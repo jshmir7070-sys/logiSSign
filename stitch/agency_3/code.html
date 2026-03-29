@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Precision Velocity - 매출 리포트</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@700;800&amp;family=Pretendard:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "inverse-on-surface": "#eff1f3",
+                        "tertiary-fixed": "#6ffbbe",
+                        "surface-container": "#eceef0",
+                        "secondary-fixed": "#dae2fd",
+                        "on-tertiary-fixed": "#002113",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-primary-container": "#eeefff",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "primary-container": "#2563eb",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#f2f4f6",
+                        "primary": "#004ac6",
+                        "on-surface-variant": "#434655",
+                        "surface-dim": "#d8dadc",
+                        "on-surface": "#191c1e",
+                        "surface-variant": "#e0e3e5",
+                        "secondary-container": "#dae2fd",
+                        "on-secondary-fixed": "#131b2e",
+                        "tertiary-container": "#007d55",
+                        "surface-tint": "#0053db",
+                        "surface-bright": "#f7f9fb",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "tertiary": "#006242",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "primary-fixed": "#dbe1ff",
+                        "surface-container-high": "#e6e8ea",
+                        "surface": "#f7f9fb",
+                        "on-error": "#ffffff",
+                        "background": "#f7f9fb",
+                        "secondary": "#565e74",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "on-tertiary-container": "#bdffdb",
+                        "outline-variant": "#c3c6d7",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "on-secondary-container": "#5c647a",
+                        "on-primary-fixed": "#00174b",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "outline": "#737686",
+                        "on-background": "#191c1e",
+                        "inverse-primary": "#b4c5ff",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#2d3133"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope", "Pretendard"],
+                        "body": ["Inter", "Pretendard"],
+                        "label": ["Inter", "Pretendard"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Pretendard', 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .glass-header { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px); }
+        .waterfall-up { background: linear-gradient(to top, #004ac6, #2563eb); }
+        .waterfall-down { background: #ba1a1a; opacity: 0.8; }
+        .ghost-border { outline: 1px solid rgba(195, 198, 215, 0.15); }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-screen w-[220px] bg-slate-900 dark:bg-slate-950 flex flex-col py-6 shadow-xl z-50 font-['Pretendard'] font-medium antialiased">
+<div class="px-6 mb-10">
+<h1 class="text-xl font-bold text-white tracking-tight">Precision Velocity</h1>
+<p class="text-xs text-slate-400 mt-1">Last-Mile Admin</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-3 flex items-center gap-3 transition-colors hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>대시보드</span>
+</a>
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-3 flex items-center gap-3 transition-colors hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span>기사 관리</span>
+</a>
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-3 flex items-center gap-3 transition-colors hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span>계약서 관리</span>
+</a>
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-3 flex items-center gap-3 transition-colors hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span>정산 관리</span>
+</a>
+<a class="bg-blue-600 text-white rounded-lg mx-2 my-1 px-4 py-3 flex items-center gap-3 active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span>매출 리포트</span>
+</a>
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-3 flex items-center gap-3 transition-colors hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="campaign">campaign</span>
+<span>공지 관리</span>
+</a>
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-3 flex items-center gap-3 transition-colors hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>설정</span>
+</a>
+</nav>
+<div class="mt-auto px-4 space-y-2">
+<div class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white transition-colors cursor-pointer">
+<span class="material-symbols-outlined" data-icon="business">business</span>
+<span class="text-sm">운영 대행사</span>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white transition-colors cursor-pointer">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+<span class="text-sm">관리자</span>
+</div>
+</div>
+</aside>
+<!-- TopNavBar -->
+<header class="fixed top-0 right-0 left-[220px] h-16 flex justify-between items-center px-8 w-full z-40 bg-white/80 backdrop-blur-md font-['Pretendard'] font-semibold text-lg">
+<div class="flex items-center gap-4">
+<span class="text-on-surface">매출 리포트</span>
+<div class="flex bg-surface-container-low p-1 rounded-lg ml-6">
+<button class="px-4 py-1.5 text-sm font-medium rounded-md bg-white shadow-sm text-primary">월별</button>
+<button class="px-4 py-1.5 text-sm font-medium text-on-surface-variant hover:text-on-surface">분기</button>
+<button class="px-4 py-1.5 text-sm font-medium text-on-surface-variant hover:text-on-surface">연간</button>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative group">
+<span class="material-symbols-outlined text-on-surface-variant hover:bg-slate-50 rounded-full p-2 cursor-pointer transition-all" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-white"></span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant hover:bg-slate-50 rounded-full p-2 cursor-pointer transition-all" data-icon="help_outline">help_outline</span>
+<div class="flex items-center gap-3 pl-4 border-l border-outline-variant/30">
+<div class="text-right">
+<p class="text-xs text-on-surface-variant font-medium">서울지사</p>
+<p class="text-sm font-bold">김철수 팀장</p>
+</div>
+<img alt="Admin Profile" class="w-10 h-10 rounded-full bg-surface-container" data-alt="close-up portrait of a professional male manager in his 40s with a friendly smile and corporate attire" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBc_acWvUktyx736mU2oC3OJLkD8h4r-MpcmfQhAwhp3yQbIlBUd4ljsT6cyaMzu5eEzwf9e6_64XTnEjSWIZfqAKoaO1PnsxnH6VD4n6_yDSlXOT0LbT19qLq0kj8YOzR4DcTiLD8dzJv8l567ffYQAOOoK-UzE2PjVIpmJTUFj9wcHZiksTEE7sIqPzk2LV5gIbpKaViv881y64AABtZpqbHXIVoc2fFJRj4KXQqNmFM9BCJZsPL7IebmIMGf62G3S4kRcdnQimVj"/>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="ml-[220px] pt-24 pb-12 px-8 min-h-screen bg-surface">
+<!-- Summary Cards -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+<div class="bg-surface-container-lowest p-6 rounded-[24px] shadow-sm flex flex-col justify-between">
+<div>
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">총 매출 (Revenue)</span>
+<h3 class="text-3xl font-bold font-['Inter'] mt-1">₩1,248,500,000</h3>
+</div>
+<div class="mt-4 flex items-center text-primary font-semibold text-sm">
+<span class="material-symbols-outlined text-sm mr-1" data-icon="trending_up">trending_up</span>
+<span>전월 대비 12.5% 상승</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-[24px] shadow-sm flex flex-col justify-between">
+<div>
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">총 지출 (Expenses)</span>
+<h3 class="text-3xl font-bold font-['Inter'] mt-1">₩842,300,000</h3>
+</div>
+<div class="mt-4 flex items-center text-on-surface-variant font-semibold text-sm">
+<span class="material-symbols-outlined text-sm mr-1" data-icon="info">info</span>
+<span>유류비 비중 42%</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-[24px] shadow-sm flex flex-col justify-between border-2 border-primary-fixed">
+<div>
+<span class="text-xs font-bold text-primary uppercase tracking-wider">순수익 (Net Profit)</span>
+<div class="flex items-baseline gap-3">
+<h3 class="text-3xl font-bold font-['Inter'] mt-1 text-primary">₩406,200,000</h3>
+<span class="text-lg font-bold text-tertiary">32.5%</span>
+</div>
+</div>
+<div class="mt-4 flex items-center text-tertiary font-semibold text-sm">
+<span class="material-symbols-outlined text-sm mr-1" data-icon="check_circle">check_circle</span>
+<span>목표 수익률 달성</span>
+</div>
+</div>
+</section>
+<!-- Charts Grid (Bento Style) -->
+<section class="grid grid-cols-12 gap-6 mb-8">
+<!-- Main Bar Chart: Monthly Revenue -->
+<div class="col-span-12 lg:col-span-8 bg-surface-container-lowest p-8 rounded-[24px] shadow-sm">
+<div class="flex justify-between items-center mb-10">
+<h4 class="text-lg font-bold">월별 매출 추이</h4>
+<div class="flex items-center gap-2 text-xs text-on-surface-variant">
+<span class="w-3 h-3 rounded-sm bg-primary"></span> 매출액 (백만원)
+                    </div>
+</div>
+<div class="h-64 flex items-end justify-between gap-4">
+<!-- Bars -->
+<div class="flex-1 bg-surface-container-low rounded-t-lg relative group h-[40%]">
+<div class="absolute inset-0 bg-primary opacity-20 group-hover:opacity-40 rounded-t-lg transition-all"></div>
+<div class="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-medium text-slate-500 font-['Inter']">JAN</div>
+</div>
+<div class="flex-1 bg-surface-container-low rounded-t-lg relative group h-[55%]">
+<div class="absolute inset-0 bg-primary opacity-20 group-hover:opacity-40 rounded-t-lg transition-all"></div>
+<div class="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-medium text-slate-500 font-['Inter']">FEB</div>
+</div>
+<div class="flex-1 bg-surface-container-low rounded-t-lg relative group h-[45%]">
+<div class="absolute inset-0 bg-primary opacity-20 group-hover:opacity-40 rounded-t-lg transition-all"></div>
+<div class="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-medium text-slate-500 font-['Inter']">MAR</div>
+</div>
+<div class="flex-1 bg-surface-container-low rounded-t-lg relative group h-[70%]">
+<div class="absolute inset-0 bg-primary opacity-20 group-hover:opacity-40 rounded-t-lg transition-all"></div>
+<div class="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-medium text-slate-500 font-['Inter']">APR</div>
+</div>
+<div class="flex-1 bg-surface-container-low rounded-t-lg relative group h-[60%]">
+<div class="absolute inset-0 bg-primary opacity-20 group-hover:opacity-40 rounded-t-lg transition-all"></div>
+<div class="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-medium text-slate-500 font-['Inter']">MAY</div>
+</div>
+<div class="flex-1 bg-surface-container-low rounded-t-lg relative group h-[85%]">
+<div class="absolute inset-0 bg-primary opacity-40 group-hover:opacity-60 rounded-t-lg transition-all"></div>
+<div class="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-medium text-slate-500 font-['Inter']">JUN</div>
+</div>
+<div class="flex-1 bg-surface-container-low rounded-t-lg relative group h-[95%]">
+<div class="absolute inset-0 bg-primary rounded-t-lg transition-all shadow-lg shadow-primary/20"></div>
+<div class="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-bold text-primary font-['Inter']">JUL</div>
+</div>
+<div class="flex-1 bg-surface-container-low rounded-t-lg relative group h-[30%] animate-pulse">
+<div class="absolute inset-0 bg-outline-variant/30 rounded-t-lg transition-all"></div>
+<div class="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-medium text-slate-400 font-['Inter']">AUG</div>
+</div>
+<div class="flex-1 bg-surface-container-low rounded-t-lg relative group h-[30%] animate-pulse">
+<div class="absolute inset-0 bg-outline-variant/30 rounded-t-lg transition-all"></div>
+<div class="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-medium text-slate-400 font-['Inter']">SEP</div>
+</div>
+<div class="flex-1 bg-surface-container-low rounded-t-lg relative group h-[30%] animate-pulse">
+<div class="absolute inset-0 bg-outline-variant/30 rounded-t-lg transition-all"></div>
+<div class="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-medium text-slate-400 font-['Inter']">OCT</div>
+</div>
+<div class="flex-1 bg-surface-container-low rounded-t-lg relative group h-[30%] animate-pulse">
+<div class="absolute inset-0 bg-outline-variant/30 rounded-t-lg transition-all"></div>
+<div class="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-medium text-slate-400 font-['Inter']">NOV</div>
+</div>
+<div class="flex-1 bg-surface-container-low rounded-t-lg relative group h-[30%] animate-pulse">
+<div class="absolute inset-0 bg-outline-variant/30 rounded-t-lg transition-all"></div>
+<div class="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-medium text-slate-400 font-['Inter']">DEC</div>
+</div>
+</div>
+</div>
+<!-- Area Chart: Profit Trend -->
+<div class="col-span-12 lg:col-span-4 bg-surface-container-lowest p-8 rounded-[24px] shadow-sm flex flex-col">
+<div class="mb-6">
+<h4 class="text-lg font-bold">순수익 추이</h4>
+<p class="text-sm text-on-surface-variant">지난 6개월 변동성 분석</p>
+</div>
+<div class="flex-1 relative overflow-hidden bg-surface-container-low rounded-xl">
+<!-- SVG Area Chart Placeholder -->
+<svg class="w-full h-full" viewbox="0 0 400 200">
+<defs>
+<lineargradient id="profitGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="5%" stop-color="#006242" stop-opacity="0.3"></stop>
+<stop offset="95%" stop-color="#006242" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<path d="M0,150 Q50,130 100,140 T200,80 T300,100 T400,40 V200 H0 Z" fill="url(#profitGradient)"></path>
+<path d="M0,150 Q50,130 100,140 T200,80 T300,100 T400,40" fill="none" stroke="#006242" stroke-width="3"></path>
+<circle cx="400" cy="40" fill="#006242" r="4"></circle>
+</svg>
+<div class="absolute top-4 right-4 bg-tertiary-fixed px-3 py-1 rounded-full text-[10px] font-bold text-on-tertiary-fixed">
+                        +22.4% PEAK
+                    </div>
+</div>
+<div class="mt-6 space-y-3">
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">최고 순수익 (6월)</span>
+<span class="font-bold">₩82,400,000</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">평균 마진율</span>
+<span class="font-bold">28.4%</span>
+</div>
+</div>
+</div>
+<!-- Stacked Bar Chart: Expense Composition -->
+<div class="col-span-12 lg:col-span-7 bg-surface-container-lowest p-8 rounded-[24px] shadow-sm">
+<div class="flex justify-between items-center mb-8">
+<h4 class="text-lg font-bold">지출 항목 구성</h4>
+<select class="text-sm bg-surface-container-low border-none rounded-lg py-1 px-3 focus:ring-primary">
+<option>전체 기간</option>
+<option>최근 3개월</option>
+</select>
+</div>
+<div class="space-y-6">
+<div class="space-y-2">
+<div class="flex justify-between text-sm font-medium">
+<span>유류비 (Fuel)</span>
+<span>₩353,700,000 (42%)</span>
+</div>
+<div class="h-3 w-full bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-primary-container" style="width: 42%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-sm font-medium">
+<span>보험료 (Insurance)</span>
+<span>₩210,500,000 (25%)</span>
+</div>
+<div class="h-3 w-full bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-secondary" style="width: 25%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-sm font-medium">
+<span>차량 정비 (Maintenance)</span>
+<span>₩151,600,000 (18%)</span>
+</div>
+<div class="h-3 w-full bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-tertiary" style="width: 18%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-sm font-medium">
+<span>기타 (Others)</span>
+<span>₩126,500,000 (15%)</span>
+</div>
+<div class="h-3 w-full bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-outline-variant" style="width: 15%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Waterfall Chart: Revenue Structure -->
+<div class="col-span-12 lg:col-span-5 bg-surface-container-lowest p-8 rounded-[24px] shadow-sm">
+<h4 class="text-lg font-bold mb-8">수익 구조 분석</h4>
+<div class="h-64 flex items-end justify-between gap-2 px-2 border-b border-outline-variant/20 pb-2">
+<!-- Total Revenue -->
+<div class="flex flex-col items-center gap-2 w-16">
+<span class="text-[10px] font-bold text-primary">1,248M</span>
+<div class="w-full h-full waterfall-up rounded-sm" style="height: 100%"></div>
+<span class="text-[9px] text-on-surface-variant font-medium text-center">총 매출</span>
+</div>
+<!-- Deduction 1 -->
+<div class="flex flex-col items-center gap-2 w-16 self-start translate-y-0">
+<span class="text-[10px] font-bold text-error">-353M</span>
+<div class="w-full waterfall-down rounded-sm" style="height: 28%"></div>
+<span class="text-[9px] text-on-surface-variant font-medium text-center">유류비</span>
+</div>
+<!-- Deduction 2 -->
+<div class="flex flex-col items-center gap-2 w-16 self-start translate-y-[28%]">
+<span class="text-[10px] font-bold text-error">-210M</span>
+<div class="w-full waterfall-down rounded-sm" style="height: 17%"></div>
+<span class="text-[9px] text-on-surface-variant font-medium text-center">보험료</span>
+</div>
+<!-- Deduction 3 -->
+<div class="flex flex-col items-center gap-2 w-16 self-start translate-y-[45%]">
+<span class="text-[10px] font-bold text-error">-278M</span>
+<div class="w-full waterfall-down rounded-sm" style="height: 22%"></div>
+<span class="text-[9px] text-on-surface-variant font-medium text-center">운영비</span>
+</div>
+<!-- Net Profit -->
+<div class="flex flex-col items-center gap-2 w-16">
+<span class="text-[10px] font-bold text-tertiary">406M</span>
+<div class="w-full bg-tertiary rounded-sm" style="height: 33%"></div>
+<span class="text-[9px] text-on-surface-variant font-medium text-center">순수익</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Data Table: Client Analysis -->
+<section class="bg-surface-container-lowest rounded-[24px] shadow-sm overflow-hidden mb-8">
+<div class="p-8 flex justify-between items-center">
+<h4 class="text-lg font-bold">원청사별 매출 분석</h4>
+<button class="text-sm text-primary font-semibold flex items-center gap-1 hover:bg-primary/5 px-3 py-1.5 rounded-lg transition-all">
+                    상세보기 <span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead class="bg-surface-container-low text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+<tr>
+<th class="px-8 py-4">원청사</th>
+<th class="px-8 py-4">배송건수</th>
+<th class="px-8 py-4">총 매출액 (소계)</th>
+<th class="px-8 py-4">비중 (Progress)</th>
+<th class="px-8 py-4 text-right">상태</th>
+</tr>
+</thead>
+<tbody class="divide-y-0">
+<tr class="hover:bg-surface-container-high transition-colors">
+<td class="px-8 py-6">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center font-bold text-slate-400 text-xs">C</div>
+<span class="font-bold">쿠팡 잇츠</span>
+</div>
+</td>
+<td class="px-8 py-6 font-['Inter']">24,502건</td>
+<td class="px-8 py-6 font-bold font-['Inter']">₩540,200,000</td>
+<td class="px-8 py-6">
+<div class="flex items-center gap-3">
+<div class="flex-1 h-2 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[43%]"></div>
+</div>
+<span class="text-xs font-bold text-on-surface-variant font-['Inter']">43%</span>
+</div>
+</td>
+<td class="px-8 py-6 text-right">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed text-[10px] font-bold px-2 py-1 rounded-full uppercase">Normal</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-high transition-colors">
+<td class="px-8 py-6">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center font-bold text-slate-400 text-xs">B</div>
+<span class="font-bold">배달의민족</span>
+</div>
+</td>
+<td class="px-8 py-6 font-['Inter']">18,320건</td>
+<td class="px-8 py-6 font-bold font-['Inter']">₩385,400,000</td>
+<td class="px-8 py-6">
+<div class="flex items-center gap-3">
+<div class="flex-1 h-2 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[31%]"></div>
+</div>
+<span class="text-xs font-bold text-on-surface-variant font-['Inter']">31%</span>
+</div>
+</td>
+<td class="px-8 py-6 text-right">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed text-[10px] font-bold px-2 py-1 rounded-full uppercase">Normal</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-high transition-colors">
+<td class="px-8 py-6">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center font-bold text-slate-400 text-xs">M</div>
+<span class="font-bold">마켓컬리</span>
+</div>
+</td>
+<td class="px-8 py-6 font-['Inter']">9,120건</td>
+<td class="px-8 py-6 font-bold font-['Inter']">₩212,900,000</td>
+<td class="px-8 py-6">
+<div class="flex items-center gap-3">
+<div class="flex-1 h-2 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[17%]"></div>
+</div>
+<span class="text-xs font-bold text-on-surface-variant font-['Inter']">17%</span>
+</div>
+</td>
+<td class="px-8 py-6 text-right">
+<span class="bg-error-container text-on-error-container text-[10px] font-bold px-2 py-1 rounded-full uppercase">Low Margin</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-high transition-colors">
+<td class="px-8 py-6">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center font-bold text-slate-400 text-xs">L</div>
+<span class="font-bold">롯데온</span>
+</div>
+</td>
+<td class="px-8 py-6 font-['Inter']">4,500건</td>
+<td class="px-8 py-6 font-bold font-['Inter']">₩110,000,000</td>
+<td class="px-8 py-6">
+<div class="flex items-center gap-3">
+<div class="flex-1 h-2 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[9%]"></div>
+</div>
+<span class="text-xs font-bold text-on-surface-variant font-['Inter']">9%</span>
+</div>
+</td>
+<td class="px-8 py-6 text-right">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed text-[10px] font-bold px-2 py-1 rounded-full uppercase">Normal</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-6 border-t border-outline-variant/10 flex justify-center">
+<nav class="flex gap-2">
+<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container-low transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined text-sm" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary text-white font-bold text-xs">1</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container-low transition-colors text-xs font-medium">2</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container-low transition-colors text-xs font-medium">3</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container-low transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span>
+</button>
+</nav>
+</div>
+</section>
+</main>
+<!-- Contextual Info (Bottom Right Floating) -->
+<div class="fixed bottom-8 right-8 flex flex-col gap-4">
+<button class="w-14 h-14 rounded-full bg-primary-container text-white shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group relative">
+<span class="material-symbols-outlined" data-icon="file_download">file_download</span>
+<span class="absolute right-16 bg-slate-900 text-white text-xs py-2 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">리포트 내보내기 (.PDF)</span>
+</button>
+</div>
+</body></html>

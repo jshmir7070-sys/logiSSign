@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@700;800&amp;family=Pretendard:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-container": "#bdffdb",
+              "surface-container-lowest": "#ffffff",
+              "on-secondary-fixed-variant": "#3f465c",
+              "on-secondary-fixed": "#131b2e",
+              "surface-container-highest": "#e0e3e5",
+              "on-surface": "#191c1e",
+              "secondary-container": "#dae2fd",
+              "primary-container": "#2563eb",
+              "on-secondary-container": "#5c647a",
+              "primary-fixed": "#dbe1ff",
+              "on-tertiary-fixed-variant": "#005236",
+              "tertiary-fixed": "#6ffbbe",
+              "outline-variant": "#c3c6d7",
+              "on-background": "#191c1e",
+              "on-primary": "#ffffff",
+              "surface-tint": "#0053db",
+              "on-error-container": "#93000a",
+              "on-primary-fixed": "#00174b",
+              "on-primary-fixed-variant": "#003ea8",
+              "inverse-primary": "#b4c5ff",
+              "secondary-fixed": "#dae2fd",
+              "error": "#ba1a1a",
+              "on-secondary": "#ffffff",
+              "surface-container-high": "#e6e8ea",
+              "surface-container-low": "#f2f4f6",
+              "on-surface-variant": "#434655",
+              "on-tertiary": "#ffffff",
+              "tertiary": "#006242",
+              "primary-fixed-dim": "#b4c5ff",
+              "surface-container": "#eceef0",
+              "primary": "#004ac6",
+              "secondary-fixed-dim": "#bec6e0",
+              "on-tertiary-fixed": "#002113",
+              "on-error": "#ffffff",
+              "tertiary-fixed-dim": "#4edea3",
+              "tertiary-container": "#007d55",
+              "surface-dim": "#d8dadc",
+              "surface-bright": "#f7f9fb",
+              "error-container": "#ffdad6",
+              "background": "#f7f9fb",
+              "on-primary-container": "#eeefff",
+              "inverse-surface": "#2d3133",
+              "surface-variant": "#e0e3e5",
+              "surface": "#f7f9fb",
+              "secondary": "#565e74",
+              "outline": "#737686",
+              "inverse-on-surface": "#eff1f3"
+            },
+            fontFamily: {
+              "headline": ["Pretendard", "Manrope", "sans-serif"],
+              "body": ["Inter", "Pretendard", "sans-serif"],
+              "label": ["Inter", "Pretendard", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "3xl": "1.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body { font-family: 'Pretendard', sans-serif; }
+      .data-number { font-family: 'Inter', sans-serif; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-sm dark:shadow-none h-14 flex justify-between items-center px-4">
+<div class="flex flex-col">
+<span class="text-[12px] text-on-secondary-container leading-tight">안녕하세요 👋</span>
+<span class="text-[18px] font-bold text-on-surface leading-tight">김철수 기사님</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-50 transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+<span class="absolute top-2.5 right-2.5 w-2 h-2 bg-error rounded-full border-2 border-white"></span>
+</div>
+<div class="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center text-white font-bold text-sm">
+                KS
+            </div>
+</div>
+</header>
+<main class="pt-20 px-4 space-y-6 max-w-md mx-auto">
+<!-- Hero Card (Predicted for Home) -->
+<section class="bg-primary-container rounded-3xl p-6 shadow-lg shadow-primary/20 relative overflow-hidden">
+<!-- Decorative Grain -->
+<div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBzUQ2Kz8dcGZ1N-YKcCXQg1goKF0RKtipSj1BSvKi809-F34mMGeJYr2n1K_X5H4aQlkqYOQhXT2sL4AuQLh7UomDgayS8285ipaUFQfEQSnuMl7tXiwMl03VtrxjNwU-GjnMWdkljtyXyLDn1fIqOVqzSns5b4KFyKcvj-7oCZXmTRdHzcYFi_NnnaJ9XYeAoHnS1wrkzSc21_oMxXUpVFSccsY9jhIYlT0h1tbHkDbsBZDZQKrJpixgeas3cZOj83M09zxB0iFW0');"></div>
+<div class="relative z-10">
+<div class="flex justify-between items-center mb-4">
+<span class="text-on-primary-container/80 text-sm font-medium">이번달 예상 정산액</span>
+<span class="bg-white/20 text-white text-xs px-3 py-1 rounded-full font-bold backdrop-blur-md">3월</span>
+</div>
+<div class="mb-6">
+<h2 class="text-white text-3xl font-bold data-number tracking-tight">₩ 2,840,000</h2>
+</div>
+<div class="h-px bg-white/20 w-full mb-6"></div>
+<div class="grid grid-cols-2 gap-3">
+<div class="bg-white/10 backdrop-blur-sm p-3 rounded-2xl flex flex-col">
+<span class="text-white/70 text-[11px] mb-1">실수령 예상</span>
+<span class="text-white font-bold text-sm data-number">₩ 2,756,000</span>
+</div>
+<div class="bg-white/10 backdrop-blur-sm p-3 rounded-2xl flex flex-col">
+<span class="text-white/70 text-[11px] mb-1">공제 합계</span>
+<span class="text-white font-bold text-sm data-number">-₩ 84,000</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Quick Action Grid -->
+<section class="grid grid-cols-2 gap-3">
+<button class="bg-white p-4 rounded-3xl shadow-sm border border-outline-variant/5 flex flex-col items-start hover:bg-surface-container-low transition-all active:scale-95 text-left">
+<div class="w-11 h-11 bg-blue-50 rounded-full flex items-center justify-center mb-3">
+<span class="material-symbols-outlined text-primary" data-icon="receipt_long">receipt_long</span>
+</div>
+<span class="text-on-surface font-bold text-[14px] mb-0.5">정산서</span>
+<span class="text-on-surface-variant text-[11px]">월별 내역 확인</span>
+</button>
+<button class="bg-white p-4 rounded-3xl shadow-sm border border-outline-variant/5 flex flex-col items-start hover:bg-surface-container-low transition-all active:scale-95 text-left">
+<div class="w-11 h-11 bg-blue-50 rounded-full flex items-center justify-center mb-3">
+<span class="material-symbols-outlined text-primary" data-icon="description">description</span>
+</div>
+<span class="text-on-surface font-bold text-[14px] mb-0.5">세금계산서</span>
+<span class="text-on-surface-variant text-[11px]">발행 및 조회</span>
+</button>
+<button class="bg-white p-4 rounded-3xl shadow-sm border border-outline-variant/5 flex flex-col items-start hover:bg-surface-container-low transition-all active:scale-95 text-left">
+<div class="w-11 h-11 bg-blue-50 rounded-full flex items-center justify-center mb-3 relative">
+<span class="material-symbols-outlined text-primary" data-icon="campaign">campaign</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-error rounded-full border-2 border-white"></span>
+</div>
+<span class="text-on-surface font-bold text-[14px] mb-0.5">공지사항</span>
+<span class="text-on-surface-variant text-[11px]">새글 2</span>
+</button>
+<button class="bg-white p-4 rounded-3xl shadow-sm border border-outline-variant/5 flex flex-col items-start hover:bg-surface-container-low transition-all active:scale-95 text-left">
+<div class="w-11 h-11 bg-blue-50 rounded-full flex items-center justify-center mb-3">
+<span class="material-symbols-outlined text-primary" data-icon="edit_note">edit_note</span>
+</div>
+<span class="text-on-surface font-bold text-[14px] mb-0.5">계약서</span>
+<span class="text-on-surface-variant text-[11px]">서명 및 보관</span>
+</button>
+</section>
+<!-- Recent Settlements -->
+<section>
+<div class="flex justify-between items-center mb-3 px-1">
+<h3 class="text-on-surface font-bold text-[16px]">최근 정산 내역</h3>
+<button class="text-on-surface-variant text-xs font-medium flex items-center gap-0.5">전체보기 <span class="material-symbols-outlined text-[14px]">chevron_right</span></button>
+</div>
+<div class="space-y-3">
+<div class="bg-white p-4 rounded-3xl flex items-center justify-between border border-outline-variant/5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-2xl bg-surface-container-low flex items-center justify-center">
+<span class="text-on-surface-variant font-bold text-sm">2월</span>
+</div>
+<div class="flex flex-col">
+<span class="text-on-surface font-semibold text-sm">정산완료</span>
+<span class="text-on-surface-variant text-[11px]">2024.03.10 입금</span>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="text-on-surface font-bold text-sm data-number">₩ 3,120,500</span>
+<span class="px-2 py-0.5 bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-bold rounded-full">지급완료</span>
+</div>
+</div>
+<div class="bg-white p-4 rounded-3xl flex items-center justify-between border border-outline-variant/5 opacity-80">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-2xl bg-surface-container-low flex items-center justify-center">
+<span class="text-on-surface-variant font-bold text-sm">1월</span>
+</div>
+<div class="flex flex-col">
+<span class="text-on-surface font-semibold text-sm">정산완료</span>
+<span class="text-on-surface-variant text-[11px]">2024.02.10 입금</span>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="text-on-surface font-bold text-sm data-number">₩ 2,940,000</span>
+<span class="px-2 py-0.5 bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-bold rounded-full">지급완료</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Latest Notice -->
+<section>
+<div class="flex justify-between items-center mb-3 px-1">
+<h3 class="text-on-surface font-bold text-[16px]">최신 공지</h3>
+<button class="text-on-surface-variant text-xs font-medium flex items-center gap-0.5">전체보기 <span class="material-symbols-outlined text-[14px]">chevron_right</span></button>
+</div>
+<div class="space-y-3">
+<div class="bg-white p-4 rounded-3xl border border-outline-variant/5 flex items-center justify-between">
+<div class="flex items-center gap-3 overflow-hidden">
+<span class="text-lg">📢</span>
+<div class="flex flex-col truncate">
+<span class="text-on-surface font-semibold text-sm truncate">3월 정산 지연 안내 및 보상 정책...</span>
+<span class="text-on-surface-variant text-[11px]">2024.03.14</span>
+</div>
+</div>
+<span class="shrink-0 bg-primary-fixed text-on-primary-fixed text-[10px] font-bold px-2 py-0.5 rounded-full">긴급</span>
+</div>
+<div class="bg-white p-4 rounded-3xl border border-outline-variant/5 flex items-center justify-between">
+<div class="flex items-center gap-3 overflow-hidden">
+<span class="text-lg">🎁</span>
+<div class="flex flex-col truncate">
+<span class="text-on-surface font-semibold text-sm truncate">상반기 우수 기사 시상식 안내</span>
+<span class="text-on-surface-variant text-[11px]">2024.03.12</span>
+</div>
+</div>
+<span class="shrink-0 bg-surface-container text-on-surface-variant text-[10px] font-bold px-2 py-0.5 rounded-full">이벤트</span>
+</div>
+</div>
+</section>
+<!-- Banner Card -->
+<div class="rounded-3xl h-32 relative overflow-hidden flex items-center p-6 bg-secondary-fixed">
+<img class="absolute inset-0 w-full h-full object-cover mix-blend-overlay opacity-40" data-alt="modern logistics warehouse with blue atmospheric lighting and industrial machinery in soft focus" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBum7_3lcOPmcpKFUkscxqGiA0hyMA3C7_0pe71MQIqZyeoxV4APOcMmCfvlvpm4QDm0ZWBq1Oqgos_4xXKCBqDWq0BS6TIEhHlhXw1nLHdQNPu5ART2qeiDfvYVCu6M5N3p5k5yUaq6-6tKhAqsw5d0fez0CLLHIl3bPGUBXH4vBrs-xnJBXBLKfJAzDQUVNF6rnv32Ko9OnLFl25OO22bEPSt2OghZ0MYsBK0ef8JVkaWj8A6TIQPQ_NtoBqsLremk03gLmGrgSNd"/>
+<div class="relative z-10 flex flex-col">
+<span class="text-on-secondary-fixed font-bold text-lg leading-tight">더 나은 배송 경험을 위한<br/>서비스 만족도 조사</span>
+<span class="text-on-secondary-fixed-variant text-xs mt-1">참여 시 스타벅스 기프티콘 증정</span>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full h-[80px] z-50 bg-white dark:bg-slate-900 rounded-t-3xl shadow-[0_-4px_20px_rgba(0,0,0,0.05)] flex justify-around items-center px-6 pb-safe">
+<div class="flex flex-col items-center justify-center text-blue-600 dark:text-blue-400 font-bold gap-1 transition-opacity cursor-pointer">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="text-[11px] font-medium tracking-tight">홈</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 gap-1 hover:opacity-80 transition-opacity cursor-pointer">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="text-[11px] font-medium tracking-tight">정산서</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 gap-1 hover:opacity-80 transition-opacity cursor-pointer">
+<span class="material-symbols-outlined">campaign</span>
+<span class="text-[11px] font-medium tracking-tight">공지사항</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 gap-1 hover:opacity-80 transition-opacity cursor-pointer">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[11px] font-medium tracking-tight">프로필</span>
+</div>
+</nav>
+</body></html>

@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Precision Velocity - Super Admin Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@700;800&amp;family=Pretendard:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed": "#002113",
+              "surface-dim": "#d8dadc",
+              "on-secondary-fixed": "#131b2e",
+              "tertiary-fixed-dim": "#4edea3",
+              "outline": "#737686",
+              "inverse-surface": "#2d3133",
+              "on-surface": "#191c1e",
+              "surface-container-low": "#f2f4f6",
+              "surface": "#f7f9fb",
+              "primary-container": "#2563eb",
+              "surface-container-high": "#e6e8ea",
+              "surface-container-lowest": "#ffffff",
+              "secondary-container": "#dae2fd",
+              "on-primary-fixed": "#00174b",
+              "on-primary-container": "#eeefff",
+              "on-secondary-container": "#5c647a",
+              "inverse-primary": "#b4c5ff",
+              "on-surface-variant": "#434655",
+              "on-tertiary-fixed-variant": "#005236",
+              "secondary-fixed": "#dae2fd",
+              "error": "#ba1a1a",
+              "surface-tint": "#0053db",
+              "primary-fixed": "#dbe1ff",
+              "surface-bright": "#f7f9fb",
+              "secondary": "#565e74",
+              "tertiary": "#006242",
+              "background": "#f7f9fb",
+              "outline-variant": "#c3c6d7",
+              "inverse-on-surface": "#eff1f3",
+              "on-secondary": "#ffffff",
+              "on-error-container": "#93000a",
+              "on-primary-fixed-variant": "#003ea8",
+              "tertiary-fixed": "#6ffbbe",
+              "on-primary": "#ffffff",
+              "on-tertiary": "#ffffff",
+              "primary": "#004ac6",
+              "surface-container": "#eceef0",
+              "on-background": "#191c1e",
+              "surface-variant": "#e0e3e5",
+              "on-tertiary-container": "#bdffdb",
+              "error-container": "#ffdad6",
+              "on-secondary-fixed-variant": "#3f465c",
+              "primary-fixed-dim": "#b4c5ff",
+              "tertiary-container": "#007d55",
+              "surface-container-highest": "#e0e3e5",
+              "on-error": "#ffffff",
+              "secondary-fixed-dim": "#bec6e0"
+            },
+            fontFamily: {
+              "headline": ["Manrope", "Pretendard"],
+              "body": ["Inter", "Pretendard"],
+              "label": ["Inter", "Pretendard"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .glass-header { backdrop-filter: blur(20px); }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased">
+<!-- SideNavBar (The Control Tower) -->
+<aside class="fixed left-0 top-0 h-screen w-[240px] z-50 bg-[#0F172A] flex flex-col justify-between py-6 font-['Pretendard','Inter'] antialiased tracking-tight shadow-2xl shadow-slate-900/50">
+<div>
+<div class="px-6 mb-10 flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-lg">bolt</span>
+</div>
+<div class="flex flex-col">
+<span class="text-lg font-bold text-white tracking-widest uppercase">Precision Velocity</span>
+<span class="text-[10px] text-slate-500 font-medium tracking-tighter uppercase">Super Admin</span>
+</div>
+</div>
+<nav class="space-y-1 px-2">
+<a class="flex items-center gap-3 px-4 py-3 bg-primary-container text-white rounded-xl mx-2 my-1 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="text-sm font-medium">전체 현황</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="business">business</span>
+<span class="text-sm font-medium">운영사 관리</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="text-sm font-medium">구독 · 결제</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="leaderboard">leaderboard</span>
+<span class="text-sm font-medium">수익 분석</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="campaign">campaign</span>
+<span class="text-sm font-medium">공지 관리</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="dns">dns</span>
+<span class="text-sm font-medium">서버 상태</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-sm font-medium">설정</span>
+</a>
+</nav>
+</div>
+<div class="px-4">
+<div class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl transition-colors cursor-pointer">
+<img alt="Admin Profile" class="w-8 h-8 rounded-full bg-slate-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCs1JgBXWZoD868d9l5qmCVoNABa62v9YpT0YUmDhDgjlpmf14zkC1kxatUQMH4nzT_XzzgReG-9s5ydQPbqJdUOjeaDMTik8UseUOB9aAQE-HxlgRHcMjALw6lEOkO66EoQGrCkmISSDJX0OThMuaKbUmX6hIvlaE-XG20kA4lBFFTKFUJ9wF7kRuIBTAeTq73hWVaauMvHaTw-y2ZTTrEv-Ss4ORVvZmDU4uePNt79boUBnReuD5D3Sa-NzkfB4vyioS-Vg2jw7R-"/>
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-white">Admin Profile</span>
+<span class="text-[10px] text-slate-500">Master Account</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-[240px] min-h-screen">
+<!-- TopAppBar -->
+<header class="fixed top-0 right-0 left-[240px] h-[56px] z-40 bg-white/80 backdrop-blur-xl flex justify-between items-center px-8 w-full border-b border-slate-100">
+<div class="flex items-center gap-4">
+<h1 class="font-['Pretendard'] font-extrabold text-slate-900 text-lg tracking-tight">전체 현황</h1>
+<div class="h-4 w-[1px] bg-slate-200"></div>
+<span class="text-xs font-medium text-slate-500 font-['Inter']">2024.05.22 14:30 GMT+9</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="hover:bg-slate-50 p-2 rounded-full transition-colors relative">
+<span class="material-symbols-outlined text-slate-600" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-white"></span>
+</button>
+<div class="flex items-center gap-3 pl-4">
+<div class="text-right">
+<p class="text-xs font-bold text-slate-900">최고관리자</p>
+<p class="text-[10px] text-slate-500">Super Admin</p>
+</div>
+<img alt="Admin Avatar" class="w-8 h-8 rounded-lg bg-slate-100 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcmvchK6cLy8Vn-_Yh8NBr5JFDIQY0LRLROszRDRC25uNcGqGqcpNUKNO9UvlvoTf7DmDi_FzXS3SeeYgyHTKoIPJi497BS2J8wob985S2S-h5anwGII0IgIjDJAbnRr9lgHz7xHgJI_yYjfLAsgr4U-Q9TvmCGOrMUPOh5TxCC7pxqA8PgPjaV_hPW7mZKV_HTvu9spsZx5hgPaAwU2p7c0-EVezsDv1MztI-nF-j4BVfwrD2zKGiDj2Pv6ipFeoXedqVjgW_FhFQ"/>
+</div>
+</div>
+</header>
+<!-- Page Canvas -->
+<div class="pt-[80px] px-8 pb-12 space-y-8 max-w-[1600px] mx-auto">
+<!-- KPI Row (Bento Style) -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<!-- Card 1: MRR -->
+<div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm border-l-4 border-primary transition-transform hover:scale-[1.01] duration-200">
+<div class="flex justify-between items-start mb-4">
+<span class="text-slate-500 text-sm font-medium">MRR</span>
+<div class="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[11px] font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="trending_up">trending_up</span>
+                            12.4%
+                        </div>
+</div>
+<div class="flex items-end justify-between">
+<div>
+<p class="text-2xl font-extrabold font-['Inter'] text-slate-900 tracking-tight">₩4,850,000</p>
+<p class="text-[11px] text-slate-400 mt-1 font-['Inter']">vs last month</p>
+</div>
+<div class="h-10 w-24">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 100 40">
+<path d="M0,35 Q10,32 20,38 T40,25 T60,30 T80,15 T100,20" fill="none" stroke="#2563eb" stroke-width="2.5"></path>
+<path d="M0,35 Q10,32 20,38 T40,25 T60,30 T80,15 T100,20 V40 H0 Z" fill="url(#grad1)" opacity="0.1"></path>
+<defs>
+<lineargradient id="grad1" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" style="stop-color:#2563eb;stop-opacity:1"></stop>
+<stop offset="100%" style="stop-color:#2563eb;stop-opacity:0"></stop>
+</lineargradient>
+</defs>
+</svg>
+</div>
+</div>
+</div>
+<!-- Card 2: Active Agencies -->
+<div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm border-l-4 border-tertiary-fixed-dim transition-transform hover:scale-[1.01] duration-200">
+<div class="flex justify-between items-start mb-4">
+<span class="text-slate-500 text-sm font-medium">활성 운영사</span>
+<div class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[11px] font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="add">add</span>
+                            3
+                        </div>
+</div>
+<div class="flex items-end justify-between">
+<div>
+<p class="text-2xl font-extrabold font-['Inter'] text-slate-900 tracking-tight">47개</p>
+<p class="text-[11px] text-slate-400 mt-1 font-['Inter']">Total partners</p>
+</div>
+<div class="h-10 w-24">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 100 40">
+<path d="M0,38 Q15,35 30,30 T50,20 T70,15 T100,5" fill="none" stroke="#10b981" stroke-width="2.5"></path>
+</svg>
+</div>
+</div>
+</div>
+<!-- Card 3: Total Drivers -->
+<div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm border-l-4 border-violet-400 transition-transform hover:scale-[1.01] duration-200">
+<div class="flex justify-between items-start mb-4">
+<span class="text-slate-500 text-sm font-medium">총 등록 기사</span>
+<div class="px-2 py-0.5 rounded-full bg-violet-50 text-violet-600 text-[11px] font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="arrow_upward">arrow_upward</span>
+                            67
+                        </div>
+</div>
+<div class="flex items-end justify-between">
+<div>
+<p class="text-2xl font-extrabold font-['Inter'] text-slate-900 tracking-tight">1,284명</p>
+<p class="text-[11px] text-slate-400 mt-1 font-['Inter']">Active workforce</p>
+</div>
+<div class="h-10 w-24">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 100 40">
+<path d="M0,30 Q25,25 50,28 T100,10" fill="none" stroke="#a78bfa" stroke-width="2.5"></path>
+</svg>
+</div>
+</div>
+</div>
+<!-- Card 4: Churn Rate -->
+<div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm border-l-4 border-amber-400 transition-transform hover:scale-[1.01] duration-200">
+<div class="flex justify-between items-start mb-4">
+<span class="text-slate-500 text-sm font-medium">Churn Rate</span>
+<div class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 text-[11px] font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="arrow_downward">arrow_downward</span>
+                            0.5%
+                        </div>
+</div>
+<div class="flex items-end justify-between">
+<div>
+<p class="text-2xl font-extrabold font-['Inter'] text-slate-900 tracking-tight">2.1%</p>
+<p class="text-[11px] text-slate-400 mt-1 font-['Inter']">Retention stable</p>
+</div>
+<div class="h-10 w-24">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 100 40">
+<path d="M0,10 Q25,12 50,15 T100,25" fill="none" stroke="#fbbf24" stroke-width="2.5"></path>
+</svg>
+</div>
+</div>
+</div>
+</div>
+<!-- Charts Row -->
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+<!-- Left: Area Chart -->
+<div class="lg:col-span-3 bg-surface-container-lowest rounded-2xl p-8 shadow-sm">
+<div class="flex justify-between items-center mb-8">
+<div>
+<h2 class="text-lg font-bold text-slate-900 tracking-tight">MRR 성장 추이</h2>
+<p class="text-xs text-slate-400 font-medium">Monthly Recurring Revenue (12 Months)</p>
+</div>
+<div class="flex gap-2">
+<button class="text-[11px] font-bold text-primary bg-primary-container/10 px-3 py-1 rounded-lg">전체</button>
+<button class="text-[11px] font-medium text-slate-400 hover:text-slate-600 px-3 py-1 transition-colors">스타터</button>
+<button class="text-[11px] font-medium text-slate-400 hover:text-slate-600 px-3 py-1 transition-colors">프로</button>
+</div>
+</div>
+<div class="h-[300px] w-full relative">
+<!-- Chart Mock Visualization -->
+<div class="absolute inset-0 flex items-end justify-between px-2">
+<!-- Simple bar spacers for grid feeling without lines -->
+<div class="flex flex-col items-center gap-2 h-full justify-end">
+<div class="w-12 h-[30%] bg-blue-50/50 rounded-t-lg"></div>
+<span class="text-[10px] text-slate-300 font-['Inter']">JAN</span>
+</div>
+<div class="flex flex-col items-center gap-2 h-full justify-end">
+<div class="w-12 h-[35%] bg-blue-50/50 rounded-t-lg"></div>
+<span class="text-[10px] text-slate-300 font-['Inter']">FEB</span>
+</div>
+<div class="flex flex-col items-center gap-2 h-full justify-end">
+<div class="w-12 h-[45%] bg-blue-50/50 rounded-t-lg"></div>
+<span class="text-[10px] text-slate-300 font-['Inter']">MAR</span>
+</div>
+<div class="flex flex-col items-center gap-2 h-full justify-end">
+<div class="w-12 h-[40%] bg-blue-50/50 rounded-t-lg"></div>
+<span class="text-[10px] text-slate-300 font-['Inter']">APR</span>
+</div>
+<div class="flex flex-col items-center gap-2 h-full justify-end">
+<div class="w-12 h-[60%] bg-blue-600/20 rounded-t-lg"></div>
+<span class="text-[10px] text-slate-400 font-bold font-['Inter']">MAY</span>
+</div>
+<div class="flex flex-col items-center gap-2 h-full justify-end">
+<div class="w-12 h-[55%] bg-blue-50/50 rounded-t-lg"></div>
+<span class="text-[10px] text-slate-300 font-['Inter']">JUN</span>
+</div>
+</div>
+<svg class="absolute inset-0 h-full w-full" preserveaspectratio="none" viewbox="0 0 100 100">
+<path d="M0,70 Q10,65 20,68 T40,55 T60,60 T80,40 T100,30" fill="none" stroke="url(#lineGrad)" stroke-linecap="round" stroke-width="3"></path>
+<path d="M0,70 Q10,65 20,68 T40,55 T60,60 T80,40 T100,30 V100 H0 Z" fill="url(#areaGrad)"></path>
+<defs>
+<lineargradient id="lineGrad" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" stop-color="#2563eb"></stop>
+<stop offset="100%" stop-color="#3b82f6"></stop>
+</lineargradient>
+<lineargradient id="areaGrad" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#2563eb" stop-opacity="0.2"></stop>
+<stop offset="100%" stop-color="#2563eb" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+</svg>
+</div>
+</div>
+<!-- Right: Donut Chart -->
+<div class="lg:col-span-2 bg-surface-container-lowest rounded-2xl p-8 shadow-sm">
+<h2 class="text-lg font-bold text-slate-900 tracking-tight mb-8">플랜별 구독 분포</h2>
+<div class="flex flex-col items-center justify-center h-[300px]">
+<div class="relative w-48 h-48 mb-8">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 36 36">
+<circle class="stroke-slate-100" cx="18" cy="18" fill="none" r="16" stroke-width="4"></circle>
+<!-- Starter: 38% -->
+<circle class="stroke-primary" cx="18" cy="18" fill="none" r="16" stroke-dasharray="38, 100" stroke-dashoffset="0" stroke-width="4"></circle>
+<!-- Pro: 49% -->
+<circle class="stroke-blue-400" cx="18" cy="18" fill="none" r="16" stroke-dasharray="49, 100" stroke-dashoffset="-38" stroke-width="4"></circle>
+<!-- Ent: 13% -->
+<circle class="stroke-blue-200" cx="18" cy="18" fill="none" r="16" stroke-dasharray="13, 100" stroke-dashoffset="-87" stroke-width="4"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-3xl font-extrabold text-slate-900 font-['Inter']">47</span>
+<span class="text-[10px] text-slate-400 font-bold">TOTAL OPS</span>
+</div>
+</div>
+<div class="w-full space-y-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-2.5 h-2.5 rounded-full bg-primary"></div>
+<span class="text-xs font-semibold text-slate-600">스타터</span>
+</div>
+<span class="text-xs font-bold font-['Inter']">38% (18개)</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-2.5 h-2.5 rounded-full bg-blue-400"></div>
+<span class="text-xs font-semibold text-slate-600">프로</span>
+</div>
+<span class="text-xs font-bold font-['Inter']">49% (23개)</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-2.5 h-2.5 rounded-full bg-blue-200"></div>
+<span class="text-xs font-semibold text-slate-600">엔터프라이즈</span>
+</div>
+<span class="text-xs font-bold font-['Inter']">13% (6개)</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Agency Table (No-Line Editorial Style) -->
+<div class="bg-surface-container-lowest rounded-2xl p-8 shadow-sm">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+<h2 class="text-lg font-bold text-slate-900 tracking-tight">운영사 목록</h2>
+<div class="flex gap-3 w-full md:w-auto">
+<div class="relative flex-1 md:w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" data-icon="search">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface text-sm rounded-xl border-none focus:ring-2 focus:ring-primary/20 placeholder:text-slate-400" placeholder="운영사명 검색" type="text"/>
+</div>
+<button class="flex items-center gap-2 px-4 py-2 bg-surface rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="filter_list">filter_list</span>
+                            필터
+                        </button>
+</div>
+</div>
+<div class="overflow-x-auto no-scrollbar">
+<table class="w-full text-left">
+<thead>
+<tr class="text-slate-400 text-[11px] font-bold uppercase tracking-wider">
+<th class="pb-6 pl-2">대리점명</th>
+<th class="pb-6">지역</th>
+<th class="pb-6">플랜</th>
+<th class="pb-6">기사수</th>
+<th class="pb-6 text-right">MRR</th>
+<th class="pb-6">가입일</th>
+<th class="pb-6">상태</th>
+<th class="pb-6"></th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<!-- Row 1 -->
+<tr class="group hover:bg-surface-container-high transition-colors">
+<td class="py-5 pl-2 font-bold text-slate-900">로지스원 서울본점</td>
+<td class="py-5 text-slate-500">서울 강남</td>
+<td class="py-5">
+<span class="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-extrabold rounded-lg">ENTERPRISE</span>
+</td>
+<td class="py-5 font-['Inter'] font-semibold">245</td>
+<td class="py-5 text-right font-['Inter'] font-bold text-slate-900">₩840,000</td>
+<td class="py-5 text-slate-500 font-['Inter']">2023.11.12</td>
+<td class="py-5">
+<span class="flex items-center gap-1.5 text-tertiary font-bold text-[11px]">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+                                        정상
+                                    </span>
+</td>
+<td class="py-5 text-right pr-2">
+<button class="material-symbols-outlined text-slate-300 hover:text-slate-600 transition-colors" data-icon="more_vert">more_vert</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="group hover:bg-surface-container-high transition-colors">
+<td class="py-5 pl-2 font-bold text-slate-900">신속물류 부산지사</td>
+<td class="py-5 text-slate-500">부산 해운대</td>
+<td class="py-5">
+<span class="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-extrabold rounded-lg">PRO</span>
+</td>
+<td class="py-5 font-['Inter'] font-semibold">112</td>
+<td class="py-5 text-right font-['Inter'] font-bold text-slate-900">₩420,000</td>
+<td class="py-5 text-slate-500 font-['Inter']">2024.01.05</td>
+<td class="py-5">
+<span class="flex items-center gap-1.5 text-error font-bold text-[11px]">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+                                        연체
+                                    </span>
+</td>
+<td class="py-5 text-right pr-2">
+<button class="material-symbols-outlined text-slate-300 hover:text-slate-600 transition-colors" data-icon="more_vert">more_vert</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="group hover:bg-surface-container-high transition-colors">
+<td class="py-5 pl-2 font-bold text-slate-900">경기특송 연합</td>
+<td class="py-5 text-slate-500">경기 화성</td>
+<td class="py-5">
+<span class="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-extrabold rounded-lg">PRO</span>
+</td>
+<td class="py-5 font-['Inter'] font-semibold">86</td>
+<td class="py-5 text-right font-['Inter'] font-bold text-slate-900">₩420,000</td>
+<td class="py-5 text-slate-500 font-['Inter']">2024.02.20</td>
+<td class="py-5">
+<span class="flex items-center gap-1.5 text-amber-500 font-bold text-[11px]">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                        해지예정
+                                    </span>
+</td>
+<td class="py-5 text-right pr-2">
+<button class="material-symbols-outlined text-slate-300 hover:text-slate-600 transition-colors" data-icon="more_vert">more_vert</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Server Status & Quick Info (Tonal Layering) -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Server Status Panel -->
+<div class="bg-surface-container-low rounded-2xl p-6">
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl" data-icon="dns">dns</span>
+<h3 class="text-sm font-bold text-slate-900 tracking-tight">실시간 서버 상태</h3>
+</div>
+<span class="px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-extrabold rounded-lg animate-pulse">ALL SYSTEMS OPERATIONAL</span>
+</div>
+<div class="space-y-4">
+<div class="flex items-center justify-between p-3 bg-white rounded-xl">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+<span class="text-xs font-semibold text-slate-700">API 메인 서버</span>
+</div>
+<span class="text-[11px] font-bold font-['Inter'] text-slate-400">99.98% Uptime</span>
+</div>
+<div class="flex items-center justify-between p-3 bg-white rounded-xl">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+<span class="text-xs font-semibold text-slate-700">전자 계약서 서버</span>
+</div>
+<span class="text-[11px] font-bold font-['Inter'] text-slate-400">100.00% Uptime</span>
+</div>
+<div class="flex items-center justify-between p-3 bg-white rounded-xl">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]"></div>
+<span class="text-xs font-semibold text-slate-700">PDF 생성 엔진</span>
+</div>
+<span class="text-[11px] font-bold font-['Inter'] text-amber-600">Delayed Response (3.2s)</span>
+</div>
+<div class="flex items-center justify-between p-3 bg-white rounded-xl">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+<span class="text-xs font-semibold text-slate-700">SMS 알림 발송 서비스</span>
+</div>
+<span class="text-[11px] font-bold font-['Inter'] text-slate-400">99.95% Uptime</span>
+</div>
+</div>
+</div>
+<!-- Recent Activity/News (Asymmetric) -->
+<div class="bg-surface-container-lowest rounded-2xl p-6 relative overflow-hidden">
+<div class="absolute -right-12 -top-12 w-48 h-48 bg-primary/5 rounded-full blur-3xl"></div>
+<h3 class="text-sm font-bold text-slate-900 tracking-tight mb-6">최근 시스템 로그</h3>
+<div class="space-y-6 relative z-10">
+<div class="flex gap-4">
+<div class="mt-1 w-2 h-2 rounded-full border-2 border-primary bg-white shrink-0"></div>
+<div>
+<p class="text-[11px] font-bold text-slate-400 font-['Inter'] uppercase">14:20 PM</p>
+<p class="text-sm text-slate-700 leading-snug">로지스원 서울본점 <strong>신규 기사 12명</strong> 등록 완료</p>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="mt-1 w-2 h-2 rounded-full border-2 border-primary bg-white shrink-0"></div>
+<div>
+<p class="text-[11px] font-bold text-slate-400 font-['Inter'] uppercase">13:05 PM</p>
+<p class="text-sm text-slate-700 leading-snug">시스템 업데이트 <strong>v2.4.1</strong> 배포 성공</p>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="mt-1 w-2 h-2 rounded-full border-2 border-error bg-white shrink-0"></div>
+<div>
+<p class="text-[11px] font-bold text-slate-400 font-['Inter'] uppercase">11:50 AM</p>
+<p class="text-sm text-slate-700 leading-snug">신속물류 부산지사 <strong>결제 승인 거절</strong> (한도 초과)</p>
+</div>
+</div>
+</div>
+<button class="w-full mt-6 py-3 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors border-t border-slate-100">VIEW ALL AUDIT LOGS</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Contextual Floating Action Button (Only on main dashboard) -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-primary text-white rounded-2xl shadow-xl shadow-primary/20 flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50">
+<span class="material-symbols-outlined text-2xl" data-icon="add" style="font-variation-settings: 'FILL' 0;">add</span>
+</button>
+</body></html>

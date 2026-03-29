@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>배송 매니저 - 정산서</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body { font-family: 'Pretendard', sans-serif; }
+        .font-inter { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        .tap-highlight-none { -webkit-tap-highlight-color: transparent; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "on-tertiary-container": "#bdffdb",
+                "surface-container-lowest": "#ffffff",
+                "on-secondary-fixed-variant": "#3f465c",
+                "on-secondary-fixed": "#131b2e",
+                "surface-container-highest": "#e0e3e5",
+                "on-surface": "#191c1e",
+                "secondary-container": "#dae2fd",
+                "primary-container": "#2563eb",
+                "on-secondary-container": "#5c647a",
+                "primary-fixed": "#dbe1ff",
+                "on-tertiary-fixed-variant": "#005236",
+                "tertiary-fixed": "#6ffbbe",
+                "outline-variant": "#c3c6d7",
+                "on-background": "#191c1e",
+                "on-primary": "#ffffff",
+                "surface-tint": "#0053db",
+                "on-error-container": "#93000a",
+                "on-primary-fixed": "#00174b",
+                "on-primary-fixed-variant": "#003ea8",
+                "inverse-primary": "#b4c5ff",
+                "secondary-fixed": "#dae2fd",
+                "error": "#ba1a1a",
+                "on-secondary": "#ffffff",
+                "surface-container-high": "#e6e8ea",
+                "surface-container-low": "#f2f4f6",
+                "on-surface-variant": "#434655",
+                "on-tertiary": "#ffffff",
+                "tertiary": "#006242",
+                "primary-fixed-dim": "#b4c5ff",
+                "surface-container": "#eceef0",
+                "primary": "#004ac6",
+                "secondary-fixed-dim": "#bec6e0",
+                "on-tertiary-fixed": "#002113",
+                "on-error": "#ffffff",
+                "tertiary-fixed-dim": "#4edea3",
+                "tertiary-container": "#007d55",
+                "surface-dim": "#d8dadc",
+                "surface-bright": "#f7f9fb",
+                "error-container": "#ffdad6",
+                "background": "#f7f9fb",
+                "on-primary-container": "#eeefff",
+                "inverse-surface": "#2d3133",
+                "surface-variant": "#e0e3e5",
+                "surface": "#f7f9fb",
+                "secondary": "#565e74",
+                "outline": "#737686",
+                "inverse-on-surface": "#eff1f3"
+              },
+              fontFamily: {
+                "headline": ["Manrope"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+              },
+              borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "3xl": "1.5rem", "full": "9999px"},
+            },
+          },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen pb-32">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-sm dark:shadow-none h-14 flex justify-between items-center px-4">
+<button class="w-10 h-10 flex items-center justify-center text-slate-900 hover:bg-slate-50 transition-colors rounded-full active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="text-lg font-bold text-slate-900">정산서</h1>
+<button class="w-10 h-10 flex items-center justify-center text-slate-900 hover:bg-slate-50 transition-colors rounded-full active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+</header>
+<main class="pt-20 px-4 space-y-6">
+<!-- Month Filter Scroll -->
+<section class="overflow-x-auto pb-2 scrollbar-hide">
+<div class="flex gap-2 min-w-max">
+<button class="px-5 py-2.5 rounded-full bg-primary text-white font-bold text-sm transition-colors shadow-sm">전체</button>
+<button class="px-5 py-2.5 rounded-full bg-surface-container-low text-on-surface-variant font-medium text-sm hover:bg-surface-container-high transition-colors">3월</button>
+<button class="px-5 py-2.5 rounded-full bg-surface-container-low text-on-surface-variant font-medium text-sm hover:bg-surface-container-high transition-colors">2월</button>
+<button class="px-5 py-2.5 rounded-full bg-surface-container-low text-on-surface-variant font-medium text-sm hover:bg-surface-container-high transition-colors">1월</button>
+<button class="px-5 py-2.5 rounded-full bg-surface-container-low text-on-surface-variant font-medium text-sm hover:bg-surface-container-high transition-colors">12월</button>
+<button class="px-5 py-2.5 rounded-full bg-surface-container-low text-on-surface-variant font-medium text-sm hover:bg-surface-container-high transition-colors">11월</button>
+</div>
+</section>
+<!-- Settlement List -->
+<section class="space-y-4">
+<!-- Card 1: Expanded (Active State Example) -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] overflow-hidden">
+<div class="p-5">
+<div class="flex justify-between items-start mb-1">
+<div class="flex items-center gap-2">
+<span class="text-lg font-bold">2024년 3월</span>
+<span class="px-2.5 py-0.5 bg-tertiary-fixed text-on-tertiary-fixed-variant text-[11px] font-bold rounded-full">정산완료</span>
+</div>
+<span class="text-xl font-bold font-inter text-primary">₩3,420,500</span>
+</div>
+<p class="text-[11px] text-on-surface-variant mb-4">공제 ₩214,000 · 실수령 ₩3,206,500</p>
+<!-- Divider (Tonal) -->
+<div class="h-[1px] bg-surface-container-high w-full my-4"></div>
+<!-- Details Expanded -->
+<div class="space-y-3 mb-5">
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">기본 배송료</span>
+<span class="font-inter font-medium">₩3,120,500</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">인센티브</span>
+<span class="font-inter font-medium text-tertiary">+₩300,000</span>
+</div>
+<div class="h-[1px] bg-surface-container-low w-full"></div>
+<div class="flex justify-between text-sm font-bold">
+<span>소계</span>
+<span class="font-inter">₩3,420,500</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">보험료</span>
+<span class="font-inter font-medium text-error">-₩84,000</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">유류비 지원공제</span>
+<span class="font-inter font-medium text-error">-₩100,000</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">앱 사용료</span>
+<span class="font-inter font-medium text-error">-₩30,000</span>
+</div>
+<div class="h-[1px] bg-surface-container-low w-full"></div>
+<div class="flex justify-between items-center pt-2">
+<span class="text-base font-bold text-slate-900">실수령액</span>
+<span class="text-lg font-bold font-inter text-primary">₩3,206,500</span>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="flex gap-2">
+<button class="flex-1 py-3 px-4 rounded-xl border border-primary text-primary text-sm font-bold flex items-center justify-center gap-1 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-lg" data-icon="file_download">file_download</span>
+                            PDF 다운로드
+                        </button>
+<button class="flex items-center justify-center gap-1 text-primary text-sm font-bold px-2 active:opacity-70">
+                            세금계산서
+                            <span class="material-symbols-outlined text-lg" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 2: Collapsed -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] p-5 active:bg-surface-container-low transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-1">
+<div class="flex items-center gap-2">
+<span class="text-lg font-bold">2024년 2월</span>
+<span class="px-2.5 py-0.5 bg-secondary-container text-on-secondary-container text-[11px] font-bold rounded-full">확인중</span>
+</div>
+<span class="text-xl font-bold font-inter text-slate-900">₩2,980,000</span>
+</div>
+<div class="flex justify-between items-end">
+<p class="text-[11px] text-on-surface-variant">공제 ₩198,000 · 실수령 ₩2,782,000</p>
+<span class="material-symbols-outlined text-slate-300" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+<!-- Card 3: Collapsed -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] p-5 active:bg-surface-container-low transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-1">
+<div class="flex items-center gap-2">
+<span class="text-lg font-bold">2024년 1월</span>
+<span class="px-2.5 py-0.5 bg-error-container text-on-error-container text-[11px] font-bold rounded-full">미정산</span>
+</div>
+<span class="text-xl font-bold font-inter text-slate-900">₩3,150,200</span>
+</div>
+<div class="flex justify-between items-end">
+<p class="text-[11px] text-on-surface-variant">공제 ₩205,000 · 실수령 ₩2,945,200</p>
+<span class="material-symbols-outlined text-slate-300" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+<!-- Card 4: Collapsed -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] p-5 active:bg-surface-container-low transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-1">
+<div class="flex items-center gap-2">
+<span class="text-lg font-bold">2023년 12월</span>
+<span class="px-2.5 py-0.5 bg-tertiary-fixed text-on-tertiary-fixed-variant text-[11px] font-bold rounded-full">정산완료</span>
+</div>
+<span class="text-xl font-bold font-inter text-slate-900">₩3,880,000</span>
+</div>
+<div class="flex justify-between items-end">
+<p class="text-[11px] text-on-surface-variant">공제 ₩234,000 · 실수령 ₩3,646,000</p>
+<span class="material-symbols-outlined text-slate-300" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+</section>
+<!-- Summary Insight Bento Card -->
+<section class="bg-primary text-white p-6 rounded-3xl space-y-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="insights">insights</span>
+</div>
+<div>
+<h3 class="text-sm font-medium opacity-80">최근 3개월 평균 실수령액</h3>
+<p class="text-xl font-bold font-inter">₩3,124,000</p>
+</div>
+</div>
+<div class="h-16 w-full flex items-end gap-1 px-1">
+<!-- Sparkline Mockup -->
+<div class="flex-1 bg-white/10 rounded-t-sm transition-all hover:bg-white/30 h-[40%]"></div>
+<div class="flex-1 bg-white/10 rounded-t-sm transition-all hover:bg-white/30 h-[60%]"></div>
+<div class="flex-1 bg-white/10 rounded-t-sm transition-all hover:bg-white/30 h-[55%]"></div>
+<div class="flex-1 bg-white/10 rounded-t-sm transition-all hover:bg-white/30 h-[85%]"></div>
+<div class="flex-1 bg-white/10 rounded-t-sm transition-all hover:bg-white/30 h-[70%]"></div>
+<div class="flex-1 bg-white rounded-t-sm h-full"></div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full h-[80px] z-50 rounded-t-3xl bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)] flex justify-around items-center px-6 pb-safe">
+<a class="flex flex-col items-center justify-center text-slate-400 gap-1 hover:opacity-80 transition-opacity tap-highlight-none" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="text-[11px] font-medium tracking-tight">홈</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary font-bold gap-1 hover:opacity-80 transition-opacity tap-highlight-none" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long" style="font-variation-settings: 'FILL' 1;">receipt_long</span>
+<span class="text-[11px] font-medium tracking-tight">정산서</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 gap-1 hover:opacity-80 transition-opacity tap-highlight-none" href="#">
+<span class="material-symbols-outlined" data-icon="campaign">campaign</span>
+<span class="text-[11px] font-medium tracking-tight">공지사항</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 gap-1 hover:opacity-80 transition-opacity tap-highlight-none" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="text-[11px] font-medium tracking-tight">프로필</span>
+</a>
+</nav>
+</body></html>

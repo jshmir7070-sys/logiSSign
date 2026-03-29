@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+
+<html lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Precision Velocity - Settlement Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Pretendard:wght@400;500;600;700;800&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "inverse-on-surface": "#eff1f3",
+                        "tertiary-fixed": "#6ffbbe",
+                        "surface-container": "#eceef0",
+                        "secondary-fixed": "#dae2fd",
+                        "on-tertiary-fixed": "#002113",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-primary-container": "#eeefff",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "primary-container": "#2563eb",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#f2f4f6",
+                        "primary": "#004ac6",
+                        "on-surface-variant": "#434655",
+                        "surface-dim": "#d8dadc",
+                        "on-surface": "#191c1e",
+                        "surface-variant": "#e0e3e5",
+                        "secondary-container": "#dae2fd",
+                        "on-secondary-fixed": "#131b2e",
+                        "tertiary-container": "#007d55",
+                        "surface-tint": "#0053db",
+                        "surface-bright": "#f7f9fb",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "tertiary": "#006242",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "primary-fixed": "#dbe1ff",
+                        "surface-container-high": "#e6e8ea",
+                        "surface": "#f7f9fb",
+                        "on-error": "#ffffff",
+                        "background": "#f7f9fb",
+                        "secondary": "#565e74",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "on-tertiary-container": "#bdffdb",
+                        "outline-variant": "#c3c6d7",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "on-secondary-container": "#5c647a",
+                        "on-primary-fixed": "#00174b",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "outline": "#737686",
+                        "on-background": "#191c1e",
+                        "inverse-primary": "#b4c5ff",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#2d3133"
+                    },
+                    fontFamily: {
+                        "headline": ["Pretendard"],
+                        "body": ["Inter"],
+                        "label": ["Pretendard"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Pretendard', sans-serif; }
+        .data-font { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- SideNavBar Shell -->
+<aside class="fixed left-0 top-0 h-screen w-[220px] bg-slate-900 dark:bg-slate-950 shadow-xl flex flex-col py-6 z-50">
+<div class="px-6 mb-8">
+<h1 class="text-xl font-bold text-white tracking-tight">Precision Velocity</h1>
+<p class="text-xs text-slate-400 mt-1">Last-Mile Admin</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-3 flex items-center gap-3 transition-colors hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="text-sm">대시보드</span>
+</a>
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-3 flex items-center gap-3 transition-colors hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="text-sm">기사 관리</span>
+</a>
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-3 flex items-center gap-3 transition-colors hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="text-sm">계약서 관리</span>
+</a>
+<a class="bg-blue-600 text-white rounded-lg mx-2 my-1 px-4 py-3 flex items-center gap-3 active:scale-95 duration-150 shadow-lg shadow-blue-900/20" href="#">
+<span class="material-symbols-outlined" data-icon="payments" style="font-variation-settings: 'FILL' 1;">payments</span>
+<span class="text-sm">정산 관리</span>
+</a>
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-3 flex items-center gap-3 transition-colors hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="text-sm">매출 리포트</span>
+</a>
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-3 flex items-center gap-3 transition-colors hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="campaign">campaign</span>
+<span class="text-sm">공지 관리</span>
+</a>
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-3 flex items-center gap-3 transition-colors hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-sm">설정</span>
+</a>
+</nav>
+<div class="mt-auto px-4 border-t border-slate-800 pt-6">
+<div class="flex items-center gap-3 px-2 py-3 bg-slate-800/50 rounded-xl">
+<div class="w-8 h-8 rounded-full overflow-hidden bg-slate-700">
+<img alt="Agency Logo" class="w-full h-full object-cover" data-alt="professional minimalist delivery agency logo with blue and white accents on a dark slate background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDQABk1KPGK6l8a3M2x5y2Acte0JyK4032b1DiieHL1pMglkkDZbIcql1yWhhXx_s9TOE6z0fHII-TeGiqWR8moGxMDlk0nx7LCOy1jZjq3zavAElHjady7QE0NyZOFsrmbhiwlbrcw9Txa8wrM2YVpAlQD2sUP5TfS9jfPECcqDNwNgHeUZl7F9qxkPYUFv2WCnxEyGpxcZuSRk51ta8dwgK3tURc7vCbAUoOJiAU0DkQsEXQO41bjSRGyWhF6WDQ_wT3qbyaUXNB"/>
+</div>
+<div>
+<p class="text-xs font-bold text-white">운영 대행사</p>
+<p class="text-[10px] text-slate-400">관리자 계정</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-[220px] min-h-screen">
+<!-- TopNavBar Shell -->
+<header class="fixed top-0 right-0 left-[220px] h-16 bg-white/80 backdrop-blur-md flex justify-between items-center px-8 z-40">
+<div class="flex items-center gap-4">
+<h2 class="font-['Pretendard'] font-semibold text-lg text-on-surface">정산 관리</h2>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative">
+<span class="material-symbols-outlined text-on-surface-variant hover:bg-slate-50 rounded-full p-2 transition-all cursor-pointer" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full ring-2 ring-white"></span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant hover:bg-slate-50 rounded-full p-2 transition-all cursor-pointer" data-icon="help_outline">help_outline</span>
+<div class="flex items-center gap-3 pl-4 border-l border-surface-container">
+<img alt="Admin Profile" class="w-8 h-8 rounded-full border-2 border-primary/20" data-alt="portrait of a professional korean male logistics manager in smart casual attire with a friendly expression in a bright office" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCzVjoeT67UAPUjDCYFqHkdxH5QHab3xUqjVpQ6KKCox8M9LvzPV_2xzu8iRMIY4cUmBhP_7tGCVuToeQsyy5Mjf6cm1UQjlM2nATgsjFAHc0RanP9BYtHEXLjxyuwoBHjGK5Nh33daCtjIcQxhHyuxtvYR5t84pnZb9IPp-GW9Fl0NQC8vRDJ_4JvYPc6sjv_z2dOajBubn3Fo70oH7ivuY6CNLFPwtNfu2lzsxQuvgZyx7rQ4_lXBzJSMt1YkNkbIj0_-zZXne3P5"/>
+</div>
+</div>
+</header>
+<!-- Content Canvas -->
+<div class="pt-24 px-8 pb-12 max-w-7xl mx-auto">
+<!-- Sub-tabs Navigation -->
+<div class="flex gap-8 mb-8 border-b-0">
+<button class="pb-3 text-lg font-bold text-primary border-b-2 border-primary px-1">정산서 생성</button>
+<button class="pb-3 text-lg font-medium text-on-surface-variant hover:text-on-surface px-1 transition-colors">정산 규칙</button>
+<button class="pb-3 text-lg font-medium text-on-surface-variant hover:text-on-surface px-1 transition-colors">세금계산서</button>
+</div>
+<!-- Step Flow Visualization -->
+<div class="bg-surface-container-low rounded-3xl p-8 mb-8">
+<div class="flex items-center justify-between max-w-4xl mx-auto relative">
+<!-- Progress Line -->
+<div class="absolute top-1/2 left-0 w-full h-0.5 bg-surface-container-highest -translate-y-1/2 z-0"></div>
+<div class="absolute top-1/2 left-0 w-1/2 h-0.5 bg-primary -translate-y-1/2 z-0"></div>
+<!-- Step 1 -->
+<div class="relative z-10 flex flex-col items-center gap-3">
+<div class="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold shadow-lg shadow-primary/20">1</div>
+<span class="text-sm font-semibold text-primary">월 + 원청사 선택</span>
+</div>
+<!-- Step 2 -->
+<div class="relative z-10 flex flex-col items-center gap-3">
+<div class="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold ring-8 ring-surface-container-low">2</div>
+<span class="text-sm font-semibold text-primary">기사별 데이터 입력</span>
+</div>
+<!-- Step 3 -->
+<div class="relative z-10 flex flex-col items-center gap-3">
+<div class="w-12 h-12 rounded-full bg-surface-container-highest text-on-surface-variant flex items-center justify-center font-bold ring-8 ring-surface-container-low">3</div>
+<span class="text-sm font-medium text-on-surface-variant">미리보기 및 발송</span>
+</div>
+</div>
+</div>
+<!-- Section Title & Controls -->
+<div class="flex justify-between items-end mb-6">
+<div>
+<h3 class="text-2xl font-extrabold text-on-surface tracking-tight mb-1">기사별 데이터 입력</h3>
+<p class="text-on-surface-variant text-sm font-medium">CJ대한통운 - 2024년 04월 정산분</p>
+</div>
+<div class="flex gap-3">
+<button class="px-5 py-2.5 rounded-xl border border-outline-variant font-semibold text-sm hover:bg-white transition-all">임시저장</button>
+<button class="px-5 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary-container transition-all shadow-md shadow-primary/10">다음 단계</button>
+</div>
+</div>
+<!-- Data Entry Table (No-border editorial style) -->
+<div class="bg-surface-container-lowest rounded-[2rem] p-4 shadow-sm">
+<table class="w-full text-left border-separate border-spacing-y-4">
+<thead>
+<tr class="text-on-surface-variant text-xs font-bold uppercase tracking-wider">
+<th class="px-6 py-2">기사명</th>
+<th class="px-6 py-2 text-center">배송건수</th>
+<th class="px-6 py-2 text-right">단가 (원)</th>
+<th class="px-6 py-2 text-right">소계 (원)</th>
+<th class="px-6 py-2 text-right">공제 (원)</th>
+<th class="px-6 py-2 text-right">실정산액 (원)</th>
+</tr>
+</thead>
+<tbody class="space-y-4">
+<!-- Row 1 -->
+<tr class="group hover:bg-surface-container-high transition-all rounded-2xl overflow-hidden">
+<td class="px-6 py-5 rounded-l-2xl">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center font-bold text-xs text-primary">김</div>
+<span class="font-bold text-on-surface">김철수 (A-01)</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<input class="w-24 mx-auto block bg-surface-container-low border-none rounded-lg text-center data-font font-semibold focus:ring-2 focus:ring-primary/20" type="number" value="1240"/>
+</td>
+<td class="px-6 py-5 text-right data-font text-on-surface-variant">850</td>
+<td class="px-6 py-5 text-right data-font font-semibold text-on-surface">1,054,000</td>
+<td class="px-6 py-5 text-right data-font text-error">- 124,500</td>
+<td class="px-6 py-5 text-right data-font font-bold text-primary rounded-r-2xl">929,500</td>
+</tr>
+<!-- Row 2 -->
+<tr class="group hover:bg-surface-container-high transition-all rounded-2xl overflow-hidden">
+<td class="px-6 py-5 rounded-l-2xl">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center font-bold text-xs text-primary">이</div>
+<span class="font-bold text-on-surface">이영희 (B-05)</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<input class="w-24 mx-auto block bg-surface-container-low border-none rounded-lg text-center data-font font-semibold focus:ring-2 focus:ring-primary/20" type="number" value="980"/>
+</td>
+<td class="px-6 py-5 text-right data-font text-on-surface-variant">850</td>
+<td class="px-6 py-5 text-right data-font font-semibold text-on-surface">833,000</td>
+<td class="px-6 py-5 text-right data-font text-error">- 95,000</td>
+<td class="px-6 py-5 text-right data-font font-bold text-primary rounded-r-2xl">738,000</td>
+</tr>
+<!-- Row 3 -->
+<tr class="group hover:bg-surface-container-high transition-all rounded-2xl overflow-hidden">
+<td class="px-6 py-5 rounded-l-2xl">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center font-bold text-xs text-primary">박</div>
+<span class="font-bold text-on-surface">박지민 (A-12)</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<input class="w-24 mx-auto block bg-surface-container-low border-none rounded-lg text-center data-font font-semibold focus:ring-2 focus:ring-primary/20" type="number" value="1450"/>
+</td>
+<td class="px-6 py-5 text-right data-font text-on-surface-variant">850</td>
+<td class="px-6 py-5 text-right data-font font-semibold text-on-surface">1,232,500</td>
+<td class="px-6 py-5 text-right data-font text-error">- 148,000</td>
+<td class="px-6 py-5 text-right data-font font-bold text-primary rounded-r-2xl">1,084,500</td>
+</tr>
+</tbody>
+<!-- Summary Footer Row -->
+<tfoot>
+<tr class="bg-primary/5 rounded-2xl">
+<td class="px-6 py-6 rounded-l-2xl">
+<span class="text-sm font-bold text-primary">합계 (3명)</span>
+</td>
+<td class="px-6 py-6 text-center data-font font-bold text-primary">3,670</td>
+<td class="px-6 py-6 text-right"></td>
+<td class="px-6 py-6 text-right data-font font-bold text-on-surface">3,119,500</td>
+<td class="px-6 py-6 text-right data-font font-bold text-error">- 367,500</td>
+<td class="px-6 py-6 text-right data-font font-extrabold text-2xl text-primary rounded-r-2xl">2,752,000</td>
+</tr>
+</tfoot>
+</table>
+</div>
+<!-- Bento Layout for Analytics/Rules (Supplementary context) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+<div class="bg-surface-container-low p-6 rounded-[1.5rem] md:col-span-1">
+<h4 class="text-sm font-bold text-on-surface-variant mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="info">info</span> 정산 안내
+                    </h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">
+                        현재 입력중인 CJ대한통운의 경우 기본 배송 단가는 850원으로 자동 고정되어 있습니다. 신선식품 및 특수 화물에 대한 할증은 '정산 규칙' 탭에서 별도로 설정 가능합니다.
+                    </p>
+</div>
+<div class="bg-surface-container-low p-6 rounded-[1.5rem] md:col-span-2 flex justify-between items-center">
+<div>
+<h4 class="text-sm font-bold text-on-surface-variant mb-1">전월 대비 정산 규모</h4>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-bold data-font">+ 12.4%</span>
+<span class="text-xs font-medium text-tertiary">지난달 보다 더 많은 배송 완료</span>
+</div>
+</div>
+<div class="h-16 w-48 overflow-hidden rounded-xl bg-white/50 relative">
+<!-- Abstract sparkline representation -->
+<div class="absolute inset-0 flex items-end">
+<div class="w-1/6 bg-primary/20 h-1/2"></div>
+<div class="w-1/6 bg-primary/30 h-2/3"></div>
+<div class="w-1/6 bg-primary/40 h-1/2"></div>
+<div class="w-1/6 bg-primary/50 h-3/4"></div>
+<div class="w-1/6 bg-primary/60 h-4/5"></div>
+<div class="w-1/6 bg-primary h-full"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Action Button (FAB) - Highly Contextual for Home/Dash but showing for navigation convenience here -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-primary text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+</body></html>

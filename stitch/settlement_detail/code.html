@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@500;700;800&amp;family=Pretendard:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "outline": "#737686",
+              "surface-bright": "#f7f9fb",
+              "tertiary-fixed": "#6ffbbe",
+              "surface-container-highest": "#e0e3e5",
+              "tertiary-container": "#007d55",
+              "secondary-container": "#dae2fd",
+              "tertiary-fixed-dim": "#4edea3",
+              "on-error-container": "#93000a",
+              "surface": "#f7f9fb",
+              "on-primary-fixed-variant": "#003ea8",
+              "primary-fixed-dim": "#b4c5ff",
+              "surface-tint": "#0053db",
+              "surface-container-low": "#f2f4f6",
+              "on-primary-container": "#eeefff",
+              "tertiary": "#006242",
+              "on-secondary": "#ffffff",
+              "primary-container": "#2563eb",
+              "surface-dim": "#d8dadc",
+              "surface-container-high": "#e6e8ea",
+              "primary": "#004ac6",
+              "outline-variant": "#c3c6d7",
+              "secondary-fixed": "#dae2fd",
+              "secondary": "#565e74",
+              "on-surface-variant": "#434655",
+              "error-container": "#ffdad6",
+              "on-primary": "#ffffff",
+              "background": "#f7f9fb",
+              "primary-fixed": "#dbe1ff",
+              "inverse-primary": "#b4c5ff",
+              "on-tertiary-fixed-variant": "#005236",
+              "on-secondary-container": "#5c647a",
+              "on-tertiary-container": "#bdffdb",
+              "on-error": "#ffffff",
+              "on-background": "#191c1e",
+              "on-surface": "#191c1e",
+              "error": "#ba1a1a",
+              "surface-variant": "#e0e3e5",
+              "on-secondary-fixed": "#131b2e",
+              "inverse-on-surface": "#eff1f3",
+              "surface-container-lowest": "#ffffff",
+              "surface-container": "#eceef0",
+              "on-primary-fixed": "#00174b",
+              "on-secondary-fixed-variant": "#3f465c",
+              "on-tertiary": "#ffffff",
+              "secondary-fixed-dim": "#bec6e0",
+              "on-tertiary-fixed": "#002113",
+              "inverse-surface": "#2d3133"
+            },
+            fontFamily: {
+              "headline": ["Pretendard", "Manrope"],
+              "body": ["Pretendard", "Inter"],
+              "label": ["Pretendard", "Inter"],
+              "data": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "3xl": "1.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body { font-family: 'Pretendard', sans-serif; }
+        .data-font { font-family: 'Inter', sans-serif; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl">
+<div class="flex items-center justify-between px-4 h-14 w-full max-w-md mx-auto">
+<button aria-label="Back" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors active:scale-95">
+<span class="material-symbols-outlined text-on-surface" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-['Pretendard'] font-semibold text-lg tracking-tight text-slate-900">정산 상세</h1>
+<div class="w-10"></div> <!-- Spacer for centering -->
+</div>
+</header>
+<main class="max-w-md mx-auto px-5 pt-20 space-y-6">
+<!-- Hero Section: Settlement Amount -->
+<section class="relative overflow-hidden bg-surface-container-lowest rounded-3xl p-6 shadow-[0_8px_32px_rgba(15,23,42,0.04)]">
+<div class="absolute -right-8 -top-8 w-32 h-32 bg-primary/5 rounded-full blur-2xl"></div>
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<span class="text-sm font-medium text-secondary">2024년 3월 정산분</span>
+<span class="px-3 py-1 bg-tertiary-fixed text-on-tertiary-fixed-variant text-[12px] font-bold rounded-full">정산완료</span>
+</div>
+<h2 class="text-3xl font-extrabold tracking-tight mt-2">
+<span class="data-font">₩3,420,500</span>
+</h2>
+<p class="text-sm text-secondary mt-1">총 정산 합계액 (세전)</p>
+</div>
+</section>
+<!-- Summary Row -->
+<section class="bg-surface-container-low rounded-3xl p-5 flex items-center justify-between">
+<div class="flex-1 text-center">
+<p class="text-[11px] text-secondary font-medium mb-1">총 배송건수</p>
+<p class="text-sm font-bold"><span class="data-font">1,240</span>건</p>
+</div>
+<div class="w-px h-8 bg-outline-variant/20"></div>
+<div class="flex-1 text-center">
+<p class="text-[11px] text-secondary font-medium mb-1">일평균 건수</p>
+<p class="text-sm font-bold"><span class="data-font">41</span>건</p>
+</div>
+<div class="w-px h-8 bg-outline-variant/20"></div>
+<div class="flex-1 text-center">
+<p class="text-[11px] text-secondary font-medium mb-1">배송 수익</p>
+<p class="text-sm font-bold text-primary"><span class="data-font">₩3.1M</span></p>
+</div>
+</section>
+<!-- Breakdown: Earnings -->
+<section class="space-y-4">
+<h3 class="text-sm font-bold text-on-surface-variant flex items-center gap-2 px-1">
+<span class="material-symbols-outlined text-[18px]" data-icon="payments">payments</span>
+                1. 수익 내역
+            </h3>
+<div class="bg-surface-container-lowest rounded-3xl p-6 space-y-4 shadow-sm">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-sm font-semibold">기본 배송료</p>
+<p class="text-xs text-secondary mt-0.5"><span class="data-font">1,240</span>건 × <span class="data-font">₩850</span></p>
+</div>
+<span class="text-sm font-bold data-font">₩1,054,000</span>
+</div>
+<div class="flex justify-between items-center">
+<p class="text-sm font-semibold">추가 인센티브</p>
+<span class="text-sm font-bold data-font">₩300,000</span>
+</div>
+<div class="flex justify-between items-center">
+<p class="text-sm font-semibold">기타 수당</p>
+<span class="text-sm font-bold data-font">₩50,000</span>
+</div>
+<div class="pt-3 border-t border-outline-variant/10 flex justify-between items-center">
+<p class="text-sm font-bold">수익 합계</p>
+<span class="text-sm font-extrabold text-primary data-font">₩1,404,000</span>
+</div>
+</div>
+</section>
+<!-- Breakdown: Deductions -->
+<section class="space-y-4">
+<h3 class="text-sm font-bold text-on-surface-variant flex items-center gap-2 px-1">
+<span class="material-symbols-outlined text-[18px]" data-icon="account_balance_wallet">account_balance_wallet</span>
+                2. 공제 내역
+            </h3>
+<div class="bg-surface-container-lowest rounded-3xl p-6 space-y-4 shadow-sm">
+<div class="flex justify-between items-center">
+<p class="text-sm font-semibold">보험료</p>
+<span class="text-sm font-bold text-error data-font">-₩84,000</span>
+</div>
+<div class="flex justify-between items-center">
+<p class="text-sm font-semibold">유류비 지원 공제</p>
+<span class="text-sm font-bold text-error data-font">-₩100,000</span>
+</div>
+<div class="flex justify-between items-center">
+<p class="text-sm font-semibold">앱 사용료</p>
+<span class="text-sm font-bold text-error data-font">-₩30,000</span>
+</div>
+<div class="pt-3 border-t border-outline-variant/10 flex justify-between items-center">
+<p class="text-sm font-bold">공제 합계</p>
+<span class="text-sm font-extrabold text-error data-font">-₩214,000</span>
+</div>
+</div>
+</section>
+<!-- Final Net Amount Card -->
+<section class="bg-primary/5 rounded-3xl p-6 border border-primary/10">
+<div class="flex justify-between items-end">
+<div>
+<p class="text-xs font-bold text-primary mb-1 uppercase tracking-wider">Estimated Payout</p>
+<p class="text-lg font-bold text-on-surface">최종 실수령액</p>
+</div>
+<div class="text-right">
+<p class="text-3xl font-black text-primary data-font tracking-tight">₩3,206,500</p>
+</div>
+</div>
+</section>
+<!-- Action Buttons -->
+<div class="flex flex-col gap-3 py-4">
+<button class="w-full h-14 bg-surface-container-lowest border border-outline-variant/30 text-primary font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors active:scale-95">
+<span class="material-symbols-outlined text-[20px]" data-icon="receipt_long">receipt_long</span>
+                세금계산서 확인
+            </button>
+<button class="w-full h-14 bg-primary text-on-primary font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:bg-primary-container transition-all active:scale-95">
+<span class="material-symbols-outlined text-[20px]" data-icon="download">download</span>
+                상세 정산표 다운로드 (PDF)
+            </button>
+</div>
+<!-- Support Info -->
+<div class="p-6 text-center">
+<p class="text-[12px] text-secondary leading-relaxed">
+                정산 내역에 이의가 있으신 경우<br/>
+                관리자 센터(<span class="data-font">1588-0000</span>)로 문의해 주세요.
+            </p>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 rounded-t-3xl bg-white/90 backdrop-blur-lg shadow-[0_-8px_32px_rgba(15,23,42,0.06)]">
+<div class="fixed bottom-0 left-0 w-full flex justify-around items-center px-6 pb-6 pt-3 max-w-md mx-auto relative">
+<a class="flex flex-col items-center justify-center text-slate-400 hover:text-blue-500 transition-all" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="home">home</span>
+<span class="font-['Pretendard'] text-[11px] font-medium tracking-wide">홈</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 hover:text-blue-500 transition-all" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="directions_run">directions_run</span>
+<span class="font-['Pretendard'] text-[11px] font-medium tracking-wide">운행</span>
+</a>
+<a class="flex flex-col items-center justify-center text-blue-600 font-bold bg-blue-50 rounded-2xl px-3 py-1" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="payments" style="font-variation-settings: 'FILL' 1;">payments</span>
+<span class="font-['Pretendard'] text-[11px] font-medium tracking-wide">정산</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 hover:text-blue-500 transition-all" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="settings">settings</span>
+<span class="font-['Pretendard'] text-[11px] font-medium tracking-wide">설정</span>
+</a>
+</div>
+</nav>
+</body></html>

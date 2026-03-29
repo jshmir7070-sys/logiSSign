@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html class="light" lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>계약서 템플릿 편집기 - Precision Velocity</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script>
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "inverse-on-surface": "#eff1f3",
+        "tertiary-fixed": "#6ffbbe",
+        "surface-container": "#eceef0",
+        "secondary-fixed": "#dae2fd",
+        "on-tertiary-fixed": "#002113",
+        "surface-container-highest": "#e0e3e5",
+        "on-primary-container": "#eeefff",
+        "primary-fixed-dim": "#b4c5ff",
+        "primary-container": "#2563eb",
+        "error-container": "#ffdad6",
+        "surface-container-low": "#f2f4f6",
+        "primary": "#004ac6",
+        "on-surface-variant": "#434655",
+        "surface-dim": "#d8dadc",
+        "on-surface": "#191c1e",
+        "surface-variant": "#e0e3e5",
+        "secondary-container": "#dae2fd",
+        "on-secondary-fixed": "#131b2e",
+        "tertiary-container": "#007d55",
+        "surface-tint": "#0053db",
+        "surface-bright": "#f7f9fb",
+        "error": "#ba1a1a",
+        "on-error": "#ffffff",
+        "background": "#f7f9fb",
+        "secondary": "#565e74",
+        "outline-variant": "#c3c6d7",
+        "on-primary": "#ffffff",
+        "surface-container-lowest": "#ffffff",
+        "outline": "#737686",
+        "on-background": "#191c1e",
+      },
+      fontFamily: {
+        "headline": ["Pretendard", "sans-serif"],
+        "body": ["Inter", "Pretendard"],
+        "label": ["Inter", "Pretendard"]
+      },
+      borderRadius: {
+        "DEFAULT": "0.25rem",
+        "lg": "0.5rem",
+        "xl": "0.75rem",
+        "2xl": "1.5rem",
+        "full": "9999px"
+      },
+    },
+  },
+}
+</script>
+<style>
+body { font-family: 'Pretendard', sans-serif; }
+.font-inter { font-family: 'Inter', sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+.variable-chip {
+  display: inline-flex;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.10), rgba(0, 74, 198, 0.08));
+  color: #004ac6;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  padding: 2px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  line-height: 1.6;
+}
+
+.editor-content [contenteditable] {
+  outline: none;
+  line-height: 1.85;
+  font-size: 0.9375rem;
+  color: #191c1e;
+}
+
+.preview-paper {
+  background: white;
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08), 0 1px 4px rgba(15, 23, 42, 0.04);
+  aspect-ratio: 210 / 297;
+}
+
+.toolbar-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 150ms;
+  color: #434655;
+  cursor: pointer;
+}
+.toolbar-btn:hover {
+  background: #eceef0;
+  color: #191c1e;
+}
+.toolbar-btn.active {
+  background: rgba(0, 74, 198, 0.1);
+  color: #004ac6;
+}
+</style>
+</head>
+
+<body class="bg-background text-on-surface antialiased">
+
+<!-- Sidebar -->
+<aside class="fixed left-0 top-0 h-screen w-[240px] bg-[#0F172A] flex flex-col py-6 z-50">
+  <div class="px-6 mb-10">
+    <h1 class="text-lg font-bold text-white tracking-tight">Precision Velocity</h1>
+    <p class="text-[10px] text-slate-400 mt-1 uppercase tracking-[0.15em]">Agency Portal</p>
+  </div>
+
+  <nav class="flex-1 space-y-0.5 overflow-y-auto no-scrollbar px-2">
+    <a class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl" href="#">
+      <span class="material-symbols-outlined text-[20px]">space_dashboard</span>
+      <span class="text-sm">대시보드</span>
+    </a>
+    <a class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl" href="#">
+      <span class="material-symbols-outlined text-[20px]">group</span>
+      <span class="text-sm">기사 관리</span>
+    </a>
+    <a class="bg-primary-container text-white px-4 py-3 flex items-center gap-3 rounded-xl" href="#">
+      <span class="material-symbols-outlined text-[20px]">description</span>
+      <span class="text-sm font-medium">계약서 관리</span>
+    </a>
+    <a class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl" href="#">
+      <span class="material-symbols-outlined text-[20px]">payments</span>
+      <span class="text-sm">정산 관리</span>
+    </a>
+    <a class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl" href="#">
+      <span class="material-symbols-outlined text-[20px]">analytics</span>
+      <span class="text-sm">매출 리포트</span>
+    </a>
+    <a class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl" href="#">
+      <span class="material-symbols-outlined text-[20px]">campaign</span>
+      <span class="text-sm">공지 관리</span>
+    </a>
+    <a class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl" href="#">
+      <span class="material-symbols-outlined text-[20px]">settings</span>
+      <span class="text-sm">설정</span>
+    </a>
+  </nav>
+
+  <div class="px-2 mt-auto pt-6">
+    <div class="mx-2 mb-2 rounded-xl bg-white/5 px-4 py-3 flex items-center gap-3">
+      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary-container to-primary flex items-center justify-center">
+        <span class="text-white text-xs font-bold">강</span>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-white text-sm font-medium truncate">강남 제1 대리점</p>
+        <p class="text-slate-500 text-[11px]">관리자</p>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- Glass Header -->
+<header class="fixed top-0 right-0 left-[240px] h-16 bg-white/80 backdrop-blur-[20px] flex justify-between items-center px-8 z-40">
+  <div class="flex items-center gap-4">
+    <h2 class="font-semibold text-base text-on-surface">계약서 템플릿 편집기</h2>
+  </div>
+  <div class="flex items-center gap-3">
+    <button class="hover:bg-surface-container-low rounded-full p-2 transition-all duration-200 relative">
+      <span class="material-symbols-outlined text-on-surface-variant text-[22px]">notifications</span>
+      <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full"></span>
+    </button>
+    <button class="hover:bg-surface-container-low rounded-full p-2 transition-all duration-200">
+      <span class="material-symbols-outlined text-on-surface-variant text-[22px]">help_outline</span>
+    </button>
+    <div class="h-8 w-8 rounded-full bg-gradient-to-br from-primary-container to-primary flex items-center justify-center">
+      <span class="text-white text-xs font-bold">관</span>
+    </div>
+  </div>
+</header>
+
+<!-- Main Content -->
+<main class="ml-[240px] pt-16 min-h-screen">
+
+  <!-- Top Bar: Breadcrumb + Actions -->
+  <div class="bg-surface-container-low px-8 py-5">
+    <!-- Breadcrumb -->
+    <div class="flex items-center gap-1.5 text-sm mb-4">
+      <a href="#" class="text-on-surface-variant hover:text-primary transition-colors">계약서 관리</a>
+      <span class="material-symbols-outlined text-outline text-[16px]">chevron_right</span>
+      <a href="#" class="text-on-surface-variant hover:text-primary transition-colors">템플릿 관리</a>
+      <span class="material-symbols-outlined text-outline text-[16px]">chevron_right</span>
+      <span class="text-on-surface font-medium">CJ대한통운 위수탁 계약서</span>
+    </div>
+
+    <!-- Title + Actions -->
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-surface-container-lowest flex items-center justify-center">
+          <span class="material-symbols-outlined text-primary text-[22px]">edit_document</span>
+        </div>
+        <div>
+          <input
+            type="text"
+            value="CJ대한통운 위수탁 계약서"
+            class="text-xl font-bold text-on-surface bg-transparent border-none p-0 focus:ring-0 focus:outline-none hover:text-primary transition-colors cursor-text"
+            style="width: 320px;"
+          />
+          <p class="text-xs text-on-surface-variant mt-0.5">마지막 수정: 2024.03.15 14:30</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button class="px-5 py-2.5 rounded-lg text-sm font-medium text-on-surface-variant bg-transparent hover:bg-surface-container transition-all duration-200" style="border: 1px solid rgba(115, 118, 134, 0.15);">
+          <span class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px]">save</span>
+            임시저장
+          </span>
+        </button>
+        <button class="px-6 py-2.5 rounded-lg text-sm font-semibold text-on-primary bg-gradient-to-r from-primary to-primary-container hover:shadow-lg hover:shadow-primary/20 transition-all duration-200">
+          <span class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px]">check_circle</span>
+            저장
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Split Layout -->
+  <div class="flex gap-6 px-8 py-6" style="height: calc(100vh - 16rem);">
+
+    <!-- Left: Editor Area (55%) -->
+    <div class="w-[55%] flex flex-col min-h-0">
+      <!-- Toolbar -->
+      <div class="bg-surface-container-lowest rounded-2xl rounded-b-none px-4 py-2.5 flex items-center gap-1">
+        <button class="toolbar-btn active" title="굵게">
+          <span class="material-symbols-outlined text-[20px]">format_bold</span>
+        </button>
+        <button class="toolbar-btn" title="기울임">
+          <span class="material-symbols-outlined text-[20px]">format_italic</span>
+        </button>
+        <button class="toolbar-btn" title="밑줄">
+          <span class="material-symbols-outlined text-[20px]">format_underlined</span>
+        </button>
+
+        <div class="w-px h-5 bg-outline-variant/20 mx-1.5"></div>
+
+        <button class="toolbar-btn" title="글머리 기호">
+          <span class="material-symbols-outlined text-[20px]">format_list_bulleted</span>
+        </button>
+        <button class="toolbar-btn" title="번호 매기기">
+          <span class="material-symbols-outlined text-[20px]">format_list_numbered</span>
+        </button>
+
+        <div class="w-px h-5 bg-outline-variant/20 mx-1.5"></div>
+
+        <button class="toolbar-btn" title="왼쪽 정렬">
+          <span class="material-symbols-outlined text-[20px]">format_align_left</span>
+        </button>
+        <button class="toolbar-btn" title="가운데 정렬">
+          <span class="material-symbols-outlined text-[20px]">format_align_center</span>
+        </button>
+        <button class="toolbar-btn" title="오른쪽 정렬">
+          <span class="material-symbols-outlined text-[20px]">format_align_right</span>
+        </button>
+
+        <div class="w-px h-5 bg-outline-variant/20 mx-1.5"></div>
+
+        <button class="toolbar-btn" title="되돌리기">
+          <span class="material-symbols-outlined text-[20px]">undo</span>
+        </button>
+        <button class="toolbar-btn" title="다시 실행">
+          <span class="material-symbols-outlined text-[20px]">redo</span>
+        </button>
+
+        <div class="flex-1"></div>
+
+        <div class="flex items-center gap-2 text-xs text-on-surface-variant">
+          <span class="material-symbols-outlined text-[16px]">text_fields</span>
+          <span class="font-inter">14px</span>
+        </div>
+      </div>
+
+      <!-- Editor Content -->
+      <div class="editor-content bg-surface-container-lowest rounded-2xl rounded-t-none flex-1 overflow-y-auto p-8 no-scrollbar">
+        <div contenteditable="true" class="min-h-full">
+          <p class="text-center text-xl font-bold text-on-surface mb-8 tracking-wide">위수탁 계약서</p>
+
+          <p class="mb-6 leading-relaxed text-[15px]">
+            <span class="font-semibold text-on-surface">제1조 (목적)</span><br/>
+            본 계약은 <span class="variable-chip">{{대리점명}}</span> (이하 '갑')과 <span class="variable-chip">{{기사이름}}</span> (이하 '을') 간의 택배 위수탁에 관한 사항을 규정함을 목적으로 합니다.
+          </p>
+
+          <p class="mb-6 leading-relaxed text-[15px]">
+            <span class="font-semibold text-on-surface">제2조 (계약기간)</span><br/>
+            본 계약의 유효기간은 <span class="variable-chip">{{계약시작일}}</span> 부터 <span class="variable-chip">{{계약종료일}}</span> 까지로 한다. 다만, 계약 만료일 30일 전까지 어느 일방이 서면으로 종료 의사를 통지하지 않는 한 동일 조건으로 1년간 자동 연장된다.
+          </p>
+
+          <p class="mb-6 leading-relaxed text-[15px]">
+            <span class="font-semibold text-on-surface">제3조 (배송단가)</span><br/>
+            건당 배송단가는 <span class="variable-chip">{{단가}}</span>원으로 한다. 배송 단가는 매 분기 말일 기준으로 갑과 을이 협의하여 조정할 수 있다.
+          </p>
+
+          <p class="mb-6 leading-relaxed text-[15px]">
+            <span class="font-semibold text-on-surface">제4조 (업무 범위)</span><br/>
+            을은 갑이 지정하는 배송 구역 내에서 택배 물품의 집하, 분류, 배송 업무를 성실히 수행하여야 한다. 배송 구역의 변경이 필요한 경우 갑과 을이 사전 협의하여 결정한다.
+          </p>
+
+          <p class="mb-6 leading-relaxed text-[15px]">
+            <span class="font-semibold text-on-surface">제5조 (정산)</span><br/>
+            갑은 매월 말일을 기준으로 을의 배송 실적을 정산하며, 익월 10일까지 을이 지정한 계좌로 지급한다. 정산에 이의가 있는 경우 을은 정산일로부터 7일 이내에 서면으로 이의를 제기할 수 있다.
+          </p>
+
+          <p class="mb-6 leading-relaxed text-[15px]">
+            <span class="font-semibold text-on-surface">제6조 (손해배상)</span><br/>
+            을의 고의 또는 과실로 인하여 배송 물품에 파손, 분실 등의 손해가 발생한 경우, 을은 갑에게 그 손해를 배상하여야 한다.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Variable Panel + Preview (45%) -->
+    <div class="w-[45%] flex flex-col gap-5 min-h-0">
+
+      <!-- Variable Insert Section -->
+      <div class="bg-surface-container-lowest rounded-2xl p-6">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="material-symbols-outlined text-primary text-[20px]">data_object</span>
+          <h3 class="font-semibold text-on-surface text-sm">변수 삽입</h3>
+          <span class="text-xs text-on-surface-variant ml-auto">클릭하여 커서 위치에 삽입</span>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-container-high text-sm font-medium text-on-surface hover:bg-surface-container-highest transition-all duration-150 hover:shadow-sm active:scale-95" onclick="insertVariable('기사이름')">
+            <span class="material-symbols-outlined text-[16px] text-primary">person</span>
+            기사이름
+          </button>
+          <button class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-container-high text-sm font-medium text-on-surface hover:bg-surface-container-highest transition-all duration-150 hover:shadow-sm active:scale-95" onclick="insertVariable('계약시작일')">
+            <span class="material-symbols-outlined text-[16px] text-primary">event</span>
+            계약시작일
+          </button>
+          <button class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-container-high text-sm font-medium text-on-surface hover:bg-surface-container-highest transition-all duration-150 hover:shadow-sm active:scale-95" onclick="insertVariable('계약종료일')">
+            <span class="material-symbols-outlined text-[16px] text-primary">event_available</span>
+            계약종료일
+          </button>
+          <button class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-container-high text-sm font-medium text-on-surface hover:bg-surface-container-highest transition-all duration-150 hover:shadow-sm active:scale-95" onclick="insertVariable('단가')">
+            <span class="material-symbols-outlined text-[16px] text-primary">payments</span>
+            단가
+          </button>
+          <button class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-container-high text-sm font-medium text-on-surface hover:bg-surface-container-highest transition-all duration-150 hover:shadow-sm active:scale-95" onclick="insertVariable('대리점명')">
+            <span class="material-symbols-outlined text-[16px] text-primary">store</span>
+            대리점명
+          </button>
+        </div>
+      </div>
+
+      <!-- Preview Section -->
+      <div class="flex-1 flex flex-col min-h-0">
+        <div class="flex items-center gap-2 mb-3 px-1">
+          <span class="material-symbols-outlined text-primary text-[20px]">preview</span>
+          <h3 class="font-semibold text-on-surface text-sm">미리보기</h3>
+          <div class="flex-1"></div>
+          <div class="flex items-center gap-1 bg-surface-container-low rounded-lg px-2 py-1">
+            <span class="material-symbols-outlined text-[16px] text-on-surface-variant">zoom_out</span>
+            <span class="font-inter text-xs text-on-surface-variant font-medium">60%</span>
+            <span class="material-symbols-outlined text-[16px] text-on-surface-variant">zoom_in</span>
+          </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto rounded-2xl bg-surface-container-low p-6 flex justify-center no-scrollbar">
+          <div class="preview-paper rounded-lg w-full max-w-[380px] p-8 self-start" style="font-size: 9px;">
+            <p class="text-center text-sm font-bold text-on-surface mb-5 tracking-wide">위수탁 계약서</p>
+
+            <p class="mb-3 leading-relaxed">
+              <span class="font-semibold">제1조 (목적)</span><br/>
+              본 계약은 <span class="text-primary font-semibold">강남 제1 대리점</span> (이하 '갑')과 <span class="text-primary font-semibold">김철수</span> (이하 '을') 간의 택배 위수탁에 관한 사항을 규정함을 목적으로 합니다.
+            </p>
+
+            <p class="mb-3 leading-relaxed">
+              <span class="font-semibold">제2조 (계약기간)</span><br/>
+              본 계약의 유효기간은 <span class="text-primary font-semibold">2024.01.01</span> 부터 <span class="text-primary font-semibold">2024.12.31</span> 까지로 한다. 다만, 계약 만료일 30일 전까지 어느 일방이 서면으로 종료 의사를 통지하지 않는 한 동일 조건으로 1년간 자동 연장된다.
+            </p>
+
+            <p class="mb-3 leading-relaxed">
+              <span class="font-semibold">제3조 (배송단가)</span><br/>
+              건당 배송단가는 <span class="text-primary font-semibold">850</span>원으로 한다. 배송 단가는 매 분기 말일 기준으로 갑과 을이 협의하여 조정할 수 있다.
+            </p>
+
+            <p class="mb-3 leading-relaxed">
+              <span class="font-semibold">제4조 (업무 범위)</span><br/>
+              을은 갑이 지정하는 배송 구역 내에서 택배 물품의 집하, 분류, 배송 업무를 성실히 수행하여야 한다.
+            </p>
+
+            <p class="mb-3 leading-relaxed">
+              <span class="font-semibold">제5조 (정산)</span><br/>
+              갑은 매월 말일을 기준으로 을의 배송 실적을 정산하며, 익월 10일까지 을이 지정한 계좌로 지급한다.
+            </p>
+
+            <p class="mb-3 leading-relaxed">
+              <span class="font-semibold">제6조 (손해배상)</span><br/>
+              을의 고의 또는 과실로 인하여 배송 물품에 파손, 분실 등의 손해가 발생한 경우, 을은 갑에게 그 손해를 배상하여야 한다.
+            </p>
+
+            <!-- Signature area -->
+            <div class="mt-6 pt-4" style="border-top: 1px solid #e0e3e5;">
+              <div class="flex justify-between text-[8px] text-on-surface-variant">
+                <div class="text-center">
+                  <p class="font-semibold text-on-surface mb-3">갑 (위탁자)</p>
+                  <div class="w-16 h-8 rounded bg-surface-container-low mb-1"></div>
+                  <p>강남 제1 대리점</p>
+                </div>
+                <div class="text-center">
+                  <p class="font-semibold text-on-surface mb-3">을 (수탁자)</p>
+                  <div class="w-16 h-8 rounded bg-surface-container-low mb-1"></div>
+                  <p>김철수</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<script>
+function insertVariable(name) {
+  const editor = document.querySelector('[contenteditable]');
+  const selection = window.getSelection();
+
+  const chip = document.createElement('span');
+  chip.className = 'variable-chip';
+  chip.textContent = '{{' + name + '}}';
+  chip.contentEditable = 'false';
+
+  if (selection.rangeCount > 0 && editor.contains(selection.anchorNode)) {
+    const range = selection.getRangeAt(0);
+    range.deleteContents();
+    range.insertNode(chip);
+    range.setStartAfter(chip);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  } else {
+    editor.appendChild(chip);
+  }
+  editor.focus();
+}
+</script>
+
+</body>
+</html>

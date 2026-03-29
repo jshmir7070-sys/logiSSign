@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html class="light" lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Precision Velocity - Electronic Signing Flow</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet"/>
+<script>
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "on-tertiary-fixed": "#002113",
+        "surface-dim": "#d8dadc",
+        "on-secondary-fixed": "#131b2e",
+        "tertiary-fixed-dim": "#4edea3",
+        "outline": "#737686",
+        "inverse-surface": "#2d3133",
+        "on-surface": "#191c1e",
+        "surface-container-low": "#f2f4f6",
+        "surface": "#f7f9fb",
+        "primary-container": "#2563eb",
+        "surface-container-high": "#e6e8ea",
+        "surface-container-lowest": "#ffffff",
+        "secondary-container": "#dae2fd",
+        "on-primary-fixed": "#00174b",
+        "on-primary-container": "#eeefff",
+        "on-secondary-container": "#5c647a",
+        "inverse-primary": "#b4c5ff",
+        "on-surface-variant": "#434655",
+        "on-tertiary-fixed-variant": "#005236",
+        "secondary-fixed": "#dae2fd",
+        "error": "#ba1a1a",
+        "surface-tint": "#0053db",
+        "primary-fixed": "#dbe1ff",
+        "surface-bright": "#f7f9fb",
+        "secondary": "#565e74",
+        "tertiary": "#006242",
+        "background": "#f7f9fb",
+        "outline-variant": "#c3c6d7",
+        "inverse-on-surface": "#eff1f3",
+        "on-secondary": "#ffffff",
+        "on-error-container": "#93000a",
+        "on-primary-fixed-variant": "#003ea8",
+        "tertiary-fixed": "#6ffbbe",
+        "on-primary": "#ffffff",
+        "on-tertiary": "#ffffff",
+        "primary": "#004ac6",
+        "surface-container": "#eceef0",
+        "on-background": "#191c1e",
+        "surface-variant": "#e0e3e5",
+        "on-tertiary-container": "#bdffdb",
+        "error-container": "#ffdad6",
+        "on-secondary-fixed-variant": "#3f465c",
+        "primary-fixed-dim": "#b4c5ff",
+        "tertiary-container": "#007d55",
+        "surface-container-highest": "#e0e3e5",
+        "on-error": "#ffffff",
+        "secondary-fixed-dim": "#bec6e0"
+      },
+      fontFamily: {
+        "headline": ["Manrope", "Pretendard"],
+        "body": ["Inter", "Pretendard"],
+        "label": ["Inter", "Pretendard"]
+      },
+      borderRadius: {
+        "DEFAULT": "0.25rem",
+        "lg": "0.5rem",
+        "xl": "0.75rem",
+        "2xl": "1.5rem",
+        "full": "9999px"
+      },
+    },
+  },
+}
+</script>
+<style>
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    display: inline-block; line-height: 1; text-transform: none;
+    letter-spacing: normal; word-wrap: normal; white-space: nowrap; direction: ltr;
+  }
+  .material-symbols-outlined.filled {
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+  body { font-family: 'Pretendard', 'Inter', sans-serif; }
+
+  /* Phone frame */
+  .phone-frame {
+    width: 390px; height: 844px;
+    border-radius: 44px;
+    background: #ffffff;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .phone-frame::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 126px; height: 34px;
+    background: #000;
+    border-radius: 0 0 20px 20px;
+    z-index: 50;
+  }
+
+  /* Status bar */
+  .status-bar {
+    height: 54px;
+    padding: 14px 24px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: #191c1e;
+    position: relative;
+    z-index: 40;
+    flex-shrink: 0;
+  }
+
+  /* Gradient button */
+  .btn-gradient {
+    background: linear-gradient(135deg, #004ac6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    transition: all 0.2s;
+  }
+  .btn-gradient:hover { filter: brightness(1.08); }
+  .btn-gradient:disabled, .btn-gradient.disabled {
+    background: linear-gradient(135deg, #c3c6d7 0%, #d8dadc 100%);
+    color: #737686;
+    cursor: not-allowed;
+  }
+
+  /* Scroll track */
+  .contract-scroll::-webkit-scrollbar { width: 4px; }
+  .contract-scroll::-webkit-scrollbar-track { background: #f2f4f6; border-radius: 4px; }
+  .contract-scroll::-webkit-scrollbar-thumb { background: #c3c6d7; border-radius: 4px; }
+
+  /* Pulse animation for completion */
+  @keyframes checkPulse {
+    0% { transform: scale(0.5); opacity: 0; }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes checkDraw {
+    0% { stroke-dashoffset: 48; }
+    100% { stroke-dashoffset: 0; }
+  }
+  @keyframes ringGrow {
+    0% { transform: scale(0); opacity: 0; }
+    60% { transform: scale(1.15); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .check-ring { animation: ringGrow 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+  .check-mark {
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    animation: checkDraw 0.5s ease-out 0.4s forwards;
+  }
+  .check-pulse { animation: checkPulse 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s forwards; opacity: 0; }
+
+  /* OTP digit focus glow */
+  .otp-digit {
+    transition: all 0.15s ease;
+  }
+  .otp-digit.active {
+    border-color: #004ac6;
+    box-shadow: 0 0 0 3px rgba(0, 74, 198, 0.12);
+  }
+
+  /* Signature pad area */
+  .sig-pad {
+    border: 2px dashed #e0e3e5;
+    border-radius: 24px;
+    background: #ffffff;
+    transition: border-color 0.2s;
+  }
+  .sig-pad.has-sig { border-color: transparent; }
+
+  /* Hide scrollbar utility */
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+</head>
+
+<body class="min-h-screen" style="background: #e8eaed;">
+
+<!-- Page Title -->
+<div class="text-center pt-10 pb-8">
+  <h1 class="text-2xl font-bold text-on-surface font-headline tracking-tight">Electronic Signing Flow</h1>
+  <p class="text-sm text-on-surface-variant mt-1 font-body">Precision Velocity Driver App &mdash; 4-Step Contract Signing</p>
+</div>
+
+<!-- 2x2 Grid -->
+<div class="flex justify-center pb-16">
+  <div class="grid grid-cols-2 gap-10">
+
+    <!-- ==================== SCREEN 1: Identity Verification ==================== -->
+    <div class="phone-frame">
+      <!-- Status Bar -->
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="flex items-center gap-1.5">
+          <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="3" width="3" height="9" rx="1" fill="#191c1e"/><rect x="4.5" y="2" width="3" height="10" rx="1" fill="#191c1e"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#191c1e"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="#c3c6d7"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 2.4C5.6 2.4 3.4 3.4 1.8 5L0 3.2C2.2 1.2 5 0 8 0s5.8 1.2 8 3.2L14.2 5C12.6 3.4 10.4 2.4 8 2.4z" fill="#191c1e"/><path d="M8 6.8c-1.6 0-3 .6-4.1 1.6L2 6.4c1.5-1.4 3.6-2.2 6-2.2s4.5.8 6 2.2l-1.9 2c-1.1-1-2.5-1.6-4.1-1.6z" fill="#191c1e"/><circle cx="8" cy="11" r="1.5" fill="#191c1e"/></svg>
+          <svg width="27" height="13" viewBox="0 0 27 13"><rect x="0" y="1" width="23" height="11" rx="2.5" stroke="#191c1e" stroke-width="1" fill="none"/><rect x="24" y="4" width="2" height="5" rx="1" fill="#191c1e"/><rect x="1.5" y="2.5" width="17" height="8" rx="1.5" fill="#191c1e"/></svg>
+        </div>
+      </div>
+
+      <!-- Header -->
+      <div class="flex items-center px-5 py-3 flex-shrink-0">
+        <button class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface-container-high transition-colors -ml-2">
+          <span class="material-symbols-outlined text-on-surface">arrow_back</span>
+        </button>
+        <h2 class="text-lg font-bold text-on-surface ml-1 flex-1">전자서명</h2>
+        <!-- Step Indicator -->
+        <div class="flex items-center gap-1.5">
+          <div class="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-white">1</div>
+          <div class="w-5 h-0.5 bg-outline-variant rounded-full"></div>
+          <div class="w-7 h-7 rounded-full bg-surface-container-high flex items-center justify-center text-xs font-medium text-on-surface-variant">2</div>
+          <div class="w-5 h-0.5 bg-outline-variant rounded-full"></div>
+          <div class="w-7 h-7 rounded-full bg-surface-container-high flex items-center justify-center text-xs font-medium text-on-surface-variant">3</div>
+          <div class="w-5 h-0.5 bg-outline-variant rounded-full"></div>
+          <div class="w-7 h-7 rounded-full bg-surface-container-high flex items-center justify-center text-xs font-medium text-on-surface-variant">4</div>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="flex-1 overflow-y-auto hide-scrollbar px-5 pb-5">
+        <!-- Hero section -->
+        <div class="flex flex-col items-center pt-4 pb-6">
+          <div class="w-20 h-20 rounded-full bg-primary-fixed flex items-center justify-center mb-4">
+            <span class="material-symbols-outlined filled text-primary" style="font-size:40px;">shield_person</span>
+          </div>
+          <h3 class="text-xl font-bold text-on-surface">본인확인이 필요합니다</h3>
+          <p class="text-sm text-on-surface-variant mt-1.5 text-center">계약서 서명을 위해 본인인증을 진행합니다</p>
+        </div>
+
+        <!-- Form Card -->
+        <div class="bg-surface-container-lowest rounded-2xl p-5 space-y-4" style="box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+          <!-- Name -->
+          <div>
+            <label class="block text-xs font-medium text-on-surface-variant mb-1.5 ml-0.5">이름</label>
+            <div class="h-12 px-4 rounded-xl bg-surface-container-high flex items-center text-sm font-medium text-on-surface">
+              김철수
+            </div>
+          </div>
+          <!-- DOB -->
+          <div>
+            <label class="block text-xs font-medium text-on-surface-variant mb-1.5 ml-0.5">생년월일</label>
+            <div class="h-12 px-4 rounded-xl bg-surface-container-high flex items-center text-sm font-medium text-on-surface">
+              1985.03.15
+            </div>
+          </div>
+          <!-- Phone -->
+          <div>
+            <label class="block text-xs font-medium text-on-surface-variant mb-1.5 ml-0.5">휴대폰 번호</label>
+            <div class="flex gap-2">
+              <div class="h-12 px-4 rounded-xl bg-surface-container-high flex items-center text-sm font-medium text-on-surface flex-1">
+                010-1234-5678
+              </div>
+              <button class="h-12 px-4 rounded-xl bg-primary text-white text-sm font-semibold whitespace-nowrap hover:bg-primary-container transition-colors">
+                인증번호 발송
+              </button>
+            </div>
+          </div>
+          <!-- OTP -->
+          <div>
+            <label class="block text-xs font-medium text-on-surface-variant mb-1.5 ml-0.5">인증번호</label>
+            <div class="flex items-center gap-2">
+              <div class="flex gap-2 flex-1">
+                <div class="otp-digit w-11 h-13 rounded-xl border-2 border-outline-variant bg-surface-container-lowest flex items-center justify-center text-lg font-bold text-on-surface" style="height:52px;">4</div>
+                <div class="otp-digit w-11 h-13 rounded-xl border-2 border-outline-variant bg-surface-container-lowest flex items-center justify-center text-lg font-bold text-on-surface" style="height:52px;">7</div>
+                <div class="otp-digit w-11 h-13 rounded-xl border-2 border-outline-variant bg-surface-container-lowest flex items-center justify-center text-lg font-bold text-on-surface" style="height:52px;">2</div>
+                <div class="otp-digit active w-11 h-13 rounded-xl border-2 border-primary bg-surface-container-lowest flex items-center justify-center text-lg font-bold text-primary" style="height:52px;">
+                  <span class="animate-pulse">|</span>
+                </div>
+                <div class="otp-digit w-11 h-13 rounded-xl border-2 border-outline-variant bg-surface-container-high flex items-center justify-center text-lg font-bold text-on-surface-variant" style="height:52px;"></div>
+                <div class="otp-digit w-11 h-13 rounded-xl border-2 border-outline-variant bg-surface-container-high flex items-center justify-center text-lg font-bold text-on-surface-variant" style="height:52px;"></div>
+              </div>
+              <span class="text-sm font-semibold text-error whitespace-nowrap">2:45</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Confirm Button -->
+        <div class="mt-5 pb-2">
+          <button class="btn-gradient w-full h-14 rounded-2xl text-base font-bold flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-xl">verified</span>
+            확인
+          </button>
+        </div>
+      </div>
+
+      <!-- Home indicator -->
+      <div class="h-8 flex items-center justify-center flex-shrink-0">
+        <div class="w-32 h-1 bg-on-surface/20 rounded-full"></div>
+      </div>
+    </div>
+
+    <!-- ==================== SCREEN 2: Contract Review ==================== -->
+    <div class="phone-frame">
+      <!-- Status Bar -->
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="flex items-center gap-1.5">
+          <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="3" width="3" height="9" rx="1" fill="#191c1e"/><rect x="4.5" y="2" width="3" height="10" rx="1" fill="#191c1e"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#191c1e"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="#c3c6d7"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 2.4C5.6 2.4 3.4 3.4 1.8 5L0 3.2C2.2 1.2 5 0 8 0s5.8 1.2 8 3.2L14.2 5C12.6 3.4 10.4 2.4 8 2.4z" fill="#191c1e"/><path d="M8 6.8c-1.6 0-3 .6-4.1 1.6L2 6.4c1.5-1.4 3.6-2.2 6-2.2s4.5.8 6 2.2l-1.9 2c-1.1-1-2.5-1.6-4.1-1.6z" fill="#191c1e"/><circle cx="8" cy="11" r="1.5" fill="#191c1e"/></svg>
+          <svg width="27" height="13" viewBox="0 0 27 13"><rect x="0" y="1" width="23" height="11" rx="2.5" stroke="#191c1e" stroke-width="1" fill="none"/><rect x="24" y="4" width="2" height="5" rx="1" fill="#191c1e"/><rect x="1.5" y="2.5" width="17" height="8" rx="1.5" fill="#191c1e"/></svg>
+        </div>
+      </div>
+
+      <!-- Header -->
+      <div class="flex items-center px-5 py-3 flex-shrink-0">
+        <button class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface-container-high transition-colors -ml-2">
+          <span class="material-symbols-outlined text-on-surface">arrow_back</span>
+        </button>
+        <h2 class="text-lg font-bold text-on-surface ml-1 flex-1">전자서명</h2>
+        <div class="flex items-center gap-1.5">
+          <div class="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center text-xs font-bold text-primary">
+            <span class="material-symbols-outlined text-base">check</span>
+          </div>
+          <div class="w-5 h-0.5 bg-primary/30 rounded-full"></div>
+          <div class="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-white">2</div>
+          <div class="w-5 h-0.5 bg-outline-variant rounded-full"></div>
+          <div class="w-7 h-7 rounded-full bg-surface-container-high flex items-center justify-center text-xs font-medium text-on-surface-variant">3</div>
+          <div class="w-5 h-0.5 bg-outline-variant rounded-full"></div>
+          <div class="w-7 h-7 rounded-full bg-surface-container-high flex items-center justify-center text-xs font-medium text-on-surface-variant">4</div>
+        </div>
+      </div>
+
+      <!-- Contract Viewer -->
+      <div class="flex-1 mx-5 mb-3 bg-surface-container-lowest rounded-2xl overflow-hidden flex flex-col" style="box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+        <div class="contract-scroll flex-1 overflow-y-auto p-5">
+          <h3 class="text-center text-lg font-bold text-on-surface mb-1">위수탁 계약서</h3>
+          <p class="text-center text-xs text-on-surface-variant mb-5">계약번호: CTR-2024-0315-001</p>
+
+          <div class="space-y-4 text-sm text-on-surface leading-relaxed">
+            <div>
+              <h4 class="font-bold mb-1">제1조 (목적)</h4>
+              <p class="text-on-surface-variant">본 계약은 "갑"(Precision Velocity)과 "을"(배송 기사) 간의 배송 업무 위수탁에 관한 기본적인 사항을 정하는 것을 목적으로 한다.</p>
+            </div>
+
+            <div>
+              <h4 class="font-bold mb-1">제2조 (용어의 정의)</h4>
+              <p class="text-on-surface-variant">본 계약에서 사용하는 용어의 정의는 다음과 같다.<br/>
+              1. "배송업무"라 함은 갑이 을에게 위탁하는 물품의 수거, 운반, 배달 일체의 업무를 말한다.<br/>
+              2. "배송구역"이라 함은 갑이 지정하는 배송 담당 지역을 말한다.</p>
+            </div>
+
+            <div>
+              <h4 class="font-bold mb-1">제3조 (계약기간)</h4>
+              <p class="text-on-surface-variant">본 계약의 유효기간은 계약 체결일로부터 1년간으로 하며, 계약 만료 30일 전까지 쌍방 이의가 없을 경우 동일 조건으로 자동 연장된다.</p>
+            </div>
+
+            <div>
+              <h4 class="font-bold mb-1">제4조 (업무범위)</h4>
+              <p class="text-on-surface-variant">을은 다음 각 호의 업무를 성실히 수행하여야 한다.<br/>
+              1. 갑이 지정한 배송구역 내 물품 배송<br/>
+              2. 배송 물품의 안전한 보관 및 취급<br/>
+              3. 수취인 확인 및 배송 완료 처리</p>
+            </div>
+
+            <div>
+              <h4 class="font-bold mb-1">제5조 (수수료)</h4>
+              <p class="text-on-surface-variant">갑은 을에게 배송 업무 수행에 대한 대가로 건당 수수료를 지급하며, 구체적인 요율은 별도 합의에 따른다. 정산은 매월 15일 및 말일에 진행한다.</p>
+            </div>
+
+            <div>
+              <h4 class="font-bold mb-1">제6조 (의무사항)</h4>
+              <p class="text-on-surface-variant">을은 배송 업무 수행 시 관련 법규를 준수하고, 고객 응대 시 예의를 갖추며, 갑의 서비스 품질 기준에 부합하도록 노력하여야 한다.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Action Area -->
+      <div class="px-5 pb-2 flex-shrink-0 space-y-3">
+        <!-- Amber notice -->
+        <div class="flex items-center gap-2.5 bg-amber-50 rounded-xl px-4 py-3">
+          <span class="material-symbols-outlined text-amber-600 text-xl">info</span>
+          <span class="text-sm text-amber-700 font-medium">계약서를 끝까지 읽어주세요</span>
+        </div>
+        <!-- Progress bar -->
+        <div class="flex items-center gap-3">
+          <div class="flex-1 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+            <div class="h-full bg-primary rounded-full transition-all" style="width: 60%;"></div>
+          </div>
+          <span class="text-xs text-on-surface-variant font-medium">60%</span>
+        </div>
+        <!-- Checkbox -->
+        <label class="flex items-center gap-3 opacity-50 pointer-events-none">
+          <div class="w-5 h-5 rounded border-2 border-outline-variant flex items-center justify-center flex-shrink-0"></div>
+          <span class="text-sm text-on-surface-variant">계약 내용을 모두 확인하였습니다</span>
+        </label>
+        <!-- Button disabled -->
+        <button class="btn-gradient disabled w-full h-14 rounded-2xl text-base font-bold flex items-center justify-center gap-2" disabled>
+          <span class="material-symbols-outlined text-xl">draw</span>
+          서명하기
+        </button>
+      </div>
+
+      <!-- Home indicator -->
+      <div class="h-8 flex items-center justify-center flex-shrink-0">
+        <div class="w-32 h-1 bg-on-surface/20 rounded-full"></div>
+      </div>
+    </div>
+
+    <!-- ==================== SCREEN 3: Signature ==================== -->
+    <div class="phone-frame">
+      <!-- Status Bar -->
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="flex items-center gap-1.5">
+          <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="3" width="3" height="9" rx="1" fill="#191c1e"/><rect x="4.5" y="2" width="3" height="10" rx="1" fill="#191c1e"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#191c1e"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="#c3c6d7"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 2.4C5.6 2.4 3.4 3.4 1.8 5L0 3.2C2.2 1.2 5 0 8 0s5.8 1.2 8 3.2L14.2 5C12.6 3.4 10.4 2.4 8 2.4z" fill="#191c1e"/><path d="M8 6.8c-1.6 0-3 .6-4.1 1.6L2 6.4c1.5-1.4 3.6-2.2 6-2.2s4.5.8 6 2.2l-1.9 2c-1.1-1-2.5-1.6-4.1-1.6z" fill="#191c1e"/><circle cx="8" cy="11" r="1.5" fill="#191c1e"/></svg>
+          <svg width="27" height="13" viewBox="0 0 27 13"><rect x="0" y="1" width="23" height="11" rx="2.5" stroke="#191c1e" stroke-width="1" fill="none"/><rect x="24" y="4" width="2" height="5" rx="1" fill="#191c1e"/><rect x="1.5" y="2.5" width="17" height="8" rx="1.5" fill="#191c1e"/></svg>
+        </div>
+      </div>
+
+      <!-- Header -->
+      <div class="flex items-center px-5 py-3 flex-shrink-0">
+        <button class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface-container-high transition-colors -ml-2">
+          <span class="material-symbols-outlined text-on-surface">arrow_back</span>
+        </button>
+        <h2 class="text-lg font-bold text-on-surface ml-1 flex-1">전자서명</h2>
+        <div class="flex items-center gap-1.5">
+          <div class="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center text-xs font-bold text-primary">
+            <span class="material-symbols-outlined text-base">check</span>
+          </div>
+          <div class="w-5 h-0.5 bg-primary/30 rounded-full"></div>
+          <div class="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center text-xs font-bold text-primary">
+            <span class="material-symbols-outlined text-base">check</span>
+          </div>
+          <div class="w-5 h-0.5 bg-primary/30 rounded-full"></div>
+          <div class="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-white">3</div>
+          <div class="w-5 h-0.5 bg-outline-variant rounded-full"></div>
+          <div class="w-7 h-7 rounded-full bg-surface-container-high flex items-center justify-center text-xs font-medium text-on-surface-variant">4</div>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="flex-1 px-5 flex flex-col">
+        <!-- Instruction -->
+        <div class="flex items-center gap-2.5 mb-5 mt-2">
+          <span class="material-symbols-outlined text-primary text-2xl">gesture</span>
+          <h3 class="text-lg font-bold text-on-surface">아래에 서명해주세요</h3>
+        </div>
+
+        <!-- Signature Pad -->
+        <div class="sig-pad has-sig flex-1 mb-4 relative flex items-center justify-center bg-surface-container-lowest" style="min-height: 340px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+          <!-- Sample Korean signature using SVG -->
+          <svg viewBox="0 0 300 180" width="280" height="170" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Signature scribble -->
+            <path d="M50 120 C55 90, 65 60, 80 50 C95 40, 100 70, 105 85 C110 100, 108 115, 115 105 C122 95, 125 65, 135 55 C145 45, 150 75, 148 90 C146 105, 140 110, 150 100 C160 90, 170 60, 185 55 C200 50, 195 80, 190 95" stroke="#191c1e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <path d="M60 130 C80 128, 120 125, 160 127 C200 129, 210 125, 220 130" stroke="#191c1e" stroke-width="2" stroke-linecap="round" fill="none"/>
+            <path d="M195 55 C205 50, 215 65, 220 80 C225 95, 218 105, 225 95 C232 85, 240 60, 250 55" stroke="#191c1e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <!-- Decorative dots -->
+            <circle cx="140" cy="45" r="2" fill="#191c1e"/>
+            <circle cx="210" cy="48" r="2" fill="#191c1e"/>
+          </svg>
+          <!-- Subtle corner markers -->
+          <div class="absolute top-4 left-4 w-5 h-5 border-t-2 border-l-2 border-outline-variant/40 rounded-tl-lg"></div>
+          <div class="absolute top-4 right-4 w-5 h-5 border-t-2 border-r-2 border-outline-variant/40 rounded-tr-lg"></div>
+          <div class="absolute bottom-4 left-4 w-5 h-5 border-b-2 border-l-2 border-outline-variant/40 rounded-bl-lg"></div>
+          <div class="absolute bottom-4 right-4 w-5 h-5 border-b-2 border-r-2 border-outline-variant/40 rounded-br-lg"></div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-3 mb-3">
+          <button class="flex-1 h-13 rounded-2xl text-sm font-semibold text-on-surface-variant flex items-center justify-center gap-2 hover:bg-surface-container-high transition-colors" style="height:52px; border: 1.5px solid #c3c6d7;">
+            <span class="material-symbols-outlined text-lg">refresh</span>
+            다시 쓰기
+          </button>
+          <button class="btn-gradient flex-[2] h-13 rounded-2xl text-base font-bold flex items-center justify-center gap-2" style="height:52px;">
+            <span class="material-symbols-outlined text-xl">check_circle</span>
+            서명 완료
+          </button>
+        </div>
+
+        <!-- Legal notice -->
+        <div class="flex items-center justify-center gap-1.5 mb-2">
+          <span class="material-symbols-outlined text-on-surface-variant text-sm" style="font-size:16px;">gavel</span>
+          <p class="text-xs text-on-surface-variant">서명은 법적 효력이 있습니다</p>
+        </div>
+      </div>
+
+      <!-- Home indicator -->
+      <div class="h-8 flex items-center justify-center flex-shrink-0">
+        <div class="w-32 h-1 bg-on-surface/20 rounded-full"></div>
+      </div>
+    </div>
+
+    <!-- ==================== SCREEN 4: Completion ==================== -->
+    <div class="phone-frame">
+      <!-- Status Bar -->
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="flex items-center gap-1.5">
+          <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="3" width="3" height="9" rx="1" fill="#191c1e"/><rect x="4.5" y="2" width="3" height="10" rx="1" fill="#191c1e"/><rect x="9" y="0" width="3" height="12" rx="1" fill="#191c1e"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="#c3c6d7"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 2.4C5.6 2.4 3.4 3.4 1.8 5L0 3.2C2.2 1.2 5 0 8 0s5.8 1.2 8 3.2L14.2 5C12.6 3.4 10.4 2.4 8 2.4z" fill="#191c1e"/><path d="M8 6.8c-1.6 0-3 .6-4.1 1.6L2 6.4c1.5-1.4 3.6-2.2 6-2.2s4.5.8 6 2.2l-1.9 2c-1.1-1-2.5-1.6-4.1-1.6z" fill="#191c1e"/><circle cx="8" cy="11" r="1.5" fill="#191c1e"/></svg>
+          <svg width="27" height="13" viewBox="0 0 27 13"><rect x="0" y="1" width="23" height="11" rx="2.5" stroke="#191c1e" stroke-width="1" fill="none"/><rect x="24" y="4" width="2" height="5" rx="1" fill="#191c1e"/><rect x="1.5" y="2.5" width="17" height="8" rx="1.5" fill="#191c1e"/></svg>
+        </div>
+      </div>
+
+      <!-- Header -->
+      <div class="flex items-center px-5 py-3 flex-shrink-0">
+        <button class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface-container-high transition-colors -ml-2">
+          <span class="material-symbols-outlined text-on-surface">close</span>
+        </button>
+        <h2 class="text-lg font-bold text-on-surface ml-1 flex-1">전자서명</h2>
+        <div class="flex items-center gap-1.5">
+          <div class="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center text-xs font-bold text-primary">
+            <span class="material-symbols-outlined text-base">check</span>
+          </div>
+          <div class="w-5 h-0.5 bg-primary/30 rounded-full"></div>
+          <div class="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center text-xs font-bold text-primary">
+            <span class="material-symbols-outlined text-base">check</span>
+          </div>
+          <div class="w-5 h-0.5 bg-primary/30 rounded-full"></div>
+          <div class="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center text-xs font-bold text-primary">
+            <span class="material-symbols-outlined text-base">check</span>
+          </div>
+          <div class="w-5 h-0.5 bg-primary/30 rounded-full"></div>
+          <div class="w-7 h-7 rounded-full bg-tertiary-container flex items-center justify-center text-xs font-bold text-white">
+            <span class="material-symbols-outlined text-base">check</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="flex-1 px-5 flex flex-col items-center justify-center">
+        <!-- Animated checkmark -->
+        <div class="relative mb-6">
+          <!-- Background glow -->
+          <div class="absolute inset-0 rounded-full bg-emerald-400/20 blur-2xl scale-150 check-pulse"></div>
+          <!-- Check circle -->
+          <svg class="check-ring relative" width="96" height="96" viewBox="0 0 96 96">
+            <circle cx="48" cy="48" r="44" fill="#e8f5e9" stroke="#16a34a" stroke-width="3"/>
+            <circle cx="48" cy="48" r="36" fill="#16a34a"/>
+            <path class="check-mark" d="M33 49 L43 59 L63 39" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </div>
+
+        <h3 class="text-2xl font-bold text-on-surface mb-2 check-pulse">서명이 완료되었습니다</h3>
+        <p class="text-sm text-on-surface-variant mb-8">계약서가 안전하게 보관됩니다</p>
+
+        <!-- Summary card -->
+        <div class="w-full bg-surface-container-lowest rounded-2xl p-5 space-y-4" style="box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-on-surface-variant">계약서</span>
+            <span class="text-sm font-semibold text-on-surface">위수탁 계약서</span>
+          </div>
+          <div class="h-px bg-outline-variant/40"></div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-on-surface-variant">서명일시</span>
+            <span class="text-sm font-semibold text-on-surface">2024.03.15 14:32:05</span>
+          </div>
+          <div class="h-px bg-outline-variant/40"></div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-on-surface-variant">문서번호</span>
+            <span class="text-sm font-semibold text-on-surface">CTR-2024-0315-001</span>
+          </div>
+          <div class="h-px bg-outline-variant/40"></div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-on-surface-variant">문서해시</span>
+            <span class="text-sm font-mono text-on-surface-variant" style="font-family: 'Inter', monospace;">7a3f2b...</span>
+          </div>
+          <div class="h-px bg-outline-variant/40"></div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-on-surface-variant">TSA 타임스탬프</span>
+            <div class="flex items-center gap-1.5">
+              <span class="material-symbols-outlined filled text-emerald-600" style="font-size:18px;">verified</span>
+              <span class="text-sm font-semibold text-emerald-600">검증완료</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="w-full mt-6 space-y-3">
+          <button class="btn-gradient w-full h-14 rounded-2xl text-base font-bold flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-xl">download</span>
+            서명된 계약서 다운로드
+          </button>
+          <button class="w-full h-12 text-sm font-semibold text-primary hover:text-primary-container transition-colors flex items-center justify-center gap-1.5">
+            <span class="material-symbols-outlined text-lg">home</span>
+            홈으로 돌아가기
+          </button>
+        </div>
+      </div>
+
+      <!-- Home indicator -->
+      <div class="h-8 flex items-center justify-center flex-shrink-0">
+        <div class="w-32 h-1 bg-on-surface/20 rounded-full"></div>
+      </div>
+    </div>
+
+  </div><!-- grid end -->
+</div>
+
+<!-- Screen Labels -->
+<style>
+  .phone-frame { position: relative; }
+  .phone-frame::after {
+    position: absolute;
+    bottom: -32px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 13px;
+    font-weight: 600;
+    color: #434655;
+    white-space: nowrap;
+    font-family: 'Inter', 'Pretendard', sans-serif;
+  }
+  .grid > .phone-frame:nth-child(1)::after { content: 'Step 1 \2014  \BCF8\C778\D655\C778 (Identity Verification)'; }
+  .grid > .phone-frame:nth-child(2)::after { content: 'Step 2 \2014  \ACC4\C57D\C11C \C5F4\B78C (Contract Review)'; }
+  .grid > .phone-frame:nth-child(3)::after { content: 'Step 3 \2014  \C11C\BA85 (Signature)'; }
+  .grid > .phone-frame:nth-child(4)::after { content: 'Step 4 \2014  \C644\B8CC (Completion)'; }
+</style>
+
+</body>
+</html>

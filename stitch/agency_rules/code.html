@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html class="light" lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Precision Velocity - 정산 규칙 설정</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+        darkMode: "class",
+        theme: {
+            extend: {
+                colors: {
+                    "on-tertiary-container": "#bdffdb",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary-fixed-variant": "#3f465c",
+                    "on-secondary-fixed": "#131b2e",
+                    "surface-container-highest": "#e0e3e5",
+                    "on-surface": "#191c1e",
+                    "secondary-container": "#dae2fd",
+                    "primary-container": "#2563eb",
+                    "on-secondary-container": "#5c647a",
+                    "primary-fixed": "#dbe1ff",
+                    "on-tertiary-fixed-variant": "#005236",
+                    "tertiary-fixed": "#6ffbbe",
+                    "outline-variant": "#c3c6d7",
+                    "on-background": "#191c1e",
+                    "on-primary": "#ffffff",
+                    "surface-tint": "#0053db",
+                    "on-error-container": "#93000a",
+                    "on-primary-fixed": "#00174b",
+                    "on-primary-fixed-variant": "#003ea8",
+                    "inverse-primary": "#b4c5ff",
+                    "secondary-fixed": "#dae2fd",
+                    "error": "#ba1a1a",
+                    "on-secondary": "#ffffff",
+                    "surface-container-high": "#e6e8ea",
+                    "surface-container-low": "#f2f4f6",
+                    "on-surface-variant": "#434655",
+                    "on-tertiary": "#ffffff",
+                    "tertiary": "#006242",
+                    "primary-fixed-dim": "#b4c5ff",
+                    "surface-container": "#eceef0",
+                    "primary": "#004ac6",
+                    "secondary-fixed-dim": "#bec6e0",
+                    "on-tertiary-fixed": "#002113",
+                    "on-error": "#ffffff",
+                    "tertiary-fixed-dim": "#4edea3",
+                    "tertiary-container": "#007d55",
+                    "surface-dim": "#d8dadc",
+                    "surface-bright": "#f7f9fb",
+                    "error-container": "#ffdad6",
+                    "background": "#f7f9fb",
+                    "on-primary-container": "#eeefff",
+                    "inverse-surface": "#2d3133",
+                    "surface-variant": "#e0e3e5",
+                    "surface": "#f7f9fb",
+                    "secondary": "#565e74",
+                    "outline": "#737686",
+                    "inverse-on-surface": "#eff1f3"
+                },
+                fontFamily: {
+                    "headline": ["Manrope", "Pretendard"],
+                    "body": ["Inter", "Pretendard"],
+                    "label": ["Inter", "Pretendard"]
+                },
+                borderRadius: {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "2xl": "1.5rem",
+                    "full": "9999px"
+                },
+            },
+        },
+    }
+</script>
+<style>
+    body { font-family: 'Pretendard', sans-serif; }
+    .font-inter { font-family: 'Inter', sans-serif; }
+    .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        display: inline-block;
+        line-height: 1;
+        text-transform: none;
+        letter-spacing: normal;
+        word-wrap: normal;
+        white-space: nowrap;
+        direction: ltr;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Toggle switch */
+    .toggle-track {
+        width: 44px; height: 24px;
+        border-radius: 9999px;
+        background: #c3c6d7;
+        position: relative;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .toggle-track.active { background: #2563eb; }
+    .toggle-track::after {
+        content: '';
+        width: 18px; height: 18px;
+        border-radius: 9999px;
+        background: white;
+        position: absolute;
+        top: 3px; left: 3px;
+        transition: transform 0.2s;
+        box-shadow: 0 1px 3px rgba(15,23,42,0.12);
+    }
+    .toggle-track.active::after { transform: translateX(20px); }
+
+    /* Editable input fields */
+    .rule-input {
+        background: transparent;
+        border: none;
+        outline: none;
+        text-align: right;
+        font-family: 'Inter', sans-serif;
+        font-weight: 600;
+        color: #191c1e;
+        width: 100%;
+        padding: 6px 8px;
+        border-radius: 8px;
+        transition: background 0.15s;
+    }
+    .rule-input:hover { background: #f2f4f6; }
+    .rule-input:focus { background: #eceef0; box-shadow: inset 0 0 0 2px #2563eb; }
+
+    /* Principal card active accent */
+    .principal-card { position: relative; transition: all 0.15s; }
+    .principal-card.active { background: #ffffff; }
+    .principal-card.active::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 8px; bottom: 8px;
+        width: 4px;
+        border-radius: 0 4px 4px 0;
+        background: linear-gradient(180deg, #004ac6, #2563eb);
+    }
+</style>
+</head>
+<body class="bg-surface text-on-surface antialiased">
+
+<!-- Sidebar -->
+<aside class="fixed left-0 top-0 h-screen w-[240px] bg-[#0F172A] flex flex-col py-6 z-50">
+    <div class="px-6 mb-10">
+        <h1 class="text-xl font-bold text-white tracking-tight font-headline">Precision Velocity</h1>
+        <p class="text-[11px] text-slate-400 mt-1 uppercase tracking-[0.15em]">Last-Mile Admin</p>
+    </div>
+    <nav class="flex-1 space-y-0.5 overflow-y-auto no-scrollbar px-2">
+        <a class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl" href="#">
+            <span class="material-symbols-outlined text-[20px]">dashboard</span>
+            <span class="text-sm">대시보드</span>
+        </a>
+        <a class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl" href="#">
+            <span class="material-symbols-outlined text-[20px]">group</span>
+            <span class="text-sm">기사 관리</span>
+        </a>
+        <a class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl" href="#">
+            <span class="material-symbols-outlined text-[20px]">description</span>
+            <span class="text-sm">계약서 관리</span>
+        </a>
+        <a class="bg-primary-container text-white px-4 py-3 flex items-center gap-3 rounded-xl" href="#">
+            <span class="material-symbols-outlined text-[20px]">payments</span>
+            <span class="text-sm font-medium">정산 관리</span>
+        </a>
+        <a class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl" href="#">
+            <span class="material-symbols-outlined text-[20px]">analytics</span>
+            <span class="text-sm">매출 리포트</span>
+        </a>
+        <a class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl" href="#">
+            <span class="material-symbols-outlined text-[20px]">campaign</span>
+            <span class="text-sm">공지 관리</span>
+        </a>
+        <a class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl" href="#">
+            <span class="material-symbols-outlined text-[20px]">settings</span>
+            <span class="text-sm">설정</span>
+        </a>
+    </nav>
+    <div class="px-2 mt-auto pt-6" style="border-top: 1px solid rgba(255,255,255,0.06);">
+        <div class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl cursor-pointer">
+            <span class="material-symbols-outlined text-[20px]">business</span>
+            <span class="text-sm">운영 대행사</span>
+        </div>
+        <div class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl cursor-pointer">
+            <span class="material-symbols-outlined text-[20px]">account_circle</span>
+            <span class="text-sm">관리자</span>
+        </div>
+    </div>
+</aside>
+
+<!-- Glass Header -->
+<header class="fixed top-0 right-0 left-[240px] h-16 bg-white/80 backdrop-blur-[20px] flex justify-between items-center px-8 z-40">
+    <div class="flex items-center gap-3">
+        <a href="#" class="text-on-surface-variant hover:text-on-surface transition-colors">
+            <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+        </a>
+        <h2 class="font-semibold text-lg text-on-surface">정산 규칙 설정</h2>
+        <span class="text-on-surface-variant text-sm">/</span>
+        <span class="text-on-surface-variant text-sm">정산 관리</span>
+    </div>
+    <div class="flex items-center gap-3">
+        <button class="hover:bg-surface-container-low rounded-full p-2 transition-all duration-200">
+            <span class="material-symbols-outlined text-on-surface-variant text-[20px]">notifications</span>
+        </button>
+        <button class="hover:bg-surface-container-low rounded-full p-2 transition-all duration-200">
+            <span class="material-symbols-outlined text-on-surface-variant text-[20px]">help_outline</span>
+        </button>
+        <div class="h-8 w-8 rounded-full bg-surface-container-high flex items-center justify-center">
+            <span class="material-symbols-outlined text-on-surface-variant text-[18px]">person</span>
+        </div>
+    </div>
+</header>
+
+<!-- Main Content -->
+<main class="ml-[240px] pt-24 pb-12 px-8 min-h-screen">
+
+    <!-- Page Title -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-on-surface tracking-tight">정산 규칙 설정</h1>
+        <p class="text-sm text-on-surface-variant mt-1">원청사별 단가, 공제 항목, 인센티브 구간을 관리합니다</p>
+    </div>
+
+    <!-- Two-panel layout -->
+    <div class="flex gap-6" style="min-height: calc(100vh - 200px);">
+
+        <!-- Left Panel: Principal List (30%) -->
+        <div class="w-[30%] flex-shrink-0">
+            <div class="bg-surface-container-low rounded-2xl p-5 sticky top-24">
+                <div class="flex items-center justify-between mb-5">
+                    <h3 class="text-sm font-semibold text-on-surface">원청사 목록</h3>
+                    <span class="text-xs font-inter text-on-surface-variant font-medium">4개</span>
+                </div>
+
+                <div class="space-y-2" id="principalList">
+                    <!-- CJ대한통운 (active) -->
+                    <div class="principal-card active bg-surface-container-lowest rounded-xl px-5 py-4 cursor-pointer" onclick="selectPrincipal(this, 'cj')">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                <span class="material-symbols-outlined text-primary text-[20px]">local_shipping</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-on-surface">CJ대한통운</p>
+                                <p class="text-xs text-on-surface-variant mt-0.5">기사 <span class="font-inter font-medium">42</span>명 배정</p>
+                            </div>
+                            <span class="material-symbols-outlined text-on-surface-variant text-[18px]">chevron_right</span>
+                        </div>
+                    </div>
+
+                    <!-- 로젠택배 -->
+                    <div class="principal-card bg-surface-container-lowest/60 rounded-xl px-5 py-4 cursor-pointer hover:bg-surface-container-lowest" onclick="selectPrincipal(this, 'logen')">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-tertiary/10 flex items-center justify-center flex-shrink-0">
+                                <span class="material-symbols-outlined text-tertiary text-[20px]">inventory_2</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-on-surface">로젠택배</p>
+                                <p class="text-xs text-on-surface-variant mt-0.5">기사 <span class="font-inter font-medium">28</span>명 배정</p>
+                            </div>
+                            <span class="material-symbols-outlined text-on-surface-variant text-[18px]">chevron_right</span>
+                        </div>
+                    </div>
+
+                    <!-- 한진택배 -->
+                    <div class="principal-card bg-surface-container-lowest/60 rounded-xl px-5 py-4 cursor-pointer hover:bg-surface-container-lowest" onclick="selectPrincipal(this, 'hanjin')">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center flex-shrink-0">
+                                <span class="material-symbols-outlined text-secondary text-[20px]">package_2</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-on-surface">한진택배</p>
+                                <p class="text-xs text-on-surface-variant mt-0.5">기사 <span class="font-inter font-medium">35</span>명 배정</p>
+                            </div>
+                            <span class="material-symbols-outlined text-on-surface-variant text-[18px]">chevron_right</span>
+                        </div>
+                    </div>
+
+                    <!-- 롯데택배 -->
+                    <div class="principal-card bg-surface-container-lowest/60 rounded-xl px-5 py-4 cursor-pointer hover:bg-surface-container-lowest" onclick="selectPrincipal(this, 'lotte')">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-error/10 flex items-center justify-center flex-shrink-0">
+                                <span class="material-symbols-outlined text-error text-[20px]">deployed_code</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-on-surface">롯데택배</p>
+                                <p class="text-xs text-on-surface-variant mt-0.5">기사 <span class="font-inter font-medium">19</span>명 배정</p>
+                            </div>
+                            <span class="material-symbols-outlined text-on-surface-variant text-[18px]">chevron_right</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Principal Button -->
+                <button class="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-primary text-sm font-medium hover:bg-primary/5 transition-colors">
+                    <span class="material-symbols-outlined text-[18px]">add</span>
+                    원청사 추가
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Panel: Rules Editor (70%) -->
+        <div class="flex-1 space-y-6">
+
+            <!-- Selected Principal Header -->
+            <div class="bg-surface-container-lowest rounded-2xl p-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-primary text-[24px]">local_shipping</span>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-on-surface" id="selectedPrincipalName">CJ대한통운</h2>
+                            <p class="text-xs text-on-surface-variant mt-0.5">마지막 수정: <span class="font-inter">2026.03.15</span></p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full bg-tertiary-fixed/30 text-on-tertiary-fixed-variant text-xs font-medium">
+                            <span class="material-symbols-outlined text-[14px] mr-1">check_circle</span>
+                            적용 중
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 1: 단가 설정 -->
+            <div class="bg-surface-container-lowest rounded-2xl p-6">
+                <div class="flex items-center gap-2 mb-5">
+                    <span class="material-symbols-outlined text-primary text-[20px]">price_change</span>
+                    <h3 class="text-base font-bold text-on-surface">단가 설정</h3>
+                </div>
+
+                <!-- Table Header -->
+                <div class="grid grid-cols-3 px-4 py-3 mb-1">
+                    <span class="text-xs font-medium text-on-surface-variant uppercase tracking-wider">배송유형</span>
+                    <span class="text-xs font-medium text-on-surface-variant uppercase tracking-wider text-right">건당 단가</span>
+                    <span class="text-xs font-medium text-on-surface-variant uppercase tracking-wider text-right">적용일</span>
+                </div>
+
+                <!-- Table Rows -->
+                <div class="space-y-1">
+                    <!-- Row 1: 일반택배 -->
+                    <div class="grid grid-cols-3 items-center px-4 py-3 rounded-xl bg-surface-container-low/50 hover:bg-surface-container-low transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-primary/8">
+                                <span class="material-symbols-outlined text-primary text-[16px]">package_2</span>
+                            </span>
+                            <span class="text-sm font-medium text-on-surface">일반택배</span>
+                        </div>
+                        <div class="flex items-center justify-end gap-1">
+                            <span class="text-xs text-on-surface-variant">&#8361;</span>
+                            <input type="text" class="rule-input w-24" value="1,350" />
+                        </div>
+                        <div class="text-right">
+                            <span class="text-sm font-inter text-on-surface-variant">2026.03.01</span>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: 대형택배 -->
+                    <div class="grid grid-cols-3 items-center px-4 py-3 rounded-xl hover:bg-surface-container-low/50 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-secondary/8">
+                                <span class="material-symbols-outlined text-secondary text-[16px]">deployed_code</span>
+                            </span>
+                            <span class="text-sm font-medium text-on-surface">대형택배</span>
+                        </div>
+                        <div class="flex items-center justify-end gap-1">
+                            <span class="text-xs text-on-surface-variant">&#8361;</span>
+                            <input type="text" class="rule-input w-24" value="2,800" />
+                        </div>
+                        <div class="text-right">
+                            <span class="text-sm font-inter text-on-surface-variant">2026.03.01</span>
+                        </div>
+                    </div>
+
+                    <!-- Row 3: 냉동택배 -->
+                    <div class="grid grid-cols-3 items-center px-4 py-3 rounded-xl bg-surface-container-low/50 hover:bg-surface-container-low transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#0891b2]/8">
+                                <span class="material-symbols-outlined text-[#0891b2] text-[16px]">ac_unit</span>
+                            </span>
+                            <span class="text-sm font-medium text-on-surface">냉동택배</span>
+                        </div>
+                        <div class="flex items-center justify-end gap-1">
+                            <span class="text-xs text-on-surface-variant">&#8361;</span>
+                            <input type="text" class="rule-input w-24" value="3,200" />
+                        </div>
+                        <div class="text-right">
+                            <span class="text-sm font-inter text-on-surface-variant">2026.03.01</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: 공제 항목 -->
+            <div class="bg-surface-container-lowest rounded-2xl p-6">
+                <div class="flex items-center justify-between mb-5">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-error text-[20px]">remove_circle</span>
+                        <h3 class="text-base font-bold text-on-surface">공제 항목</h3>
+                    </div>
+                    <div class="flex items-center gap-2 bg-error-container/40 px-3 py-1.5 rounded-full">
+                        <span class="text-xs font-medium text-on-error-container">공제합계</span>
+                        <span class="text-sm font-inter font-bold text-on-error-container" id="deductionTotal">&#8361;420,000</span>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <!-- Deduction Row 1: 보험료 -->
+                    <div class="flex items-center justify-between px-4 py-3.5 rounded-xl bg-surface-container-low/50 hover:bg-surface-container-low transition-colors">
+                        <div class="flex items-center gap-4">
+                            <div class="toggle-track active" onclick="this.classList.toggle('active'); calcTotal()"></div>
+                            <div class="flex items-center gap-3">
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-primary/8">
+                                    <span class="material-symbols-outlined text-primary text-[16px]">shield</span>
+                                </span>
+                                <span class="text-sm font-medium text-on-surface">보험료</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="text-xs text-on-surface-variant">&#8361;</span>
+                            <input type="text" class="rule-input w-24" value="42,000" onchange="calcTotal()" />
+                            <span class="text-xs text-on-surface-variant">/월</span>
+                        </div>
+                    </div>
+
+                    <!-- Deduction Row 2: 유류비 -->
+                    <div class="flex items-center justify-between px-4 py-3.5 rounded-xl hover:bg-surface-container-low/50 transition-colors">
+                        <div class="flex items-center gap-4">
+                            <div class="toggle-track active" onclick="this.classList.toggle('active'); calcTotal()"></div>
+                            <div class="flex items-center gap-3">
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-tertiary/8">
+                                    <span class="material-symbols-outlined text-tertiary text-[16px]">local_gas_station</span>
+                                </span>
+                                <span class="text-sm font-medium text-on-surface">유류비</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="text-xs text-on-surface-variant">&#8361;</span>
+                            <input type="text" class="rule-input w-24" value="28,000" onchange="calcTotal()" />
+                            <span class="text-xs text-on-surface-variant">/월</span>
+                        </div>
+                    </div>
+
+                    <!-- Deduction Row 3: 차량할부 -->
+                    <div class="flex items-center justify-between px-4 py-3.5 rounded-xl bg-surface-container-low/50 hover:bg-surface-container-low transition-colors">
+                        <div class="flex items-center gap-4">
+                            <div class="toggle-track active" onclick="this.classList.toggle('active'); calcTotal()"></div>
+                            <div class="flex items-center gap-3">
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-secondary/8">
+                                    <span class="material-symbols-outlined text-secondary text-[16px]">directions_car</span>
+                                </span>
+                                <span class="text-sm font-medium text-on-surface">차량할부</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="text-xs text-on-surface-variant">&#8361;</span>
+                            <input type="text" class="rule-input w-24" value="350,000" onchange="calcTotal()" />
+                            <span class="text-xs text-on-surface-variant">/월</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Deduction -->
+                <button class="mt-3 flex items-center gap-1.5 px-4 py-2 text-primary text-sm font-medium hover:bg-primary/5 rounded-lg transition-colors">
+                    <span class="material-symbols-outlined text-[16px]">add</span>
+                    항목 추가
+                </button>
+            </div>
+
+            <!-- Section 3: 인센티브 구간 -->
+            <div class="bg-surface-container-lowest rounded-2xl p-6">
+                <div class="flex items-center gap-2 mb-5">
+                    <span class="material-symbols-outlined text-tertiary text-[20px]">trending_up</span>
+                    <h3 class="text-base font-bold text-on-surface">인센티브 구간</h3>
+                </div>
+
+                <!-- Table Header -->
+                <div class="grid grid-cols-3 px-4 py-3 mb-1">
+                    <span class="text-xs font-medium text-on-surface-variant uppercase tracking-wider">최소건수</span>
+                    <span class="text-xs font-medium text-on-surface-variant uppercase tracking-wider text-center">최대건수</span>
+                    <span class="text-xs font-medium text-on-surface-variant uppercase tracking-wider text-right">건당 추가단가</span>
+                </div>
+
+                <!-- Incentive Rows -->
+                <div class="space-y-1">
+                    <!-- Tier 1 -->
+                    <div class="grid grid-cols-3 items-center px-4 py-3.5 rounded-xl bg-surface-container-low/50 hover:bg-surface-container-low transition-colors">
+                        <div class="flex items-center gap-2">
+                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-on-surface-variant/8 text-xs font-inter font-bold text-on-surface-variant">1</span>
+                            <span class="text-sm font-inter font-medium text-on-surface">0</span>
+                            <span class="text-xs text-on-surface-variant">건</span>
+                        </div>
+                        <div class="text-center">
+                            <span class="text-sm font-inter font-medium text-on-surface">100</span>
+                            <span class="text-xs text-on-surface-variant"> 건</span>
+                        </div>
+                        <div class="flex items-center justify-end gap-1">
+                            <span class="text-xs text-on-surface-variant">+&#8361;</span>
+                            <span class="text-sm font-inter font-semibold text-on-surface-variant">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Tier 2 -->
+                    <div class="grid grid-cols-3 items-center px-4 py-3.5 rounded-xl hover:bg-surface-container-low/50 transition-colors">
+                        <div class="flex items-center gap-2">
+                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-primary/10 text-xs font-inter font-bold text-primary">2</span>
+                            <span class="text-sm font-inter font-medium text-on-surface">101</span>
+                            <span class="text-xs text-on-surface-variant">건</span>
+                        </div>
+                        <div class="text-center">
+                            <span class="text-sm font-inter font-medium text-on-surface">200</span>
+                            <span class="text-xs text-on-surface-variant"> 건</span>
+                        </div>
+                        <div class="flex items-center justify-end gap-1">
+                            <span class="text-xs text-primary">+&#8361;</span>
+                            <span class="text-sm font-inter font-semibold text-primary">50</span>
+                        </div>
+                    </div>
+
+                    <!-- Tier 3 -->
+                    <div class="grid grid-cols-3 items-center px-4 py-3.5 rounded-xl bg-surface-container-low/50 hover:bg-surface-container-low transition-colors">
+                        <div class="flex items-center gap-2">
+                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-tertiary/10 text-xs font-inter font-bold text-tertiary">3</span>
+                            <span class="text-sm font-inter font-medium text-on-surface">201</span>
+                            <span class="text-xs text-on-surface-variant">건</span>
+                        </div>
+                        <div class="text-center">
+                            <span class="text-sm font-inter font-medium text-on-surface-variant">&#8734;</span>
+                        </div>
+                        <div class="flex items-center justify-end gap-1">
+                            <span class="text-xs text-tertiary">+&#8361;</span>
+                            <span class="text-sm font-inter font-semibold text-tertiary">100</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Tier -->
+                <button class="mt-3 flex items-center gap-1.5 px-4 py-2 text-primary text-sm font-medium hover:bg-primary/5 rounded-lg transition-colors">
+                    <span class="material-symbols-outlined text-[16px]">add</span>
+                    구간 추가
+                </button>
+            </div>
+
+            <!-- Save Button -->
+            <div class="flex justify-end pt-2">
+                <button class="inline-flex items-center gap-2 px-8 py-3 rounded-lg text-white font-semibold text-sm shadow-lg shadow-primary/20 transition-all hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0"
+                        style="background: linear-gradient(135deg, #004ac6 0%, #2563eb 100%);">
+                    <span class="material-symbols-outlined text-[18px]">save</span>
+                    저장
+                </button>
+            </div>
+
+        </div>
+    </div>
+</main>
+
+<script>
+    function selectPrincipal(card, id) {
+        // Remove active from all
+        document.querySelectorAll('.principal-card').forEach(c => {
+            c.classList.remove('active');
+            c.classList.remove('bg-surface-container-lowest');
+            c.classList.add('bg-surface-container-lowest/60');
+        });
+        // Set active
+        card.classList.add('active');
+        card.classList.add('bg-surface-container-lowest');
+        card.classList.remove('bg-surface-container-lowest/60');
+
+        const names = {
+            cj: 'CJ대한통운',
+            logen: '로젠택배',
+            hanjin: '한진택배',
+            lotte: '롯데택배'
+        };
+        document.getElementById('selectedPrincipalName').textContent = names[id] || id;
+    }
+
+    function calcTotal() {
+        // Simple recalculation of deduction total
+        const rows = document.querySelectorAll('.toggle-track.active');
+        let total = 0;
+        rows.forEach(toggle => {
+            const row = toggle.closest('.flex.items-center.justify-between');
+            if (row) {
+                const input = row.querySelector('.rule-input');
+                if (input) {
+                    const val = parseInt(input.value.replace(/,/g, ''), 10);
+                    if (!isNaN(val)) total += val;
+                }
+            }
+        });
+        const formatted = '₩' + total.toLocaleString('ko-KR');
+        document.getElementById('deductionTotal').textContent = formatted;
+    }
+</script>
+</body>
+</html>

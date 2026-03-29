@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-tertiary-container": "#bdffdb",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "on-secondary-fixed": "#131b2e",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-surface": "#191c1e",
+                        "secondary-container": "#dae2fd",
+                        "primary-container": "#2563eb",
+                        "on-secondary-container": "#5c647a",
+                        "primary-fixed": "#dbe1ff",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "tertiary-fixed": "#6ffbbe",
+                        "outline-variant": "#c3c6d7",
+                        "on-background": "#191c1e",
+                        "on-primary": "#ffffff",
+                        "surface-tint": "#0053db",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed": "#00174b",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "inverse-primary": "#b4c5ff",
+                        "secondary-fixed": "#dae2fd",
+                        "error": "#ba1a1a",
+                        "on-secondary": "#ffffff",
+                        "surface-container-high": "#e6e8ea",
+                        "surface-container-low": "#f2f4f6",
+                        "on-surface-variant": "#434655",
+                        "on-tertiary": "#ffffff",
+                        "tertiary": "#006242",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "surface-container": "#eceef0",
+                        "primary": "#004ac6",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "on-tertiary-fixed": "#002113",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "tertiary-container": "#007d55",
+                        "surface-dim": "#d8dadc",
+                        "surface-bright": "#f7f9fb",
+                        "error-container": "#ffdad6",
+                        "background": "#f7f9fb",
+                        "on-primary-container": "#eeefff",
+                        "inverse-surface": "#2d3133",
+                        "surface-variant": "#e0e3e5",
+                        "surface": "#f7f9fb",
+                        "secondary": "#565e74",
+                        "outline": "#737686",
+                        "inverse-on-surface": "#eff1f3"
+                    },
+                    fontFamily: {
+                        "headline": ["Pretendard", "Manrope", "sans-serif"],
+                        "body": ["Pretendard", "Inter", "sans-serif"],
+                        "label": ["Pretendard", "Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "3xl": "1.5rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .glass-header { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body min-h-screen pb-32">
+<!-- Top Navigation Bar -->
+<nav class="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl flex justify-between items-center px-4 h-14 shadow-sm dark:shadow-none">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-900 dark:text-slate-50">menu</span>
+</div>
+<h1 class="text-lg font-bold text-slate-900 dark:text-slate-50">배송 매니저</h1>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-900 dark:text-slate-50">notifications</span>
+</div>
+</nav>
+<!-- Profile Header Section -->
+<header class="pt-14 pb-24 px-6 bg-primary-container relative overflow-hidden">
+<div class="absolute top-0 left-0 w-full h-full opacity-10">
+<div class="absolute top-[-20%] right-[-10%] w-64 h-64 rounded-full bg-white blur-3xl"></div>
+</div>
+<div class="flex justify-end mt-4">
+<button class="text-white text-sm font-medium px-3 py-1.5 rounded-lg bg-white/10 backdrop-blur-md hover:bg-white/20 transition-all active:scale-95">편집</button>
+</div>
+<div class="flex flex-col items-center mt-2 text-center relative z-10">
+<div class="w-[66px] h-[66px] rounded-full border-2 border-white overflow-hidden mb-4 shadow-lg">
+<img alt="Driver Profile Photo" class="w-full h-full object-cover" data-alt="portrait of a professional delivery driver wearing a clean uniform, friendly expression, outdoor bright daylight lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9x9m-__l9vJzo17fSap5ZKx7RNllD1sXZRMJTQ2tRMU2V-8x2AQ58Z1TE37Ip2O_sTJg7L69fypmWvKz0UVixNfUGRHgkuGACbj3qcZF78YlsO2P6WVCtfbGaPt9_uNVwy5uZD0kC-x3XF-nz4ubp9uxIY2-Iu1-1OKvxYDjgrAMZ1xoEdq13mTj3A0pbCu-jMeEnX5qMpF_k6okRCb-2u8xyXP4bZoFUQYX5i_l6FIUcche1lEyRabgXYQeIA1vM7RIgVk7vypqS"/>
+</div>
+<h2 class="text-[20px] font-bold text-white mb-1">김철수 기사님</h2>
+<p class="text-white/80 text-sm font-medium">강남 제1 대리점</p>
+<p class="text-white/60 text-xs mt-0.5 tracking-wider font-mono">ID: DLV_2024_0824</p>
+</div>
+</header>
+<!-- Floating Stats Card -->
+<div class="px-5 -mt-16 relative z-20">
+<div class="bg-surface-container-lowest rounded-3xl shadow-[0_8px_32px_rgba(15,23,42,0.08)] grid grid-cols-3 divide-x divide-outline-variant/15 py-6">
+<div class="flex flex-col items-center justify-center">
+<span class="text-secondary text-[11px] font-medium mb-1">가입일</span>
+<span class="text-on-surface font-semibold text-[15px] font-['Inter']">24.03.12</span>
+</div>
+<div class="flex flex-col items-center justify-center">
+<span class="text-secondary text-[11px] font-medium mb-1">계약상태</span>
+<div class="flex items-center gap-1">
+<div class="w-1.5 h-1.5 rounded-full bg-tertiary"></div>
+<span class="text-tertiary font-bold text-[15px]">정상</span>
+</div>
+</div>
+<div class="flex flex-col items-center justify-center">
+<span class="text-secondary text-[11px] font-medium mb-1">미서명 건수</span>
+<span class="text-[#f59e0b] font-bold text-[15px] font-['Inter']">2건</span>
+</div>
+</div>
+</div>
+<!-- Menu Sections -->
+<main class="px-5 mt-8 space-y-8">
+<!-- 내 정보 Section -->
+<section>
+<h3 class="text-secondary text-xs font-bold px-1 mb-3">내 정보</h3>
+<div class="bg-surface-container-lowest rounded-3xl overflow-hidden shadow-sm">
+<button class="w-full flex items-center justify-between px-5 py-4 hover:bg-surface-container-low transition-colors group">
+<div class="flex flex-col items-start">
+<span class="text-[11px] text-secondary mb-0.5">이름</span>
+<span class="text-[15px] text-on-surface font-medium">김철수</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-active:translate-x-1 transition-transform">chevron_right</span>
+</button>
+<button class="w-full flex items-center justify-between px-5 py-4 hover:bg-surface-container-low transition-colors group">
+<div class="flex flex-col items-start">
+<span class="text-[11px] text-secondary mb-0.5">연락처</span>
+<span class="text-[15px] text-on-surface font-medium font-['Inter']">010-1234-5678</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-active:translate-x-1 transition-transform">chevron_right</span>
+</button>
+<button class="w-full flex items-center justify-between px-5 py-4 hover:bg-surface-container-low transition-colors group">
+<div class="flex flex-col items-start">
+<span class="text-[11px] text-secondary mb-0.5">차량번호</span>
+<span class="text-[15px] text-on-surface font-medium">서울 12가 3456</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-active:translate-x-1 transition-transform">chevron_right</span>
+</button>
+</div>
+</section>
+<!-- 서류 관리 Section -->
+<section>
+<h3 class="text-secondary text-xs font-bold px-1 mb-3">서류 관리</h3>
+<div class="bg-surface-container-lowest rounded-3xl overflow-hidden shadow-sm">
+<button class="w-full flex items-center justify-between px-5 py-4 hover:bg-surface-container-low transition-colors group">
+<span class="text-[15px] text-on-surface font-medium">등록 서류 확인</span>
+<span class="material-symbols-outlined text-outline-variant">chevron_right</span>
+</button>
+<button class="w-full flex items-center justify-between px-5 py-4 hover:bg-surface-container-low transition-colors group">
+<div class="flex items-center gap-2">
+<span class="text-[15px] text-on-surface font-medium">서류 재업로드</span>
+<span class="px-2 py-0.5 bg-error-container text-error text-[10px] font-bold rounded-full">업데이트 필요</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant">chevron_right</span>
+</button>
+</div>
+</section>
+<!-- 알림 설정 Section -->
+<section>
+<h3 class="text-secondary text-xs font-bold px-1 mb-3">알림 설정</h3>
+<div class="bg-surface-container-lowest rounded-3xl overflow-hidden shadow-sm divide-y divide-surface-container-low">
+<div class="flex items-center justify-between px-5 py-4">
+<span class="text-[15px] text-on-surface font-medium">정산서 발행 알림</span>
+<div class="w-11 h-6 bg-primary-container rounded-full relative p-1 flex items-center justify-end">
+<div class="w-4 h-4 bg-white rounded-full shadow-sm"></div>
+</div>
+</div>
+<div class="flex items-center justify-between px-5 py-4">
+<span class="text-[15px] text-on-surface font-medium">공지사항 알림</span>
+<div class="w-11 h-6 bg-primary-container rounded-full relative p-1 flex items-center justify-end">
+<div class="w-4 h-4 bg-white rounded-full shadow-sm"></div>
+</div>
+</div>
+<div class="flex items-center justify-between px-5 py-4">
+<span class="text-[15px] text-on-surface font-medium">계약서 알림</span>
+<div class="w-11 h-6 bg-surface-container-highest rounded-full relative p-1 flex items-center justify-start">
+<div class="w-4 h-4 bg-white rounded-full shadow-sm"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- 앱 정보 Section -->
+<section>
+<h3 class="text-secondary text-xs font-bold px-1 mb-3">앱 정보</h3>
+<div class="bg-surface-container-lowest rounded-3xl overflow-hidden shadow-sm">
+<div class="flex items-center justify-between px-5 py-4">
+<span class="text-[15px] text-on-surface font-medium">버전 정보</span>
+<span class="text-[13px] text-secondary font-['Inter']">v1.2.4</span>
+</div>
+<button class="w-full flex items-center justify-between px-5 py-4 hover:bg-surface-container-low transition-colors">
+<span class="text-[15px] text-on-surface font-medium">이용약관</span>
+<span class="material-symbols-outlined text-outline-variant">chevron_right</span>
+</button>
+<button class="w-full flex items-center justify-between px-5 py-4 hover:bg-surface-container-low transition-colors">
+<span class="text-[15px] text-on-surface font-medium">개인정보처리방침</span>
+<span class="material-symbols-outlined text-outline-variant">chevron_right</span>
+</button>
+</div>
+</section>
+<!-- Logout Button -->
+<section class="pt-4 pb-8">
+<button class="w-full py-4 rounded-2xl border border-error/20 text-error font-bold text-[15px] hover:bg-error/5 transition-colors active:scale-95 duration-150">
+                로그아웃
+            </button>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full h-[80px] z-50 rounded-t-3xl bg-white dark:bg-slate-900 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] flex justify-around items-center px-6 pb-2">
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 gap-1 hover:opacity-80 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[11px] font-medium tracking-tight">홈</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 gap-1 hover:opacity-80 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="text-[11px] font-medium tracking-tight">정산서</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 gap-1 hover:opacity-80 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">campaign</span>
+<span class="text-[11px] font-medium tracking-tight">공지사항</span>
+</a>
+<a class="flex flex-col items-center justify-center text-blue-600 dark:text-blue-400 font-bold gap-1 hover:opacity-80 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="text-[11px] font-medium tracking-tight">프로필</span>
+</a>
+</nav>
+</body></html>

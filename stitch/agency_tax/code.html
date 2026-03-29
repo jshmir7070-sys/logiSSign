@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html class="light" lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Precision Velocity - 세금계산서 관리</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script>
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "surface": "#f7f9fb",
+        "surface-bright": "#f7f9fb",
+        "surface-dim": "#d8dadc",
+        "surface-container-lowest": "#ffffff",
+        "surface-container-low": "#f2f4f6",
+        "surface-container": "#eceef0",
+        "surface-container-high": "#e6e8ea",
+        "surface-container-highest": "#e0e3e5",
+        "surface-variant": "#e0e3e5",
+        "surface-tint": "#0053db",
+        "on-surface": "#191c1e",
+        "on-surface-variant": "#434655",
+        "on-background": "#191c1e",
+        "background": "#f7f9fb",
+        "primary": "#004ac6",
+        "primary-container": "#2563eb",
+        "on-primary": "#ffffff",
+        "on-primary-container": "#eeefff",
+        "secondary": "#565e74",
+        "secondary-container": "#dae2fd",
+        "secondary-fixed": "#dae2fd",
+        "on-secondary-fixed": "#131b2e",
+        "tertiary": "#006242",
+        "tertiary-container": "#007d55",
+        "tertiary-fixed": "#6ffbbe",
+        "on-tertiary-fixed": "#002113",
+        "error": "#ba1a1a",
+        "error-container": "#ffdad6",
+        "on-error": "#ffffff",
+        "outline": "#737686",
+        "outline-variant": "#c3c6d7",
+        "inverse-surface": "#2d3133",
+        "inverse-on-surface": "#eff1f3",
+        "inverse-primary": "#b4c5ff",
+      },
+      fontFamily: {
+        "headline": ["Manrope", "Pretendard", "sans-serif"],
+        "body": ["Inter", "Pretendard", "sans-serif"],
+        "label": ["Inter", "Pretendard", "sans-serif"]
+      },
+      borderRadius: {
+        "DEFAULT": "0.25rem",
+        "lg": "0.5rem",
+        "xl": "0.75rem",
+        "2xl": "1rem",
+        "3xl": "1.5rem",
+        "full": "9999px"
+      },
+    },
+  },
+}
+</script>
+<style>
+body { font-family: 'Pretendard', sans-serif; }
+.font-inter { font-family: 'Inter', sans-serif; }
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+  display: inline-block; line-height: 1; text-transform: none;
+  letter-spacing: normal; word-wrap: normal; white-space: nowrap; direction: ltr;
+}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.glass-header { background: rgba(255,255,255,0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+.power-gradient { background: linear-gradient(135deg, #004ac6, #2563eb); }
+.ghost-border { box-shadow: inset 0 0 0 1px rgba(195,198,215,0.15); }
+.ambient-shadow { box-shadow: 0 8px 32px rgba(15,23,42,0.08); }
+.row-hover:hover { background-color: #e6e8ea; }
+</style>
+</head>
+<body class="bg-surface text-on-surface antialiased min-h-screen">
+
+<!-- ====== SIDEBAR (240px, #0F172A) ====== -->
+<aside class="fixed left-0 top-0 h-screen w-[240px] bg-[#0F172A] flex flex-col py-6 z-50">
+  <div class="px-6 mb-10">
+    <h1 class="text-xl font-bold text-white tracking-tight font-headline">Precision Velocity</h1>
+    <p class="text-[11px] text-slate-400 mt-1.5 uppercase tracking-[0.15em]">Agency Portal</p>
+  </div>
+
+  <nav class="flex-1 space-y-0.5 overflow-y-auto no-scrollbar px-2">
+    <!-- 대시보드 -->
+    <a href="#" class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl">
+      <span class="material-symbols-outlined text-[20px]">dashboard</span>
+      <span class="text-sm">대시보드</span>
+    </a>
+    <!-- 기사 관리 -->
+    <a href="#" class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl">
+      <span class="material-symbols-outlined text-[20px]">group</span>
+      <span class="text-sm">기사 관리</span>
+    </a>
+    <!-- 계약서 관리 -->
+    <a href="#" class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl">
+      <span class="material-symbols-outlined text-[20px]">description</span>
+      <span class="text-sm">계약서 관리</span>
+    </a>
+
+    <!-- 정산 관리 (Active, with sub-items) -->
+    <div class="mt-1">
+      <a href="#" class="bg-[#2563eb] text-white px-4 py-3 flex items-center gap-3 rounded-xl">
+        <span class="material-symbols-outlined text-[20px]">payments</span>
+        <span class="text-sm font-medium">정산 관리</span>
+        <span class="material-symbols-outlined text-[18px] ml-auto">expand_more</span>
+      </a>
+      <!-- Sub-items -->
+      <div class="ml-4 mt-1 space-y-0.5">
+        <a href="#" class="text-slate-400 hover:text-white pl-8 pr-4 py-2.5 flex items-center gap-2.5 transition-colors hover:bg-white/5 rounded-lg text-[13px]">
+          <span class="w-1 h-1 rounded-full bg-slate-600"></span>
+          정산서 생성
+        </a>
+        <a href="#" class="text-slate-400 hover:text-white pl-8 pr-4 py-2.5 flex items-center gap-2.5 transition-colors hover:bg-white/5 rounded-lg text-[13px]">
+          <span class="w-1 h-1 rounded-full bg-slate-600"></span>
+          정산 규칙
+        </a>
+        <a href="#" class="text-white bg-white/10 pl-8 pr-4 py-2.5 flex items-center gap-2.5 rounded-lg text-[13px] font-medium">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#2563eb]"></span>
+          세금계산서
+        </a>
+      </div>
+    </div>
+
+    <!-- 매출 리포트 -->
+    <a href="#" class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl">
+      <span class="material-symbols-outlined text-[20px]">analytics</span>
+      <span class="text-sm">매출 리포트</span>
+    </a>
+    <!-- 공지 관리 -->
+    <a href="#" class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl">
+      <span class="material-symbols-outlined text-[20px]">campaign</span>
+      <span class="text-sm">공지 관리</span>
+    </a>
+    <!-- 설정 -->
+    <a href="#" class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl">
+      <span class="material-symbols-outlined text-[20px]">settings</span>
+      <span class="text-sm">설정</span>
+    </a>
+  </nav>
+
+  <!-- Bottom user section -->
+  <div class="px-2 mt-auto pt-6 border-t border-white/5 space-y-0.5">
+    <div class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl cursor-pointer">
+      <span class="material-symbols-outlined text-[20px]">business</span>
+      <span class="text-sm">운영 대행사</span>
+    </div>
+    <div class="text-slate-400 hover:text-white px-4 py-3 flex items-center gap-3 transition-colors hover:bg-white/5 rounded-xl cursor-pointer">
+      <span class="material-symbols-outlined text-[20px]">account_circle</span>
+      <span class="text-sm">관리자</span>
+    </div>
+  </div>
+</aside>
+
+<!-- ====== GLASS HEADER ====== -->
+<header class="fixed top-0 right-0 left-[240px] h-16 glass-header flex justify-between items-center px-8 z-40">
+  <div class="flex items-center gap-4">
+    <h2 class="font-semibold text-lg text-on-surface">세금계산서 관리</h2>
+    <span class="text-on-surface-variant text-sm">/portal/tax-invoices</span>
+  </div>
+  <div class="flex items-center gap-3">
+    <div class="relative">
+      <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+      <input type="text" placeholder="검색..." class="bg-surface-container-low rounded-full py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/30 focus:outline-none w-56 transition-all ghost-border"/>
+    </div>
+    <button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high rounded-full transition-colors relative">
+      <span class="material-symbols-outlined text-[20px]">notifications</span>
+      <span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+    </button>
+    <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary-container flex items-center justify-center text-white text-sm font-semibold font-inter">A</div>
+  </div>
+</header>
+
+<!-- ====== MAIN CONTENT ====== -->
+<main class="ml-[240px] pt-16 min-h-screen">
+  <div class="p-8">
+
+    <!-- Sub-tabs -->
+    <div class="flex items-center gap-1 mb-8">
+      <button class="px-5 py-2.5 rounded-full text-sm font-medium bg-on-surface text-white transition-colors">전체</button>
+      <button class="px-5 py-2.5 rounded-full text-sm font-medium text-on-surface-variant hover:bg-surface-container-high transition-colors">발행대기</button>
+      <button class="px-5 py-2.5 rounded-full text-sm font-medium text-on-surface-variant hover:bg-surface-container-high transition-colors">발행완료</button>
+      <button class="px-5 py-2.5 rounded-full text-sm font-medium text-on-surface-variant hover:bg-surface-container-high transition-colors">취소</button>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-3 gap-6 mb-8">
+      <!-- 이번달 발행건수 -->
+      <div class="bg-surface-container-lowest rounded-3xl p-6 ghost-border">
+        <p class="text-on-surface-variant text-sm mb-3 tracking-wide" style="letter-spacing:0.02em">이번달 발행건수</p>
+        <div class="flex items-end justify-between">
+          <span class="font-inter font-bold text-3xl text-on-surface tracking-tight">47<span class="text-lg font-semibold text-on-surface-variant ml-0.5">건</span></span>
+          <div class="flex items-center gap-1 text-tertiary text-xs font-medium font-inter bg-tertiary-fixed/30 px-2.5 py-1 rounded-full">
+            <span class="material-symbols-outlined text-[14px]">trending_up</span>
+            +12%
+          </div>
+        </div>
+      </div>
+
+      <!-- 총 공급가액 -->
+      <div class="bg-surface-container-lowest rounded-3xl p-6 ghost-border">
+        <p class="text-on-surface-variant text-sm mb-3 tracking-wide" style="letter-spacing:0.02em">총 공급가액</p>
+        <div class="flex items-end justify-between">
+          <span class="font-inter font-bold text-3xl text-on-surface tracking-tight"><span class="text-xl font-semibold">&#8361;</span>84,200,000</span>
+        </div>
+      </div>
+
+      <!-- 미발행 건수 -->
+      <div class="bg-surface-container-lowest rounded-3xl p-6 ghost-border relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-24 h-24 bg-amber-400/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+        <p class="text-on-surface-variant text-sm mb-3 tracking-wide" style="letter-spacing:0.02em">미발행 건수</p>
+        <div class="flex items-end justify-between">
+          <span class="font-inter font-bold text-3xl text-amber-600 tracking-tight">12<span class="text-lg font-semibold ml-0.5">건</span></span>
+          <div class="flex items-center gap-1 text-amber-700 text-xs font-medium font-inter bg-amber-100 px-2.5 py-1 rounded-full">
+            <span class="material-symbols-outlined text-[14px]">warning</span>
+            발행 필요
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Row -->
+    <div class="bg-surface-container-lowest rounded-3xl p-5 mb-6 ghost-border">
+      <div class="flex items-center gap-4">
+        <!-- Month Picker -->
+        <div class="relative">
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">calendar_month</span>
+          <input type="month" value="2024-03" class="bg-surface-container-low rounded-xl py-2.5 pl-10 pr-4 text-sm font-inter focus:ring-2 focus:ring-primary/30 focus:outline-none ghost-border cursor-pointer"/>
+        </div>
+        <!-- Driver Search -->
+        <div class="relative flex-1 max-w-xs">
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">person_search</span>
+          <input type="text" placeholder="기사명 검색" class="w-full bg-surface-container-low rounded-xl py-2.5 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/30 focus:outline-none ghost-border"/>
+        </div>
+        <!-- Status Filter -->
+        <select class="bg-surface-container-low rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-primary/30 focus:outline-none ghost-border appearance-none cursor-pointer pr-10" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22%23737686%22><path d=%22M7 10l5 5 5-5z%22/></svg>'); background-repeat: no-repeat; background-position: right 12px center;">
+          <option>전체 상태</option>
+          <option>발행대기</option>
+          <option>발행완료</option>
+          <option>취소</option>
+        </select>
+        <!-- Spacer + Action -->
+        <div class="ml-auto">
+          <button class="text-sm text-on-surface-variant hover:text-on-surface flex items-center gap-1.5 transition-colors">
+            <span class="material-symbols-outlined text-[18px]">filter_list</span>
+            필터 초기화
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="bg-surface-container-lowest rounded-3xl ghost-border overflow-hidden">
+      <!-- Table Header -->
+      <div class="px-6 pt-6 pb-3">
+        <div class="grid grid-cols-[1.2fr_0.8fr_1.2fr_1fr_1.2fr_1fr_1fr_0.8fr] items-center text-xs text-on-surface-variant font-medium uppercase tracking-wider" style="letter-spacing:0.05em">
+          <span>기사명</span>
+          <span>정산월</span>
+          <span class="text-right">공급가액</span>
+          <span class="text-right">세액</span>
+          <span class="text-right">합계</span>
+          <span class="text-center">상태</span>
+          <span class="text-center">발행일</span>
+          <span class="text-center">액션</span>
+        </div>
+      </div>
+
+      <!-- Table Body -->
+      <div class="px-6 pb-6">
+        <!-- Row 1: 김철수 -->
+        <div class="grid grid-cols-[1.2fr_0.8fr_1.2fr_1fr_1.2fr_1fr_1fr_0.8fr] items-center py-[1.125rem] rounded-2xl px-0 row-hover transition-colors cursor-pointer" style="margin-bottom: 0.125rem;">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-semibold">김</div>
+            <div>
+              <p class="text-sm font-medium text-on-surface">김철수</p>
+              <p class="text-xs text-on-surface-variant">010-1234-5678</p>
+            </div>
+          </div>
+          <span class="text-sm font-inter text-on-surface-variant">2024.03</span>
+          <span class="text-sm font-inter text-on-surface text-right font-medium">&#8361;3,420,500</span>
+          <span class="text-sm font-inter text-on-surface-variant text-right">&#8361;342,050</span>
+          <span class="text-sm font-inter text-on-surface text-right font-semibold">&#8361;3,762,550</span>
+          <div class="text-center">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-tertiary-fixed/40 text-tertiary" style="border-radius:999px">발행완료</span>
+          </div>
+          <span class="text-sm font-inter text-on-surface-variant text-center">2024.03.25</span>
+          <div class="text-center">
+            <button class="text-xs text-primary hover:text-primary-container font-medium px-3 py-1.5 rounded-lg hover:bg-primary/5 transition-colors">보기</button>
+          </div>
+        </div>
+
+        <!-- Row 2: 이영희 -->
+        <div class="grid grid-cols-[1.2fr_0.8fr_1.2fr_1fr_1.2fr_1fr_1fr_0.8fr] items-center py-[1.125rem] rounded-2xl px-0 row-hover transition-colors cursor-pointer" style="margin-bottom: 0.125rem;">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-rose-400 to-rose-600 flex items-center justify-center text-white text-xs font-semibold">이</div>
+            <div>
+              <p class="text-sm font-medium text-on-surface">이영희</p>
+              <p class="text-xs text-on-surface-variant">010-2345-6789</p>
+            </div>
+          </div>
+          <span class="text-sm font-inter text-on-surface-variant">2024.03</span>
+          <span class="text-sm font-inter text-on-surface text-right font-medium">&#8361;2,890,000</span>
+          <span class="text-sm font-inter text-on-surface-variant text-right">&#8361;289,000</span>
+          <span class="text-sm font-inter text-on-surface text-right font-semibold">&#8361;3,179,000</span>
+          <div class="text-center">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700" style="border-radius:999px">발행대기</span>
+          </div>
+          <span class="text-sm font-inter text-on-surface-variant text-center">-</span>
+          <div class="text-center flex items-center justify-center gap-1">
+            <button class="text-xs text-white font-medium px-3 py-1.5 rounded-lg power-gradient hover:opacity-90 transition-opacity">발행</button>
+            <button class="text-xs text-primary hover:text-primary-container font-medium px-3 py-1.5 rounded-lg hover:bg-primary/5 transition-colors">보기</button>
+          </div>
+        </div>
+
+        <!-- Row 3: 박민수 -->
+        <div class="grid grid-cols-[1.2fr_0.8fr_1.2fr_1fr_1.2fr_1fr_1fr_0.8fr] items-center py-[1.125rem] rounded-2xl px-0 row-hover transition-colors cursor-pointer" style="margin-bottom: 0.125rem;">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white text-xs font-semibold">박</div>
+            <div>
+              <p class="text-sm font-medium text-on-surface">박민수</p>
+              <p class="text-xs text-on-surface-variant">010-3456-7890</p>
+            </div>
+          </div>
+          <span class="text-sm font-inter text-on-surface-variant">2024.03</span>
+          <span class="text-sm font-inter text-on-surface text-right font-medium">&#8361;3,150,200</span>
+          <span class="text-sm font-inter text-on-surface-variant text-right">&#8361;315,020</span>
+          <span class="text-sm font-inter text-on-surface text-right font-semibold">&#8361;3,465,220</span>
+          <div class="text-center">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700" style="border-radius:999px">발행대기</span>
+          </div>
+          <span class="text-sm font-inter text-on-surface-variant text-center">-</span>
+          <div class="text-center flex items-center justify-center gap-1">
+            <button class="text-xs text-white font-medium px-3 py-1.5 rounded-lg power-gradient hover:opacity-90 transition-opacity">발행</button>
+            <button class="text-xs text-primary hover:text-primary-container font-medium px-3 py-1.5 rounded-lg hover:bg-primary/5 transition-colors">보기</button>
+          </div>
+        </div>
+
+        <!-- Row 4: 장지훈 -->
+        <div class="grid grid-cols-[1.2fr_0.8fr_1.2fr_1fr_1.2fr_1fr_1fr_0.8fr] items-center py-[1.125rem] rounded-2xl px-0 row-hover transition-colors cursor-pointer" style="margin-bottom: 0.125rem;">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center text-white text-xs font-semibold">장</div>
+            <div>
+              <p class="text-sm font-medium text-on-surface">장지훈</p>
+              <p class="text-xs text-on-surface-variant">010-4567-8901</p>
+            </div>
+          </div>
+          <span class="text-sm font-inter text-on-surface-variant">2024.02</span>
+          <span class="text-sm font-inter text-on-surface text-right font-medium">&#8361;2,980,000</span>
+          <span class="text-sm font-inter text-on-surface-variant text-right">&#8361;298,000</span>
+          <span class="text-sm font-inter text-on-surface text-right font-semibold">&#8361;3,278,000</span>
+          <div class="text-center">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-tertiary-fixed/40 text-tertiary" style="border-radius:999px">발행완료</span>
+          </div>
+          <span class="text-sm font-inter text-on-surface-variant text-center">2024.02.28</span>
+          <div class="text-center">
+            <button class="text-xs text-primary hover:text-primary-container font-medium px-3 py-1.5 rounded-lg hover:bg-primary/5 transition-colors">보기</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Bar: Pagination + Bulk Action -->
+      <div class="px-6 py-5 bg-surface-container-low/50 flex items-center justify-between">
+        <div class="flex items-center gap-2 text-sm text-on-surface-variant">
+          <span class="font-inter">1-4</span>
+          <span>/</span>
+          <span class="font-inter">47건</span>
+        </div>
+
+        <!-- Pagination -->
+        <div class="flex items-center gap-1">
+          <button class="w-9 h-9 flex items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container-high transition-colors">
+            <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+          </button>
+          <button class="w-9 h-9 flex items-center justify-center rounded-xl bg-on-surface text-white text-sm font-inter font-medium">1</button>
+          <button class="w-9 h-9 flex items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container-high transition-colors text-sm font-inter">2</button>
+          <button class="w-9 h-9 flex items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container-high transition-colors text-sm font-inter">3</button>
+          <span class="text-on-surface-variant text-sm px-1">...</span>
+          <button class="w-9 h-9 flex items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container-high transition-colors text-sm font-inter">12</button>
+          <button class="w-9 h-9 flex items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container-high transition-colors">
+            <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+          </button>
+        </div>
+
+        <!-- Bulk Action Button -->
+        <button class="power-gradient text-white text-sm font-medium px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity flex items-center gap-2" style="border-radius:8px">
+          <span class="material-symbols-outlined text-[18px]">send</span>
+          일괄 발행
+        </button>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ====== FAB (Floating Action Button) ====== -->
+<button class="fixed bottom-8 right-8 w-14 h-14 rounded-full power-gradient text-white flex items-center justify-center ambient-shadow hover:scale-105 active:scale-95 transition-transform z-50 group">
+  <span class="material-symbols-outlined text-[24px]">add</span>
+  <!-- Tooltip -->
+  <span class="absolute right-full mr-3 bg-inverse-surface text-inverse-on-surface text-xs font-medium px-3 py-1.5 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">수동 발행</span>
+</button>
+
+</body>
+</html>

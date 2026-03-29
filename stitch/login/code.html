@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Precision Velocity - 로그인</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@700;800&amp;family=Pretendard:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed": "#002113",
+              "surface-dim": "#d8dadc",
+              "on-secondary-fixed": "#131b2e",
+              "tertiary-fixed-dim": "#4edea3",
+              "outline": "#737686",
+              "inverse-surface": "#2d3133",
+              "on-surface": "#191c1e",
+              "surface-container-low": "#f2f4f6",
+              "surface": "#f7f9fb",
+              "primary-container": "#2563eb",
+              "surface-container-high": "#e6e8ea",
+              "surface-container-lowest": "#ffffff",
+              "secondary-container": "#dae2fd",
+              "on-primary-fixed": "#00174b",
+              "on-primary-container": "#eeefff",
+              "on-secondary-container": "#5c647a",
+              "inverse-primary": "#b4c5ff",
+              "on-surface-variant": "#434655",
+              "on-tertiary-fixed-variant": "#005236",
+              "secondary-fixed": "#dae2fd",
+              "error": "#ba1a1a",
+              "surface-tint": "#0053db",
+              "primary-fixed": "#dbe1ff",
+              "surface-bright": "#f7f9fb",
+              "secondary": "#565e74",
+              "tertiary": "#006242",
+              "background": "#f7f9fb",
+              "outline-variant": "#c3c6d7",
+              "inverse-on-surface": "#eff1f3",
+              "on-secondary": "#ffffff",
+              "on-error-container": "#93000a",
+              "on-primary-fixed-variant": "#003ea8",
+              "tertiary-fixed": "#6ffbbe",
+              "on-primary": "#ffffff",
+              "on-tertiary": "#ffffff",
+              "primary": "#004ac6",
+              "surface-container": "#eceef0",
+              "on-background": "#191c1e",
+              "surface-variant": "#e0e3e5",
+              "on-tertiary-container": "#bdffdb",
+              "error-container": "#ffdad6",
+              "on-secondary-fixed-variant": "#3f465c",
+              "primary-fixed-dim": "#b4c5ff",
+              "tertiary-container": "#007d55",
+              "surface-container-highest": "#e0e3e5",
+              "on-error": "#ffffff",
+              "secondary-fixed-dim": "#bec6e0"
+            },
+            fontFamily: {
+              "headline": ["Manrope", "Pretendard"],
+              "body": ["Inter", "Pretendard"],
+              "label": ["Inter", "Pretendard"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    display: inline-block;
+    line-height: 1;
+    text-transform: none;
+    letter-spacing: normal;
+    word-wrap: normal;
+    white-space: nowrap;
+    direction: ltr;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Power Gradient for CTAs */
+  .btn-power-gradient {
+    background: linear-gradient(135deg, #004ac6 0%, #2563eb 100%);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .btn-power-gradient:hover {
+    background: linear-gradient(135deg, #003ea8 0%, #1d4ed8 100%);
+    box-shadow: 0 8px 32px rgba(0, 74, 198, 0.32);
+    transform: translateY(-1px);
+  }
+  .btn-power-gradient:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 16px rgba(0, 74, 198, 0.24);
+  }
+
+  /* Ambient shadow card */
+  .ambient-shadow {
+    box-shadow: 0 8px 32px rgba(15, 23, 42, 0.08);
+  }
+
+  /* Ghost border */
+  .ghost-border {
+    border: 1px solid rgba(195, 198, 215, 0.15);
+  }
+
+  /* Left panel animated gradient */
+  @keyframes gradientShift {
+    0%, 100% { opacity: 0.6; transform: translate(-10%, -10%) scale(1); }
+    33% { opacity: 0.8; transform: translate(5%, 5%) scale(1.1); }
+    66% { opacity: 0.5; transform: translate(-5%, 10%) scale(0.95); }
+  }
+  @keyframes gradientShift2 {
+    0%, 100% { opacity: 0.4; transform: translate(10%, 10%) scale(1); }
+    33% { opacity: 0.6; transform: translate(-5%, -5%) scale(1.05); }
+    66% { opacity: 0.5; transform: translate(5%, -10%) scale(1.1); }
+  }
+  @keyframes pulseGlow {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.6; }
+  }
+
+  .gradient-orb-1 {
+    animation: gradientShift 12s ease-in-out infinite;
+  }
+  .gradient-orb-2 {
+    animation: gradientShift2 15s ease-in-out infinite;
+  }
+  .pulse-glow {
+    animation: pulseGlow 4s ease-in-out infinite;
+  }
+
+  /* Input focus ring */
+  .input-field {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .input-field:focus {
+    box-shadow: 0 0 0 3px rgba(0, 74, 198, 0.12);
+  }
+
+  /* Tab underline animation */
+  .tab-item {
+    position: relative;
+    transition: color 0.2s ease;
+  }
+  .tab-item::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(135deg, #004ac6, #2563eb);
+    border-radius: 1px;
+    transform: scaleX(0);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .tab-item.active::after {
+    transform: scaleX(1);
+  }
+
+  /* Glass morphism */
+  .glass {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  /* Password toggle */
+  .password-toggle {
+    transition: color 0.15s ease;
+  }
+  .password-toggle:hover {
+    color: #004ac6;
+  }
+
+  /* Smooth fade-in */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fade-in-up {
+    animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+  .fade-in-up-delay-1 { animation-delay: 0.1s; opacity: 0; }
+  .fade-in-up-delay-2 { animation-delay: 0.2s; opacity: 0; }
+  .fade-in-up-delay-3 { animation-delay: 0.3s; opacity: 0; }
+  .fade-in-up-delay-4 { animation-delay: 0.4s; opacity: 0; }
+
+  /* Checkbox custom */
+  .custom-checkbox {
+    accent-color: #004ac6;
+  }
+</style>
+</head>
+
+<body class="bg-surface font-body antialiased">
+
+<!-- Full-screen split layout -->
+<div class="flex min-h-screen w-full">
+
+  <!-- ===== LEFT PANEL: Brand Showcase ===== -->
+  <div class="relative hidden lg:flex lg:w-[52%] xl:w-[55%] flex-col justify-between overflow-hidden" style="background: #0F172A;">
+
+    <!-- Animated gradient orbs -->
+    <div class="absolute inset-0 overflow-hidden">
+      <div class="gradient-orb-1 absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full" style="background: radial-gradient(circle, rgba(0,74,198,0.35) 0%, transparent 70%);"></div>
+      <div class="gradient-orb-2 absolute -bottom-40 -right-20 w-[600px] h-[600px] rounded-full" style="background: radial-gradient(circle, rgba(37,99,235,0.25) 0%, transparent 70%);"></div>
+      <div class="pulse-glow absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full" style="background: radial-gradient(circle, rgba(180,197,255,0.08) 0%, transparent 70%);"></div>
+    </div>
+
+    <!-- Subtle grid pattern overlay -->
+    <div class="absolute inset-0 opacity-[0.03]" style="background-image: radial-gradient(rgba(255,255,255,0.8) 1px, transparent 1px); background-size: 32px 32px;"></div>
+
+    <!-- Top: Logo area -->
+    <div class="relative z-10 px-12 pt-12">
+      <div class="flex items-center gap-3">
+        <div class="flex items-center justify-center w-10 h-10 rounded-xl" style="background: linear-gradient(135deg, #004ac6, #2563eb);">
+          <span class="material-symbols-outlined text-white text-xl" style="font-variation-settings: 'FILL' 1, 'wght' 600;">bolt</span>
+        </div>
+        <span class="font-headline font-extrabold text-white text-lg tracking-tight">Precision Velocity</span>
+      </div>
+    </div>
+
+    <!-- Center: Hero content -->
+    <div class="relative z-10 px-12 flex-1 flex flex-col justify-center -mt-8">
+      <div class="max-w-lg">
+        <!-- Decorative line -->
+        <div class="flex items-center gap-3 mb-8">
+          <div class="h-px w-12" style="background: linear-gradient(90deg, #2563eb, transparent);"></div>
+          <span class="text-xs font-label font-semibold tracking-[0.2em] uppercase" style="color: rgba(180,197,255,0.7);">Last-Mile Delivery Platform</span>
+        </div>
+
+        <h1 class="font-headline font-extrabold text-white text-5xl xl:text-[3.5rem] leading-[1.15] tracking-tight mb-6">
+          라스트마일<br/>
+          배송 통합<br/>
+          <span style="background: linear-gradient(135deg, #b4c5ff, #2563eb); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">관리 시스템</span>
+        </h1>
+
+        <p class="text-base leading-relaxed mb-10" style="color: rgba(255,255,255,0.5);">
+          실시간 배송 추적, 자동 정산, 대리점 관리까지.<br/>
+          모든 라스트마일 배송 업무를 하나의 플랫폼에서.
+        </p>
+
+        <!-- Feature pills -->
+        <div class="flex flex-wrap gap-3">
+          <div class="glass rounded-full px-4 py-2 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm" style="color: #4edea3; font-variation-settings: 'FILL' 1, 'wght' 500;">check_circle</span>
+            <span class="text-xs font-label font-medium" style="color: rgba(255,255,255,0.7);">실시간 배송 추적</span>
+          </div>
+          <div class="glass rounded-full px-4 py-2 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm" style="color: #4edea3; font-variation-settings: 'FILL' 1, 'wght' 500;">check_circle</span>
+            <span class="text-xs font-label font-medium" style="color: rgba(255,255,255,0.7);">자동 정산 시스템</span>
+          </div>
+          <div class="glass rounded-full px-4 py-2 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm" style="color: #4edea3; font-variation-settings: 'FILL' 1, 'wght' 500;">check_circle</span>
+            <span class="text-xs font-label font-medium" style="color: rgba(255,255,255,0.7);">대리점 통합 관리</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom: Version & Copyright -->
+    <div class="relative z-10 px-12 pb-10">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-label" style="color: rgba(255,255,255,0.25);">v2.4.0</span>
+        <span class="text-xs font-label" style="color: rgba(255,255,255,0.25);">&copy; 2026 Precision Velocity. All rights reserved.</span>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ===== RIGHT PANEL: Login Form ===== -->
+  <div class="flex-1 flex items-center justify-center bg-surface-container-lowest px-6 py-12 lg:px-16">
+    <div class="w-full max-w-[420px]">
+
+      <!-- Mobile logo (visible < lg) -->
+      <div class="flex lg:hidden items-center gap-3 mb-10 justify-center">
+        <div class="flex items-center justify-center w-10 h-10 rounded-xl" style="background: linear-gradient(135deg, #004ac6, #2563eb);">
+          <span class="material-symbols-outlined text-white text-xl" style="font-variation-settings: 'FILL' 1, 'wght' 600;">bolt</span>
+        </div>
+        <span class="font-headline font-extrabold text-on-surface text-lg tracking-tight">Precision Velocity</span>
+      </div>
+
+      <!-- Welcome heading -->
+      <div class="mb-10 fade-in-up">
+        <h2 class="font-headline font-extrabold text-on-surface text-2xl tracking-tight mb-2">
+          로그인
+        </h2>
+        <p class="text-sm text-on-surface-variant leading-relaxed">
+          계정에 로그인하여 배송 관리를 시작하세요.
+        </p>
+      </div>
+
+      <!-- Role selector tabs -->
+      <div class="mb-8 fade-in-up fade-in-up-delay-1">
+        <div class="flex gap-0 border-b" style="border-color: rgba(195,198,215,0.15);">
+          <button class="tab-item active flex-1 pb-3 text-sm font-label font-semibold text-primary text-center" onclick="switchTab(this, 'admin')">
+            <div class="flex items-center justify-center gap-1.5">
+              <span class="material-symbols-outlined text-base">admin_panel_settings</span>
+              관리자
+            </div>
+          </button>
+          <button class="tab-item flex-1 pb-3 text-sm font-label font-medium text-on-surface-variant text-center" onclick="switchTab(this, 'agency')">
+            <div class="flex items-center justify-center gap-1.5">
+              <span class="material-symbols-outlined text-base">storefront</span>
+              대리점
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Login Form -->
+      <form onsubmit="handleLogin(event)" class="space-y-5">
+
+        <!-- Email / Phone input -->
+        <div class="fade-in-up fade-in-up-delay-2">
+          <label class="block text-xs font-label font-semibold text-on-surface-variant mb-2">이메일 또는 휴대폰 번호</label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-lg text-outline">mail</span>
+            <input
+              type="text"
+              placeholder="example@company.com"
+              class="input-field w-full bg-surface-container-lowest rounded-2xl pl-11 pr-4 py-3.5 text-sm font-body text-on-surface placeholder:text-outline-variant ghost-border outline-none focus:border-primary/30"
+              autocomplete="email"
+            />
+          </div>
+        </div>
+
+        <!-- Password input -->
+        <div class="fade-in-up fade-in-up-delay-3">
+          <label class="block text-xs font-label font-semibold text-on-surface-variant mb-2">비밀번호</label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-lg text-outline">lock</span>
+            <input
+              id="passwordInput"
+              type="password"
+              placeholder="비밀번호를 입력하세요"
+              class="input-field w-full bg-surface-container-lowest rounded-2xl pl-11 pr-12 py-3.5 text-sm font-body text-on-surface placeholder:text-outline-variant ghost-border outline-none focus:border-primary/30"
+              autocomplete="current-password"
+            />
+            <button type="button" onclick="togglePassword()" class="password-toggle absolute right-4 top-1/2 -translate-y-1/2 text-outline">
+              <span id="visibilityIcon" class="material-symbols-outlined text-lg">visibility_off</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Remember me & Forgot -->
+        <div class="flex items-center justify-between fade-in-up fade-in-up-delay-3">
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" class="custom-checkbox w-4 h-4 rounded border-outline-variant/30" checked />
+            <span class="text-xs font-label text-on-surface-variant">로그인 상태 유지</span>
+          </label>
+          <a href="#" class="text-xs font-label font-medium text-primary hover:text-primary-container transition-colors">
+            비밀번호 찾기
+          </a>
+        </div>
+
+        <!-- Login button -->
+        <div class="pt-2 fade-in-up fade-in-up-delay-4">
+          <button
+            type="submit"
+            class="btn-power-gradient w-full rounded-2xl py-3.5 text-sm font-label font-semibold text-white flex items-center justify-center gap-2"
+          >
+            <span>로그인</span>
+            <span class="material-symbols-outlined text-base">arrow_forward</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Divider -->
+      <div class="flex items-center gap-4 my-8 fade-in-up fade-in-up-delay-4">
+        <div class="flex-1 h-px" style="background: rgba(195,198,215,0.15);"></div>
+        <span class="text-xs font-label text-outline-variant">또는</span>
+        <div class="flex-1 h-px" style="background: rgba(195,198,215,0.15);"></div>
+      </div>
+
+      <!-- SSO / Alternative login -->
+      <div class="space-y-3 fade-in-up fade-in-up-delay-4">
+        <button class="w-full rounded-2xl py-3 text-sm font-label font-medium text-on-surface bg-surface-container-lowest ghost-border hover:bg-surface-container-low transition-colors flex items-center justify-center gap-2.5 ambient-shadow">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.26c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/>
+            <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.997 8.997 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z" fill="#EA4335"/>
+          </svg>
+          <span>Google 계정으로 로그인</span>
+        </button>
+
+        <button class="w-full rounded-2xl py-3 text-sm font-label font-medium text-on-surface bg-surface-container-lowest ghost-border hover:bg-surface-container-low transition-colors flex items-center justify-center gap-2.5 ambient-shadow">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <rect width="18" height="18" rx="4" fill="#FEE500"/>
+            <path d="M9 4C5.686 4 3 6.12 3 8.724c0 1.694 1.126 3.178 2.822 4.012l-.72 2.636a.2.2 0 0 0 .306.218l3.07-2.024c.17.014.343.022.522.022 3.314 0 6-2.12 6-4.864C15 6.12 12.314 4 9 4Z" fill="#3C1E1E"/>
+          </svg>
+          <span>카카오 계정으로 로그인</span>
+        </button>
+      </div>
+
+      <!-- Help text -->
+      <div class="mt-10 text-center fade-in-up fade-in-up-delay-4">
+        <p class="text-xs text-outline-variant leading-relaxed">
+          계정이 없으신가요?
+          <a href="#" class="font-medium text-primary hover:text-primary-container transition-colors ml-1">관리자에게 문의</a>
+        </p>
+      </div>
+
+      <!-- Footer links (mobile) -->
+      <div class="mt-8 flex items-center justify-center gap-4 lg:hidden">
+        <a href="#" class="text-xs text-outline-variant hover:text-on-surface-variant transition-colors">이용약관</a>
+        <span class="text-xs text-outline-variant/40">|</span>
+        <a href="#" class="text-xs text-outline-variant hover:text-on-surface-variant transition-colors">개인정보처리방침</a>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Tab switching
+  function switchTab(el, role) {
+    document.querySelectorAll('.tab-item').forEach(tab => {
+      tab.classList.remove('active', 'text-primary', 'font-semibold');
+      tab.classList.add('text-on-surface-variant', 'font-medium');
+    });
+    el.classList.add('active', 'text-primary', 'font-semibold');
+    el.classList.remove('text-on-surface-variant', 'font-medium');
+
+    // Update email placeholder based on role
+    const emailInput = document.querySelector('input[type="text"]');
+    if (role === 'admin') {
+      emailInput.placeholder = 'example@company.com';
+    } else {
+      emailInput.placeholder = '대리점 아이디 또는 연락처';
+    }
+  }
+
+  // Password visibility toggle
+  function togglePassword() {
+    const input = document.getElementById('passwordInput');
+    const icon = document.getElementById('visibilityIcon');
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.textContent = 'visibility';
+    } else {
+      input.type = 'password';
+      icon.textContent = 'visibility_off';
+    }
+  }
+
+  // Form submit
+  function handleLogin(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalContent = btn.innerHTML;
+
+    btn.innerHTML = '<svg class="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>';
+    btn.disabled = true;
+    btn.style.opacity = '0.8';
+
+    setTimeout(() => {
+      btn.innerHTML = originalContent;
+      btn.disabled = false;
+      btn.style.opacity = '1';
+    }, 2000);
+  }
+</script>
+
+</body>
+</html>

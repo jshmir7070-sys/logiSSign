@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+
+<html lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@700;800&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "inverse-on-surface": "#eff1f3",
+              "tertiary-fixed": "#6ffbbe",
+              "surface-container": "#eceef0",
+              "secondary-fixed": "#dae2fd",
+              "on-tertiary-fixed": "#002113",
+              "surface-container-highest": "#e0e3e5",
+              "on-primary-container": "#eeefff",
+              "primary-fixed-dim": "#b4c5ff",
+              "primary-container": "#2563eb",
+              "error-container": "#ffdad6",
+              "surface-container-low": "#f2f4f6",
+              "primary": "#004ac6",
+              "on-surface-variant": "#434655",
+              "surface-dim": "#d8dadc",
+              "on-surface": "#191c1e",
+              "surface-variant": "#e0e3e5",
+              "secondary-container": "#dae2fd",
+              "on-secondary-fixed": "#131b2e",
+              "tertiary-container": "#007d55",
+              "surface-tint": "#0053db",
+              "surface-bright": "#f7f9fb",
+              "error": "#ba1a1a",
+              "on-secondary-fixed-variant": "#3f465c",
+              "tertiary-fixed-dim": "#4edea3",
+              "tertiary": "#006242",
+              "on-tertiary-fixed-variant": "#005236",
+              "primary-fixed": "#dbe1ff",
+              "surface-container-high": "#e6e8ea",
+              "surface": "#f7f9fb",
+              "on-error": "#ffffff",
+              "background": "#f7f9fb",
+              "secondary": "#565e74",
+              "secondary-fixed-dim": "#bec6e0",
+              "on-tertiary-container": "#bdffdb",
+              "outline-variant": "#c3c6d7",
+              "on-secondary": "#ffffff",
+              "on-primary": "#ffffff",
+              "on-primary-fixed-variant": "#003ea8",
+              "on-secondary-container": "#5c647a",
+              "on-primary-fixed": "#00174b",
+              "on-tertiary": "#ffffff",
+              "surface-container-lowest": "#ffffff",
+              "outline": "#737686",
+              "on-background": "#191c1e",
+              "inverse-primary": "#b4c5ff",
+              "on-error-container": "#93000a",
+              "inverse-surface": "#2d3133"
+            },
+            fontFamily: {
+              "headline": ["Manrope", "Pretendard"],
+              "body": ["Inter", "Pretendard"],
+              "label": ["Inter", "Pretendard"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Pretendard', sans-serif; }
+        .data-font { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface selection:bg-primary-container selection:text-white">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-screen w-[220px] bg-slate-900 dark:bg-slate-950 flex flex-col py-6 shadow-xl z-50 font-['Pretendard'] font-medium antialiased">
+<div class="px-6 mb-8">
+<h1 class="text-xl font-bold text-white tracking-tight">Precision Velocity</h1>
+<p class="text-xs text-slate-400 mt-1">Last-Mile Admin</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-3 flex items-center gap-3 transition-colors hover:bg-slate-800 rounded-lg group" href="#">
+<span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform">dashboard</span>
+<span>대시보드</span>
+</a>
+<a class="bg-blue-600 text-white rounded-lg mx-2 my-1 px-4 py-3 flex items-center gap-3 active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">group</span>
+<span>기사 관리</span>
+</a>
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-3 flex items-center gap-3 transition-colors hover:bg-slate-800 rounded-lg group" href="#">
+<span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform">description</span>
+<span>계약서 관리</span>
+</a>
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-3 flex items-center gap-3 transition-colors hover:bg-slate-800 rounded-lg group" href="#">
+<span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform">payments</span>
+<span>정산 관리</span>
+</a>
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-3 flex items-center gap-3 transition-colors hover:bg-slate-800 rounded-lg group" href="#">
+<span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform">analytics</span>
+<span>매출 리포트</span>
+</a>
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-3 flex items-center gap-3 transition-colors hover:bg-slate-800 rounded-lg group" href="#">
+<span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform">campaign</span>
+<span>공지 관리</span>
+</a>
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-3 flex items-center gap-3 transition-colors hover:bg-slate-800 rounded-lg group" href="#">
+<span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform">settings</span>
+<span>설정</span>
+</a>
+</nav>
+<div class="mt-auto px-4 border-t border-slate-800 pt-6 space-y-4">
+<div class="flex items-center gap-3 px-2 text-slate-400">
+<span class="material-symbols-outlined">business</span>
+<span class="text-sm">운영 대행사</span>
+</div>
+<div class="flex items-center gap-3 px-2 text-slate-400">
+<span class="material-symbols-outlined">account_circle</span>
+<span class="text-sm">관리자</span>
+</div>
+</div>
+</aside>
+<!-- TopNavBar -->
+<header class="fixed top-0 right-0 left-[220px] h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex justify-between items-center px-8 w-full z-40 transition-all duration-200 ease-in-out">
+<div class="flex items-center gap-4 flex-1">
+<div class="relative w-72">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-xl">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-full pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-primary/20" placeholder="기사명 또는 연락처 검색" type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<button class="hover:bg-slate-50 dark:hover:bg-slate-800 rounded-full p-2 transition-all">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+</button>
+<button class="hover:bg-slate-50 dark:hover:bg-slate-800 rounded-full p-2 transition-all">
+<span class="material-symbols-outlined text-on-surface-variant">help_outline</span>
+</button>
+<div class="h-8 w-8 rounded-full overflow-hidden bg-surface-container-high border border-outline-variant/15">
+<img alt="Admin Profile" class="w-full h-full object-cover" data-alt="professional portrait of a male corporate administrator in a dark suit with a clean neutral background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCAa2HtqDoiQXcuBFnQY1w_WVdVohdGzLrdwkGVxAfClwgHTSuI26uH0lzMwgmOK01xzM0VwHtk7icczikaJ_VNKXGz1uoQ5sa1CKTH47kp0kUycrRhrytyuBdn-n5yD6pf-yoZF1JLPM3_F4foQKHU5DyX2C0tmpC_JMNcpXkJPHjSBy5A2nc-xHi21LwB6R_X3bcvn-nRenYA-zhyFcz68NmX0PMYH0PsA0o3pYO0vj1UtKjotx4Curxz1wqISPypvdhot_l7idI8"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-[220px] pt-16 min-h-screen">
+<div class="p-8 max-w-[1600px] mx-auto">
+<!-- Page Header -->
+<div class="flex justify-between items-end mb-8">
+<div>
+<h2 class="text-3xl font-bold tracking-tight text-on-surface font-headline">기사 관리</h2>
+<p class="text-on-surface-variant mt-2">소속 기사의 계약 상태 및 구인 현황을 실시간으로 관리합니다.</p>
+</div>
+<button class="bg-gradient-to-r from-primary to-primary-container text-white px-6 py-2.5 rounded-lg flex items-center gap-2 font-semibold shadow-lg hover:brightness-110 active:scale-95 transition-all">
+<span class="material-symbols-outlined">person_add</span>
+<span>신규 기사 등록</span>
+</button>
+</div>
+<!-- Tab Navigation -->
+<div class="flex gap-8 mb-8 border-b-0">
+<button class="text-primary border-b-2 border-primary pb-4 font-semibold text-lg transition-all">기사 목록</button>
+<button class="text-outline hover:text-on-surface pb-4 font-semibold text-lg transition-all">구인 관리</button>
+</div>
+<div class="grid grid-cols-12 gap-8">
+<!-- Filters & Main Table Section -->
+<div class="col-span-12 lg:col-span-8 space-y-6">
+<!-- Search & Filter Bar -->
+<div class="bg-surface-container-lowest p-5 rounded-2xl flex flex-wrap gap-4 items-center">
+<div class="flex items-center gap-2 px-3 py-1.5 bg-surface-container-low rounded-lg text-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+<span class="font-medium">필터:</span>
+</div>
+<select class="bg-surface-container-low border-none rounded-lg text-sm font-medium py-1.5 px-4 focus:ring-2 focus:ring-primary/20">
+<option>계약상태 전체</option>
+<option>계약 완료</option>
+<option>검토 중</option>
+<option>해지</option>
+</select>
+<select class="bg-surface-container-low border-none rounded-lg text-sm font-medium py-1.5 px-4 focus:ring-2 focus:ring-primary/20">
+<option>등록일 (최근순)</option>
+<option>등록일 (과거순)</option>
+<option>이름순</option>
+</select>
+<div class="ml-auto text-sm text-outline">
+                            총 <span class="data-font font-bold text-on-surface">1,248</span>명 검색됨
+                        </div>
+</div>
+<!-- Driver List Table -->
+<div class="bg-surface-container-lowest rounded-2xl overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low">
+<th class="px-6 py-4 text-xs font-bold text-outline uppercase tracking-wider">이름</th>
+<th class="px-6 py-4 text-xs font-bold text-outline uppercase tracking-wider">연락처</th>
+<th class="px-6 py-4 text-xs font-bold text-outline uppercase tracking-wider">차량번호</th>
+<th class="px-6 py-4 text-xs font-bold text-outline uppercase tracking-wider">등록일</th>
+<th class="px-6 py-4 text-xs font-bold text-outline uppercase tracking-wider text-center">계약상태</th>
+<th class="px-6 py-4 text-xs font-bold text-outline uppercase tracking-wider text-right">관리</th>
+</tr>
+</thead>
+<tbody class="divide-y-0">
+<!-- Row 1 -->
+<tr class="group hover:bg-surface-container-high transition-colors cursor-pointer">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold text-xs">김</div>
+<span class="font-bold text-on-surface">김철수</span>
+</div>
+</td>
+<td class="px-6 py-5 data-font text-on-surface-variant">010-1234-5678</td>
+<td class="px-6 py-5 data-font font-medium">12가 3456</td>
+<td class="px-6 py-5 data-font text-sm text-outline">2024.01.12</td>
+<td class="px-6 py-5 text-center">
+<span class="px-3 py-1 rounded-full text-[11px] font-bold bg-tertiary-fixed text-on-tertiary-fixed uppercase">계약 완료</span>
+</td>
+<td class="px-6 py-5 text-right">
+<button class="text-primary hover:underline text-sm font-bold">상세보기</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="group hover:bg-surface-container-high transition-colors cursor-pointer">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-secondary-fixed flex items-center justify-center text-secondary font-bold text-xs">이</div>
+<span class="font-bold text-on-surface">이영희</span>
+</div>
+</td>
+<td class="px-6 py-5 data-font text-on-surface-variant">010-9876-5432</td>
+<td class="px-6 py-5 data-font font-medium">98하 7654</td>
+<td class="px-6 py-5 data-font text-sm text-outline">2024.03.05</td>
+<td class="px-6 py-5 text-center">
+<span class="px-3 py-1 rounded-full text-[11px] font-bold bg-secondary-container text-on-secondary-container uppercase">검토 중</span>
+</td>
+<td class="px-6 py-5 text-right">
+<button class="text-primary hover:underline text-sm font-bold">상세보기</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="group hover:bg-surface-container-high transition-colors cursor-pointer bg-surface-container-low/30">
+<td class="px-6 py-5 border-l-4 border-primary">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-primary font-bold text-xs">박</div>
+<span class="font-bold text-on-surface">박지민</span>
+</div>
+</td>
+<td class="px-6 py-5 data-font text-on-surface-variant">010-5555-1111</td>
+<td class="px-6 py-5 data-font font-medium">45무 1234</td>
+<td class="px-6 py-5 data-font text-sm text-outline">2023.11.20</td>
+<td class="px-6 py-5 text-center">
+<span class="px-3 py-1 rounded-full text-[11px] font-bold bg-tertiary-fixed text-on-tertiary-fixed uppercase">계약 완료</span>
+</td>
+<td class="px-6 py-5 text-right">
+<button class="text-primary hover:underline text-sm font-bold">상세보기</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="group hover:bg-surface-container-high transition-colors cursor-pointer">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-error-container flex items-center justify-center text-error font-bold text-xs">최</div>
+<span class="font-bold text-on-surface">최현우</span>
+</div>
+</td>
+<td class="px-6 py-5 data-font text-on-surface-variant">010-8888-9999</td>
+<td class="px-6 py-5 data-font font-medium">22어 5678</td>
+<td class="px-6 py-5 data-font text-sm text-outline">2024.02.15</td>
+<td class="px-6 py-5 text-center">
+<span class="px-3 py-1 rounded-full text-[11px] font-bold bg-error-container text-on-error-container uppercase">해지</span>
+</td>
+<td class="px-6 py-5 text-right">
+<button class="text-primary hover:underline text-sm font-bold">상세보기</button>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="p-6 flex justify-center border-t border-surface-container-high bg-white">
+<nav class="flex gap-2">
+<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container text-outline transition-colors"><span class="material-symbols-outlined text-sm">chevron_left</span></button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary text-white font-bold data-font text-sm">1</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container text-outline font-bold data-font text-sm transition-colors">2</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container text-outline font-bold data-font text-sm transition-colors">3</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container text-outline transition-colors"><span class="material-symbols-outlined text-sm">chevron_right</span></button>
+</nav>
+</div>
+</div>
+</div>
+<!-- Side Detail Summary Panel -->
+<div class="col-span-12 lg:col-span-4">
+<div class="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm sticky top-24">
+<div class="p-6 bg-gradient-to-br from-slate-900 to-slate-800 text-white">
+<div class="flex items-center justify-between mb-4">
+<span class="bg-primary/20 text-primary-fixed text-[10px] font-extrabold px-2 py-0.5 rounded border border-primary/30 tracking-widest uppercase">Driver Profile</span>
+<button class="text-slate-400 hover:text-white transition-colors"><span class="material-symbols-outlined">close</span></button>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-16 h-16 rounded-2xl bg-white/10 p-1">
+<img alt="박지민 기사" class="w-full h-full object-cover rounded-xl" data-alt="headshot of a friendly professional asian delivery driver in a uniform jacket smiling at the camera" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBzIx9o6rGCgQ5h2JTHq8T8CxhY1ptWWhGVNkUYwyTIyGkUfCdUtVhzekVHFCbQjIjdpblZEv9G6wlL6j8yW4BdJJmFKdWhfIFvNRS9XktRCUhJMkBCiKPgTn3C3zh-TpU5MP3zmO1VqccSml2MfGOf3DXHQ4JmAlYh9-ecpN3U_dPeEicNImme9b0j-B3aZ1MRmKeQy1est1LYt1RaBnex4M0XC5Bw_mKARfrjXbdQQrAXQOYEE-hCHbx4qNrzlsIwoO2ikpMKkmTP"/>
+</div>
+<div>
+<h3 class="text-xl font-bold">박지민 <span class="text-sm font-normal text-slate-400 ml-1">#PV-9821</span></h3>
+<p class="text-slate-400 text-xs data-font mt-0.5">010-5555-1111 | 45무 1234</p>
+</div>
+</div>
+</div>
+<div class="p-6 space-y-6 max-h-[calc(100vh-320px)] overflow-y-auto no-scrollbar">
+<!-- Section: Status Icons -->
+<div class="grid grid-cols-4 gap-4 text-center">
+<div class="space-y-1">
+<div class="w-10 h-10 mx-auto rounded-full bg-surface-container-low flex items-center justify-center text-primary"><span class="material-symbols-outlined text-xl">verified</span></div>
+<span class="text-[10px] text-outline font-bold">계약확인</span>
+</div>
+<div class="space-y-1">
+<div class="w-10 h-10 mx-auto rounded-full bg-tertiary-fixed flex items-center justify-center text-tertiary"><span class="material-symbols-outlined text-xl">fact_check</span></div>
+<span class="text-[10px] text-outline font-bold">서류통과</span>
+</div>
+<div class="space-y-1">
+<div class="w-10 h-10 mx-auto rounded-full bg-surface-container-low flex items-center justify-center text-outline"><span class="material-symbols-outlined text-xl">medical_services</span></div>
+<span class="text-[10px] text-outline font-bold">검진필요</span>
+</div>
+<div class="space-y-1">
+<div class="w-10 h-10 mx-auto rounded-full bg-surface-container-low flex items-center justify-center text-outline"><span class="material-symbols-outlined text-xl">shield</span></div>
+<span class="text-[10px] text-outline font-bold">보험대기</span>
+</div>
+</div>
+<!-- Section: Financial Summary -->
+<div class="bg-surface-container-low rounded-xl p-4">
+<h4 class="text-xs font-bold text-on-surface-variant mb-3 flex items-center justify-between">
+<span>누적 정산 요약</span>
+<span class="text-primary material-symbols-outlined text-sm">trending_up</span>
+</h4>
+<div class="space-y-3">
+<div class="flex justify-between items-end">
+<span class="text-sm text-outline">총 정산액</span>
+<span class="data-font text-lg font-bold text-on-surface">₩4,250,000</span>
+</div>
+<div class="flex justify-between items-end">
+<span class="text-sm text-outline">이번 달 예상</span>
+<span class="data-font text-base font-semibold text-primary">₩1,120,000</span>
+</div>
+</div>
+</div>
+<!-- Section: Documents -->
+<div>
+<h4 class="text-xs font-bold text-on-surface-variant mb-3">서류 및 계약서</h4>
+<ul class="space-y-2">
+<li class="flex items-center justify-between p-3 rounded-lg border border-outline-variant/15 hover:bg-surface-container-low transition-colors group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant text-lg">description</span>
+<span class="text-sm font-medium">전자 표준 계약서</span>
+</div>
+<span class="material-symbols-outlined text-primary text-lg opacity-0 group-hover:opacity-100 transition-opacity">download</span>
+</li>
+<li class="flex items-center justify-between p-3 rounded-lg border border-outline-variant/15 hover:bg-surface-container-low transition-colors group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant text-lg">badge</span>
+<span class="text-sm font-medium">운전면허증 사본</span>
+</div>
+<span class="material-symbols-outlined text-primary text-lg opacity-0 group-hover:opacity-100 transition-opacity">visibility</span>
+</li>
+<li class="flex items-center justify-between p-3 rounded-lg border border-outline-variant/15 hover:bg-surface-container-low transition-colors group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant text-lg">car_repair</span>
+<span class="text-sm font-medium">자동차 등록증</span>
+</div>
+<span class="material-symbols-outlined text-primary text-lg opacity-0 group-hover:opacity-100 transition-opacity">visibility</span>
+</li>
+</ul>
+</div>
+</div>
+<div class="p-6 bg-surface-container-high/30 border-t border-surface-container-high">
+<button class="w-full py-2.5 bg-on-surface text-white rounded-lg text-sm font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-base">edit</span>
+                                정보 수정하기
+                            </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Recruitment Section (Guin Management) - Logic: Part of the same page but visual separator -->
+<div class="mt-16">
+<div class="flex items-center gap-3 mb-8">
+<span class="w-8 h-1 bg-primary rounded-full"></span>
+<h2 class="text-2xl font-bold tracking-tight text-on-surface font-headline">구인 관리</h2>
+</div>
+<div class="grid grid-cols-12 gap-8">
+<!-- Invite Code Card -->
+<div class="col-span-12 md:col-span-4 lg:col-span-3">
+<div class="bg-primary-container p-6 rounded-3xl text-white relative overflow-hidden h-full shadow-xl shadow-primary/20">
+<div class="relative z-10 flex flex-col h-full">
+<div class="mb-8">
+<span class="text-[10px] font-black uppercase tracking-[0.2em] opacity-70">Agency Invite Code</span>
+<div class="mt-4 flex items-center justify-between">
+<code class="text-2xl font-black font-mono tracking-tighter">AGN-2024-A7X3</code>
+</div>
+</div>
+<div class="mt-auto space-y-4">
+<div class="flex gap-2">
+<button class="flex-1 bg-white/20 hover:bg-white/30 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 backdrop-blur-sm">
+<span class="material-symbols-outlined text-sm">content_copy</span>
+                                            코드 복사
+                                        </button>
+<button class="flex-1 bg-white/20 hover:bg-white/30 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 backdrop-blur-sm">
+<span class="material-symbols-outlined text-sm">qr_code_2</span>
+                                            QR 코드
+                                        </button>
+</div>
+<div class="p-4 bg-white/10 rounded-2xl">
+<p class="text-xs opacity-70">이 코드로 가입한 기사</p>
+<p class="text-2xl font-black data-font mt-1">34<span class="text-sm font-medium ml-1">명</span></p>
+</div>
+</div>
+</div>
+<!-- Background Accent -->
+<div class="absolute -right-12 -bottom-12 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
+</div>
+</div>
+<!-- Interview & Application Table -->
+<div class="col-span-12 md:col-span-8 lg:col-span-9">
+<div class="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm">
+<div class="px-6 py-5 border-b border-surface-container-high flex items-center justify-between">
+<h3 class="font-bold text-on-surface">면접 서류 관리</h3>
+<button class="text-primary text-sm font-bold flex items-center gap-1">
+<span>전체보기</span>
+<span class="material-symbols-outlined text-base">arrow_forward</span>
+</button>
+</div>
+<table class="w-full text-left">
+<thead>
+<tr class="bg-surface-container-low/50">
+<th class="px-6 py-4 text-[11px] font-bold text-outline uppercase tracking-wider">지원자명</th>
+<th class="px-6 py-4 text-[11px] font-bold text-outline uppercase tracking-wider">접수일</th>
+<th class="px-6 py-4 text-[11px] font-bold text-outline uppercase tracking-wider">서류 상태</th>
+<th class="px-6 py-4 text-[11px] font-bold text-outline uppercase tracking-wider">계약 상태</th>
+<th class="px-6 py-4 text-[11px] font-bold text-outline uppercase tracking-wider text-right">처리</th>
+</tr>
+</thead>
+<tbody class="divide-y-0">
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4 font-bold">홍길동</td>
+<td class="px-6 py-4 data-font text-sm text-outline">2024.03.14</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-100 text-blue-700">서류접수</span>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 text-slate-500">대기중</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="bg-surface-container-high hover:bg-outline-variant/30 px-3 py-1 rounded text-[11px] font-bold transition-all">처리</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4 font-bold">강민호</td>
+<td class="px-6 py-4 data-font text-sm text-outline">2024.03.13</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-100 text-amber-700">검토중</span>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 text-slate-500">대기중</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="bg-surface-container-high hover:bg-outline-variant/30 px-3 py-1 rounded text-[11px] font-bold transition-all">처리</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4 font-bold">오지은</td>
+<td class="px-6 py-4 data-font text-sm text-outline">2024.03.12</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-tertiary-fixed text-tertiary">서류통과</span>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-green-100 text-green-700">계약발송</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="bg-surface-container-high hover:bg-outline-variant/30 px-3 py-1 rounded text-[11px] font-bold transition-all">처리</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4 font-bold">장성우</td>
+<td class="px-6 py-4 data-font text-sm text-outline">2024.03.10</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-red-100 text-red-700">반려</span>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-red-50 text-red-300">중단</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="bg-surface-container-high hover:bg-outline-variant/30 px-3 py-1 rounded text-[11px] font-bold transition-all">처리</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Modal Overlay Simulation (Multi-step Registration) -->
+<div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4 hidden">
+<div class="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl">
+<div class="p-8 border-b border-surface-container-high">
+<div class="flex items-center justify-between mb-8">
+<h3 class="text-2xl font-bold">신규 기사 등록</h3>
+<button class="p-2 hover:bg-surface-container rounded-full transition-all"><span class="material-symbols-outlined">close</span></button>
+</div>
+<!-- Stepper -->
+<div class="flex items-center justify-between relative px-4">
+<div class="absolute top-1/2 left-0 w-full h-0.5 bg-surface-container -translate-y-1/2 -z-10"></div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">1</div>
+<span class="text-[11px] font-bold text-primary">기본정보</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-10 h-10 rounded-full bg-surface-container text-outline flex items-center justify-center font-bold">2</div>
+<span class="text-[11px] font-bold text-outline">서류첨부</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-10 h-10 rounded-full bg-surface-container text-outline flex items-center justify-center font-bold">3</div>
+<span class="text-[11px] font-bold text-outline">계약서 발송</span>
+</div>
+</div>
+</div>
+<div class="p-8">
+<form class="space-y-6">
+<div class="grid grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="text-xs font-bold text-outline ml-1">성명</label>
+<input class="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20" placeholder="성명을 입력하세요" type="text"/>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-bold text-outline ml-1">연락처</label>
+<input class="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20" placeholder="010-0000-0000" type="text"/>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-bold text-outline ml-1">생년월일</label>
+<input class="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20" placeholder="YYYYMMDD" type="text"/>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-bold text-outline ml-1">희망 배송 지역</label>
+<select class="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20">
+<option>지역 선택</option>
+<option>서울 강남구</option>
+<option>서울 서초구</option>
+<option>서울 송파구</option>
+</select>
+</div>
+</div>
+</form>
+</div>
+<div class="p-8 pt-0 flex gap-4">
+<button class="flex-1 py-4 bg-surface-container-high text-on-surface-variant rounded-xl font-bold hover:bg-surface-container-highest transition-all">취소</button>
+<button class="flex-[2] py-4 bg-primary text-white rounded-xl font-bold hover:brightness-110 shadow-lg shadow-primary/20 transition-all">다음 단계로</button>
+</div>
+</div>
+</div>
+</body></html>

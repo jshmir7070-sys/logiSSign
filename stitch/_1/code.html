@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@700;800&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed": "#002113",
+              "surface-dim": "#d8dadc",
+              "on-secondary-fixed": "#131b2e",
+              "tertiary-fixed-dim": "#4edea3",
+              "outline": "#737686",
+              "inverse-surface": "#2d3133",
+              "on-surface": "#191c1e",
+              "surface-container-low": "#f2f4f6",
+              "surface": "#f7f9fb",
+              "primary-container": "#2563eb",
+              "surface-container-high": "#e6e8ea",
+              "surface-container-lowest": "#ffffff",
+              "secondary-container": "#dae2fd",
+              "on-primary-fixed": "#00174b",
+              "on-primary-container": "#eeefff",
+              "on-secondary-container": "#5c647a",
+              "inverse-primary": "#b4c5ff",
+              "on-surface-variant": "#434655",
+              "on-tertiary-fixed-variant": "#005236",
+              "secondary-fixed": "#dae2fd",
+              "error": "#ba1a1a",
+              "surface-tint": "#0053db",
+              "primary-fixed": "#dbe1ff",
+              "surface-bright": "#f7f9fb",
+              "secondary": "#565e74",
+              "tertiary": "#006242",
+              "background": "#f7f9fb",
+              "outline-variant": "#c3c6d7",
+              "inverse-on-surface": "#eff1f3",
+              "on-secondary": "#ffffff",
+              "on-error-container": "#93000a",
+              "on-primary-fixed-variant": "#003ea8",
+              "tertiary-fixed": "#6ffbbe",
+              "on-primary": "#ffffff",
+              "on-tertiary": "#ffffff",
+              "primary": "#004ac6",
+              "surface-container": "#eceef0",
+              "on-background": "#191c1e",
+              "surface-variant": "#e0e3e5",
+              "on-tertiary-container": "#bdffdb",
+              "error-container": "#ffdad6",
+              "on-secondary-fixed-variant": "#3f465c",
+              "primary-fixed-dim": "#b4c5ff",
+              "tertiary-container": "#007d55",
+              "surface-container-highest": "#e0e3e5",
+              "on-error": "#ffffff",
+              "secondary-fixed-dim": "#bec6e0"
+            },
+            fontFamily: {
+              "headline": ["Manrope", "Pretendard"],
+              "body": ["Inter", "Pretendard"],
+              "label": ["Inter", "Pretendard"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        body { font-family: 'Pretendard', 'Inter', sans-serif; }
+        .glass-effect { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface antialiased selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-screen w-[240px] z-50 bg-[#0F172A] dark:bg-slate-950 shadow-2xl shadow-slate-900/50 flex flex-col justify-between py-6 font-['Pretendard','Inter'] antialiased tracking-tight">
+<div>
+<div class="px-6 mb-10 flex items-center gap-3">
+<div class="w-8 h-8 bg-gradient-to-br from-primary to-primary-container rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-xl">speed</span>
+</div>
+<h1 class="text-lg font-bold text-white tracking-widest uppercase">Precision Velocity</h1>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-medium">전체 현황</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined">business</span>
+<span class="font-medium">운영사 관리</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-medium">구독 · 결제</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined">leaderboard</span>
+<span class="font-medium">수익 분석</span>
+</a>
+<!-- Active Tab: 공지 관리 -->
+<a class="flex items-center gap-3 px-4 py-3 bg-blue-600 text-white rounded-xl mx-2 my-1 transition-all duration-200 shadow-lg shadow-blue-600/20 active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined">campaign</span>
+<span class="font-medium">공지 관리</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined">dns</span>
+<span class="font-medium">서버 상태</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-medium">설정</span>
+</a>
+</nav>
+</div>
+<div class="px-2">
+<div class="flex items-center gap-3 px-4 py-4 text-slate-400 hover:bg-slate-800/50 rounded-xl transition-all cursor-pointer">
+<img alt="Admin Profile" class="w-8 h-8 rounded-full bg-slate-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCLtH3ZzpAqjsGmnj0wozFqfUJsoFt6FU26dXETcjfFFHdII0-1_9To_tH32faGnv8o0zL8amKodWCPbeOyH3sAkU0uc_Qs516uYWd-gLFwq3C70eISAQVf8ZKrGy_NxzSYmV0GdY6WWAO4ACGwuZIuwz811Pt2-Br_BqStgH9Csjfyn_Fz90F9-NdyRjV0fX9KpZPjnSZ2wc2XPVTNvb1n9XxaxHTSSVoqD-rARx51orz0dVwB--atLkSfTB2McSzpIHqYyuj7m6Vg"/>
+<div class="flex flex-col">
+<span class="text-white text-sm font-semibold">Admin Profile</span>
+<span class="text-xs text-slate-500">Super Admin</span>
+</div>
+<span class="material-symbols-outlined ml-auto text-sm">logout</span>
+</div>
+</div>
+</aside>
+<!-- TopAppBar -->
+<header class="fixed top-0 right-0 left-[240px] h-[56px] z-40 bg-white/80 backdrop-blur-xl border-b border-slate-100 flex justify-between items-center px-8 w-full">
+<div class="flex items-center gap-4">
+<h2 class="font-['Pretendard'] font-semibold text-slate-900 text-lg">공지 관리</h2>
+<div class="h-4 w-[1px] bg-slate-200"></div>
+<span class="text-slate-500 text-sm">시스템 전체 공지사항 및 가이드 관리</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="hover:bg-slate-50 p-2 rounded-full transition-colors relative">
+<span class="material-symbols-outlined text-slate-600">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-white"></span>
+</button>
+<div class="flex items-center gap-2 pl-2">
+<div class="text-right">
+<p class="text-xs font-bold text-slate-900">최민호</p>
+<p class="text-[10px] text-slate-500">최종 접속: 14:02</p>
+</div>
+<img alt="Admin Avatar" class="w-8 h-8 rounded-lg bg-slate-100 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUkDlDWe9MvKAJNna1ZB80dm1Nml_mxR0zkKIDho0sKFOzgfyuEMrXnbAeAvBG28e1JrqMGY_DmXChpeTA2ra5lLwOnXU_YSCccFDkN3ZbrSKvraWBI0n0B9loOdochGHeWn0BHy4jbgJx0DMxBCnb_chWigL0x1oEQt6COCMVmYA9F75YZTmTOsMTAXOJNRZSyfDv5n5IYdpoZk36KAFrhz757Y3eK17wOgkigNymstrBJGlatdds9gUNGK1GX4-_0i4ajuC-mn3U"/>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="ml-[240px] pt-[56px] min-h-screen bg-surface">
+<div class="p-8 grid grid-cols-12 gap-8">
+<!-- Left: 공지 목록 (65%) -->
+<section class="col-span-8 flex flex-col gap-6">
+<!-- Header Stats & Search -->
+<div class="flex items-center justify-between">
+<div class="flex gap-4">
+<div class="bg-surface-container-lowest px-4 py-3 rounded-2xl shadow-sm flex items-center gap-3">
+<span class="text-sm font-medium text-slate-500">전체</span>
+<span class="text-lg font-bold font-['Inter'] text-primary">128</span>
+</div>
+<div class="bg-surface-container-lowest px-4 py-3 rounded-2xl shadow-sm flex items-center gap-3">
+<span class="text-sm font-medium text-slate-500">게시 중</span>
+<span class="text-lg font-bold font-['Inter'] text-tertiary">42</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+<input class="pl-10 pr-4 py-2.5 bg-surface-container-low border-none rounded-xl text-sm w-64 focus:ring-2 focus:ring-primary/20 transition-all" placeholder="제목 또는 내용 검색" type="text"/>
+</div>
+<button class="bg-gradient-to-r from-primary to-primary-container text-white px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 hover:shadow-lg hover:shadow-primary/20 active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-lg">add</span>
+                            새 공지 작성
+                        </button>
+</div>
+</div>
+<!-- Table Card -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-sm overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low/50">
+<th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">카테고리</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">제목</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">대상</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">작성일</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">상태</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">관리</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-50">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low/30 transition-colors group">
+<td class="px-6 py-5">
+<span class="bg-blue-50 text-blue-700 text-[11px] font-bold px-2 py-1 rounded-md">업데이트</span>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-semibold text-slate-900 mb-0.5">V2.4.0 시스템 성능 개선 업데이트 안내</p>
+<p class="text-[11px] text-slate-400 line-clamp-1">보다 원활한 배차를 위해 서버 아키텍처 개선 작업이...</p>
+</td>
+<td class="px-6 py-5">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center" title="운영사">
+<span class="material-symbols-outlined text-[12px] text-slate-500">business</span>
+</div>
+<div class="w-6 h-6 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center" title="드라이버">
+<span class="material-symbols-outlined text-[12px] text-slate-500">local_shipping</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="text-[13px] font-['Inter'] text-slate-500">2024.05.21</span>
+</td>
+<td class="px-6 py-5 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-tertiary/10 text-tertiary">게시 중</span>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors" title="수정">
+<span class="material-symbols-outlined text-lg">edit</span>
+</button>
+<button class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="복제">
+<span class="material-symbols-outlined text-lg">content_copy</span>
+</button>
+<button class="p-1.5 text-slate-400 hover:text-error hover:bg-error/5 rounded-lg transition-colors" title="삭제">
+<span class="material-symbols-outlined text-lg">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low/30 transition-colors group">
+<td class="px-6 py-5">
+<span class="bg-emerald-50 text-emerald-700 text-[11px] font-bold px-2 py-1 rounded-md">공지</span>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-semibold text-slate-900 mb-0.5">여름철 안전 운행 가이드 배포</p>
+<p class="text-[11px] text-slate-400 line-clamp-1">폭염 및 장마 대비 드라이버 안전 수칙 필수 확인</p>
+</td>
+<td class="px-6 py-5">
+<div class="w-6 h-6 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center" title="드라이버">
+<span class="material-symbols-outlined text-[12px] text-slate-500">local_shipping</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="text-[13px] font-['Inter'] text-slate-500">2024.05.18</span>
+</td>
+<td class="px-6 py-5 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-tertiary/10 text-tertiary">게시 중</span>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors" title="수정">
+<span class="material-symbols-outlined text-lg">edit</span>
+</button>
+<button class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="복제">
+<span class="material-symbols-outlined text-lg">content_copy</span>
+</button>
+<button class="p-1.5 text-slate-400 hover:text-error hover:bg-error/5 rounded-lg transition-colors" title="삭제">
+<span class="material-symbols-outlined text-lg">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low/30 transition-colors group">
+<td class="px-6 py-5">
+<span class="bg-purple-50 text-purple-700 text-[11px] font-bold px-2 py-1 rounded-md">앱가이드</span>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-semibold text-slate-900 mb-0.5">신규 정산 프로세스 이용 방법 (운영사용)</p>
+<p class="text-[11px] text-slate-400 line-clamp-1">변경된 월별 정산 리포트 확인 및 승인 가이드</p>
+</td>
+<td class="px-6 py-5">
+<div class="w-6 h-6 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center" title="운영사">
+<span class="material-symbols-outlined text-[12px] text-slate-500">business</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="text-[13px] font-['Inter'] text-slate-500">2024.05.15</span>
+</td>
+<td class="px-6 py-5 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">비활성</span>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors" title="수정">
+<span class="material-symbols-outlined text-lg">edit</span>
+</button>
+<button class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="복제">
+<span class="material-symbols-outlined text-lg">content_copy</span>
+</button>
+<button class="p-1.5 text-slate-400 hover:text-error hover:bg-error/5 rounded-lg transition-colors" title="삭제">
+<span class="material-symbols-outlined text-lg">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-low/30 transition-colors group">
+<td class="px-6 py-5">
+<span class="bg-slate-100 text-slate-600 text-[11px] font-bold px-2 py-1 rounded-md">기타</span>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-semibold text-slate-900 mb-0.5">개인정보 처리방침 개정 사전 고지</p>
+<p class="text-[11px] text-slate-400 line-clamp-1">법률 개정에 따른 데이터 수집 및 이용 동의 내용 변경</p>
+</td>
+<td class="px-6 py-5">
+<span class="text-[11px] font-medium text-slate-400">전체</span>
+</td>
+<td class="px-6 py-5">
+<span class="text-[13px] font-['Inter'] text-slate-500">2024.05.10</span>
+</td>
+<td class="px-6 py-5 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-600">예약</span>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors" title="수정">
+<span class="material-symbols-outlined text-lg">edit</span>
+</button>
+<button class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="복제">
+<span class="material-symbols-outlined text-lg">content_copy</span>
+</button>
+<button class="p-1.5 text-slate-400 hover:text-error hover:bg-error/5 rounded-lg transition-colors" title="삭제">
+<span class="material-symbols-outlined text-lg">delete</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- Pagination -->
+<div class="px-6 py-4 bg-surface-container-low/20 flex items-center justify-between">
+<span class="text-xs text-slate-500 font-medium font-['Inter']">Showing 1-10 of 128 items</span>
+<div class="flex gap-1">
+<button class="p-1.5 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined text-lg">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded-lg bg-primary text-white text-xs font-bold">1</button>
+<button class="w-8 h-8 rounded-lg hover:bg-slate-100 text-xs font-medium text-slate-600 transition-colors">2</button>
+<button class="w-8 h-8 rounded-lg hover:bg-slate-100 text-xs font-medium text-slate-600 transition-colors">3</button>
+<span class="w-8 h-8 flex items-center justify-center text-slate-400">...</span>
+<button class="w-8 h-8 rounded-lg hover:bg-slate-100 text-xs font-medium text-slate-600 transition-colors">13</button>
+<button class="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+<span class="material-symbols-outlined text-lg">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Right: 미리보기 Panel (35%) -->
+<section class="col-span-4 sticky top-[80px] h-[calc(100vh-120px)] flex flex-col gap-6">
+<div class="flex items-center justify-between">
+<h3 class="font-bold text-slate-900">앱 미리보기</h3>
+<div class="flex bg-surface-container-low p-1 rounded-lg">
+<button class="px-3 py-1 bg-white shadow-sm rounded-md text-[11px] font-bold text-primary">Driver App</button>
+<button class="px-3 py-1 text-[11px] font-medium text-slate-500 hover:text-slate-700">Client Web</button>
+</div>
+</div>
+<div class="flex-1 bg-surface-container-lowest rounded-[2.5rem] shadow-xl border-[8px] border-slate-900 relative overflow-hidden flex flex-col mx-auto w-full max-w-[280px]">
+<!-- Mobile StatusBar -->
+<div class="h-8 bg-white flex justify-between items-center px-6 pt-2">
+<span class="text-[10px] font-bold font-['Inter']">09:41</span>
+<div class="flex gap-1 items-center">
+<span class="material-symbols-outlined text-[14px]">signal_cellular_4_bar</span>
+<span class="material-symbols-outlined text-[14px]">wifi</span>
+<span class="material-symbols-outlined text-[14px]">battery_full</span>
+</div>
+</div>
+<!-- Mobile Header -->
+<div class="px-4 py-3 bg-white flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-900">arrow_back</span>
+<span class="font-bold text-slate-900 text-sm">공지사항</span>
+</div>
+<!-- Mobile Content -->
+<div class="flex-1 overflow-y-auto bg-slate-50 p-4 hide-scrollbar">
+<div class="bg-white rounded-xl p-4 shadow-sm mb-4">
+<div class="flex items-center justify-between mb-2">
+<span class="bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">업데이트</span>
+<span class="text-[10px] text-slate-400 font-['Inter']">2024.05.21</span>
+</div>
+<h4 class="text-xs font-bold text-slate-900 mb-2 leading-tight">V2.4.0 시스템 성능 개선 업데이트 안내</h4>
+<div class="aspect-video bg-slate-100 rounded-lg mb-3 overflow-hidden">
+<img alt="Update Visual" class="w-full h-full object-cover" data-alt="Close up of a modern smartphone showing an app update interface with clean typography and blue accents." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQBKKldoRDZQUukyUmginbB6_qDjfCn2xOXnNy2CrR7ANuaun89QbWlulRX1js1o8p2KXOPXqUGD9hWu-LcwLe6OC7kubkCHlacJe8SJNqe7fBeorxgrmwix5Zy2nSyjgiHww87WYtB0yuIZiRHlXvYpVCSSZl8RnPalKNgZyFULcwapXID4uwIYHbIu9W7XikKVtZijuT2TBCI9eSF-asae0_Idf5Ar6Nm14RE0xc-ZsZXQjQjAUKzLsZFdSApXrGCeDFY7gu7LvK"/>
+</div>
+<div class="text-[11px] text-slate-600 leading-relaxed space-y-2">
+<p>안녕하세요, 프리시전 벨로시티 운영팀입니다.</p>
+<p>오는 5월 22일(수) 새벽 02:00 ~ 04:00 사이에 서버 최적화 및 배차 알고리즘 고도화를 위한 업데이트가 진행될 예정입니다.</p>
+<ul class="list-disc pl-4 space-y-1">
+<li>GPS 위치 보정 기능 강화</li>
+<li>정산 리포트 로딩 속도 개선</li>
+<li>긴급 푸시 알림 지연 해소</li>
+</ul>
+<p>작업 시간 동안 서비스 이용이 일시적으로 제한될 수 있으니 양해 부탁드립니다.</p>
+</div>
+</div>
+<div class="bg-primary/5 border border-primary/10 rounded-xl p-3 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">download</span>
+<span class="text-[10px] font-bold text-primary">최신 버전 다운로드</span>
+</div>
+<span class="material-symbols-outlined text-primary text-sm">chevron_right</span>
+</div>
+</div>
+<!-- Mobile Home Indicator -->
+<div class="h-6 bg-slate-50 flex justify-center items-end pb-1.5">
+<div class="w-24 h-1 bg-slate-300 rounded-full"></div>
+</div>
+</div>
+<div class="bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50">
+<p class="text-xs text-blue-700 leading-relaxed">
+<span class="font-bold">Pro Tip:</span> 실시간으로 반영되는 미리보기를 통해 드라이버가 보게 될 최종 레이아웃을 확인하고 글자 크기와 이미지 가독성을 조절하세요.
+                    </p>
+</div>
+</section>
+</div>
+</main>
+<!-- Modal/Drawer for 공지 작성 (Overlay) -->
+<div class="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm flex justify-end">
+<!-- Drawer Container -->
+<div class="w-full max-w-2xl bg-white h-screen shadow-2xl flex flex-col animate-slide-in-right">
+<!-- Drawer Header -->
+<div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
+<div class="flex items-center gap-3">
+<button class="p-2 hover:bg-slate-100 rounded-full transition-colors">
+<span class="material-symbols-outlined text-slate-600">close</span>
+</button>
+<h2 class="text-xl font-bold text-slate-900">새 공지 작성</h2>
+</div>
+<div class="flex gap-2">
+<button class="px-5 py-2.5 rounded-xl font-semibold text-sm border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">임시 저장</button>
+<button class="bg-primary text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-primary/20 active:scale-[0.98] transition-all">공지 게시하기</button>
+</div>
+</div>
+<!-- Drawer Content -->
+<div class="flex-1 overflow-y-auto p-8 space-y-8">
+<!-- Row 1: Title -->
+<div class="space-y-2">
+<label class="text-sm font-bold text-slate-700">공지 제목</label>
+<input class="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-base focus:ring-2 focus:ring-primary/20 transition-all font-semibold placeholder:font-normal" placeholder="공지사항의 제목을 입력하세요" type="text"/>
+</div>
+<!-- Row 2: Category & Target -->
+<div class="grid grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="text-sm font-bold text-slate-700">카테고리</label>
+<select class="w-full px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-primary/20 appearance-none">
+<option>공지</option>
+<option>앱가이드</option>
+<option>업데이트</option>
+<option>기타</option>
+</select>
+</div>
+<div class="space-y-2">
+<label class="text-sm font-bold text-slate-700">공지 대상</label>
+<div class="flex flex-wrap gap-2">
+<label class="cursor-pointer">
+<input checked="" class="hidden peer" type="checkbox"/>
+<span class="px-3 py-2 rounded-lg bg-slate-100 text-slate-500 text-xs font-bold peer-checked:bg-primary-container peer-checked:text-white transition-all">전체</span>
+</label>
+<label class="cursor-pointer">
+<input class="hidden peer" type="checkbox"/>
+<span class="px-3 py-2 rounded-lg bg-slate-100 text-slate-500 text-xs font-bold peer-checked:bg-primary-container peer-checked:text-white transition-all">운영사</span>
+</label>
+<label class="cursor-pointer">
+<input class="hidden peer" type="checkbox"/>
+<span class="px-3 py-2 rounded-lg bg-slate-100 text-slate-500 text-xs font-bold peer-checked:bg-primary-container peer-checked:text-white transition-all">드라이버</span>
+</label>
+</div>
+</div>
+</div>
+<!-- Row 3: Rich Text Editor Mockup -->
+<div class="space-y-2">
+<label class="text-sm font-bold text-slate-700">공지 내용</label>
+<div class="border border-slate-200 rounded-2xl overflow-hidden">
+<div class="bg-slate-50 px-4 py-2 border-b border-slate-200 flex gap-2">
+<button class="p-1.5 hover:bg-slate-200 rounded text-slate-600"><span class="material-symbols-outlined text-lg">format_bold</span></button>
+<button class="p-1.5 hover:bg-slate-200 rounded text-slate-600"><span class="material-symbols-outlined text-lg">format_italic</span></button>
+<button class="p-1.5 hover:bg-slate-200 rounded text-slate-600"><span class="material-symbols-outlined text-lg">format_list_bulleted</span></button>
+<button class="p-1.5 hover:bg-slate-200 rounded text-slate-600"><span class="material-symbols-outlined text-lg">link</span></button>
+<button class="p-1.5 hover:bg-slate-200 rounded text-slate-600"><span class="material-symbols-outlined text-lg">image</span></button>
+</div>
+<textarea class="w-full p-6 border-none focus:ring-0 text-sm leading-relaxed text-slate-700" placeholder="공지 내용을 상세히 입력하세요..." rows="12"></textarea>
+</div>
+</div>
+<!-- Row 4: File Attach & Links -->
+<div class="grid grid-cols-2 gap-6">
+<div class="space-y-3">
+<label class="text-sm font-bold text-slate-700">파일 첨부</label>
+<div class="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center hover:bg-slate-50 transition-colors cursor-pointer group">
+<span class="material-symbols-outlined text-slate-300 text-3xl group-hover:text-primary transition-colors">cloud_upload</span>
+<p class="text-xs text-slate-500 mt-2 font-medium">드래그하거나 클릭하여 업로드</p>
+<p class="text-[10px] text-slate-400 mt-1">PDF, JPG, PNG (Max 10MB)</p>
+</div>
+</div>
+<div class="space-y-3">
+<label class="text-sm font-bold text-slate-700">스토어 링크 (선택)</label>
+<div class="space-y-2">
+<div class="flex items-center gap-2">
+<div class="bg-slate-100 p-2 rounded-lg">
+<span class="material-symbols-outlined text-slate-500 text-lg">play_arrow</span>
+</div>
+<input class="flex-1 bg-slate-50 border-none rounded-lg text-xs py-2 px-3 focus:ring-1 focus:ring-primary/20" placeholder="Play Store Link" type="text"/>
+</div>
+<div class="flex items-center gap-2">
+<div class="bg-slate-100 p-2 rounded-lg">
+<span class="material-symbols-outlined text-slate-500 text-lg">ios</span>
+</div>
+<input class="flex-1 bg-slate-50 border-none rounded-lg text-xs py-2 px-3 focus:ring-1 focus:ring-primary/20" placeholder="App Store Link" type="text"/>
+</div>
+</div>
+</div>
+</div>
+<!-- Row 5: Schedule -->
+<div class="bg-slate-50 rounded-2xl p-6 flex items-center justify-between">
+<div>
+<p class="text-sm font-bold text-slate-900">예약 게시 설정</p>
+<p class="text-xs text-slate-500 mt-0.5">원하는 시간에 맞춰 자동으로 게시물을 공개합니다.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</div>
+</div>
+</body></html>
