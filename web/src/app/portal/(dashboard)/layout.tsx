@@ -20,7 +20,7 @@ export default function PortalDashboardLayout({
         setUser({
           name: data.user.user_metadata?.company_name || '대리점',
           email: data.user.email || '',
-          plan: data.user.user_metadata?.plan || 'free',
+          plan: data.user.app_metadata?.plan || 'free',
           ownerName: data.user.user_metadata?.owner_name || '',
         });
       }

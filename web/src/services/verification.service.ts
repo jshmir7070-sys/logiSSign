@@ -480,7 +480,14 @@ export async function getAuditCertificateData(
       consent_privacy_3rd_id: boolean;
     }
 
-    const auditEntries = sig.audit_log ?? []
+    // audit_log normalize: 모바일은 단일 객체, 웹은 배열 → 항상 배열로
+    const rawAuditLog = sig.audit_log;
+    let auditEntries: AuditTrailEntry[] = [];
+    if (Array.isArray(rawAuditLog)) {
+      auditEntries = rawAuditLog;
+    } else if (rawAuditLog && typeof rawAuditLog === 'object') {
+      auditEntries = [rawAuditLog as AuditTrailEntry];
+    }
     const auditFinalHash = await computeAuditTrailHash(auditEntries)
     const timestampHash = await generateTimestampHash(
       c.document_number, c.content_hash, c.signed_at

@@ -43,6 +43,7 @@ const signupSchema = z.object({
   bankAccount: z.string().optional(),
   bankHolder: z.string().optional(),
   plan: z.enum(['free', 'basic', 'standard', 'enterprise']).default('free'),
+  billing: z.enum(['monthly', '1year', '2year', '3year']).optional().default('monthly'),
 })
 
 /**
@@ -147,18 +148,26 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. 구독(subscriptions) 레코드 생성
+    const planPrices: Record<string, number> = { free: 0, basic: 49900, standard: 99000, enterprise: 0 };
+    const monthlyAmount = planPrices[validated.plan] ?? 0;
+    const billingCycle = validated.billing ?? 'monthly';
+
     const { error: subError } = await supabaseAdmin
       .from('subscriptions')
       .insert({
         agency_id: agencyData.id,
         plan: validated.plan,
-        billing_cycle: 'monthly',
-        status: 'active', // TODO: 결제 연동 후 유료플랜은 'pending_payment'로 복원
-        started_at: new Date().toISOString(),
+        amount: monthlyAmount,
+        billing_date: new Date().getDate(),
+        status: validated.plan === 'free' ? 'active' : 'active',
+        last_paid_at: new Date().toISOString(),
+        next_billing_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       } as never)
 
     if (subError) {
-      console.error('[Signup] 구독 생성 실패 (비치명적):', subError.message)
+      console.error('[Signup] 구독 생성 실패:', subError.message)
+      // 구독 실패는 치명적 — 에러 반환
+      return NextResponse.json({ error: '구독 등록 실패: ' + subError.message }, { status: 500 })
     }
 
     return NextResponse.json({

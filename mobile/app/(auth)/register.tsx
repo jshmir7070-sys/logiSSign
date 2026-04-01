@@ -44,7 +44,7 @@ export default function RegisterScreen() {
   const [agreePrivacy, setAgreePrivacy] = useState(false);
   const [agreeAge, setAgreeAge] = useState(false);
 
-  /** 초대코드 검증 → agency 매칭 */
+  /** 초대코드 검증 → API route로 (RLS 우회) */
   const validateInviteCode = async () => {
     if (!inviteCode.trim()) {
       Alert.alert('입력 오류', '초대코드를 입력해주세요.');
@@ -52,19 +52,25 @@ export default function RegisterScreen() {
     }
 
     setIsValidating(true);
-    const { data, error } = await supabase
-      .from('agencies')
-      .select('id, name')
-      .eq('invite_code', inviteCode.trim().toUpperCase())
-      .single();
-    setIsValidating(false);
+    try {
+      const APP_URL = process.env.EXPO_PUBLIC_APP_URL || 'https://logissign.com';
+      const res = await fetch(`${APP_URL}/api/auth/verify-invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inviteCode: inviteCode.trim().toUpperCase() }),
+      });
+      const data = await res.json();
+      setIsValidating(false);
 
-    if (error || !data) {
-      Alert.alert('인증 실패', '유효하지 않은 초대코드입니다.');
-      return;
+      if (!res.ok || !data.id) {
+        Alert.alert('인증 실패', data.error || '유효하지 않은 초대코드입니다.');
+        return;
+      }
+      setAgency({ id: data.id, name: data.name });
+    } catch {
+      setIsValidating(false);
+      Alert.alert('오류', '초대코드 검증 중 문제가 발생했습니다.');
     }
-
-    setAgency(data);
   };
 
   /** 이메일 + 비밀번호로 가입 → drivers 레코드 생성 */
@@ -121,44 +127,24 @@ export default function RegisterScreen() {
         return;
       }
 
-      // 2. drivers 테이블 — 기존 레코드 연결 또는 신규 생성
-      //    대리점 관리자가 미리 등록한 기사 → phone으로 매칭하여 user_id만 연결
-      //    매칭 안 되면 → 새 레코드 생성
+      // 2. driver row 연결 — API route로 (RLS 우회)
       if (signUpData.user) {
-        const normalizedPhone = phone.trim().replace(/[^0-9]/g, '');
-
-        // 2-1. 기존 레코드 조회 (같은 agency, 같은 전화번호, user_id 미연결)
-        const { data: existingDriver } = await supabase
-          .from('drivers')
-          .select('id')
-          .eq('agency_id', agency?.id ?? '')
-          .filter('user_id', 'is', null)
-          .or(`phone.eq.${normalizedPhone},phone.eq.${phone.trim()}`)
-          .limit(1)
-          .maybeSingle();
-
-        if (existingDriver) {
-          // 2-2. 기존 레코드에 user_id + 추가 정보 연결
-          await supabase.from('drivers').update({
-            user_id: signUpData.user.id,
-            email: email.trim(),
-            birth_date: birthDate.trim() || null,
-          } as never).eq('id', existingDriver.id);
-        } else {
-          // 2-3. 신규 생성 (대리점에서 미리 등록하지 않은 기사)
-          const { error: insertError } = await supabase.from('drivers').insert({
-            user_id: signUpData.user.id,
-            agency_id: agency?.id,
-            name: name.trim(),
-            birth_date: birthDate.trim() || null,
-            phone: phone.trim(),
-            email: email.trim(),
-            status: 'active',
-          } as never);
-
-          if (insertError) {
-            // Auth 계정은 생성됨 — 다음 로그인 시 drivers 없으면 안내 필요
-          }
+        try {
+          const APP_URL = process.env.EXPO_PUBLIC_APP_URL || 'https://logissign.com';
+          await fetch(`${APP_URL}/api/auth/link-driver`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: signUpData.user.id,
+              agencyId: agency?.id,
+              name: name.trim(),
+              phone: phone.trim(),
+              email: email.trim(),
+              birthDate: birthDate.trim() || null,
+            }),
+          });
+        } catch {
+          // driver 연결 실패 — 다음 로그인 시 재시도 가능
         }
       }
 

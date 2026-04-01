@@ -1,7 +1,7 @@
 import { PDFDocument, rgb } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
 import { loadKoreanFonts } from '@/lib/pdf-fonts'
-import { createBrowserSupabaseClient } from '@/lib/supabase'
+import { createAdminSupabaseClient } from '@/lib/supabase'
 import {
   finalizeContractVerification,
   type DocumentVerification,
@@ -27,7 +27,7 @@ export async function generateSignedPdf(contractId: string): Promise<{
   url: string | null
   error: string | null
 }> {
-  const supabase = createBrowserSupabaseClient()
+  const supabase = createAdminSupabaseClient()
 
   try {
     // 1. 계약서 + 서명 데이터 조회
@@ -477,7 +477,7 @@ async function generateGovernmentFormSignedPdf(
   contractId: string,
   templateId: string,
   bindingData: ContractBindingData,
-  supabase: ReturnType<typeof createBrowserSupabaseClient>
+  supabase: ReturnType<typeof createAdminSupabaseClient>
 ): Promise<{ url: string | null; error: string | null }> {
   try {
     // 서명 데이터 조회

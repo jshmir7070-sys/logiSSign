@@ -57,7 +57,7 @@ export default function PortalSettingsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setAgencyId(user.app_metadata?.agency_id as string ?? null);
-        setUserPlan(user.user_metadata?.plan as string ?? 'free');
+        setUserPlan(user.app_metadata?.plan as string ?? 'free');
       }
     }
     init();

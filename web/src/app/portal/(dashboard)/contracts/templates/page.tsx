@@ -54,7 +54,7 @@ export default function ContractTemplatesPage() {
       const aid = user.app_metadata?.agency_id as string | undefined;
       if (!aid) { setLoading(false); return; }
       setAgencyId(aid);
-      setUserPlan(user.user_metadata?.plan as string ?? 'free');
+      setUserPlan(user.app_metadata?.plan as string ?? 'free');
       setUserRole(user.app_metadata?.role as string ?? 'agency_admin');
 
       const [tmplRes, princRes, agencyRes] = await Promise.all([

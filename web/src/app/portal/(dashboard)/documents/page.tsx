@@ -58,7 +58,7 @@ export default function DocumentsPage() {
       const aid = user.app_metadata?.agency_id as string | undefined;
       if (!aid) return;
       setAgencyId(aid);
-      setUserPlan(user.user_metadata?.plan as string ?? 'free');
+      setUserPlan(user.app_metadata?.plan as string ?? 'free');
       await loadDocuments(aid);
     })();
   }, [loadDocuments]);

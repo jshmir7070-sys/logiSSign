@@ -13,6 +13,8 @@ const PUBLIC_ROUTES = [
   "/verify",        // 공개 진위확인 페이지
   "/api/verify",    // 공개 진위확인 API
   "/api/auth/signup", // 회원가입 API
+  "/api/auth/verify-invite", // 초대코드 검증 (기사 가입 전)
+  "/api/auth/link-driver",   // 기사 driver row 연결 (가입 직후)
   "/api/cron",      // CRON (자체 시크릿 인증)
   "/_next",
   "/favicon.ico",
