@@ -24,18 +24,52 @@ export async function POST(request: NextRequest) {
     if (action === 'save-billing-key') {
       const { billingKey, cardName, cardNumber } = body
 
-      await supabaseAdmin
-        .from('subscriptions')
-        .upsert({
-          agency_id: auth.agencyId,
-          billing_key: billingKey,
-          card_name: cardName ?? '',
-          card_number_masked: cardNumber ?? '',
-          status: 'active',
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'agency_id' })
+      if (!billingKey || typeof billingKey !== 'string') {
+        return NextResponse.json({ error: '빌링키가 필요합니다' }, { status: 400 })
+      }
 
-      return NextResponse.json({ success: true })
+      // ✅ PG사에서 빌링키 유효성 검증
+      const { getPayment: _, ...paymentService } = await import('@/services/payment.service')
+      try {
+        const token = await (async () => {
+          const secret = process.env.PORTONE_API_SECRET
+          if (!secret) throw new Error('PORTONE_API_SECRET 미설정')
+          const res = await fetch('https://api.portone.io/login/api-secret', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ apiSecret: secret }),
+          })
+          if (!res.ok) throw new Error('포트원 인증 실패')
+          const data = await res.json()
+          return data.accessToken as string
+        })()
+
+        // 빌링키 정보 조회로 유효성 확인
+        const verifyRes = await fetch(`https://api.portone.io/billing-keys/${encodeURIComponent(billingKey)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!verifyRes.ok) {
+          return NextResponse.json({ error: '유효하지 않은 빌링키입니다' }, { status: 400 })
+        }
+        const billingInfo = await verifyRes.json()
+        const verifiedCardName = billingInfo.methods?.[0]?.card?.name ?? cardName ?? ''
+        const verifiedCardNumber = billingInfo.methods?.[0]?.card?.number ?? cardNumber ?? ''
+
+        await supabaseAdmin
+          .from('subscriptions')
+          .upsert({
+            agency_id: auth.agencyId,
+            billing_key: billingKey,
+            card_name: verifiedCardName,
+            card_number_masked: verifiedCardNumber,
+            status: 'active',
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'agency_id' })
+
+        return NextResponse.json({ success: true, cardName: verifiedCardName })
+      } catch (err) {
+        return NextResponse.json({ error: '빌링키 검증 실패: ' + (err instanceof Error ? err.message : '') }, { status: 400 })
+      }
     }
 
     // 정기결제 실행

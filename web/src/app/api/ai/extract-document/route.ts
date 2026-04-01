@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
   try {
     const { text, fileName } = await request.json()
     if (!text || text.length < 10) return NextResponse.json({ error: '문서 텍스트가 필요합니다' }, { status: 400 })
+    if (text.length > 50000) return NextResponse.json({ error: '문서 크기가 50KB를 초과합니다' }, { status: 400 })
 
     const systemPrompt = `당신은 한국 물류 계약서 분석 전문가입니다.
 주어진 문서 텍스트를 분석하여:
