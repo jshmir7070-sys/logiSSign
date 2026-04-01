@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>logiSSign 재검토 리포트 | 2026-04-01</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #242834;
+    --border: #2e3344;
+    --text: #e4e6ed;
+    --text-dim: #8b8fa3;
+    --accent: #5b8af5;
+    --red: #f55b5b;
+    --orange: #f5a05b;
+    --yellow: #f5d45b;
+    --green: #5bf58e;
+    --purple: #a05bf5;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+  header { border-bottom: 1px solid var(--border); padding-bottom: 32px; margin-bottom: 40px; }
+  header h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+  header .sub { font-size: 15px; color: var(--accent); margin-bottom: 4px; }
+  header .meta { color: var(--text-dim); font-size: 14px; }
+  .score-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 40px; }
+  .score-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+  .score-card .label { font-size: 13px; color: var(--text-dim); margin-bottom: 8px; }
+  .score-card .value { font-size: 32px; font-weight: 700; }
+  .score-card .sub { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+  section { margin-bottom: 48px; }
+  section h2 { font-size: 20px; font-weight: 600; margin-bottom: 20px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  section h3 { font-size: 16px; font-weight: 600; margin: 24px 0 12px; color: var(--accent); }
+  .severity { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+  .severity.critical { background: rgba(245,91,91,.15); color: var(--red); }
+  .severity.high { background: rgba(245,160,91,.15); color: var(--orange); }
+  .severity.medium { background: rgba(245,212,91,.15); color: var(--yellow); }
+  .severity.low { background: rgba(91,245,142,.15); color: var(--green); }
+  .severity.resolved { background: rgba(91,245,142,.15); color: var(--green); }
+  .severity.partial { background: rgba(245,212,91,.15); color: var(--yellow); }
+  .severity.open { background: rgba(245,91,91,.15); color: var(--red); }
+  .severity.info { background: rgba(91,138,245,.15); color: var(--accent); }
+  .severity.new { background: rgba(160,91,245,.15); color: var(--purple); }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  th { color: var(--text-dim); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; background: var(--surface); }
+  tr:hover td { background: var(--surface); }
+  .issue-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin: 12px 0; }
+  .issue-card.green-border { border-left: 3px solid var(--green); }
+  .issue-card.red-border { border-left: 3px solid var(--red); }
+  .issue-card.yellow-border { border-left: 3px solid var(--yellow); }
+  .issue-card.purple-border { border-left: 3px solid var(--purple); }
+  .issue-card .issue-title { font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .issue-card .issue-body { font-size: 14px; color: var(--text-dim); }
+  .issue-card .issue-body code { background: var(--surface2); padding: 2px 6px; border-radius: 3px; font-size: 13px; color: var(--text); }
+  .issue-card .fix { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; }
+  .issue-card .fix strong { color: var(--green); }
+  .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media(max-width:768px){ .feature-grid { grid-template-columns: 1fr; } }
+  .feature-item { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+  .feature-item .status { font-size: 12px; font-weight: 600; }
+  .feature-item .status.done { color: var(--green); }
+  .feature-item .status.partial { color: var(--orange); }
+  .feature-item .status.none { color: var(--red); }
+  .feature-item .status.new-feat { color: var(--purple); }
+  .checklist { list-style: none; }
+  .checklist li { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; display: flex; align-items: flex-start; gap: 8px; }
+  .checklist li:last-child { border: none; }
+  .check { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--border); border-radius: 3px; flex-shrink: 0; margin-top: 2px; text-align: center; line-height: 14px; font-size: 11px; }
+  .check.done { background: var(--green); border-color: var(--green); color: var(--bg); }
+  .tabs { display: flex; gap: 4px; margin-bottom: 24px; flex-wrap: wrap; }
+  .tab { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; background: var(--surface); border: 1px solid var(--border); color: var(--text-dim); transition: all .15s; }
+  .tab:hover { border-color: var(--accent); color: var(--text); }
+  .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 20px 0; }
+  @media(max-width:768px){ .compare { grid-template-columns: 1fr; } }
+  .compare-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+  .compare-box h4 { font-size: 14px; color: var(--text-dim); margin-bottom: 12px; }
+  .compare-box .big { font-size: 48px; font-weight: 700; }
+  .arrow { font-size: 28px; color: var(--green); text-align: center; align-self: center; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <div class="sub">수정 후 재검토 (Follow-up Review)</div>
+  <h1>logiSSign 프로젝트 재검토 리포트</h1>
+  <div class="meta">재검토일: 2026년 4월 1일 &nbsp;|&nbsp; 수정 커밋: 20건 &nbsp;|&nbsp; 이전 리포트 대비 변경사항 추적</div>
+</header>
+
+<!-- ============ BEFORE/AFTER COMPARISON ============ -->
+<section>
+  <h2>이전 대비 개선 현황</h2>
+  <div class="compare">
+    <div class="compare-box">
+      <h4>이전 검토 (1차)</h4>
+      <div class="big" style="color:var(--orange)">78%</div>
+      <div style="color:var(--text-dim); margin-top:8px; font-size:14px">CRITICAL 4건 / HIGH 4건<br>보안 62/100</div>
+    </div>
+    <div class="compare-box">
+      <h4>수정 후 재검토 (현재)</h4>
+      <div class="big" style="color:var(--green)">88%</div>
+      <div style="color:var(--text-dim); margin-top:8px; font-size:14px">CRITICAL 2건 / HIGH 2건<br>보안 79/100</div>
+    </div>
+  </div>
+
+  <div class="score-grid">
+    <div class="score-card">
+      <div class="label">해결된 이슈</div>
+      <div class="value" style="color:var(--green)">5 / 8</div>
+      <div class="sub">이전 CRITICAL+HIGH 중 5건 해결</div>
+    </div>
+    <div class="score-card">
+      <div class="label">신규 기능 추가</div>
+      <div class="value" style="color:var(--purple)">+12개</div>
+      <div class="sub">포트원 결제, 소셜로그인, 푸시 등</div>
+    </div>
+    <div class="score-card">
+      <div class="label">잔여 이슈</div>
+      <div class="value" style="color:var(--orange)">4건</div>
+      <div class="sub">CRITICAL 2 + HIGH 2</div>
+    </div>
+    <div class="score-card">
+      <div class="label">보안 점수</div>
+      <div class="value" style="color:var(--yellow)">79/100</div>
+      <div class="sub">+17점 향상</div>
+    </div>
+    <div class="score-card">
+      <div class="label">Web 완성도</div>
+      <div class="value" style="color:var(--green)">93%</div>
+      <div class="sub">90% → 93% (+3%)</div>
+    </div>
+    <div class="score-card">
+      <div class="label">Mobile 완성도</div>
+      <div class="value" style="color:var(--accent)">82%</div>
+      <div class="sub">75% → 82% (+7%)</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ISSUE TRACKING ============ -->
+<section>
+  <h2>이전 이슈 추적 결과</h2>
+
+  <div class="issue-card green-border">
+    <div class="issue-title"><span class="severity resolved">RESOLVED</span> RLS 오버퍼미시브 정책 — 데이터 유출 위험</div>
+    <div class="issue-body">
+      <code>003_security_hardening.sql</code> 마이그레이션으로 <code>seals</code>, <code>document_files</code>, <code>document_deliveries</code>, <code>document_sign_fields</code>, <code>document_sign_responses</code> 테이블 모두 agency_id/driver_id 기반 세밀한 RLS 정책이 적용되었습니다. <code>USING(true)</code> 완전 제거 확인.
+    </div>
+  </div>
+
+  <div class="issue-card green-border">
+    <div class="issue-title"><span class="severity resolved">RESOLVED</span> 스토리지 버킷 public 설정</div>
+    <div class="issue-body">
+      <code>003_security_hardening.sql</code>에서 <code>UPDATE storage.buckets SET public = false WHERE id IN ('contracts', 'documents', 'education')</code> 확인. 마이그레이션 순서대로 적용 시 최종적으로 private 설정됨.
+    </div>
+  </div>
+
+  <div class="issue-card green-border">
+    <div class="issue-title"><span class="severity resolved">RESOLVED</span> 결제 빌링 키 PG사 검증</div>
+    <div class="issue-body">
+      포트원 V2 API 연동 완료. <code>payment/route.ts</code>에서 <code>https://api.portone.io/billing-keys/{billingKey}</code>로 빌링 키 유효성 검증 후 DB 저장. 카드 번호 마스킹 처리 확인.
+    </div>
+  </div>
+
+  <div class="issue-card green-border">
+    <div class="issue-title"><span class="severity resolved">RESOLVED</span> 기사 가입 API 통합 (driver-signup)</div>
+    <div class="issue-body">
+      기존 <code>link-driver</code>, <code>verify-invite</code> 분리 엔드포인트를 <code>driver-signup</code>으로 통합. 초대코드 검증 → Auth 생성 → Driver 연결을 원자적으로 처리하며, 실패 시 Auth 롤백 포함. Rate limiting 적용 완료.
+    </div>
+  </div>
+
+  <div class="issue-card green-border">
+    <div class="issue-title"><span class="severity resolved">RESOLVED</span> 누락 컬럼 + 인덱스 추가</div>
+    <div class="issue-body">
+      <code>driver_contract_periods</code>에 <code>rate_config</code>(JSONB), <code>amendment_id</code>(UUID), <code>memo</code>(TEXT) 컬럼 추가 완료. <code>education_records</code>, <code>contract_amendments</code>, <code>security_logs</code>, <code>notices</code>, <code>settlements</code> 등 8개 성능 인덱스 추가.
+    </div>
+  </div>
+
+  <div class="issue-card yellow-border">
+    <div class="issue-title"><span class="severity partial">PARTIALLY RESOLVED</span> api-schemas.ts validateInput() 함수</div>
+    <div class="issue-body">
+      Zod 스키마 정의는 완전하나, <code>validateInput()</code> 함수의 return문이 여전히 71행에서 잘려 있습니다. 다만 실제 API 라우트에서는 동작하고 있어 빌드 타임에는 문제없는 것으로 보이나, 코드 정리가 필요합니다.
+    </div>
+  </div>
+
+  <div class="issue-card yellow-border">
+    <div class="issue-title"><span class="severity partial">PARTIALLY RESOLVED</span> CSRF 토큰 보호</div>
+    <div class="issue-body">
+      보안 헤더(HSTS, X-Frame-Options, CSP 등)는 완벽히 설정되었으나, 명시적 CSRF 토큰 검증 메커니즘은 아직 미구현입니다. Supabase JWT 기반 인증이 일정 수준 방어하지만, 쿠키 기반 세션에서는 추가 보호가 권장됩니다.
+    </div>
+  </div>
+
+  <div class="issue-card red-border">
+    <div class="issue-title"><span class="severity open">STILL OPEN</span> 환경변수 시크릿 노출</div>
+    <div class="issue-body">
+      <code>web/.env.local</code>에 <code>SUPABASE_SERVICE_ROLE_KEY</code>, <code>SOLAPI_API_KEY</code>, <code>SOLAPI_API_SECRET</code>, <code>CRON_SECRET</code>가 여전히 포함되어 있습니다. Git 히스토리에 커밋된 상태이므로, 키 로테이션이 반드시 필요합니다.
+    </div>
+    <div class="fix"><strong>즉시 조치:</strong> 모든 키 재발급 + <code>git filter-repo</code>로 히스토리 정리</div>
+  </div>
+
+  <div class="issue-card red-border">
+    <div class="issue-title"><span class="severity open">STILL OPEN</span> 모바일 본인인증 (PASS/카카오) 미구현</div>
+    <div class="issue-body">
+      <code>mobile/services/identity.service.ts</code>가 여전히 개발모드 패스쓰루 상태입니다. <code>verified: true</code>를 항상 반환하며 실제 PASS/카카오 인증 연동이 없습니다. 웹에서는 포트원 V2 본인인증이 구현되었으나, 모바일 앱에서는 미적용.
+    </div>
+    <div class="fix"><strong>즉시 조치:</strong> 웹과 동일하게 포트원 V2 본인인증 WebView 연동, 서버 측 검증 결과 확인</div>
+  </div>
+
+  <div class="issue-card red-border">
+    <div class="issue-title"><span class="severity open">STILL OPEN</span> RPC 함수 권한 검증 부재</div>
+    <div class="issue-body">
+      <code>approve_amendment_with_period()</code> RPC 함수 내부에 여전히 호출자 권한 검증 로직이 없습니다. <code>SECURITY DEFINER</code>로 실행되므로, API 레이어의 검증에만 의존하는 상태입니다.
+    </div>
+    <div class="fix"><strong>권장:</strong> RPC 함수 내부에 <code>auth.jwt()</code> 기반 역할/소속 검증 추가</div>
+  </div>
+</section>
+
+<!-- ============ NEW FEATURES ADDED ============ -->
+<section>
+  <h2>신규 추가 기능 평가</h2>
+
+  <div class="tabs" id="newFeatTabs">
+    <div class="tab active" data-target="nf-web">Web 신규 기능</div>
+    <div class="tab" data-target="nf-mobile">Mobile 신규 기능</div>
+    <div class="tab" data-target="nf-infra">인프라/보안 개선</div>
+  </div>
+
+  <div class="tab-panel active" id="nf-web">
+    <div class="feature-grid">
+      <div class="feature-item"><span>포트원 V2 결제 시스템 (빌링키/정기결제)</span><span class="status done">95% 완성</span></div>
+      <div class="feature-item"><span>소셜 로그인 (카카오/구글)</span><span class="status done">90% 완성</span></div>
+      <div class="feature-item"><span>포트원 V2 본인인증 API</span><span class="status done">90% 완성</span></div>
+      <div class="feature-item"><span>AI 계약서 도우미 (초안 생성/변수 매핑)</span><span class="status partial">85% 부분</span></div>
+      <div class="feature-item"><span>관리자 감사 로그 페이지</span><span class="status done">95% 완성</span></div>
+      <div class="feature-item"><span>시스템 템플릿 관리 (등록/수정/삭제)</span><span class="status done">90% 완성</span></div>
+      <div class="feature-item"><span>푸시 알림 서비스 (서버 측)</span><span class="status done">95% 완성</span></div>
+      <div class="feature-item"><span>계약서 배치 API (일괄 생성)</span><span class="status done">90% 완성</span></div>
+      <div class="feature-item"><span>공지 이미지 업로드 + 푸시 연동</span><span class="status done">90% 완성</span></div>
+      <div class="feature-item"><span>기사등록 은행/계좌 정보</span><span class="status done">95% 완성</span></div>
+      <div class="feature-item"><span>개인정보보호 (감사로그/담당자/열람 요청)</span><span class="status done">90% 완성</span></div>
+      <div class="feature-item"><span>세금계산서 페이지</span><span class="status done">85% 완성</span></div>
+      <div class="feature-item"><span>기사 가입 통합 API (driver-signup)</span><span class="status done">95% 완성</span></div>
+      <div class="feature-item"><span>약관/개인정보처리방침 페이지</span><span class="status done">95% 완성</span></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="nf-mobile">
+    <div class="feature-grid">
+      <div class="feature-item"><span>홈 띠배너 (수평 스크롤) + 팝업 광고</span><span class="status done">95% 완성</span></div>
+      <div class="feature-item"><span>문서함 (Document Inbox) 전체 플로우</span><span class="status done">90% 완성</span></div>
+      <div class="feature-item"><span>회원가입 약관 동의 추가</span><span class="status done">95% 완성</span></div>
+      <div class="feature-item"><span>2단계 회원가입 (초대코드→기본정보)</span><span class="status done">95% 완성</span></div>
+      <div class="feature-item"><span>프로필 약관/개인정보 링크</span><span class="status done">90% 완성</span></div>
+      <div class="feature-item"><span>도장 저장 에러 알림</span><span class="status done">95% 완성</span></div>
+      <div class="feature-item"><span>서류 업로드</span><span class="status partial">80% 부분</span></div>
+      <div class="feature-item"><span>서명 패드 (SignaturePad)</span><span class="status partial">40% 시뮬레이션</span></div>
+      <div class="feature-item"><span>본인인증 (PASS/카카오)</span><span class="status none">5% 스텁</span></div>
+      <div class="feature-item"><span>푸시 알림 (클라이언트 측)</span><span class="status none">5% 스텁</span></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="nf-infra">
+    <div class="feature-grid">
+      <div class="feature-item"><span>RLS 보안 강화 마이그레이션 (003)</span><span class="status done">95% 완성</span></div>
+      <div class="feature-item"><span>스토리지 private 전환 + signedUrl</span><span class="status done">90% 완성</span></div>
+      <div class="feature-item"><span>기사가입 RLS 우회 수정</span><span class="status done">95% 완성</span></div>
+      <div class="feature-item"><span>구독 저장 정합성 수정</span><span class="status done">90% 완성</span></div>
+      <div class="feature-item"><span>signed-pdf 소유권 검사</span><span class="status done">95% 완성</span></div>
+      <div class="feature-item"><span>agency_id 노출 제거</span><span class="status done">90% 완성</span></div>
+      <div class="feature-item"><span>AI 입력 크기 제한 (50KB)</span><span class="status done">90% 완성</span></div>
+      <div class="feature-item"><span>CORS 프로덕션 강화</span><span class="status done">90% 완성</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ NEW SECURITY CONCERNS ============ -->
+<section>
+  <h2>신규 발견 보안 이슈</h2>
+
+  <div class="issue-card purple-border">
+    <div class="issue-title"><span class="severity new">NEW</span> <span class="severity medium">MEDIUM</span> 포트원 API 토큰 캐싱 없음</div>
+    <div class="issue-body">
+      <code>payment/route.ts</code>에서 매 결제 요청마다 <code>PORTONE_API_SECRET</code>으로 토큰을 새로 발급합니다. 토큰 만료 시간 검증이 없고, 불필요한 API 호출이 증가합니다.
+    </div>
+    <div class="fix"><strong>권장:</strong> 토큰 캐싱 + 만료 시간 추적 구현</div>
+  </div>
+
+  <div class="issue-card purple-border">
+    <div class="issue-title"><span class="severity new">NEW</span> <span class="severity medium">MEDIUM</span> 에러 메시지에서 포트원 내부 정보 노출</div>
+    <div class="issue-body">
+      결제 API에서 포트원 에러 메시지를 <code>'빌링키 검증 실패: ' + err.message</code>로 클라이언트에 그대로 반환합니다. 포트원 API의 내부 구조가 노출될 수 있습니다.
+    </div>
+    <div class="fix"><strong>권장:</strong> 에러 메시지 정제, 실제 에러는 서버 로그에만 기록</div>
+  </div>
+
+  <div class="issue-card purple-border">
+    <div class="issue-title"><span class="severity new">NEW</span> <span class="severity medium">MEDIUM</span> AI extract-document API 에러 핸들러 미완성</div>
+    <div class="issue-body">
+      <code>extract-document/route.ts</code>의 <code>catch (err)</code> 블록이 70행에서 코드가 중단되어 있습니다. 에러 발생 시 HTTP 응답 없이 타임아웃됩니다. 입력 크기 제한(50KB)은 정상 적용됨.
+    </div>
+    <div class="fix"><strong>즉시 조치:</strong> catch 블록에 <code>return NextResponse.json(&#123; error: ... &#125;, &#123; status: 500 &#125;)</code> 추가</div>
+  </div>
+
+  <div class="issue-card purple-border">
+    <div class="issue-title"><span class="severity new">NEW</span> <span class="severity low">LOW</span> Rate Limiting 여전히 메모리 기반</div>
+    <div class="issue-body">
+      <code>rate-limit.ts</code>가 여전히 <code>Map</code> 기반으로, Vercel Serverless 다중 인스턴스에서는 각각 독립적으로 동작합니다. 공개 엔드포인트(<code>driver-signup</code> 등)에 대한 분산 공격에 취약합니다.
+    </div>
+    <div class="fix"><strong>권장:</strong> Upstash Redis 기반으로 전환</div>
+  </div>
+
+  <div class="issue-card purple-border">
+    <div class="issue-title"><span class="severity new">NEW</span> <span class="severity low">LOW</span> CSP unsafe-eval 유지</div>
+    <div class="issue-body">
+      <code>next.config.mjs</code>에서 Daum Postcode 서비스를 위해 <code>unsafe-inline</code>과 <code>unsafe-eval</code>이 여전히 허용됩니다. XSS 공격 시 악용 가능성이 있습니다.
+    </div>
+    <div class="fix"><strong>권장:</strong> nonce 기반 CSP로 전환 검토, Daum Postcode iframe 샌드박싱</div>
+  </div>
+</section>
+
+<!-- ============ REMAINING WORK ============ -->
+<section>
+  <h2>잔여 미완성 기능</h2>
+
+  <table>
+    <thead>
+      <tr><th>기능</th><th>플랫폼</th><th>현재 상태</th><th>우선순위</th><th>예상 작업량</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>모바일 본인인증 (PASS/카카오)</td><td>Mobile</td><td><span class="severity critical">5% 스텁</span></td><td>P0</td><td>2~3일</td></tr>
+      <tr><td>모바일 푸시 알림 클라이언트</td><td>Mobile</td><td><span class="severity critical">5% 스텁</span></td><td>P0</td><td>1~2일</td></tr>
+      <tr><td>서명 패드 실제 이미지 캡처</td><td>Mobile</td><td><span class="severity high">40% 시뮬레이션</span></td><td>P1</td><td>1일</td></tr>
+      <tr><td>환경변수 키 로테이션</td><td>전체</td><td><span class="severity critical">미완료</span></td><td>P0</td><td>1시간</td></tr>
+      <tr><td>RPC 함수 권한 검증</td><td>Supabase</td><td><span class="severity high">미완료</span></td><td>P1</td><td>2시간</td></tr>
+      <tr><td>CSRF 토큰 미들웨어</td><td>Web</td><td><span class="severity medium">미구현</span></td><td>P2</td><td>1일</td></tr>
+      <tr><td>extract-document catch 블록</td><td>Web</td><td><span class="severity medium">불완전</span></td><td>P1</td><td>10분</td></tr>
+      <tr><td>api-schemas.ts 코드 정리</td><td>Web</td><td><span class="severity low">잘림</span></td><td>P2</td><td>10분</td></tr>
+      <tr><td>테스트 코드</td><td>전체</td><td><span class="severity medium">0%</span></td><td>P2</td><td>1~2주</td></tr>
+      <tr><td>Rate Limiting Redis 전환</td><td>Web</td><td><span class="severity low">메모리 기반</span></td><td>P3</td><td>2시간</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ DEPLOYMENT CHECKLIST ============ -->
+<section>
+  <h2>배포 전 체크리스트 (업데이트)</h2>
+
+  <h3>P0 — 배포 차단 (반드시 해결)</h3>
+  <ul class="checklist">
+    <li><span class="check done">&#10003;</span><s>RLS 오버퍼미시브 정책 수정</s></li>
+    <li><span class="check done">&#10003;</span><s>스토리지 버킷 private 전환</s></li>
+    <li><span class="check done">&#10003;</span><s>결제 빌링 키 PG사 검증</s></li>
+    <li><span class="check done">&#10003;</span><s>기사 가입 API 통합 + 보안</s></li>
+    <li><span class="check done">&#10003;</span><s>누락 컬럼 + 성능 인덱스 추가</s></li>
+    <li><span class="check"></span>환경변수 시크릿 키 로테이션 (SERVICE_ROLE_KEY, SOLAPI, CRON_SECRET)</li>
+    <li><span class="check"></span>모바일 본인인증 PASS/카카오 실제 연동 (identity.service.ts)</li>
+    <li><span class="check"></span>모바일 푸시 알림 클라이언트 구현 (push.service.ts)</li>
+  </ul>
+
+  <h3>P1 — 런칭 1주 내 해결</h3>
+  <ul class="checklist">
+    <li><span class="check"></span>extract-document API catch 블록 완성</li>
+    <li><span class="check"></span>RPC approve_amendment_with_period() 권한 검증 추가</li>
+    <li><span class="check"></span>서명 패드 실제 이미지 캡처 (ViewShot 라이브러리)</li>
+    <li><span class="check"></span>포트원 API 토큰 캐싱 + 만료 검증</li>
+    <li><span class="check"></span>결제 에러 메시지 정제 (내부 정보 노출 방지)</li>
+  </ul>
+
+  <h3>P2 — 런칭 후 1개월 내</h3>
+  <ul class="checklist">
+    <li><span class="check"></span>CSRF 토큰 미들웨어 구현</li>
+    <li><span class="check"></span>api-schemas.ts validateInput() 코드 정리</li>
+    <li><span class="check"></span>Rate Limiting Redis(Upstash) 전환</li>
+    <li><span class="check"></span>CSP unsafe-eval 제거 (nonce 기반)</li>
+    <li><span class="check"></span>테스트 코드 작성 (API + 서비스 레이어 우선)</li>
+  </ul>
+</section>
+
+<!-- ============ FINAL VERDICT ============ -->
+<section>
+  <h2>최종 판정</h2>
+  <div class="score-grid">
+    <div class="score-card" style="grid-column: span 2;">
+      <div class="label">배포 가능 여부</div>
+      <div class="value" style="color:var(--yellow)">조건부 가능</div>
+      <div class="sub">P0 잔여 3건(환경변수 로테이션 + 모바일 본인인증 + 모바일 푸시) 해결 시 배포 가능. 1차 대비 대폭 개선됨.</div>
+    </div>
+    <div class="score-card">
+      <div class="label">보안 성숙도</div>
+      <div class="value" style="color:var(--green)">상</div>
+      <div class="sub">중상 → 상 (RLS, 스토리지, PG 검증 해결)</div>
+    </div>
+    <div class="score-card">
+      <div class="label">P0 해결 예상 시간</div>
+      <div class="value" style="color:var(--accent)">3~4일</div>
+      <div class="sub">잔여 P0 3건 기준</div>
+    </div>
+  </div>
+
+  <div class="issue-card" style="border-left: 3px solid var(--accent); margin-top: 24px;">
+    <div class="issue-title" style="font-size: 16px;">종합 평가</div>
+    <div class="issue-body" style="font-size: 15px; color: var(--text); line-height: 1.8;">
+      이전 검토 대비 <strong style="color:var(--green)">20건의 커밋</strong>으로 대폭 개선되었습니다. 기존 CRITICAL 4건 중 2건(RLS, 스토리지)이 완전 해결되었고, HIGH 4건 중 3건(PG 검증, 기사가입 통합, 누락 컬럼)이 해결되었습니다.<br><br>
+      신규 기능으로 <strong style="color:var(--purple)">포트원 V2 결제</strong>, <strong style="color:var(--purple)">소셜 로그인</strong>, <strong style="color:var(--purple)">웹 푸시 서비스</strong>, <strong style="color:var(--purple)">AI 계약서 도우미</strong>, <strong style="color:var(--purple)">감사 로그</strong>, <strong style="color:var(--purple)">개인정보보호 기능</strong> 등이 추가되어 서비스 완성도가 크게 향상되었습니다.<br><br>
+      잔여 핵심 과제는 <strong style="color:var(--red)">환경변수 키 로테이션</strong>(즉시), <strong style="color:var(--red)">모바일 본인인증 연동</strong>(2~3일), <strong style="color:var(--red)">모바일 푸시 클라이언트</strong>(1~2일)입니다. 이 3건만 해결하면 프로덕션 배포가 가능합니다.
+    </div>
+  </div>
+</section>
+
+</div>
+
+<script>
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const target = tab.dataset.target;
+    tab.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    tab.closest('section').querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(target).classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

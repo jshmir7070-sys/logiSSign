@@ -1,17 +1,11 @@
 /**
  * 본인인증 서비스 (모바일)
  *
- * 계약서 전자서명 전 본인 확인
- * PASS 또는 카카오 인증을 WebView로 호출
- *
- * 실 연동 시:
- *  1. 웹 포털 API에서 인증 세션 생성
- *  2. 인증 URL을 WebView / 외부 브라우저로 열기
- *  3. 콜백으로 결과 수신
- *  4. 결과를 서명 데이터에 포함
+ * 포트원 V2 본인인증을 WebView/외부 브라우저로 호출
+ * 서버 API에서 결과 검증
  */
 
-import { Linking, Platform } from 'react-native';
+import { Platform, Linking } from 'react-native';
 
 export type IdentityProvider = 'pass' | 'kakao';
 
@@ -25,33 +19,79 @@ export interface VerificationResult {
   error: string | null;
 }
 
+const APP_URL = process.env.EXPO_PUBLIC_APP_URL || 'https://logissign.com';
+
 /**
  * 본인인증 실행
- * 개발 환경에서는 인증 없이 통과 (API 키 미설정 시)
- * 실 서비스에서는 WebView → PASS/카카오 인증 → 콜백
+ * 서버 API를 통해 포트원 본인인증 결과를 검증
  */
 export async function requestIdentityVerification(
   provider: IdentityProvider,
   contractId: string,
   driverInfo: { name: string; phone: string }
 ): Promise<VerificationResult> {
-  // TODO: 실 연동 시 서버에서 세션 생성 후 WebView로 인증 페이지 열기
-  // const session = await fetch('/api/identity/session', { method: 'POST', body: ... })
-  // await Linking.openURL(session.verificationUrl)
-  // ... 콜백 대기 ...
+  try {
+    // 서버에 본인인증 세션 생성 요청
+    const verificationId = `identity_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 
-  // 개발 모드: 인증 성공으로 처리
-  console.log(`[Identity] ${provider} 인증 요청 — 개발모드 자동 통과`);
+    // 포트원 본인인증 URL로 외부 브라우저 열기
+    const verifyUrl = `${APP_URL}/verify-identity?id=${verificationId}&name=${encodeURIComponent(driverInfo.name)}&phone=${encodeURIComponent(driverInfo.phone)}&provider=${provider}`;
 
-  return {
-    verified: true,
-    provider,
-    certId: `dev_${Date.now()}`,
-    name: driverInfo.name,
-    phone: driverInfo.phone,
-    verifiedAt: new Date().toISOString(),
-    error: null,
-  };
+    const canOpen = await Linking.canOpenURL(verifyUrl);
+    if (canOpen) {
+      await Linking.openURL(verifyUrl);
+    }
+
+    // 서버에서 본인인증 결과 확인 (폴링)
+    for (let i = 0; i < 60; i++) {
+      await new Promise(r => setTimeout(r, 3000)); // 3초 간격
+
+      const res = await fetch(`${APP_URL}/api/payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'verify-identity',
+          identityVerificationId: verificationId,
+        }),
+      });
+
+      if (!res.ok) continue;
+      const data = await res.json();
+
+      if (data.verified) {
+        return {
+          verified: true,
+          provider,
+          certId: verificationId,
+          name: data.name || driverInfo.name,
+          phone: data.phone || driverInfo.phone,
+          verifiedAt: new Date().toISOString(),
+          error: null,
+        };
+      }
+    }
+
+    // 타임아웃 (3분)
+    return {
+      verified: false,
+      provider,
+      certId: '',
+      name: '',
+      phone: '',
+      verifiedAt: '',
+      error: '본인인증 시간이 초과되었습니다. 다시 시도해주세요.',
+    };
+  } catch (err) {
+    return {
+      verified: false,
+      provider,
+      certId: '',
+      name: '',
+      phone: '',
+      verifiedAt: '',
+      error: err instanceof Error ? err.message : '본인인증 실패',
+    };
+  }
 }
 
 /**
@@ -63,13 +103,13 @@ export const IDENTITY_PROVIDERS = [
     name: 'PASS 인증',
     description: '통신사 본인확인 + 민간인증서',
     icon: '🔐',
-    recommended: Platform.OS === 'android', // Android에서 PASS 앱 보급률 높음
+    recommended: Platform.OS === 'android',
   },
   {
     id: 'kakao' as IdentityProvider,
     name: '카카오 인증',
     description: '카카오톡 간편인증',
     icon: '💬',
-    recommended: Platform.OS === 'ios', // iOS에서 카카오 사용률 높음
+    recommended: Platform.OS === 'ios',
   },
 ] as const;

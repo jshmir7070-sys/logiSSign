@@ -36,8 +36,15 @@ export interface IdentityVerificationResult {
 
 /* ══════════════════════ 서버 전용 (API Secret 사용) ══════════════════════ */
 
-/** 포트원 V2 인증 토큰 발급 */
+/** 포트원 V2 인증 토큰 발급 (캐싱) */
+let _cachedToken: { token: string; expiresAt: number } | null = null
+
 async function getPortoneToken(): Promise<string> {
+  // 캐시된 토큰이 유효하면 재사용 (만료 1분 전 갱신)
+  if (_cachedToken && Date.now() < _cachedToken.expiresAt - 60_000) {
+    return _cachedToken.token
+  }
+
   const secret = process.env.PORTONE_API_SECRET
   if (!secret) throw new Error('PORTONE_API_SECRET 미설정')
 
@@ -47,8 +54,15 @@ async function getPortoneToken(): Promise<string> {
     body: JSON.stringify({ apiSecret: secret }),
   })
 
-  if (!res.ok) throw new Error(`포트원 인증 실패: ${res.status}`)
+  if (!res.ok) throw new Error('결제 시스템 인증 실패')
   const data = await res.json()
+
+  // 토큰 캐시 (기본 30분)
+  _cachedToken = {
+    token: data.accessToken,
+    expiresAt: Date.now() + 30 * 60_000,
+  }
+
   return data.accessToken
 }
 

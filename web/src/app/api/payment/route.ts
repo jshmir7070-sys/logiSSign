@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ success: true, cardName: verifiedCardName })
       } catch (err) {
-        return NextResponse.json({ error: '빌링키 검증 실패: ' + (err instanceof Error ? err.message : '') }, { status: 400 })
+        console.error('[Payment] 빌링키 검증 실패:', err); return NextResponse.json({ error: '카드 등록에 실패했습니다. 다시 시도해주세요.' }, { status: 400 })
       }
     }
 
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '알 수 없는 action' }, { status: 400 })
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : '결제 처리 실패' },
+      { error: '결제 처리 중 오류가 발생했습니다' },
       { status: 500 }
     )
   }
