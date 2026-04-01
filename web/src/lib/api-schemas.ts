@@ -38,8 +38,10 @@ export const patchAmendmentSchema = z.object({
 // ── Contracts ──
 
 export const sendContractSchema = z.object({
-  driverId: uuid,
+  driverId: uuid.optional(),
+  driverIds: z.array(uuid).optional(),
   templateIds: z.array(uuid).min(1, '템플릿을 1개 이상 선택하세요'),
+  bindingDataMap: z.record(z.string(), z.record(z.string(), z.string())).optional(),
   bindingData: z.record(z.string(), z.string()).optional().default({}),
 })
 

@@ -173,27 +173,10 @@ export async function sendDocuments(
     }
   }
 
-  // 5. SMS 발송
-  let smsSent = 0
-  if (sendMethod === 'sms' || sendMethod === 'both') {
-    const smsTargets = drivers.filter((d) => d.phone)
-    for (const driver of smsTargets) {
-      try {
-        // SMS API 호출 (server-side route 사용 권장, 여기서는 직접 호출)
-        const response = await fetch('/api/sms/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: driver.phone,
-            text: `[로지사인] "${title}" ${getDefaultMessage(sendType, title)}`,
-          }),
-        })
-        if (response.ok) smsSent++
-      } catch {
-        console.warn(`[DocumentSend] SMS 발송 실패: ${driver.phone}`)
-      }
-    }
-  }
+  // 5. SMS 발송 — 비활성 (푸시 알림으로 대체)
+  const smsSent = 0
+  // SMS는 비용 절감을 위해 기본 비활성.
+  // 푸시 토큰이 없는 기사에게만 필요 시 수동 발송.
 
   const failed = driverIds.length - Math.max(pushSent, smsSent)
 

@@ -143,70 +143,71 @@ export default function NewContractPage() {
   };
 
   const handleSend = async () => {
-    if (!agencyId || selectedDriverIds.size === 0 || selectedTemplateIds.size === 0) return;
+    if (!agencyId || selectedDriverIds.size === 0 || (selectedTemplateIds.size === 0 && selectedDocIds.size === 0)) return;
     setSending(true);
 
     let totalSent = 0;
     let totalFailed = 0;
 
-    for (const driverId of Array.from(selectedDriverIds)) {
-      const driver = drivers.find((d) => d.id === driverId);
-      if (!driver) continue;
-
-      // 카테고리 field_config에서 보험 부담비율 추출
+    // 계약서 템플릿 — 배치 API 1회 호출 (기사 × 템플릿 일괄 생성)
+    if (selectedTemplateIds.size > 0) {
+      const bindingDataMap: Record<string, Record<string, string>> = {};
       const principal = principals.find((p) => p.id === principalId);
       const fc = principal ? normalizeFieldConfig(principal.field_config) : null;
       const empIns = fc?.deduction_section?.employment_insurance;
       const indIns = fc?.deduction_section?.industrial_insurance;
 
-      const bindingData: ContractBindingData = {
-        기사명: driver.name,
-        전화번호: driver.phone,
-        주소: driver.address ?? '',
-        사번: driver.employee_code ?? '',
-        카테고리명: principal?.name ?? '',
-        배송지역: driver.delivery_area ?? '',
-        배송단가: '-',
-        반품단가: '-',
-        집하단가: '-',
-        노선별단가: '-',
-        계약시작일: contractStartDate ? new Date(contractStartDate).toLocaleDateString('ko-KR') : '',
-        계약종료일: contractEndDate ? new Date(contractEndDate).toLocaleDateString('ko-KR') : '',
-        계약일: new Date().toLocaleDateString('ko-KR'),
-        대리점명: agencyName,
-        대리점사업자번호: agencyBizNumber,
-        대리점주소: agencyAddress,
-        사업자번호: driver.business_reg_number ?? '',
-        대표자명: driver.representative_name ?? '',
-        사업장주소: driver.business_address ?? '',
-        부가세구분: driver.is_business_owner ? (driver.vat_included ? '포함가' : '별도') : '해당없음',
-        세금처리: driver.is_business_owner ? '세금계산서' : '3.3% 원천징수',
-        차종: '',
-        연식: '',
-        차량번호: driver.vehicle_number ?? '',
-        차대번호: '',
-        인도시주행거리: '',
-        월임대료: '',
-        보증금: '',
-        보험부담: '임대인',
-        고용보험_기사부담: empIns?.enabled
-          ? (empIns.split_mode === 'split_50_50' ? '50%' : '0%') : '-',
-        고용보험_사업주부담: empIns?.enabled
-          ? (empIns.split_mode === 'split_50_50' ? '50%' : '100%') : '-',
-        산재보험_기사부담: indIns?.enabled
-          ? (indIns.split_mode === 'split_50_50' ? '50%' : '0%') : '-',
-        산재보험_사업주부담: indIns?.enabled
-          ? (indIns.split_mode === 'split_50_50' ? '50%' : '100%') : '-',
-      };
+      for (const driverId of Array.from(selectedDriverIds)) {
+        const driver = drivers.find((d) => d.id === driverId);
+        if (!driver) continue;
 
-      const { created, error } = await createAndSendContracts(
-        agencyId, driverId, Array.from(selectedTemplateIds), bindingData
-      );
-      if (error) totalFailed += 1;
-      else totalSent += created;
+        bindingDataMap[driverId] = {
+          기사명: driver.name,
+          전화번호: driver.phone,
+          주소: driver.address ?? '',
+          사번: driver.employee_code ?? '',
+          카테고리명: principal?.name ?? '',
+          배송지역: driver.delivery_area ?? '',
+          배송단가: '-', 반품단가: '-', 집하단가: '-', 노선별단가: '-',
+          계약시작일: contractStartDate ? new Date(contractStartDate).toLocaleDateString('ko-KR') : '',
+          계약종료일: contractEndDate ? new Date(contractEndDate).toLocaleDateString('ko-KR') : '',
+          계약일: new Date().toLocaleDateString('ko-KR'),
+          대리점명: agencyName,
+          대리점사업자번호: agencyBizNumber,
+          대리점주소: agencyAddress,
+          사업자번호: driver.business_reg_number ?? '',
+          대표자명: driver.representative_name ?? '',
+          사업장주소: driver.business_address ?? '',
+          부가세구분: driver.is_business_owner ? (driver.vat_included ? '포함가' : '별도') : '해당없음',
+          세금처리: driver.is_business_owner ? '세금계산서' : '3.3% 원천징수',
+          차종: '', 연식: '', 차량번호: driver.vehicle_number ?? '',
+          차대번호: '', 인도시주행거리: '', 월임대료: '', 보증금: '', 보험부담: '임대인',
+          고용보험_기사부담: empIns?.enabled ? (empIns.split_mode === 'split_50_50' ? '50%' : '0%') : '-',
+          고용보험_사업주부담: empIns?.enabled ? (empIns.split_mode === 'split_50_50' ? '50%' : '100%') : '-',
+          산재보험_기사부담: indIns?.enabled ? (indIns.split_mode === 'split_50_50' ? '50%' : '0%') : '-',
+          산재보험_사업주부담: indIns?.enabled ? (indIns.split_mode === 'split_50_50' ? '50%' : '100%') : '-',
+        };
+      }
+
+      try {
+        const response = await fetch('/api/contracts/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            driverIds: Array.from(selectedDriverIds),
+            templateIds: Array.from(selectedTemplateIds),
+            bindingDataMap,
+          }),
+        });
+        const result = await response.json();
+        if (response.ok) totalSent += result.created ?? 0;
+        else totalFailed += selectedDriverIds.size;
+      } catch {
+        totalFailed += selectedDriverIds.size;
+      }
     }
 
-    // 외부문서 전송
+    // 외부문서 전송 — 푸시만 (SMS 없음)
     if (selectedDocIds.size > 0) {
       const { sendDocuments } = await import('@/services/document-send.service');
       for (const docId of Array.from(selectedDocIds)) {

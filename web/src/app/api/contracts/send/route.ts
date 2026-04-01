@@ -56,27 +56,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validationError }, { status: 400 })
     }
 
-    const { driverId, templateIds, bindingData } = validated
+    // 단건 (driverId) 또는 다건 (driverIds) 지원
+    const driverIds: string[] = validated.driverIds ?? (validated.driverId ? [validated.driverId] : [])
+    const { templateIds, bindingData, bindingDataMap } = validated
 
-    // 인증된 사용자의 agencyId 사용
+    if (driverIds.length === 0) {
+      return NextResponse.json({ error: '기사를 1명 이상 선택하세요' }, { status: 400 })
+    }
+
     const agencyId = auth!.agencyId
     if (!agencyId) {
       return NextResponse.json({ error: '대리점 정보가 없습니다' }, { status: 403 })
     }
 
-    // 소속 기사 확인
-    const { data: driver } = await supabaseAdmin
+    // 소속 기사 일괄 확인
+    const { data: drivers } = await supabaseAdmin
       .from('drivers')
-      .select('id, agency_id')
-      .eq('id', driverId)
+      .select('id, push_token')
       .eq('agency_id', agencyId)
-      .single()
+      .in('id', driverIds)
 
-    if (!driver) {
+    if (!drivers?.length) {
       return NextResponse.json({ error: '소속 기사가 아닙니다' }, { status: 403 })
     }
+    const validDriverIds = new Set(drivers.map(d => d.id))
 
-    // 1. 템플릿 조회 (소속 대리점 것 + 시스템 공용 템플릿)
+    // 템플릿 조회
     const { data: templates, error: fetchErr } = await supabaseAdmin
       .from('contract_templates')
       .select('id, title, content')
@@ -87,27 +92,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '템플릿 조회 실패' }, { status: 400 })
     }
 
-    // 2. 계약서 생성
-    const contracts = []
-    for (const tmpl of templates) {
-      const boundContent = bindVariables((tmpl as { content: string }).content, bindingData ?? {})
-      const contentHash = await sha256(boundContent)
-      const signToken = crypto.randomUUID()
+    // 전체 계약서 일괄 생성 (기사 × 템플릿)
+    const contracts: Record<string, unknown>[] = []
+    const pushTokens: string[] = []
 
-      contracts.push({
-        agency_id: agencyId,
-        template_id: (tmpl as { id: string }).id,
-        driver_id: driverId,
-        title: (tmpl as { title: string }).title,
-        content: boundContent,
-        content_hash: contentHash,
-        sign_token: signToken,
-        binding_data: bindingData ?? null,
-        status: 'sent',
-        sent_at: new Date().toISOString(),
-      })
+    for (const did of driverIds) {
+      if (!validDriverIds.has(did)) continue
+      const driverBindingData = bindingDataMap?.[did] ?? bindingData ?? {}
+
+      for (const tmpl of templates) {
+        const boundContent = bindVariables((tmpl as { content: string }).content, driverBindingData)
+        const contentHash = await sha256(boundContent)
+        const signToken = crypto.randomUUID()
+
+        contracts.push({
+          agency_id: agencyId,
+          template_id: (tmpl as { id: string }).id,
+          driver_id: did,
+          title: (tmpl as { title: string }).title,
+          content: boundContent,
+          content_hash: contentHash,
+          sign_token: signToken,
+          binding_data: driverBindingData,
+          status: 'sent',
+          sent_at: new Date().toISOString(),
+        })
+      }
+
+      // 푸시 토큰 수집
+      const driver = drivers.find(d => d.id === did)
+      if (driver?.push_token) pushTokens.push(driver.push_token as string)
     }
 
+    // 일괄 INSERT
     const { data: inserted, error: insertErr } = await supabaseAdmin
       .from('contracts')
       .insert(contracts as never[])
@@ -116,6 +133,30 @@ export async function POST(request: NextRequest) {
     if (insertErr) {
       console.error('[ContractSend] Insert error:', insertErr)
       return NextResponse.json({ error: '계약서 생성 실패: ' + insertErr.message }, { status: 500 })
+    }
+
+    // 푸시 알림 일괄 발송 (SMS 대신 푸시)
+    if (pushTokens.length > 0) {
+      const pushMessages = pushTokens.map(token => ({
+        to: token,
+        title: '📝 계약서 도착',
+        body: `${templates.length}건의 계약서가 도착했습니다. 확인 후 서명해주세요.`,
+        sound: 'default' as const,
+        data: { type: 'contract' },
+        channelId: 'default',
+      }))
+
+      // 100건씩 배치
+      for (let i = 0; i < pushMessages.length; i += 100) {
+        const batch = pushMessages.slice(i, i + 100)
+        try {
+          await fetch('https://exp.host/--/api/v2/push/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify(batch),
+          })
+        } catch { /* 푸시 실패 무시 — 비치명적 */ }
+      }
     }
 
     return NextResponse.json({ created: inserted?.length ?? 0 })

@@ -1360,89 +1360,61 @@ export default function NewDriverPage() {
         {/* 계약 기간 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={labelCls}>계약 시작일</label>
-            <input type="date"
-              value={contractStartDate}
+            <label className={labelCls}>계약 시작일 *</label>
+            <input type="date" value={contractStartDate}
               onChange={(e) => setContractStartDate(e.target.value)}
-              className={`${inputCls} font-data`}
-            />
+              className={`${inputCls} font-data`} />
           </div>
           <div>
-            <label className={labelCls}>계약 종료일</label>
-            <input type="date"
-              value={contractEndDate}
+            <label className={labelCls}>계약 종료일 *</label>
+            <input type="date" value={contractEndDate}
               onChange={(e) => setContractEndDate(e.target.value)}
-              className={`${inputCls} font-data`}
-            />
+              className={`${inputCls} font-data`} />
           </div>
         </div>
 
-        {/* 템플릿 목록 */}
+        {/* 계약서 선택 */}
         <div className="space-y-2">
-          {contractTemplates.map((tmpl) => {
-            const checked = selectedTemplateIds.has(tmpl.id);
-            return (
-              <label
-                key={tmpl.id}
-                className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                  checked ? 'border-primary/40 bg-primary/5' : 'border-outline-variant/15 hover:border-outline-variant/30'
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={checked}
+          <p className="text-xs font-label font-medium text-on-surface font-korean">전송할 계약서 선택</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {contractTemplates.map((t) => (
+              <label key={t.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                selectedTemplateIds.has(t.id) ? 'border-primary bg-primary/5' : 'border-outline-variant/20 hover:border-outline-variant/40'
+              }`}>
+                <input type="checkbox" checked={selectedTemplateIds.has(t.id)}
                   onChange={() => {
                     setSelectedTemplateIds((prev) => {
                       const next = new Set(prev);
-                      if (next.has(tmpl.id)) next.delete(tmpl.id); else next.add(tmpl.id);
+                      if (next.has(t.id)) next.delete(t.id); else next.add(t.id);
                       return next;
                     });
                   }}
-                  className="w-4 h-4 rounded accent-primary"
-                />
-                <div className="flex-1">
-                  <p className="text-sm font-body font-semibold text-on-surface font-korean">{tmpl.title}</p>
-                  <p className="text-xs text-on-surface-variant font-korean mt-0.5 line-clamp-1">{tmpl.content.substring(0, 60)}...</p>
-                </div>
+                  className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/30" />
+                <span className="text-sm text-on-surface font-korean">{t.title}</span>
               </label>
-            );
-          })}
-        </div>
-
-        {selectedTemplateIds.size > 0 && (
-          <div className="bg-tertiary/5 rounded-xl p-3 border border-tertiary/10">
-            <p className="text-[10px] text-tertiary font-korean font-semibold">
-              {selectedTemplateIds.size}건의 계약서가 기사 등록 완료 시 자동 전송됩니다
-            </p>
-            <p className="text-[10px] text-on-surface-variant/60 font-korean mt-0.5">
-              기사 정보(이름, 전화번호, 단가, 대리점명, 사업자정보, 계약기간 등)가 계약서에 자동 입력됩니다
-            </p>
+            ))}
           </div>
-        )}
-      </section>
-      ) : principalId && contractTemplates.length === 0 ? (
-      <section className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6">
-        <div className="text-center space-y-2">
-          <p className="text-sm text-on-surface-variant font-korean">등록된 계약서 템플릿이 없습니다</p>
-          <p className="text-xs text-on-surface-variant/50 font-korean">
-            계약서 관리 &gt; 템플릿에서 계약서를 먼저 등록하세요
-          </p>
         </div>
       </section>
       ) : null}
 
-      {/* ═══ Submit ═══ */}
-      <div className="flex items-center justify-between">
-        <button onClick={() => router.push('/portal/drivers')}
-          className="h-11 px-6 rounded-xl bg-surface-container-high text-on-surface-variant font-label text-sm hover:bg-surface-container-highest transition-colors font-korean">
+      {/* ═══ 저장 버튼 ═══ */}
+      <div className="flex justify-end gap-3 pt-2">
+        <button type="button" onClick={() => router.back()}
+          className="h-11 px-6 rounded-xl border border-outline-variant/30 text-on-surface-variant text-sm font-label font-semibold hover:bg-surface-container-high transition-colors font-korean">
           취소
         </button>
-        <button onClick={handleSubmit}
-          disabled={saving || !name.trim() || !phone.trim() || !principalId}
-          className="h-11 px-8 rounded-xl bg-power-gradient text-white font-label font-semibold text-sm hover:shadow-lg transition-shadow disabled:opacity-50 font-korean">
-          {saving ? '등록 중...' : '기사 등록'}
+        <button type="button" onClick={handleSubmit} disabled={saving}
+          className="h-11 px-8 rounded-xl bg-primary text-white text-sm font-label font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-korean flex items-center gap-2">
+          {saving ? (
+            <>
+              <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25"/><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/></svg>
+              저장 중...
+            </>
+          ) : '기사 등록'}
         </button>
       </div>
+
     </div>
-  )
+  );
 }
