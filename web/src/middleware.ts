@@ -65,16 +65,18 @@ export async function middleware(request: NextRequest) {
     },
   });
 
+  // ✅ 보안: getUser()는 서버에서 JWT를 재검증합니다 (getSession은 검증하지 않음)
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
 
   const isAdminRoute = pathname.startsWith("/admin");
   const isPortalRoute = pathname.startsWith("/portal");
   const isApiRoute = pathname.startsWith("/api");
 
   // 미인증 → 각 섹션의 로그인 페이지로
-  if (!session) {
+  if (userError || !user) {
     if (isApiRoute) {
       return NextResponse.json({ error: '인증이 필요합니다' }, { status: 401 });
     }
@@ -88,7 +90,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // ⚠️ 보안: app_metadata만 사용 (user_metadata는 클라이언트 조작 가능)
-  const role = session.user.app_metadata?.role as string | undefined;
+  const role = user.app_metadata?.role as string | undefined;
 
   // 슈퍼관리자 경로 보호
   if (isAdminRoute && role !== "provider_admin") {
@@ -116,6 +118,6 @@ export const config = {
      * 모든 경로를 매칭하되, 정적 파일과 이미지는 제외
      * - _next/static, _next/image, favicon.ico
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 }

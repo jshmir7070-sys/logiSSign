@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendInviteCodeSms } from '@/services/sms.service'
 import { createClient } from '@supabase/supabase-js'
+import { authenticateAdmin } from '@/lib/api-auth'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,12 +11,17 @@ const supabaseAdmin = createClient(
 /**
  * POST /api/sms/invite
  * 기사 초대코드 + 앱 설치 링크 SMS 발송
+ * ✅ 인증 필수: agency_admin 또는 provider_admin만 호출 가능
  *
  * Body:
  *  - driverPhone, driverName (필수)
  *  - inviteCode, agencyName (직접 전달) OR agencyId (DB에서 자동 조회)
  */
 export async function POST(request: NextRequest) {
+  // 인증 확인
+  const { auth, error: authError } = await authenticateAdmin(request)
+  if (authError || !auth) return authError!
+
   try {
     const body = await request.json()
     const { driverPhone, driverName } = body

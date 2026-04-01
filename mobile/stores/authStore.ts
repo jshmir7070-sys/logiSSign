@@ -63,6 +63,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   signOut: async () => {
+    // 푸시 토큰 해제
+    const currentDriver = useAuthStore.getState().driver;
+    if (currentDriver?.id) {
+      const { unregisterPushToken } = await import('../services/push.service');
+      await unregisterPushToken(currentDriver.id);
+    }
     await supabase.auth.signOut();
     set({ session: null, driver: null });
   },

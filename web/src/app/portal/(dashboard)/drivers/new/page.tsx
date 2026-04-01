@@ -31,6 +31,8 @@ export default function NewDriverPage() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [addressDetail, setAddressDetail] = useState('');
+  const [zonecode, setZonecode] = useState('');
   const [employeeCode, setEmployeeCode] = useState('');
   const [email, setEmail] = useState('');
 
@@ -39,6 +41,8 @@ export default function NewDriverPage() {
   const [businessRegNumber, setBusinessRegNumber] = useState('');
   const [representativeName, setRepresentativeName] = useState('');
   const [businessAddress, setBusinessAddress] = useState('');
+  const [businessAddressDetail, setBusinessAddressDetail] = useState('');
+  const [businessZonecode, setBusinessZonecode] = useState('');
   const [businessType, setBusinessType] = useState('');
   const [businessCategory, setBusinessCategory] = useState('');
   const [vatIncluded, setVatIncluded] = useState(true);
@@ -310,14 +314,14 @@ export default function NewDriverPage() {
     // 2. Update all fields
     await supabase.from('drivers').update({
       employee_code: employeeCode.trim() || null,
-      address: address.trim() || null,
+      address: (addressDetail ? `${address} ${addressDetail}` : address).trim() || null,
       email: email.trim() || null,
       delivery_area: deliveryArea.trim() || null,
       camp_name: campName.trim() || null,
       is_business_owner: isBusinessOwner,
       business_reg_number: businessRegNumber.trim() || null,
       representative_name: representativeName.trim() || null,
-      business_address: businessAddress.trim() || null,
+      business_address: (businessAddressDetail ? `${businessAddress} ${businessAddressDetail}` : businessAddress).trim() || null,
       business_type: businessType.trim() || null,
       business_category: businessCategory.trim() || null,
       vat_included: vatIncluded,
@@ -562,9 +566,15 @@ export default function NewDriverPage() {
           <div className="sm:col-span-2 lg:col-span-3">
             <AddressSearch
               value={address}
+              detailValue={addressDetail}
+              zonecodeValue={zonecode}
               label="주소"
               inline
-              onChange={(addr: AddressValue) => setAddress(addr.fullAddress)}
+              onChange={(addr: AddressValue) => {
+                setAddress(addr.address);
+                setAddressDetail(addr.addressDetail);
+                setZonecode(addr.zonecode);
+              }}
             />
           </div>
           <div>
@@ -700,9 +710,15 @@ export default function NewDriverPage() {
               <div className="sm:col-span-2 lg:col-span-3">
                 <AddressSearch
                   value={businessAddress}
+                  detailValue={businessAddressDetail}
+                  zonecodeValue={businessZonecode}
                   label="사업장주소"
                   inline
-                  onChange={(addr: AddressValue) => setBusinessAddress(addr.fullAddress)}
+                  onChange={(addr: AddressValue) => {
+                    setBusinessAddress(addr.address);
+                    setBusinessAddressDetail(addr.addressDetail);
+                    setBusinessZonecode(addr.zonecode);
+                  }}
                 />
               </div>
               <div>
@@ -1329,5 +1345,5 @@ export default function NewDriverPage() {
         </button>
       </div>
     </div>
-  );
+  )
 }

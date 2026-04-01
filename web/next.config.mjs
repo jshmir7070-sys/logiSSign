@@ -25,7 +25,23 @@ const nextConfig = {
             key: 'Strict-Transport-Security',
             value: 'max-age=63072000; includeSubDomains; preload',
           },
-          // CSP는 프로덕션 배포 시 별도 설정 (Kakao Postcode 등 외부 서비스 호환성)
+          // CSP: Kakao Postcode, Supabase, Google Fonts, Vercel Analytics 허용
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://t1.daumcdn.net https://postcode.map.daum.net https://ssl.daumcdn.net https://va.vercel-scripts.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://t1.daumcdn.net",
+              "font-src 'self' https://fonts.gstatic.com data:",
+              "img-src 'self' data: blob: https://*.supabase.co https://t1.daumcdn.net",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://postcode.map.daum.net https://va.vercel-scripts.com",
+              "frame-src https://t1.daumcdn.net https://postcode.map.daum.net",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+              "frame-ancestors 'none'",
+            ].join('; '),
+          },
           {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=(), payment=()',

@@ -1,15 +1,23 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from '../stores/authStore';
+import {
+  registerPushToken,
+  addNotificationListeners,
+  getNavigationFromNotification,
+} from '../services/push.service';
 import { colors } from '../constants/theme';
 
 export default function RootLayout() {
-  const { session, isLoading } = useAuth();
+  const { session, isLoading, driver } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const pushRegistered = useRef(false);
 
+  // 인증 라우팅
   useEffect(() => {
     if (isLoading) return;
 
@@ -21,6 +29,30 @@ export default function RootLayout() {
       router.replace('/(tabs)');
     }
   }, [session, isLoading, segments, router]);
+
+  // 푸시 알림 초기화
+  useEffect(() => {
+    if (!driver?.id || pushRegistered.current) return;
+    pushRegistered.current = true;
+
+    // 토큰 등록
+    registerPushToken(driver.id);
+
+    // 알림 리스너
+    const cleanup = addNotificationListeners(
+      // 포그라운드 수신 — 별도 처리 필요 없음 (시스템 알림 표시)
+      undefined,
+      // 알림 탭 → 화면 이동
+      (response) => {
+        const nav = getNavigationFromNotification(response);
+        if (nav) {
+          router.push(nav.route as never);
+        }
+      }
+    );
+
+    return cleanup;
+  }, [driver?.id, router]);
 
   if (isLoading) {
     return (
