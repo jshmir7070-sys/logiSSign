@@ -37,6 +37,9 @@ CREATE TABLE agencies (
   excel_config JSONB,        -- 엑셀 업로드 컬럼 매핑 설정
   field_config JSONB,        -- 커스텀 필드 설정
   templates_locked BOOLEAN DEFAULT false,  -- 템플릿 선택 확정 여부 (true면 변경 불가)
+  privacy_officer_name TEXT,     -- 개인정보보호 담당자 이름
+  privacy_officer_phone TEXT,    -- 개인정보보호 담당자 연락처
+  privacy_officer_email TEXT,    -- 개인정보보호 담당자 이메일
   created_at TIMESTAMPTZ DEFAULT now()
 );
 

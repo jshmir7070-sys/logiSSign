@@ -315,6 +315,48 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* 개인정보 관리 */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>개인정보 관리</Text>
+          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}
+            onPress={() => Alert.alert(
+              '내 개인정보 열람',
+              `이름: ${driver?.name ?? '-'}\n전화번호: ${driver?.phone ?? '-'}\n이메일: ${driver?.email ?? '-'}\n소속: ${driver?.agency_name ?? '-'}\n\n개인정보보호법 제35조에 따라 본인의 개인정보를 열람할 수 있습니다.`,
+            )}>
+            <View style={styles.menuLeft}>
+              <MaterialIcons name="visibility" size={22} color={colors.onSurfaceVariant} />
+              <Text style={styles.menuLabel}>내 정보 열람</Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={22} color={colors.outline} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}
+            onPress={() => Alert.alert(
+              '개인정보 수정/삭제 요청',
+              '개인정보 수정 또는 삭제를 요청하시겠습니까?\n\n소속 대리점 개인정보보호 담당자에게 요청이 전달됩니다.',
+              [
+                { text: '취소', style: 'cancel' },
+                { text: '수정 요청', onPress: () => Alert.alert('요청 완료', '개인정보 수정 요청이 접수되었습니다. 담당자가 확인 후 처리합니다.') },
+                { text: '삭제 요청', style: 'destructive', onPress: () => Alert.alert('요청 완료', '개인정보 삭제(탈퇴) 요청이 접수되었습니다. 처리까지 최대 5일이 소요됩니다.') },
+              ]
+            )}>
+            <View style={styles.menuLeft}>
+              <MaterialIcons name="edit" size={22} color={colors.onSurfaceVariant} />
+              <Text style={styles.menuLabel}>수정/삭제 요청</Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={22} color={colors.outline} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}
+            onPress={() => Linking.openURL('https://logissign.com/privacy')}>
+            <View style={styles.menuLeft}>
+              <MaterialIcons name="policy" size={22} color={colors.onSurfaceVariant} />
+              <Text style={styles.menuLabel}>개인정보처리방침</Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={22} color={colors.outline} />
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>앱 정보</Text>
           {APP_INFO_ITEMS.map((item) => (

@@ -17,6 +17,7 @@ const navItems: NavItem[] = [
   { label: '매출 분석', icon: 'bar_chart', href: '/admin/revenue' },
   { label: '공지 관리', icon: 'campaign', href: '/admin/notices' },
   { label: '서버 상태', icon: 'dns', href: '/admin/server' },
+  { label: '감사 로그', icon: 'security', href: '/admin/audit-log' },
   { label: '설정', icon: 'settings', href: '/admin/settings' },
 ];
 

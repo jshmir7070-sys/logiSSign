@@ -274,6 +274,9 @@ function ProfileTab() {
     address: '', address_detail: '',
     business_number: '', email: '',
     invite_code: '',
+    privacy_officer_name: '',
+    privacy_officer_phone: '',
+    privacy_officer_email: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -289,7 +292,7 @@ function ProfileTab() {
 
       const { data } = await supabase
         .from('agencies')
-        .select('name, owner_name, phone, address, address_detail, business_number, email, invite_code')
+        .select('name, owner_name, phone, address, address_detail, business_number, email, invite_code, privacy_officer_name, privacy_officer_phone, privacy_officer_email')
         .eq('id', aid)
         .single();
 
@@ -312,6 +315,9 @@ function ProfileTab() {
           business_number: (data as Record<string, string>).business_number ?? '',
           email: (data as Record<string, string>).email ?? '',
           invite_code: inviteCode,
+          privacy_officer_name: (data as Record<string, string>).privacy_officer_name ?? '',
+          privacy_officer_phone: (data as Record<string, string>).privacy_officer_phone ?? '',
+          privacy_officer_email: (data as Record<string, string>).privacy_officer_email ?? '',
         });
       }
       setLoading(false);
@@ -329,6 +335,9 @@ function ProfileTab() {
       phone: form.phone,
       address: form.address,
       address_detail: form.address_detail,
+      privacy_officer_name: form.privacy_officer_name || null,
+      privacy_officer_phone: form.privacy_officer_phone || null,
+      privacy_officer_email: form.privacy_officer_email || null,
     }).eq('id', agencyId);
     setSaving(false);
   };
@@ -387,6 +396,32 @@ function ProfileTab() {
             </button>
           </div>
           <p className="text-xs text-on-surface-variant/60 mt-1 font-korean">기사에게 이 코드를 전달하면 앱에서 가입 시 자동으로 소속이 연결됩니다</p>
+        </div>
+
+        {/* 개인정보보호 담당자 */}
+        <div className="col-span-2 pt-4 border-t border-outline-variant/20">
+          <p className="text-xs font-semibold text-on-surface font-korean mb-3 flex items-center gap-1.5">
+            🛡️ 개인정보보호 담당자
+            <span className="text-on-surface-variant/50 font-normal">(개인정보보호법 제31조)</span>
+          </p>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">담당자 이름</label>
+              <input type="text" value={form.privacy_officer_name} onChange={e => setForm(f => ({ ...f, privacy_officer_name: e.target.value }))}
+                placeholder="홍길동" className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            </div>
+            <div>
+              <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">연락처</label>
+              <input type="tel" value={form.privacy_officer_phone} onChange={e => setForm(f => ({ ...f, privacy_officer_phone: e.target.value }))}
+                placeholder="010-0000-0000" className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-data focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            </div>
+            <div>
+              <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">이메일</label>
+              <input type="email" value={form.privacy_officer_email} onChange={e => setForm(f => ({ ...f, privacy_officer_email: e.target.value }))}
+                placeholder="privacy@company.com" className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-data focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            </div>
+          </div>
+          <p className="text-[11px] text-on-surface-variant/50 mt-2 font-korean">기사 앱 개인정보처리방침에 표시됩니다</p>
         </div>
       </div>
       <div className="flex justify-end pt-2">
