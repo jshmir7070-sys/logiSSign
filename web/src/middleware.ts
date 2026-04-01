@@ -3,7 +3,8 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 // 공개 경로: 인증 불필요
 const PUBLIC_ROUTES = [
-  "/",              // 랜딩 페이지
+  "/",              // 커밍순 페이지
+  "/about",         // 서비스 소개 페이지
   "/terms",         // 이용약관
   "/privacy",       // 개인정보처리방침
   "/admin/login",   // 슈퍼관리자 로그인
