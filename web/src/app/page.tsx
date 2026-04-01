@@ -30,14 +30,16 @@ export default function ComingSoonHomePage() {
       <main className="content">
         {/* Logo */}
         <div className="logo-section fade-in" style={{ animationDelay: '0.3s' }}>
-          <Image
-            src="/logo.png"
-            alt="logiSSign"
-            width={360}
-            height={140}
-            priority
-            className="logo-image"
-          />
+          <div className="logo-wrap">
+            <Image
+              src="/logo.png"
+              alt="logiSSign"
+              width={320}
+              height={124}
+              priority
+              className="logo-image"
+            />
+          </div>
         </div>
 
         {/* Headline */}
@@ -224,10 +226,15 @@ export default function ComingSoonHomePage() {
           display: flex;
           justify-content: center;
         }
+        .logo-wrap {
+          background: rgba(255,255,255,0.95);
+          border-radius: 20px;
+          padding: 24px 36px;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+        }
         .logo-image {
-          max-width: 360px;
+          max-width: 320px;
           height: auto;
-          mix-blend-mode: screen;
         }
         .badge {
           display: inline-flex;
