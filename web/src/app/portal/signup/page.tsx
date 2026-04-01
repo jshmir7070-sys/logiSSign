@@ -148,6 +148,7 @@ interface SignupForm {
   passwordConfirm: string;
   agreeTerms: boolean;
   agreePrivacy: boolean;
+  agreeDataProcessing: boolean;  // 개인정보처리 서약
   /* 본인인증 */
   identityVerified: boolean;
   identityName: string;
@@ -197,6 +198,7 @@ function SignupContent() {
     passwordConfirm: "",
     agreeTerms: false,
     agreePrivacy: false,
+    agreeDataProcessing: false,
     identityVerified: false,
     identityName: '',
     identityPhone: '',
@@ -300,7 +302,7 @@ function SignupContent() {
     if (!/[0-9]/.test(form.password)) { updateForm({ error: "비밀번호에 숫자를 포함해주세요." }); return; }
     if (!/[^a-zA-Z0-9]/.test(form.password)) { updateForm({ error: "비밀번호에 특수문자를 포함해주세요. (예: !@#$%)" }); return; }
     if (form.password !== form.passwordConfirm) { updateForm({ error: "비밀번호가 일치하지 않습니다." }); return; }
-    if (!form.agreeTerms || !form.agreePrivacy) { updateForm({ error: "필수 약관에 동의해주세요." }); return; }
+    if (!form.agreeTerms || !form.agreePrivacy || !form.agreeDataProcessing) { updateForm({ error: "필수 약관에 모두 동의해주세요." }); return; }
     if (!form.identityVerified) { updateForm({ error: "본인인증을 완료해주세요." }); return; }
 
     // 유효성 통과
@@ -813,6 +815,10 @@ function SignupContent() {
                 <label className="flex items-center gap-2.5 cursor-pointer">
                   <input type="checkbox" checked={form.agreePrivacy} onChange={(e) => updateForm({ agreePrivacy: e.target.checked })} className="w-4 h-4 rounded accent-primary" />
                   <span className="text-xs text-on-surface-variant"><a href="/privacy" target="_blank" className="text-primary underline">개인정보처리방침</a>에 동의합니다 (필수)</span>
+                </label>
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input type="checkbox" checked={form.agreeDataProcessing} onChange={(e) => updateForm({ agreeDataProcessing: e.target.checked })} className="w-4 h-4 rounded accent-primary" />
+                  <span className="text-xs text-on-surface-variant">[필수] <strong className="text-on-surface">개인정보처리 서약</strong> — 소속 기사의 개인정보를 관련 법령에 따라 안전하게 관리하며, 목적 외 이용·제3자 제공·유출 시 법적 책임을 부담할 것을 서약합니다</span>
                 </label>
               </div>
 
