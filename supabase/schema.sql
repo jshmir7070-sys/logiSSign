@@ -78,6 +78,9 @@ CREATE TABLE drivers (
   custom_values JSONB,        -- 커스텀 필드 값
   fresh_incentive_pct NUMERIC(5,2) DEFAULT 0,   -- 신선 인센티브 %
   extra_incentive_pct NUMERIC(5,2) DEFAULT 0,   -- 추가 인센티브 %
+  bank_name TEXT,              -- 정산 입금 은행
+  bank_account TEXT,           -- 계좌번호
+  bank_holder TEXT,            -- 예금주
   push_token TEXT,
   status TEXT CHECK (status IN ('active','inactive')) DEFAULT 'active',
   created_at TIMESTAMPTZ DEFAULT now()

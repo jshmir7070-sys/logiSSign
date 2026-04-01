@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { toastError, toastWarning } from '@/components/shared/Toast';
+import { formatPhoneNumber } from '@/lib/formatters';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
 import {
   getPrincipals,
@@ -465,7 +466,7 @@ export default function PrincipalsPage() {
                 {/* 전화번호 */}
                 <div>
                   <label className={labelCls}>전화번호</label>
-                  <input type="tel" placeholder="010-0000-0000" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className={inputCls} />
+                  <input type="tel" placeholder="010-0000-0000" value={contactPhone} onChange={(e) => setContactPhone(formatPhoneNumber(e.target.value))} maxLength={13} className={inputCls} />
                 </div>
 
               </div>

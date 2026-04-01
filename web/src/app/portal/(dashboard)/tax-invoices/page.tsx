@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Badge from '@/components/shared/Badge';
+import { formatBusinessNumber } from '@/lib/formatters';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
 import {
   getTaxInvoices,
@@ -232,8 +233,8 @@ export default function TaxInvoicesPage() {
             <div>
               <label className={labelCls}>사업자등록번호</label>
               <input type="text" value={formData.business_reg_number}
-                onChange={(e) => setFormData((f) => ({ ...f, business_reg_number: e.target.value }))}
-                placeholder="123-45-67890" className={`${inputCls} font-data`} />
+                onChange={(e) => setFormData((f) => ({ ...f, business_reg_number: formatBusinessNumber(e.target.value) }))}
+                placeholder="123-45-67890" maxLength={12} className={`${inputCls} font-data`} />
             </div>
             <div>
               <label className={labelCls}>대표자</label>

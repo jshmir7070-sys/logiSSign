@@ -11,6 +11,7 @@ import { bulkCreateDriverRates } from '@/services/driver-rate.service';
 import { getContractTemplates, createAndSendContracts, type ContractTemplate, type ContractBindingData } from '@/services/contract.service';
 import { createContractPeriod, type RateConfig } from '@/services/contractPeriod.service';
 import AddressSearch, { type AddressValue } from '@/components/shared/AddressSearch';
+import { formatPhoneNumber, formatBusinessNumber } from '@/lib/formatters';
 import type { PackageType, RateType, DeductionType } from '@/types/database';
 
 interface RouteRow { route_code: string; delivery_rate: string; return_rate: string }
@@ -35,6 +36,11 @@ export default function NewDriverPage() {
   const [zonecode, setZonecode] = useState('');
   const [employeeCode, setEmployeeCode] = useState('');
   const [email, setEmail] = useState('');
+
+  /* ── 정산 입금 계좌 ── */
+  const [bankName, setBankName] = useState('');
+  const [bankAccount, setBankAccount] = useState('');
+  const [bankHolder, setBankHolder] = useState('');
 
   /* ── 사업자 정보 ── */
   const [isBusinessOwner, setIsBusinessOwner] = useState(true);
@@ -339,6 +345,9 @@ export default function NewDriverPage() {
       vehicle_owner: vehicleOwner,
       vehicle_rent_monthly: Number(vehicleRentMonthly) || 0,
       vehicle_deposit: Number(vehicleDeposit) || 0,
+      bank_name: bankName || null,
+      bank_account: bankAccount.replace(/[^0-9-]/g, '') || null,
+      bank_holder: bankHolder.trim() || null,
       vehicle_insurance_by: vehicleInsuranceBy,
       custom_values: Object.keys(customValues).length > 0 ? customValues : null,
     } as never).eq('id', driverId);
@@ -518,6 +527,53 @@ export default function NewDriverPage() {
     router.push(`/portal/drivers/${driverId}`);
   }
 
+  /* ── 은행별 계좌번호 자동 포맷 ── */
+  const BANK_OPTIONS = [
+    '국민은행', '신한은행', '우리은행', '하나은행', 'SC제일은행',
+    '기업은행', '농협은행', '수협은행', '산업은행', '카카오뱅크',
+    '토스뱅크', '케이뱅크', '대구은행', '부산은행', '경남은행',
+    '광주은행', '전북은행', '제주은행', '새마을금고', '신협',
+    '우체국', '기타',
+  ];
+
+  const BANK_ACCOUNT_FORMATS: Record<string, number[]> = {
+    '국민은행': [3, 2, 4, 3],      // 000-00-0000-000
+    '신한은행': [3, 3, 6],          // 000-000-000000
+    '우리은행': [4, 3, 6],          // 0000-000-000000
+    '하나은행': [3, 6, 5],          // 000-000000-00000
+    'SC제일은행': [3, 2, 6],        // 000-00-000000
+    '기업은행': [3, 6, 2, 3],       // 000-000000-00-000
+    '농협은행': [3, 4, 4, 2],       // 000-0000-0000-00
+    '수협은행': [3, 2, 6, 2],       // 000-00-000000-0
+    '산업은행': [3, 6, 3, 2],       // 000-000000-000-00
+    '카카오뱅크': [4, 2, 7],         // 0000-00-0000000
+    '토스뱅크': [4, 4, 4],          // 0000-0000-0000
+    '케이뱅크': [3, 3, 7],          // 000-000-0000000
+    '대구은행': [3, 2, 6, 1],       // 000-00-000000-0
+    '부산은행': [3, 4, 4, 2],       // 000-0000-0000-00
+  };
+
+  function formatBankAccount(value: string, bank: string): string {
+    const digits = value.replace(/[^0-9]/g, '');
+    const format = BANK_ACCOUNT_FORMATS[bank];
+    if (!format) return digits;
+
+    let result = '';
+    let pos = 0;
+    for (let i = 0; i < format.length; i++) {
+      const chunk = digits.slice(pos, pos + format[i]);
+      if (!chunk) break;
+      if (i > 0) result += '-';
+      result += chunk;
+      pos += format[i];
+    }
+    // 남은 자릿수
+    if (pos < digits.length) {
+      result += digits.slice(pos);
+    }
+    return result;
+  }
+
   const inputCls = 'w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-on-surface-variant/40';
   const labelCls = 'block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean';
 
@@ -560,8 +616,8 @@ export default function NewDriverPage() {
           </div>
           <div>
             <label className={labelCls}>전화번호 *</label>
-            <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)}
-              placeholder="010-1234-5678" className={`${inputCls} font-data`} />
+            <input type="text" value={phone} onChange={(e) => setPhone(formatPhoneNumber(e.target.value))}
+              placeholder="010-1234-5678" maxLength={13} className={`${inputCls} font-data`} />
           </div>
           <div className="sm:col-span-2 lg:col-span-3">
             <AddressSearch
@@ -587,6 +643,51 @@ export default function NewDriverPage() {
             <label className={labelCls}>이메일</label>
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
               placeholder="driver@email.com" className={`${inputCls} font-data`} />
+          </div>
+        </div>
+
+        {/* 정산 입금 계좌 */}
+        <div className="pt-5 mt-5 border-t border-outline-variant/20">
+          <p className="text-xs font-semibold text-on-surface font-korean mb-3 flex items-center gap-1.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            정산 입금 계좌
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className={labelCls}>은행</label>
+              <select
+                value={bankName}
+                onChange={(e) => {
+                  setBankName(e.target.value);
+                  // 은행 변경 시 계좌번호 재포맷
+                  if (bankAccount) {
+                    setBankAccount(formatBankAccount(bankAccount, e.target.value));
+                  }
+                }}
+                className={`${inputCls} font-korean`}
+              >
+                <option value="">선택하세요</option>
+                {BANK_OPTIONS.map((b) => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>계좌번호</label>
+              <input
+                type="text"
+                value={bankAccount}
+                onChange={(e) => setBankAccount(formatBankAccount(e.target.value, bankName))}
+                placeholder={bankName ? (BANK_ACCOUNT_FORMATS[bankName] ? BANK_ACCOUNT_FORMATS[bankName].map(n => '0'.repeat(n)).join('-') : '계좌번호') : '은행을 먼저 선택하세요'}
+                className={`${inputCls} font-data`}
+                maxLength={25}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>예금주</label>
+              <input type="text" value={bankHolder} onChange={(e) => setBankHolder(e.target.value)}
+                placeholder="예금주명" className={`${inputCls} font-korean`} />
+            </div>
           </div>
         </div>
 
@@ -699,8 +800,8 @@ export default function NewDriverPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className={labelCls}>사업자등록번호</label>
-                <input type="text" value={businessRegNumber} onChange={(e) => setBusinessRegNumber(e.target.value)}
-                  placeholder="123-45-67890" className={`${inputCls} font-data`} />
+                <input type="text" value={businessRegNumber} onChange={(e) => setBusinessRegNumber(formatBusinessNumber(e.target.value))}
+                  placeholder="123-45-67890" maxLength={12} className={`${inputCls} font-data`} />
               </div>
               <div>
                 <label className={labelCls}>대표자</label>
@@ -1260,19 +1361,23 @@ export default function NewDriverPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelCls}>계약 시작일</label>
-            <input type="date" value={contractStartDate}
+            <input type="date"
+              value={contractStartDate}
               onChange={(e) => setContractStartDate(e.target.value)}
-              className={`${inputCls} font-data`} />
+              className={`${inputCls} font-data`}
+            />
           </div>
           <div>
             <label className={labelCls}>계약 종료일</label>
-            <input type="date" value={contractEndDate}
+            <input type="date"
+              value={contractEndDate}
               onChange={(e) => setContractEndDate(e.target.value)}
-              className={`${inputCls} font-data`} />
-            <p className="text-[11px] text-on-surface-variant/60 mt-1 font-korean">비워두면 계약서에 종료일이 표시되지 않습니다</p>
+              className={`${inputCls} font-data`}
+            />
           </div>
         </div>
 
+        {/* 템플릿 목록 */}
         <div className="space-y-2">
           {contractTemplates.map((tmpl) => {
             const checked = selectedTemplateIds.has(tmpl.id);
@@ -1280,7 +1385,7 @@ export default function NewDriverPage() {
               <label
                 key={tmpl.id}
                 className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                  checked ? 'border-primary/40 bg-primary/5' : 'border-outline-variant/20 hover:border-outline-variant/40'
+                  checked ? 'border-primary/40 bg-primary/5' : 'border-outline-variant/15 hover:border-outline-variant/30'
                 }`}
               >
                 <input
@@ -1289,22 +1394,16 @@ export default function NewDriverPage() {
                   onChange={() => {
                     setSelectedTemplateIds((prev) => {
                       const next = new Set(prev);
-                      if (next.has(tmpl.id)) next.delete(tmpl.id);
-                      else next.add(tmpl.id);
+                      if (next.has(tmpl.id)) next.delete(tmpl.id); else next.add(tmpl.id);
                       return next;
                     });
                   }}
-                  className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/30"
+                  className="w-4 h-4 rounded accent-primary"
                 />
-                <div className="flex-1 min-w-0">
+                <div className="flex-1">
                   <p className="text-sm font-body font-semibold text-on-surface font-korean">{tmpl.title}</p>
-                  {tmpl.principals?.name && (
-                    <p className="text-xs text-on-surface-variant/60 font-korean">{tmpl.principals.name}</p>
-                  )}
+                  <p className="text-xs text-on-surface-variant font-korean mt-0.5 line-clamp-1">{tmpl.content.substring(0, 60)}...</p>
                 </div>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-on-surface-variant/30 shrink-0">
-                  <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
-                </svg>
               </label>
             );
           })}

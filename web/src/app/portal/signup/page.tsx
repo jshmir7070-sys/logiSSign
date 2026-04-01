@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createBrowserSupabaseClient } from "@/lib/supabase";
 import AddressSearch, { type AddressValue } from "@/components/shared/AddressSearch";
+import { formatBusinessNumber, formatPhoneNumber, formatBirthDate } from "@/lib/formatters";
 
 /* ───────────────────────── 타입 & 상수 ───────────────────────── */
 
@@ -120,38 +121,6 @@ function getSaving(plan: Plan, cycle: BillingCycle): number {
   if (!plan.pricing || cycle === "monthly") return 0;
   const months = getMonths(cycle);
   return plan.pricing.monthly * months - getTotalPrice(plan, cycle);
-}
-
-/* ───────────────────────── 자동 포맷 헬퍼 ───────────────────────── */
-
-/** 사업자등록번호: 000-00-00000 */
-function formatBusinessNumber(value: string): string {
-  const digits = value.replace(/\D/g, '').slice(0, 10);
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-  return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
-}
-
-/** 전화번호: 010-0000-0000 또는 02-000-0000 등 */
-function formatPhoneNumber(value: string): string {
-  const digits = value.replace(/\D/g, '').slice(0, 11);
-  if (digits.startsWith('02')) {
-    if (digits.length <= 2) return digits;
-    if (digits.length <= 5) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
-    if (digits.length <= 9) return `${digits.slice(0, 2)}-${digits.slice(2, 5)}-${digits.slice(5)}`;
-    return `${digits.slice(0, 2)}-${digits.slice(2, 6)}-${digits.slice(6)}`;
-  }
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
-}
-
-/** 생년월일: 0000-00-00 */
-function formatBirthDate(value: string): string {
-  const digits = value.replace(/\D/g, '').slice(0, 8);
-  if (digits.length <= 4) return digits;
-  if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
-  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
 }
 
 /* ───────────────────────── 폼 타입 ───────────────────────── */
