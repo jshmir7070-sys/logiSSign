@@ -148,6 +148,10 @@ interface SignupForm {
   passwordConfirm: string;
   agreeTerms: boolean;
   agreePrivacy: boolean;
+  /* 본인인증 */
+  identityVerified: boolean;
+  identityName: string;
+  identityPhone: string;
   /* 결제 */
   paymentMethod: "card" | "transfer" | "free_trial";
   cardNumber: string;
@@ -193,6 +197,9 @@ function SignupContent() {
     passwordConfirm: "",
     agreeTerms: false,
     agreePrivacy: false,
+    identityVerified: false,
+    identityName: '',
+    identityPhone: '',
     paymentMethod: "free_trial",
     cardNumber: "",
     cardExpiry: "",
@@ -294,6 +301,7 @@ function SignupContent() {
     if (!/[^a-zA-Z0-9]/.test(form.password)) { updateForm({ error: "비밀번호에 특수문자를 포함해주세요. (예: !@#$%)" }); return; }
     if (form.password !== form.passwordConfirm) { updateForm({ error: "비밀번호가 일치하지 않습니다." }); return; }
     if (!form.agreeTerms || !form.agreePrivacy) { updateForm({ error: "필수 약관에 동의해주세요." }); return; }
+    if (!form.identityVerified) { updateForm({ error: "본인인증을 완료해주세요." }); return; }
 
     // 유효성 통과
     if (!isPaidPlan) {
@@ -722,6 +730,78 @@ function SignupContent() {
                   <span className="text-xs font-medium text-on-surface font-data">
                     {selectedPlan.maxDrivers ? `최대 ${selectedPlan.maxDrivers}명` : "무제한"}
                   </span>
+                </div>
+              </div>
+
+              {/* 본인인증 */}
+              <div className="p-4 rounded-xl border-2 border-outline-variant/15 mt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-on-surface font-korean flex items-center gap-2">
+                      🔐 본인인증
+                      {form.identityVerified && <span className="text-xs text-tertiary font-normal">✓ 인증 완료</span>}
+                    </p>
+                    <p className="text-xs text-on-surface-variant font-korean mt-0.5">
+                      {form.identityVerified
+                        ? `${form.identityName} (${form.identityPhone})`
+                        : '가입을 위해 본인인증이 필요합니다'}
+                    </p>
+                  </div>
+                  {!form.identityVerified ? (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const storeId = process.env.NEXT_PUBLIC_PORTONE_STORE_ID;
+                        if (!storeId) {
+                          // 개발 모드: 인증 스킵
+                          updateForm({
+                            identityVerified: true,
+                            identityName: form.ownerName || '테스트',
+                            identityPhone: form.phone || '01000000000',
+                          });
+                          return;
+                        }
+                        try {
+                          const PortOne = await import('@portone/browser-sdk/v2');
+                          const verificationId = `identity_${Date.now()}`;
+                          const result = await PortOne.requestIdentityVerification({
+                            storeId,
+                            identityVerificationId: verificationId,
+                            channelKey: process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY ?? '',
+                          });
+                          if (!result || result.code) {
+                            alert('본인인증 실패: ' + (result?.message ?? ''));
+                            return;
+                          }
+                          // 서버에서 결과 조회
+                          const res = await fetch('/api/payment', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'verify-identity', identityVerificationId: verificationId }),
+                          });
+                          const data = await res.json();
+                          if (data.verified) {
+                            updateForm({
+                              identityVerified: true,
+                              identityName: data.name,
+                              identityPhone: data.phone,
+                              ownerName: data.name || form.ownerName,
+                              phone: data.phone || form.phone,
+                            });
+                          } else {
+                            alert('본인인증 확인 실패: ' + (data.error ?? ''));
+                          }
+                        } catch (err) {
+                          alert('본인인증 오류: ' + (err instanceof Error ? err.message : ''));
+                        }
+                      }}
+                      className="h-10 px-5 rounded-xl bg-gradient-to-r from-[#004ac6] to-[#2563eb] text-white text-sm font-semibold hover:shadow-lg transition-all font-korean"
+                    >
+                      본인인증 하기
+                    </button>
+                  ) : (
+                    <span className="px-3 py-1.5 rounded-lg bg-tertiary/10 text-tertiary text-xs font-semibold">인증됨 ✓</span>
+                  )}
                 </div>
               </div>
 
