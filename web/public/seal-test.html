@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>도장 렌더링 테스트 v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@700;900&family=Nanum+Myeongjo:wght@700;800&family=Nanum+Gothic:wght@700;800&family=Gowun+Batang:wght@700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #f5f5f5; padding: 20px; font-family: sans-serif; }
+h2 { margin: 20px 0 10px; color: #333; font-size: 18px; }
+.grid { display: grid; grid-template-columns: repeat(4, 220px); gap: 16px; margin-bottom: 30px; }
+.cell { background: white; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.cell canvas { border: 1px solid #eee; }
+.cell .label { margin-top: 6px; font-size: 11px; color: #666; text-align: center; }
+</style>
+</head>
+<body>
+<h2>법인도장 (원형) — 회사명: 로지사인 / 대표이사인</h2>
+<div class="grid" id="corp-circle"></div>
+
+<h2>법인도장 (원형) — 4글자 직함: 대표이사</h2>
+<div class="grid" id="corp-circle-4"></div>
+
+<h2>법인도장 (사각)</h2>
+<div class="grid" id="corp-square"></div>
+
+<h2>일반도장 (원형) — 3글자: 주상하</h2>
+<div class="grid" id="personal-circle"></div>
+
+<h2>일반도장 (원형) — 2글자: 주상</h2>
+<div class="grid" id="personal-2"></div>
+
+<script>
+const SEAL_COLOR = '#C42B2B';
+const FONTS = [
+  { family: '"Noto Serif KR", "Batang", serif', label: '명조', weight: '900' },
+  { family: '"Nanum Myeongjo", "Batang", serif', label: '나눔명조', weight: '800' },
+  { family: '"Nanum Gothic", "Malgun Gothic", sans-serif', label: '고딕', weight: '900' },
+  { family: '"Gowun Batang", "Batang", serif', label: '고운바탕', weight: '700' },
+];
+
+// ── 전각풍 매우 두꺼운 글자 (다중 stroke 패스) ──
+function drawThickText(ctx, text, x, y, fontSize, fontFamily, fontWeight, strokeRatio) {
+  strokeRatio = strokeRatio || 0.18;
+  ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = SEAL_COLOR;
+  ctx.strokeStyle = SEAL_COLOR;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  const sw = Math.max(2, fontSize * strokeRatio);
+  // 다중 패스
+  ctx.lineWidth = sw;
+  ctx.strokeText(text, x, y);
+  ctx.lineWidth = sw * 0.6;
+  ctx.strokeText(text, x, y);
+  ctx.fillText(text, x, y);
+}
+
+// ── 원호 위 두꺼운 글자 (다중 stroke) ──
+function drawCharOnArc(ctx, char, cx, cy, r, angle, fontSize, fontFamily, fontWeight) {
+  ctx.save();
+  ctx.translate(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+  ctx.rotate(angle + Math.PI / 2);
+  const sw = Math.max(2, fontSize * 0.18);
+  ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.strokeStyle = SEAL_COLOR;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.lineWidth = sw;
+  ctx.strokeText(char, 0, 0);
+  ctx.lineWidth = sw * 0.6;
+  ctx.strokeText(char, 0, 0);
+  ctx.fillStyle = SEAL_COLOR;
+  ctx.fillText(char, 0, 0);
+  ctx.restore();
+}
+
+// ── 법인 원형 도장 ──
+function drawCorporateCircle(ctx, companyName, fontFamily, fontWeight, cx, cy, size, corporateTitle) {
+  const pad = size * 0.06;
+  const outerLineW = size * 0.04;
+  const innerLineW = size * 0.025;
+  const outerR = (size / 2) - pad;
+  const innerR = outerR * 0.55;
+
+  // 외곽 원
+  ctx.lineWidth = outerLineW * 1.2;
+  ctx.strokeStyle = SEAL_COLOR;
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // 내곽 원
+  ctx.lineWidth = innerLineW;
+  ctx.beginPath();
+  ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // 원호 텍스트
+  const ringR = (outerR + innerR) / 2;
+  const nameChars = companyName.split('');
+  const totalItems = nameChars.length + 2;
+  const arcSpan = Math.PI * 0.85;
+  const charAngleStep = arcSpan / totalItems;
+  const ringTextSize = (outerR - innerR) * 0.78;
+
+  const startAngle = -Math.PI / 2 - arcSpan / 2;
+  drawCharOnArc(ctx, '★', cx, cy, ringR, startAngle + charAngleStep * 0.5, ringTextSize * 0.55, fontFamily, fontWeight);
+  for (let i = 0; i < nameChars.length; i++) {
+    const angle = startAngle + charAngleStep * (i + 1.5);
+    drawCharOnArc(ctx, nameChars[i], cx, cy, ringR, angle, ringTextSize, fontFamily, fontWeight);
+  }
+  drawCharOnArc(ctx, '★', cx, cy, ringR, startAngle + charAngleStep * (nameChars.length + 1.5), ringTextSize * 0.55, fontFamily, fontWeight);
+
+  // 중앙 직함
+  const title = corporateTitle || '대표이사인';
+  const titleChars = title.split('');
+
+  // 십자 구분선
+  if (titleChars.length >= 4) {
+    ctx.strokeStyle = SEAL_COLOR;
+    ctx.lineWidth = innerLineW * 0.7;
+    ctx.beginPath();
+    ctx.moveTo(cx - innerR * 0.85, cy);
+    ctx.lineTo(cx + innerR * 0.85, cy);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - innerR * 0.85);
+    ctx.lineTo(cx, cy + innerR * 0.85);
+    ctx.stroke();
+  }
+
+  if (titleChars.length <= 3) {
+    const fs = innerR * 0.85;
+    const spacing = fs * 1.05;
+    const totalH = titleChars.length * spacing;
+    const startY = cy - totalH / 2 + spacing / 2;
+    titleChars.forEach((ch, i) => drawThickText(ctx, ch, cx, startY + i * spacing, fs, fontFamily, fontWeight, 0.22));
+  } else if (titleChars.length === 4) {
+    const fs = innerR * 0.72;
+    const gx = innerR * 0.36;
+    const gy = innerR * 0.36;
+    drawThickText(ctx, titleChars[0], cx + gx, cy - gy, fs, fontFamily, fontWeight, 0.20);
+    drawThickText(ctx, titleChars[1], cx + gx, cy + gy, fs, fontFamily, fontWeight, 0.20);
+    drawThickText(ctx, titleChars[2], cx - gx, cy - gy, fs, fontFamily, fontWeight, 0.20);
+    drawThickText(ctx, titleChars[3], cx - gx, cy + gy, fs, fontFamily, fontWeight, 0.20);
+  } else {
+    const fs = innerR * 0.56;
+    const gx = innerR * 0.33;
+    const spacing = fs * 0.98;
+    const col1 = titleChars.slice(0, 3);
+    const col2 = titleChars.slice(3);
+    const startY1 = cy - spacing;
+    col1.forEach((ch, i) => drawThickText(ctx, ch, cx + gx, startY1 + i * spacing, fs, fontFamily, fontWeight, 0.20));
+    const startY2 = cy - spacing * 0.5;
+    col2.forEach((ch, i) => drawThickText(ctx, ch, cx - gx, startY2 + i * spacing, fs, fontFamily, fontWeight, 0.20));
+  }
+
+  addInkTexture(ctx, size, size);
+}
+
+// ── 법인 사각 도장 ──
+function drawCorporateSquare(ctx, companyName, fontFamily, fontWeight, size, corporateTitle) {
+  const pad = size * 0.06;
+  const outerLineW = size * 0.04;
+  const innerLineW = size * 0.025;
+  const cx = size / 2, cy = size / 2;
+
+  ctx.lineWidth = outerLineW * 1.3;
+  ctx.strokeStyle = SEAL_COLOR;
+  ctx.strokeRect(pad, pad, size - pad * 2, size - pad * 2);
+
+  const innerPad = pad + outerLineW * 1.3 + size * 0.04;
+  ctx.lineWidth = innerLineW;
+  ctx.beginPath();
+  ctx.moveTo(innerPad, cy);
+  ctx.lineTo(size - innerPad, cy);
+  ctx.stroke();
+
+  const topArea = cy - pad - outerLineW;
+  const topFs = Math.min(topArea * 0.58, (size - innerPad * 2) / Math.max(companyName.length, 2) * 1.05);
+  drawThickText(ctx, companyName, cx, cy - topArea * 0.38, topFs, fontFamily, fontWeight, 0.18);
+
+  const title = corporateTitle || '대표이사인';
+  const btFs = topFs * 0.82;
+  drawThickText(ctx, title, cx, cy + topArea * 0.42, btFs, fontFamily, fontWeight, 0.18);
+
+  addInkTexture(ctx, size, size);
+}
+
+// ── 개인 원형 도장 ──
+function drawPersonalCircle(ctx, chars, fontFamily, fontWeight, cx, cy, size) {
+  const pad = size * 0.06;
+  const outerLineW = size * 0.04;
+  const outerR = (size / 2) - pad;
+  const usableR = outerR - outerLineW;
+
+  ctx.lineWidth = outerLineW * 1.2;
+  ctx.strokeStyle = SEAL_COLOR;
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+  ctx.stroke();
+
+  if (chars.length === 1) {
+    drawThickText(ctx, chars, cx, cy, usableR * 1.6, fontFamily, fontWeight, 0.22);
+  } else if (chars.length === 2) {
+    const fs = usableR * 1.0;
+    const gap = fs * 0.50;
+    drawThickText(ctx, chars[0], cx, cy - gap, fs, fontFamily, fontWeight, 0.20);
+    drawThickText(ctx, chars[1], cx, cy + gap, fs, fontFamily, fontWeight, 0.20);
+  } else if (chars.length === 3) {
+    const fs = usableR * 0.78;
+    drawThickText(ctx, chars[0], cx, cy - fs * 0.48, fs, fontFamily, fontWeight, 0.20);
+    drawThickText(ctx, chars[1], cx - fs * 0.48, cy + fs * 0.42, fs, fontFamily, fontWeight, 0.20);
+    drawThickText(ctx, chars[2], cx + fs * 0.48, cy + fs * 0.42, fs, fontFamily, fontWeight, 0.20);
+  } else if (chars.length === 4) {
+    const fs = usableR * 0.68;
+    const gx = usableR * 0.34;
+    const gy = usableR * 0.34;
+    drawThickText(ctx, chars[0], cx + gx, cy - gy, fs, fontFamily, fontWeight, 0.20);
+    drawThickText(ctx, chars[1], cx + gx, cy + gy, fs, fontFamily, fontWeight, 0.20);
+    drawThickText(ctx, chars[2], cx - gx, cy - gy, fs, fontFamily, fontWeight, 0.20);
+    drawThickText(ctx, chars[3], cx - gx, cy + gy, fs, fontFamily, fontWeight, 0.20);
+  }
+
+  addInkTexture(ctx, size, size);
+}
+
+// ── 잉크 질감 ──
+function addInkTexture(ctx, w, h) {
+  const imageData = ctx.getImageData(0, 0, w, h);
+  const d = imageData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] > 0) {
+      const noise = Math.random();
+      if (noise < 0.05) d[i + 3] = Math.max(0, d[i + 3] - Math.floor(Math.random() * 100));
+      else if (noise < 0.10) d[i + 3] = Math.max(0, d[i + 3] - Math.floor(Math.random() * 40));
+      else if (noise < 0.15) d[i + 3] = Math.max(0, d[i + 3] - Math.floor(Math.random() * 15));
+      const px = (i / 4) % w;
+      const py = Math.floor((i / 4) / w);
+      const dist = Math.sqrt(Math.pow(px - w / 2, 2) + Math.pow(py - h / 2, 2));
+      const maxDist = Math.sqrt(Math.pow(w / 2, 2) + Math.pow(h / 2, 2));
+      if (dist / maxDist > 0.82 && Math.random() < 0.25) {
+        d[i + 3] = Math.max(0, d[i + 3] - Math.floor(Math.random() * 50));
+      }
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+
+// ── 렌더링 ──
+window.addEventListener('load', () => {
+  const SIZE = 200;
+
+  // 법인 원형 — 5글자 직함 (대표이사인)
+  const g1 = document.getElementById('corp-circle');
+  FONTS.forEach(font => {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    const canvas = document.createElement('canvas');
+    canvas.width = SIZE; canvas.height = SIZE;
+    const ctx = canvas.getContext('2d');
+    drawCorporateCircle(ctx, '로지사인', font.family, font.weight, SIZE/2, SIZE/2, SIZE, '대표이사인');
+    cell.appendChild(canvas);
+    cell.innerHTML += `<div class="label">${font.label} / 대표이사인</div>`;
+    g1.appendChild(cell);
+  });
+
+  // 법인 원형 — 4글자 직함 (대표이사)
+  const g2 = document.getElementById('corp-circle-4');
+  FONTS.forEach(font => {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    const canvas = document.createElement('canvas');
+    canvas.width = SIZE; canvas.height = SIZE;
+    const ctx = canvas.getContext('2d');
+    drawCorporateCircle(ctx, '로지사인', font.family, font.weight, SIZE/2, SIZE/2, SIZE, '대표이사');
+    cell.appendChild(canvas);
+    cell.innerHTML += `<div class="label">${font.label} / 대표이사</div>`;
+    g2.appendChild(cell);
+  });
+
+  // 법인 사각
+  const g3 = document.getElementById('corp-square');
+  FONTS.slice(0,2).forEach(font => {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    const canvas = document.createElement('canvas');
+    canvas.width = SIZE; canvas.height = SIZE;
+    const ctx = canvas.getContext('2d');
+    drawCorporateSquare(ctx, '로지사인', font.family, font.weight, SIZE, '대표이사인');
+    cell.appendChild(canvas);
+    cell.innerHTML += `<div class="label">${font.label} / 사각</div>`;
+    g3.appendChild(cell);
+  });
+
+  // 개인 원형 — 3글자
+  const g4 = document.getElementById('personal-circle');
+  FONTS.forEach(font => {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    const canvas = document.createElement('canvas');
+    canvas.width = SIZE; canvas.height = SIZE;
+    const ctx = canvas.getContext('2d');
+    drawPersonalCircle(ctx, '주상하', font.family, font.weight, SIZE/2, SIZE/2, SIZE);
+    cell.appendChild(canvas);
+    cell.innerHTML += `<div class="label">${font.label}</div>`;
+    g4.appendChild(cell);
+  });
+
+  // 개인 원형 — 2글자
+  const g5 = document.getElementById('personal-2');
+  FONTS.forEach(font => {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    const canvas = document.createElement('canvas');
+    canvas.width = SIZE; canvas.height = SIZE;
+    const ctx = canvas.getContext('2d');
+    drawPersonalCircle(ctx, '주상', font.family, font.weight, SIZE/2, SIZE/2, SIZE);
+    cell.appendChild(canvas);
+    cell.innerHTML += `<div class="label">${font.label} / 2글자</div>`;
+    g5.appendChild(cell);
+  });
+});
+</script>
+</body>
+</html>

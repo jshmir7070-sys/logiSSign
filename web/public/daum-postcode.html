@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>주소 검색</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; }
+  #loading {
+    display: flex; align-items: center; justify-content: center;
+    height: 100vh; color: #666; font-size: 15px;
+    flex-direction: column; gap: 12px;
+  }
+  #loading .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid #e0e0e0; border-top-color: #6750A4;
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #wrap { display: none; height: 100vh; }
+  .error { color: #B3261E; text-align: center; padding: 40px 20px; font-size: 14px; }
+</style>
+</head>
+<body>
+<div id="loading">
+  <div class="spinner"></div>
+  <span>주소 검색 로딩 중...</span>
+</div>
+<div id="wrap"></div>
+
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"
+        onerror="document.getElementById('loading').innerHTML='<div class=error>주소 검색 서비스를 불러올 수 없습니다.<br>인터넷 연결을 확인해주세요.</div>'">
+</script>
+<script>
+  try {
+    new daum.Postcode({
+      oncomplete: function(data) {
+        var addr = data.addressType === 'R' ? data.roadAddress : data.jibunAddress;
+        var extra = '';
+        if (data.buildingName) {
+          extra = data.bname
+            ? ' (' + data.bname + ', ' + data.buildingName + ')'
+            : ' (' + data.buildingName + ')';
+        } else if (data.bname) {
+          extra = ' (' + data.bname + ')';
+        }
+
+        if (window.opener) {
+          window.opener.postMessage({
+            type: 'DAUM_POSTCODE_RESULT',
+            payload: {
+              zonecode: data.zonecode,
+              address: addr + extra,
+              roadAddress: data.roadAddress,
+              jibunAddress: data.jibunAddress,
+              buildingName: data.buildingName || ''
+            }
+          }, '*');
+        }
+        window.close();
+      },
+      onclose: function() {
+        // 사용자가 X 버튼으로 닫은 경우
+      },
+      width: '100%',
+      height: '100%'
+    }).embed(document.getElementById('wrap'));
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('wrap').style.display = 'block';
+  } catch(e) {
+    document.getElementById('loading').innerHTML =
+      '<div class="error">주소 검색 초기화 실패<br>' + e.message + '</div>';
+  }
+</script>
+</body>
+</html>

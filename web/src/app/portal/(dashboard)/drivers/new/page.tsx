@@ -1,0 +1,1331 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createBrowserSupabaseClient } from '@/lib/supabase';
+import { getPrincipals, type Principal, normalizeFieldConfig, getUnitPriceFields, getPercentageFields, buildExcelHeaders, type CustomIncomeItem, type CustomDeductionItem, type FieldConfig, DEDUCTION_CALC_OPTIONS, COUNT_FIELD_OPTIONS, INSURANCE_PRESETS, ITEM_LABELS, DELIVERY_RATE_OPTIONS, RETURN_RATE_OPTIONS, PICKUP_RATE_OPTIONS } from '@/services/principal.service';
+import { createDriver } from '@/services/driver.service';
+import { bulkUpsertDriverRouteRates } from '@/services/driver-route-rate.service';
+import { bulkUpsertDriverDeductions } from '@/services/driver-deduction.service';
+import { bulkCreateDriverRates } from '@/services/driver-rate.service';
+import { getContractTemplates, createAndSendContracts, type ContractTemplate, type ContractBindingData } from '@/services/contract.service';
+import { createContractPeriod, type RateConfig } from '@/services/contractPeriod.service';
+import AddressSearch, { type AddressValue } from '@/components/shared/AddressSearch';
+import type { PackageType, RateType, DeductionType } from '@/types/database';
+
+interface RouteRow { route_code: string; delivery_rate: string; return_rate: string }
+interface DeductionRow { name: string; deduction_type: DeductionType; amount: string }
+
+export default function NewDriverPage() {
+  const router = useRouter();
+  const [agencyId, setAgencyId] = useState<string | null>(null);
+  const [agencyName, setAgencyName] = useState('');
+  const [agencyBusinessNumber, setAgencyBusinessNumber] = useState('');
+  const [agencyAddress, setAgencyAddress] = useState('');
+  const [principals, setPrincipals] = useState<Principal[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  /* ── 기본 정보 ── */
+  const [principalId, setPrincipalId] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [employeeCode, setEmployeeCode] = useState('');
+  const [email, setEmail] = useState('');
+
+  /* ── 사업자 정보 ── */
+  const [isBusinessOwner, setIsBusinessOwner] = useState(true);
+  const [businessRegNumber, setBusinessRegNumber] = useState('');
+  const [representativeName, setRepresentativeName] = useState('');
+  const [businessAddress, setBusinessAddress] = useState('');
+  const [businessType, setBusinessType] = useState('');
+  const [businessCategory, setBusinessCategory] = useState('');
+  const [vatIncluded, setVatIncluded] = useState(true);
+  const [taxType, setTaxType] = useState<'none' | 'withholding_3_3' | 'vat_invoice' | 'manual_reverse'>('vat_invoice');
+
+  /* ── 초대코드 SMS ── */
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteSentResult, setInviteSentResult] = useState<'success' | 'fail' | null>(null);
+
+  async function handleSendInvite() {
+    if (!agencyId || !name.trim() || !phone.trim()) return;
+    setInviteSending(true);
+    setInviteSentResult(null);
+    try {
+      const res = await fetch('/api/sms/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          driverPhone: phone.trim(),
+          driverName: name.trim(),
+          agencyId,
+        }),
+      });
+      if (res.ok) {
+        setInviteSentResult('success');
+      } else {
+        setInviteSentResult('fail');
+      }
+    } catch {
+      setInviteSentResult('fail');
+    }
+    setInviteSending(false);
+  }
+
+  /* ── 계약 / 단가 설정 ── */
+  const [campName, setCampName] = useState('');
+  const [deliveryArea, setDeliveryArea] = useState('');
+  const [routeRates, setRouteRates] = useState<RouteRow[]>([{ route_code: '', delivery_rate: '', return_rate: '' }]);
+  const [freshPct, setFreshPct] = useState('100');
+  const [incentivePct, setIncentivePct] = useState('100');
+
+  /* ── 카테고리 커스텀 필드 값 ── */
+  const [customValues, setCustomValues] = useState<Record<string, string>>({});
+
+  const selectedPrincipal = principals.find((p) => p.id === principalId);
+  const fieldConfig = selectedPrincipal ? normalizeFieldConfig(selectedPrincipal.field_config) : null;
+  const unitPriceFields = fieldConfig ? getUnitPriceFields(fieldConfig) : [];
+  const percentageFields = fieldConfig ? getPercentageFields(fieldConfig) : [];
+  const excelHeaders = fieldConfig ? buildExcelHeaders(fieldConfig) : [];
+  const hasCustomFields = unitPriceFields.length > 0;
+  const hasPercentageFields = percentageFields.length > 0;
+
+  function handlePrincipalChange(pid: string) {
+    setPrincipalId(pid);
+    setCustomValues({});
+    setCampName('');
+    setDeliveryArea('');
+    setRouteRates([{ route_code: '', delivery_rate: '', return_rate: '' }]);
+    setFreshPct('100');
+    setIncentivePct('100');
+
+    // 카테고리의 전체 차감항목을 기사 공제항목에 프리필
+    const principal = principals.find((p) => p.id === pid);
+    if (principal) {
+      const fc = normalizeFieldConfig(principal.field_config);
+      const prefilledDeductions: DeductionRow[] = [];
+      const ds = fc.deduction_section;
+
+      // 1) 고용보험 — deduction_section 또는 insurance_config에서 읽기
+      const empDs = ds?.employment_insurance;
+      const empIc = fc.insurance_config?.employment_insurance;
+      if (empDs?.enabled || empIc?.enabled) {
+        const rate = empIc?.rate ?? 0.9;
+        const mode = empDs?.split_mode;
+        prefilledDeductions.push({
+          name: '고용보험',
+          deduction_type: 'percentage' as DeductionType,
+          amount: mode === 'split_50_50' ? String(rate) : mode === 'employer_100' ? '0' : String(rate),
+        });
+      }
+
+      // 2) 산재보험 — deduction_section 또는 insurance_config에서 읽기
+      const indDs = ds?.industrial_insurance;
+      const indIc = fc.insurance_config?.industrial_insurance;
+      if (indDs?.enabled || indIc?.enabled) {
+        const rate = indIc?.rate ?? 1.8;
+        const mode = indDs?.split_mode;
+        prefilledDeductions.push({
+          name: '산재보험',
+          deduction_type: 'percentage' as DeductionType,
+          amount: mode === 'split_50_50' ? String(rate) : mode === 'employer_100' ? '0' : String(rate),
+        });
+      }
+
+      // 3) 화물사고
+      if (ds?.cargo_accident?.enabled) {
+        const ca = ds.cargo_accident;
+        prefilledDeductions.push({
+          name: '화물사고',
+          deduction_type: ca.mode === 'fixed_amount' ? 'fixed' : ca.mode === 'percentage' ? 'percentage' : 'fixed',
+          amount: ca.mode === 'actual_cost' ? '0' : String(ca.fixed_value || '0'),
+        });
+      }
+
+      // 4) 차량임대료
+      if (ds?.vehicle_rental?.enabled) {
+        prefilledDeductions.push({
+          name: '차량임대료',
+          deduction_type: 'fixed' as DeductionType,
+          amount: '0',  // 기사별 개별 입력
+        });
+      }
+
+      // 5) 운송장 차감
+      if (ds?.waybill?.enabled) {
+        if (ds.waybill.return_count_price) {
+          prefilledDeductions.push({
+            name: '운송장 (반품)',
+            deduction_type: 'per_unit' as DeductionType,
+            amount: '0',
+          });
+        }
+        if (ds.waybill.pickup_count_price) {
+          prefilledDeductions.push({
+            name: '운송장 (집하)',
+            deduction_type: 'per_unit' as DeductionType,
+            amount: '0',
+          });
+        }
+      }
+
+      // 6) 커스텀 차감항목 (보험 항목과 중복 방지)
+      for (const d of fc.custom_deduction_items ?? []) {
+        const alreadyAdded = prefilledDeductions.some((p) => p.name === d.name);
+        if (!alreadyAdded) {
+          prefilledDeductions.push({
+            name: d.name,
+            deduction_type: d.calc_method === 'fixed' ? 'fixed' : d.calc_method === 'per_count' ? 'per_unit' : 'percentage',
+            amount: String(d.default_value || ''),
+          });
+        }
+      }
+
+      // 7) deduction_section 내 custom_deductions (별도 저장 경로)
+      for (const d of ds?.custom_deductions ?? []) {
+        // 위에서 이미 추가한 항목과 중복 방지
+        const alreadyAdded = prefilledDeductions.some((p) => p.name === d.name);
+        if (!alreadyAdded) {
+          prefilledDeductions.push({
+            name: d.name,
+            deduction_type: d.calc_method === 'fixed' ? 'fixed' : d.calc_method === 'per_count' ? 'per_unit' : 'percentage',
+            amount: String(d.default_value || ''),
+          });
+        }
+      }
+
+      setDeductions(prefilledDeductions);
+
+      // 계약서 템플릿 로드
+      if (agencyId) {
+        getContractTemplates(agencyId, pid).then((res) => {
+          if (res.data) {
+            setContractTemplates(res.data);
+            // 기본: 전체 선택
+            setSelectedTemplateIds(new Set(res.data.map((t) => t.id)));
+          }
+        });
+      }
+    } else {
+      setDeductions([]);
+      setContractTemplates([]);
+      setSelectedTemplateIds(new Set());
+    }
+  }
+
+  /* ── 계약서 템플릿 ── */
+  const [contractTemplates, setContractTemplates] = useState<ContractTemplate[]>([]);
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<Set<string>>(new Set());
+  const [contractStartDate, setContractStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [contractEndDate, setContractEndDate] = useState('');
+
+  /* ── 차량 임대 ── */
+  const [vehicleOwner, setVehicleOwner] = useState<'self' | 'company'>('self');
+  const [vehicleType, setVehicleType] = useState('');
+  const [vehicleNumber, setVehicleNumber] = useState('');
+  const [vehicleYear, setVehicleYear] = useState('');
+  const [vehicleVin, setVehicleVin] = useState('');
+  const [vehicleMileage, setVehicleMileage] = useState('');
+  const [vehicleRentMonthly, setVehicleRentMonthly] = useState('');
+  const [vehicleDeposit, setVehicleDeposit] = useState('');
+  const [vehicleInsuranceBy, setVehicleInsuranceBy] = useState<'lessor' | 'lessee'>('lessor');
+
+  /* ── 공제 항목 ── */
+  const [deductions, setDeductions] = useState<DeductionRow[]>([]);
+
+  function addDeductionRow() {
+    setDeductions((prev) => [...prev, { name: '', deduction_type: 'fixed', amount: '' }]);
+  }
+
+  function removeDeductionRow(idx: number) {
+    setDeductions((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function updateDeduction(idx: number, field: string, value: string) {
+    setDeductions((prev) => prev.map((d, i) => i === idx ? { ...d, [field]: value } : d));
+  }
+
+  useEffect(() => {
+    async function load() {
+      const supabase = createBrowserSupabaseClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const aid = user.app_metadata?.agency_id as string | undefined;
+      if (!aid) return;
+      setAgencyId(aid);
+      const [principalResult, agencyResult] = await Promise.all([
+        getPrincipals(aid),
+        supabase.from('agencies').select('name, business_number, address').eq('id', aid).single(),
+      ]);
+      if (principalResult.data) setPrincipals(principalResult.data);
+      if (agencyResult.data) {
+        const agency = agencyResult.data as { name: string; business_number: string | null; address: string | null };
+        setAgencyName(agency.name);
+        setAgencyBusinessNumber(agency.business_number ?? '');
+        setAgencyAddress(agency.address ?? '');
+      }
+    }
+    load();
+  }, []);
+
+  function addRouteRow() {
+    setRouteRates((prev) => [...prev, { route_code: '', delivery_rate: '', return_rate: '' }]);
+  }
+
+  function removeRouteRow(idx: number) {
+    setRouteRates((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function updateRoute(idx: number, field: string, value: string) {
+    setRouteRates((prev) => prev.map((r, i) => i === idx ? { ...r, [field]: value } : r));
+  }
+
+  async function handleSubmit() {
+    if (!agencyId || !name.trim() || !phone.trim() || !principalId) {
+      setError('필수 항목을 모두 입력하세요 (카테고리, 이름, 전화번호)');
+      return;
+    }
+    setSaving(true);
+    setError('');
+
+    // 1. Create driver + 원청사 연결 (초대코드 SMS는 상단에서 별도 전송)
+    const result = await createDriver({
+      agency_id: agencyId,
+      name: name.trim(),
+      phone: phone.trim(),
+      principalIds: [principalId],
+      sendInviteSms: false,   // SMS는 상단 버튼에서 이미 전송
+    });
+
+    if (result.error || !result.data) {
+      setError(result.error ?? '기사 등록 실패');
+      setSaving(false);
+      return;
+    }
+
+    const driverId = result.data.id;
+    const supabase = createBrowserSupabaseClient();
+
+    // 2. Update all fields
+    await supabase.from('drivers').update({
+      employee_code: employeeCode.trim() || null,
+      address: address.trim() || null,
+      email: email.trim() || null,
+      delivery_area: deliveryArea.trim() || null,
+      camp_name: campName.trim() || null,
+      is_business_owner: isBusinessOwner,
+      business_reg_number: businessRegNumber.trim() || null,
+      representative_name: representativeName.trim() || null,
+      business_address: businessAddress.trim() || null,
+      business_type: businessType.trim() || null,
+      business_category: businessCategory.trim() || null,
+      vat_included: vatIncluded,
+      tax_type: isBusinessOwner ? taxType : 'withholding_3_3',
+      fresh_incentive_pct: Number(freshPct) || 100,
+      extra_incentive_pct: Number(incentivePct) || 100,
+      rate_mode: fieldConfig?.items?.delivery?.rate_mode === 'unit_price' ? 'route' : fieldConfig?.items?.delivery?.rate_mode === 'percentage' ? 'percentage' : 'flat',
+      flat_rate: Number(customValues['delivery_unit_price'] || 0),
+      rate_percentage: Number(customValues['delivery_rate_pct'] || 0),
+      vehicle_number: vehicleNumber.trim() || null,
+      vehicle_type: vehicleType.trim() || null,
+      vehicle_year: vehicleYear.trim() || null,
+      vehicle_vin: vehicleVin.trim() || null,
+      vehicle_mileage: Number(vehicleMileage) || null,
+      vehicle_owner: vehicleOwner,
+      vehicle_rent_monthly: Number(vehicleRentMonthly) || 0,
+      vehicle_deposit: Number(vehicleDeposit) || 0,
+      vehicle_insurance_by: vehicleInsuranceBy,
+      custom_values: Object.keys(customValues).length > 0 ? customValues : null,
+    } as never).eq('id', driverId);
+
+    // 3. Save route rates (if unit_price mode with route codes)
+    if (fieldConfig?.items?.delivery?.rate_mode === 'unit_price') {
+      const validRoutes = routeRates
+        .filter((r) => r.route_code.trim() && (Number(r.delivery_rate) > 0))
+        .map((r) => ({
+          route_code: r.route_code.trim().toUpperCase(),
+          delivery_rate: Number(r.delivery_rate) || 0,
+          return_rate: Number(r.return_rate) || Number(r.delivery_rate) || 0,
+        }));
+      if (validRoutes.length > 0) {
+        await bulkUpsertDriverRouteRates(driverId, validRoutes);
+      }
+    }
+
+    // 4. Save driver_rates from unit price fields (카테고리의 단가 항목 → 기사별 단가)
+    if (fieldConfig) {
+      const driverRates: { package_type: PackageType; unit_price: number; rate_type: RateType }[] = [];
+      const types: ('delivery' | 'return' | 'pickup')[] = ['delivery', 'return', 'pickup'];
+      const typeLabels: Record<string, string> = { delivery: '배송', return: '반품', pickup: '집하' };
+      for (const t of types) {
+        const cfg = fieldConfig.items[t];
+        if (!cfg?.enabled) continue;
+        const key = `${t}_unit_price`;
+        const value = Number(customValues[key] ?? 0);
+        if (value > 0) {
+          driverRates.push({
+            package_type: typeLabels[t] as PackageType,
+            unit_price: value,
+            rate_type: cfg.rate_mode === 'percentage' ? 'percentage' : 'fixed',
+          });
+        }
+      }
+      // 커스텀 수입 항목도 driver_rates에 저장
+      for (const item of fieldConfig.custom_income_items ?? []) {
+        const value = Number(customValues[`income_${item.id}`] ?? item.default_value ?? 0);
+        if (value > 0) {
+          driverRates.push({
+            package_type: item.name as PackageType,
+            unit_price: value,
+            rate_type: item.calc_method === 'rate_percent' ? 'percentage' : 'fixed',
+          });
+        }
+      }
+      if (driverRates.length > 0) {
+        await bulkCreateDriverRates(driverId, driverRates);
+      }
+    }
+
+    // 5. Save deduction items
+    const validDeductions = deductions
+      .filter((d) => d.name.trim() && Number(d.amount) > 0)
+      .map((d) => ({
+        name: d.name.trim(),
+        deduction_type: d.deduction_type,
+        amount: Number(d.amount),
+      }));
+
+    // 차량 임대료 자동 공제 추가
+    if (vehicleOwner === 'company' && Number(vehicleRentMonthly) > 0) {
+      const alreadyHasRent = validDeductions.some((d) => d.name === '차량 임대료');
+      if (!alreadyHasRent) {
+        validDeductions.push({
+          name: '차량 임대료',
+          deduction_type: 'fixed' as const,
+          amount: Number(vehicleRentMonthly),
+        });
+      }
+    }
+
+    if (validDeductions.length > 0) {
+      await bulkUpsertDriverDeductions(driverId, validDeductions);
+    }
+
+    // 6. 선택된 계약서 자동 생성 + 전송
+    if (selectedTemplateIds.size > 0 && agencyId) {
+      // 노선별 단가 텍스트 생성
+      const deliveryRateMode = fieldConfig?.items?.delivery?.rate_mode ?? 'unit_price';
+      const routeRateText = deliveryRateMode === 'unit_price'
+        ? routeRates
+            .filter((r) => r.route_code.trim() && Number(r.delivery_rate) > 0)
+            .map((r) => `${r.route_code}: 배송 ${Number(r.delivery_rate).toLocaleString()}원 / 반품 ${Number(r.return_rate || r.delivery_rate).toLocaleString()}원`)
+            .join('\n') || '-'
+        : '-';
+
+      const taxLabel = isBusinessOwner
+        ? (taxType === 'vat_invoice' ? '세금계산서 발행' : '수기 역발행')
+        : '3.3% 원천징수';
+
+      const bindingData: ContractBindingData = {
+        기사명: name.trim(),
+        전화번호: phone.trim(),
+        주소: address.trim(),
+        사번: employeeCode.trim(),
+        카테고리명: selectedPrincipal?.name ?? '',
+        배송지역: deliveryArea.trim(),
+        배송단가: customValues['delivery_unit_price'] ? `${Number(customValues['delivery_unit_price']).toLocaleString()}원` : '-',
+        반품단가: customValues['return_unit_price'] ? `${Number(customValues['return_unit_price']).toLocaleString()}원` : '-',
+        집하단가: customValues['pickup_unit_price'] ? `${Number(customValues['pickup_unit_price']).toLocaleString()}원` : '-',
+        노선별단가: routeRateText,
+        계약시작일: contractStartDate ? new Date(contractStartDate).toLocaleDateString('ko-KR') : '',
+        계약종료일: contractEndDate ? new Date(contractEndDate).toLocaleDateString('ko-KR') : '',
+        계약일: new Date().toLocaleDateString('ko-KR'),
+        대리점명: agencyName,
+        대리점사업자번호: agencyBusinessNumber,
+        대리점주소: agencyAddress,
+        사업자번호: businessRegNumber.trim(),
+        대표자명: representativeName.trim(),
+        사업장주소: businessAddress.trim(),
+        부가세구분: isBusinessOwner ? (vatIncluded ? '포함가 (VAT 포함)' : '별도 (VAT 별도)') : '해당없음',
+        세금처리: taxLabel,
+        차종: vehicleType.trim() || '-',
+        연식: vehicleYear.trim() || '-',
+        차량번호: vehicleNumber.trim() || '-',
+        차대번호: vehicleVin.trim() || '-',
+        인도시주행거리: vehicleMileage ? Number(vehicleMileage).toLocaleString() : '-',
+        월임대료: vehicleRentMonthly ? `${Number(vehicleRentMonthly).toLocaleString()}원` : '-',
+        보증금: vehicleDeposit ? `${Number(vehicleDeposit).toLocaleString()}원` : '-',
+        보험부담: vehicleInsuranceBy === 'lessor' ? '임대인' : '임차인',
+        고용보험_기사부담: fieldConfig?.deduction_section?.employment_insurance?.enabled
+          ? (fieldConfig.deduction_section.employment_insurance.split_mode === 'split_50_50' ? '50%' : '0%')
+          : '-',
+        고용보험_사업주부담: fieldConfig?.deduction_section?.employment_insurance?.enabled
+          ? (fieldConfig.deduction_section.employment_insurance.split_mode === 'split_50_50' ? '50%' : '100%')
+          : '-',
+        산재보험_기사부담: fieldConfig?.deduction_section?.industrial_insurance?.enabled
+          ? (fieldConfig.deduction_section.industrial_insurance.split_mode === 'split_50_50' ? '50%' : '0%')
+          : '-',
+        산재보험_사업주부담: fieldConfig?.deduction_section?.industrial_insurance?.enabled
+          ? (fieldConfig.deduction_section.industrial_insurance.split_mode === 'split_50_50' ? '50%' : '100%')
+          : '-',
+      };
+      await createAndSendContracts(agencyId, driverId, Array.from(selectedTemplateIds), bindingData);
+    }
+
+    // 7. 계약 기간 (정산 적용 기간) 자동 생성
+    if (agencyId && contractStartDate && contractEndDate) {
+      const empIns = fieldConfig?.deduction_section?.employment_insurance;
+      const indIns = fieldConfig?.deduction_section?.industrial_insurance;
+      const periodRateConfig: RateConfig = {
+        delivery_unit_price: Number(customValues['delivery_unit_price'] || 0),
+        return_unit_price: Number(customValues['return_unit_price'] || 0),
+        pickup_unit_price: Number(customValues['pickup_unit_price'] || 0),
+        delivery_rate_mode: fieldConfig?.items?.delivery?.rate_mode ?? 'unit_price',
+        return_rate_mode: fieldConfig?.items?.return?.rate_mode,
+        pickup_rate_mode: fieldConfig?.items?.pickup?.rate_mode,
+        route_rates: (fieldConfig?.items?.delivery?.rate_mode ?? 'unit_price') === 'unit_price'
+          ? routeRates.filter((r) => r.route_code.trim()).map((r) => ({
+              route_code: r.route_code.trim(),
+              delivery_rate: Number(r.delivery_rate),
+              return_rate: Number(r.return_rate || r.delivery_rate),
+            }))
+          : undefined,
+        insurance: {
+          employment_driver: empIns?.enabled ? (empIns.split_mode === 'split_50_50' ? '50%' : '0%') : '-',
+          employment_employer: empIns?.enabled ? (empIns.split_mode === 'split_50_50' ? '50%' : '100%') : '-',
+          industrial_driver: indIns?.enabled ? (indIns.split_mode === 'split_50_50' ? '50%' : '0%') : '-',
+          industrial_employer: indIns?.enabled ? (indIns.split_mode === 'split_50_50' ? '50%' : '100%') : '-',
+        },
+      };
+
+      await createContractPeriod({
+        agencyId,
+        driverId,
+        principalId: principalId || undefined,
+        periodStart: contractStartDate,
+        periodEnd: contractEndDate,
+        rateConfig: periodRateConfig,
+        memo: '최초 계약',
+      });
+    }
+
+    setSaving(false);
+    router.push(`/portal/drivers/${driverId}`);
+  }
+
+  const inputCls = 'w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-on-surface-variant/40';
+  const labelCls = 'block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean';
+
+  return (
+    <div className="space-y-8 pb-12">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <button
+          onClick={() => router.push('/portal/drivers')}
+          className="w-10 h-10 rounded-xl bg-surface-container-low flex items-center justify-center hover:bg-surface-container-high transition-colors"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-on-surface-variant">
+            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+          </svg>
+        </button>
+        <div>
+          <h1 className="text-2xl font-headline font-bold text-on-surface font-korean">신규 기사 등록</h1>
+          <p className="mt-1 text-sm text-on-surface-variant font-korean">기사 정보, 사업자 정보, 계약 단가를 설정합니다</p>
+        </div>
+      </div>
+
+      {error && <div className="bg-error/10 text-error rounded-xl px-4 py-3 text-sm font-korean">{error}</div>}
+
+      {/* ═══ 1. 기본 정보 ═══ */}
+      <section className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 space-y-4">
+        <h2 className="text-base font-headline font-semibold text-on-surface font-korean">기본 정보</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <label className={labelCls}>카테고리 (거래처) *</label>
+            <select value={principalId} onChange={(e) => handlePrincipalChange(e.target.value)}
+              className={`${inputCls} font-korean`}>
+              <option value="">선택하세요</option>
+              {principals.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>이름 *</label>
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)}
+              placeholder="홍길동" className={`${inputCls} font-korean`} />
+          </div>
+          <div>
+            <label className={labelCls}>전화번호 *</label>
+            <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)}
+              placeholder="010-1234-5678" className={`${inputCls} font-data`} />
+          </div>
+          <div className="sm:col-span-2 lg:col-span-3">
+            <AddressSearch
+              value={address}
+              label="주소"
+              onChange={(addr: AddressValue) => setAddress(addr.fullAddress)}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>사번 / 아이디 *</label>
+            <input type="text" value={employeeCode} onChange={(e) => setEmployeeCode(e.target.value)}
+              placeholder="사번 입력" className={`${inputCls} font-data`} />
+            <p className="text-[11px] text-on-surface-variant/60 mt-1 font-korean">엑셀 정산 시 자동 매칭 키</p>
+          </div>
+          <div>
+            <label className={labelCls}>이메일</label>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+              placeholder="driver@email.com" className={`${inputCls} font-data`} />
+          </div>
+        </div>
+
+        {/* 초대코드 SMS 즉시 전송 */}
+        <div className="pt-4 border-t border-outline-variant/20">
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <p className="text-sm font-body font-semibold text-on-surface font-korean">초대코드 SMS 전송</p>
+              <p className="text-[11px] text-on-surface-variant/60 font-korean mt-0.5">
+                이름, 전화번호 입력 후 초대코드 + 앱 다운로드 링크를 즉시 발송합니다
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleSendInvite}
+              disabled={inviteSending || !name.trim() || !phone.trim() || !agencyId || inviteSentResult === 'success'}
+              className={`h-10 px-5 rounded-xl text-sm font-label font-semibold transition-all flex items-center gap-2 shrink-0 font-korean ${
+                inviteSentResult === 'success'
+                  ? 'bg-primary/10 text-primary cursor-default'
+                  : 'bg-primary text-white hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed'
+              }`}
+            >
+              {inviteSending ? (
+                <>
+                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25"/><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/></svg>
+                  전송 중...
+                </>
+              ) : inviteSentResult === 'success' ? (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                  전송 완료
+                </>
+              ) : (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/><path d="M12 15l1.57-3.43L17 10l-3.43-1.57L12 5l-1.57 3.43L7 10l3.43 1.57z"/></svg>
+                  초대코드 전송
+                </>
+              )}
+            </button>
+          </div>
+          {inviteSentResult === 'success' && (
+            <div className="mt-2.5 px-3 py-2 rounded-lg bg-primary/[0.06] border border-primary/15 text-xs font-korean flex items-start gap-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-primary shrink-0 mt-0.5"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+              <div>
+                <p className="text-primary font-semibold">초대코드 SMS 전송 완료</p>
+                <p className="text-on-surface-variant/70 mt-0.5">{phone} 으로 초대코드 + 앱 설치 링크가 발송되었습니다</p>
+              </div>
+            </div>
+          )}
+          {inviteSentResult === 'fail' && (
+            <div className="mt-2.5 px-3 py-2 rounded-lg bg-error/[0.06] border border-error/15 text-xs font-korean flex items-start gap-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-error shrink-0 mt-0.5"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+              <div>
+                <p className="text-error font-semibold">전송 실패</p>
+                <p className="text-on-surface-variant/70 mt-0.5">대리점 초대코드가 설정되지 않았거나 SMS 발송에 실패했습니다</p>
+                <button onClick={() => setInviteSentResult(null)} className="text-primary font-semibold mt-1 hover:underline">다시 시도</button>
+              </div>
+            </div>
+          )}
+          {!name.trim() || !phone.trim() ? (
+            <p className="mt-2 text-[11px] text-on-surface-variant/40 font-korean">
+              이름과 전화번호를 입력하면 전송 버튼이 활성화됩니다
+            </p>
+          ) : null}
+        </div>
+      </section>
+
+      {/* ═══ 2. 사업자 / 세금 처리 ═══ */}
+      <section className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-headline font-semibold text-on-surface font-korean">사업자 / 세금 처리</h2>
+          <select value={isBusinessOwner ? 'true' : 'false'}
+            onChange={(e) => {
+              const biz = e.target.value === 'true';
+              setIsBusinessOwner(biz);
+              setTaxType(biz ? 'vat_invoice' : 'withholding_3_3');
+            }}
+            className="h-9 px-3 rounded-lg bg-surface-container-low text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30">
+            <option value="true">사업자 유</option>
+            <option value="false">사업자 무</option>
+          </select>
+        </div>
+
+        {/* 세금 처리 방식 */}
+        <div>
+          <label className={labelCls}>세금 처리 방식</label>
+          {isBusinessOwner ? (
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setTaxType('vat_invoice')}
+                className={`flex-1 p-3 rounded-xl border-2 text-left transition-all ${taxType === 'vat_invoice' ? 'border-primary bg-primary/5' : 'border-outline-variant/20 hover:border-outline-variant/40'}`}>
+                <p className="text-sm font-body font-semibold text-on-surface font-korean">세금계산서 발행요청</p>
+                <p className="text-xs text-on-surface-variant mt-0.5 font-korean">기사에게 세금계산서 발행 요청</p>
+              </button>
+              <button type="button" onClick={() => setTaxType('manual_reverse')}
+                className={`flex-1 p-3 rounded-xl border-2 text-left transition-all ${taxType === 'manual_reverse' ? 'border-primary bg-primary/5' : 'border-outline-variant/20 hover:border-outline-variant/40'}`}>
+                <p className="text-sm font-body font-semibold text-on-surface font-korean">수기 역발행</p>
+                <p className="text-xs text-on-surface-variant mt-0.5 font-korean">대리점에서 직접 역발행 처리</p>
+              </button>
+            </div>
+          ) : (
+            <div className="p-3 rounded-xl border-2 border-primary bg-primary/5">
+              <p className="text-sm font-body font-semibold text-on-surface font-korean">3.3% 원천징수</p>
+              <p className="text-xs text-on-surface-variant mt-0.5 font-korean">사업자 미등록 시 정산금액에서 3.3% 원천징수 후 지급</p>
+            </div>
+          )}
+        </div>
+
+        {isBusinessOwner && (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <label className={labelCls}>사업자등록번호</label>
+                <input type="text" value={businessRegNumber} onChange={(e) => setBusinessRegNumber(e.target.value)}
+                  placeholder="123-45-67890" className={`${inputCls} font-data`} />
+              </div>
+              <div>
+                <label className={labelCls}>대표자</label>
+                <input type="text" value={representativeName} onChange={(e) => setRepresentativeName(e.target.value)}
+                  placeholder="대표자명" className={`${inputCls} font-korean`} />
+              </div>
+              <div className="sm:col-span-2 lg:col-span-3">
+                <AddressSearch
+                  value={businessAddress}
+                  label="사업장주소"
+                  onChange={(addr: AddressValue) => setBusinessAddress(addr.fullAddress)}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>업종</label>
+                <input type="text" value={businessType} onChange={(e) => setBusinessType(e.target.value)}
+                  placeholder="운수업" className={`${inputCls} font-korean`} />
+              </div>
+              <div>
+                <label className={labelCls}>업태</label>
+                <input type="text" value={businessCategory} onChange={(e) => setBusinessCategory(e.target.value)}
+                  placeholder="화물운송" className={`${inputCls} font-korean`} />
+              </div>
+              <div>
+                <label className={labelCls}>부가세</label>
+                <select value={vatIncluded ? 'included' : 'excluded'}
+                  onChange={(e) => setVatIncluded(e.target.value === 'included')}
+                  className={`${inputCls} font-korean`}>
+                  <option value="included">포함가 (VAT 포함 단가)</option>
+                  <option value="excluded">별도 (VAT 별도 청구)</option>
+                </select>
+                {vatIncluded && (
+                  <p className="text-[11px] text-on-surface-variant/60 mt-1 font-korean">포함가 선택 시 정산금액에서 부가세(÷1.1) 역산 공제</p>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </section>
+
+      {/* ═══ 3. 계약 배송구역 및 지급액 (카테고리 설정값 기반) ═══ */}
+      {principalId && fieldConfig ? (
+      <section className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 space-y-5">
+        <div>
+          <h2 className="text-base font-headline font-semibold text-on-surface font-korean">
+            계약 배송구역 및 지급액 ({selectedPrincipal?.name})
+          </h2>
+          <p className="text-xs text-on-surface-variant/60 mt-0.5 font-korean">
+            카테고리 설정에 따라 활성화된 항목만 표시됩니다
+          </p>
+        </div>
+
+        {/* 캠프명 + 배송구역 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className={labelCls}>캠프명</label>
+            <input type="text" value={campName} onChange={(e) => setCampName(e.target.value)}
+              placeholder="캠프명 입력" className={`${inputCls} font-korean`} />
+          </div>
+          <div>
+            <label className={labelCls}>배송구역</label>
+            <input type="text" value={deliveryArea} onChange={(e) => setDeliveryArea(e.target.value)}
+              placeholder="배송구역 입력" className={`${inputCls} font-data`} />
+          </div>
+        </div>
+
+        {/* ── 배송/반품 통합 카드 ── */}
+        {(fieldConfig.items.delivery?.enabled || fieldConfig.items.return?.enabled) && (() => {
+          const cfg = fieldConfig.items.delivery;
+          const rateMode = cfg.rate_mode;
+          const feeSame = cfg.fee_same;
+          const feeSeparate = cfg.fee_separate;
+          const routeSame = cfg.route_same;
+          const routeSeparate = cfg.route_separate;
+          const hasAnyFeeMode = feeSame || feeSeparate || routeSame || routeSeparate;
+          return (
+            <div className="p-4 rounded-xl bg-surface-container-low/50 border border-outline-variant/10 space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-primary/10 text-primary">배송/반품</span>
+                <span className="text-xs text-on-surface-variant font-korean">
+                  {rateMode === 'unit_price' ? '수량 × 단가' :
+                   rateMode === 'percentage' ? '매출 × 요율 (수수료% 차감)' :
+                   rateMode === 'fixed_salary' ? '고정 급여' : '—'}
+                  {feeSame ? ' · 동일수수료' : feeSeparate ? ' · 별도수수료' : ''}
+                </span>
+              </div>
+
+              {/* ═══ unit_price 모드 ═══ */}
+              {(rateMode === 'unit_price' || rateMode === 'mixed_count') && (
+                <>
+                  {!hasAnyFeeMode && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelCls}>배송/반품 단가 (원/건)</label>
+                        <input type="number"
+                          value={customValues['delivery_unit_price'] ?? ''}
+                          onChange={(e) => setCustomValues((prev) => ({ ...prev, delivery_unit_price: e.target.value }))}
+                          placeholder="0" className={`${inputCls} font-data`} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 동일수수료: 단가 1개 */}
+                  {feeSame && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelCls}>배송/반품 동일 단가 (원/건)</label>
+                        <input type="number"
+                          value={customValues['delivery_fee_same'] ?? ''}
+                          onChange={(e) => setCustomValues((prev) => ({ ...prev, delivery_fee_same: e.target.value }))}
+                          placeholder="0" className={`${inputCls} font-data`} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 별도수수료: 배송/반품 각각 단가 */}
+                  {feeSeparate && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelCls}>배송 단가 (원/건)</label>
+                        <input type="number"
+                          value={customValues['delivery_delivery_price'] ?? ''}
+                          onChange={(e) => setCustomValues((prev) => ({ ...prev, delivery_delivery_price: e.target.value }))}
+                          placeholder="0" className={`${inputCls} font-data`} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>반품 단가 (원/건)</label>
+                        <input type="number"
+                          value={customValues['delivery_return_price'] ?? ''}
+                          onChange={(e) => setCustomValues((prev) => ({ ...prev, delivery_return_price: e.target.value }))}
+                          placeholder="0" className={`${inputCls} font-data`} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 동일 라우트 수수료 */}
+                  {routeSame && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-label font-medium text-on-surface font-korean">라우트별 동일 단가</p>
+                        <button onClick={addRouteRow}
+                          className="h-7 px-2.5 rounded-lg bg-surface-container-high text-on-surface-variant font-label text-[11px] hover:bg-surface-container-highest transition-colors font-korean flex items-center gap-1">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                          추가
+                        </button>
+                      </div>
+                      <div className="rounded-xl border border-outline-variant/10 overflow-hidden">
+                        <div className="grid grid-cols-[1fr_1fr_32px] gap-0 bg-surface-container-high/50 px-3 py-1.5 text-[10px] text-on-surface-variant/60 font-korean font-semibold">
+                          <span>라우트</span>
+                          <span>단가</span>
+                          <span></span>
+                        </div>
+                        {routeRates.map((rr, idx) => (
+                          <div key={idx} className="grid grid-cols-[1fr_1fr_32px] gap-0 border-t border-outline-variant/10 items-center">
+                            <input type="text" placeholder="코드" value={rr.route_code}
+                              onChange={(e) => updateRoute(idx, 'route_code', e.target.value)}
+                              className="h-10 px-3 bg-transparent text-on-surface text-sm font-data uppercase focus:outline-none focus:bg-primary/[0.03]" />
+                            <input type="number" placeholder="0" value={rr.delivery_rate}
+                              onChange={(e) => updateRoute(idx, 'delivery_rate', e.target.value)}
+                              className="h-10 px-3 bg-transparent text-on-surface text-sm font-data focus:outline-none focus:bg-primary/[0.03] border-l border-outline-variant/10" />
+                            <div className="flex items-center justify-center border-l border-outline-variant/10">
+                              {routeRates.length > 1 && (
+                                <button onClick={() => removeRouteRow(idx)}
+                                  className="w-7 h-7 rounded text-on-surface-variant/30 hover:bg-error/10 hover:text-error flex items-center justify-center transition-colors">
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 별 라우트 수수료 */}
+                  {routeSeparate && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-label font-medium text-on-surface font-korean">라우트별 배송/반품 단가</p>
+                        <button onClick={addRouteRow}
+                          className="h-7 px-2.5 rounded-lg bg-surface-container-high text-on-surface-variant font-label text-[11px] hover:bg-surface-container-highest transition-colors font-korean flex items-center gap-1">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                          추가
+                        </button>
+                      </div>
+                      <div className="rounded-xl border border-outline-variant/10 overflow-hidden">
+                        <div className="grid grid-cols-[1fr_1fr_1fr_32px] gap-0 bg-surface-container-high/50 px-3 py-1.5 text-[10px] text-on-surface-variant/60 font-korean font-semibold">
+                          <span>라우트</span>
+                          <span>배송단가</span>
+                          <span>반품단가</span>
+                          <span></span>
+                        </div>
+                        {routeRates.map((rr, idx) => (
+                          <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_32px] gap-0 border-t border-outline-variant/10 items-center">
+                            <input type="text" placeholder="코드" value={rr.route_code}
+                              onChange={(e) => updateRoute(idx, 'route_code', e.target.value)}
+                              className="h-10 px-3 bg-transparent text-on-surface text-sm font-data uppercase focus:outline-none focus:bg-primary/[0.03]" />
+                            <input type="number" placeholder="0" value={rr.delivery_rate}
+                              onChange={(e) => updateRoute(idx, 'delivery_rate', e.target.value)}
+                              className="h-10 px-3 bg-transparent text-on-surface text-sm font-data focus:outline-none focus:bg-primary/[0.03] border-l border-outline-variant/10" />
+                            <input type="number" placeholder="0" value={rr.return_rate}
+                              onChange={(e) => updateRoute(idx, 'return_rate', e.target.value)}
+                              className="h-10 px-3 bg-transparent text-on-surface text-sm font-data focus:outline-none focus:bg-primary/[0.03] border-l border-outline-variant/10" />
+                            <div className="flex items-center justify-center border-l border-outline-variant/10">
+                              {routeRates.length > 1 && (
+                                <button onClick={() => removeRouteRow(idx)}
+                                  className="w-7 h-7 rounded text-on-surface-variant/30 hover:bg-error/10 hover:text-error flex items-center justify-center transition-colors">
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ═══ 요율 입력 (percentage) ═══ */}
+              {rateMode === 'percentage' && (
+                <>
+                  {feeSame && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelCls}>배송/반품 동일 수수료율 (%)</label>
+                        <input type="number"
+                          value={customValues['delivery_rate_pct'] ?? ''}
+                          onChange={(e) => setCustomValues((prev) => ({ ...prev, delivery_rate_pct: e.target.value }))}
+                          placeholder="0" className={`${inputCls} font-data`} />
+                        <p className="text-[11px] text-on-surface-variant/60 mt-1 font-korean">매출액에서 해당 %를 수수료로 차감</p>
+                      </div>
+                    </div>
+                  )}
+                  {feeSeparate && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelCls}>배송 수수료율 (%)</label>
+                        <input type="number"
+                          value={customValues['delivery_rate_pct'] ?? ''}
+                          onChange={(e) => setCustomValues((prev) => ({ ...prev, delivery_rate_pct: e.target.value }))}
+                          placeholder="0" className={`${inputCls} font-data`} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>반품 수수료율 (%)</label>
+                        <input type="number"
+                          value={customValues['return_rate_pct'] ?? ''}
+                          onChange={(e) => setCustomValues((prev) => ({ ...prev, return_rate_pct: e.target.value }))}
+                          placeholder="0" className={`${inputCls} font-data`} />
+                      </div>
+                    </div>
+                  )}
+                  {!feeSame && !feeSeparate && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelCls}>배송/반품 수수료율 (%)</label>
+                        <input type="number"
+                          value={customValues['delivery_rate_pct'] ?? ''}
+                          onChange={(e) => setCustomValues((prev) => ({ ...prev, delivery_rate_pct: e.target.value }))}
+                          placeholder="0" className={`${inputCls} font-data`} />
+                        <p className="text-[11px] text-on-surface-variant/60 mt-1 font-korean">매출액에서 해당 %를 수수료로 차감</p>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ═══ 고정급여 입력 (fixed_salary) ═══ */}
+              {rateMode === 'fixed_salary' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelCls}>배송/반품 월 고정 금액 (원)</label>
+                    <input type="number"
+                      value={customValues['delivery_fixed_salary'] ?? ''}
+                      onChange={(e) => setCustomValues((prev) => ({ ...prev, delivery_fixed_salary: e.target.value }))}
+                      placeholder="0" className={`${inputCls} font-data`} />
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── 집하 카드 (별도 유지) ── */}
+        {fieldConfig.items.pickup?.enabled && (() => {
+          const cfg = fieldConfig.items.pickup;
+          const rateMode = cfg.rate_mode;
+          return (
+            <div className="p-4 rounded-xl bg-surface-container-low/50 border border-outline-variant/10 space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-secondary/10 text-secondary">집하</span>
+                <span className="text-xs text-on-surface-variant font-korean">
+                  {rateMode === 'unit_price' ? '수량 × 단가' :
+                   rateMode === 'percentage' ? '매출 × 요율 (수수료% 차감)' :
+                   rateMode === 'fixed_salary' ? '고정 급여' : '—'}
+                </span>
+              </div>
+
+              {rateMode === 'unit_price' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelCls}>집하 단가 (원/건)</label>
+                    <input type="number"
+                      value={customValues['pickup_unit_price'] ?? ''}
+                      onChange={(e) => setCustomValues((prev) => ({ ...prev, pickup_unit_price: e.target.value }))}
+                      placeholder="0" className={`${inputCls} font-data`} />
+                  </div>
+                </div>
+              )}
+
+              {rateMode === 'percentage' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelCls}>집하 수수료율 (%)</label>
+                    <input type="number"
+                      value={customValues['pickup_rate_pct'] ?? ''}
+                      onChange={(e) => setCustomValues((prev) => ({ ...prev, pickup_rate_pct: e.target.value }))}
+                      placeholder="0" className={`${inputCls} font-data`} />
+                    <p className="text-[11px] text-on-surface-variant/60 mt-1 font-korean">매출액에서 해당 %를 수수료로 차감</p>
+                  </div>
+                </div>
+              )}
+
+              {rateMode === 'fixed_salary' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelCls}>집하 월 고정 금액 (원)</label>
+                    <input type="number"
+                      value={customValues['pickup_fixed_salary'] ?? ''}
+                      onChange={(e) => setCustomValues((prev) => ({ ...prev, pickup_fixed_salary: e.target.value }))}
+                      placeholder="0" className={`${inputCls} font-data`} />
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* 활성화된 항목 없을 때 안내 */}
+        {!fieldConfig.items.delivery?.enabled && !fieldConfig.items.return?.enabled && !fieldConfig.items.pickup?.enabled && (
+          <div className="text-center py-4">
+            <p className="text-sm text-on-surface-variant/60 font-korean">
+              카테고리 설정에서 배송/반품/집하 항목을 활성화해주세요
+            </p>
+            <button onClick={() => window.open(`/portal/principals/${principalId}`, '_blank')}
+              className="mt-2 text-xs text-primary font-semibold hover:underline font-korean">
+              카테고리 설정 바로가기 →
+            </button>
+          </div>
+        )}
+
+        {/* ═══ 수익항목(좌) + 차감항목(우) 나란히 배치 ═══ */}
+        <div className="pt-4 border-t border-outline-variant/20">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* ── 좌측: 수익 항목 ── */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-primary/10 text-primary">수익</span>
+                <span className="text-xs font-semibold text-on-surface font-korean">수익 항목</span>
+              </div>
+
+              {/* 커스텀 수입 항목 */}
+              {fieldConfig && (fieldConfig.custom_income_items ?? []).length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-on-surface-variant/60 font-korean">카테고리에 설정된 항목입니다. 기사별 값을 입력하세요.</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {(fieldConfig.custom_income_items ?? []).map((item: CustomIncomeItem) => (
+                      <div key={item.id}>
+                        <label className={labelCls}>
+                          {item.name} ({item.calc_method === 'fixed' ? '원' : '%'})
+                        </label>
+                        <input
+                          type="number"
+                          value={customValues[`income_${item.id}`] ?? String(item.default_value || '')}
+                          onChange={(e) => setCustomValues((prev) => ({ ...prev, [`income_${item.id}`]: e.target.value }))}
+                          placeholder={String(item.default_value || 0)}
+                          className={`${inputCls} font-data`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 인센티브 지급 설정 */}
+              <div className="space-y-2">
+                <p className="text-xs font-label font-medium text-on-surface-variant font-korean">인센티브 지급 설정</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelCls}>프레쉬백</label>
+                    <div className="flex items-center gap-1">
+                      <input type="number" value={freshPct} onChange={(e) => setFreshPct(e.target.value)}
+                        className="w-full h-10 px-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-data focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                      <span className="text-sm text-on-surface-variant">%</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className={labelCls}>인센티브</label>
+                    <div className="flex items-center gap-1">
+                      <input type="number" value={incentivePct} onChange={(e) => setIncentivePct(e.target.value)}
+                        className="w-full h-10 px-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-data focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                      <span className="text-sm text-on-surface-variant">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 수입항목 없을 때 안내 */}
+              {(!fieldConfig || (fieldConfig.custom_income_items ?? []).length === 0) && (
+                <p className="text-sm text-on-surface-variant/40 font-korean py-2">카테고리 설정에서 추가 수입 항목을 등록하세요.</p>
+              )}
+            </div>
+
+            {/* ── 우측: 차감(공제) 항목 ── */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-error/10 text-error">차감</span>
+                  <span className="text-xs font-semibold text-on-surface font-korean">공제 항목</span>
+                </div>
+                <button onClick={addDeductionRow}
+                  className="h-7 px-3 rounded-lg bg-surface-container-high text-on-surface-variant font-label text-[11px] hover:bg-surface-container-highest transition-colors font-korean">
+                  + 추가
+                </button>
+              </div>
+
+              {deductions.length === 0 ? (
+                <p className="text-sm text-on-surface-variant/40 font-korean py-2">
+                  등록된 공제 항목이 없습니다. 필요 시 추가하세요.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {deductions.map((ded, idx) => (
+                    <div key={idx} className="grid grid-cols-[1fr_auto_auto_24px] gap-2 items-center">
+                      <input type="text" placeholder="항목명" value={ded.name}
+                        onChange={(e) => updateDeduction(idx, 'name', e.target.value)}
+                        className="h-10 px-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                      <select value={ded.deduction_type}
+                        onChange={(e) => updateDeduction(idx, 'deduction_type', e.target.value)}
+                        className="h-10 px-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30">
+                        <option value="fixed">고정</option>
+                        <option value="per_unit">건당</option>
+                        <option value="percentage">%</option>
+                      </select>
+                      <div className="flex items-center gap-1">
+                        <input type="number" placeholder="0" value={ded.amount}
+                          onChange={(e) => updateDeduction(idx, 'amount', e.target.value)}
+                          className="w-24 h-10 px-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-data focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                        <span className="text-[11px] text-on-surface-variant shrink-0">
+                          {ded.deduction_type === 'percentage' ? '%' : '원'}
+                        </span>
+                      </div>
+                      <button onClick={() => removeDeductionRow(idx)}
+                        className="w-6 h-6 rounded text-on-surface-variant/30 hover:bg-error/10 hover:text-error flex items-center justify-center transition-colors">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+      ) : null}
+
+      {/* ═══ 5. 차량 정보 ═══ */}
+      <section className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-headline font-semibold text-on-surface font-korean">차량 정보</h2>
+          <select
+            value={vehicleOwner}
+            onChange={(e) => setVehicleOwner(e.target.value as 'self' | 'company')}
+            className="h-9 px-3 rounded-lg bg-surface-container-low text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <option value="self">자차 (본인 소유)</option>
+            <option value="company">회사차 (임대)</option>
+          </select>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <label className={labelCls}>차종</label>
+            <input type="text" value={vehicleType} onChange={(e) => setVehicleType(e.target.value)}
+              placeholder="차량 종류" className={`${inputCls} font-korean`} />
+          </div>
+          <div>
+            <label className={labelCls}>차량번호</label>
+            <input type="text" value={vehicleNumber} onChange={(e) => setVehicleNumber(e.target.value)}
+              placeholder="차량번호" className={`${inputCls} font-data`} />
+          </div>
+          <div>
+            <label className={labelCls}>연식</label>
+            <input type="text" value={vehicleYear} onChange={(e) => setVehicleYear(e.target.value)}
+              placeholder="2024" className={`${inputCls} font-data`} />
+          </div>
+        </div>
+
+        {vehicleOwner === 'company' && (
+          <>
+            <div className="pt-3 border-t border-outline-variant/20">
+              <p className="text-xs font-medium text-on-surface-variant mb-3 font-korean">임대 조건</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <label className={labelCls}>차대번호</label>
+                <input type="text" value={vehicleVin} onChange={(e) => setVehicleVin(e.target.value)}
+                  placeholder="차대번호" className={`${inputCls} font-data`} />
+              </div>
+              <div>
+                <label className={labelCls}>인도 시 주행거리 (km)</label>
+                <input type="number" value={vehicleMileage} onChange={(e) => setVehicleMileage(e.target.value)}
+                  placeholder="주행거리 (km)" className={`${inputCls} font-data`} />
+              </div>
+              <div>
+                <label className={labelCls}>월 임대료 (원)</label>
+                <input type="number" value={vehicleRentMonthly} onChange={(e) => setVehicleRentMonthly(e.target.value)}
+                  placeholder="월 임대료" className={`${inputCls} font-data`} />
+                <p className="text-[11px] text-on-surface-variant/60 mt-1 font-korean">정산 시 수수료에서 자동 공제됩니다</p>
+              </div>
+              <div>
+                <label className={labelCls}>보증금 (원)</label>
+                <input type="number" value={vehicleDeposit} onChange={(e) => setVehicleDeposit(e.target.value)}
+                  placeholder="보증금" className={`${inputCls} font-data`} />
+              </div>
+              <div>
+                <label className={labelCls}>보험료 부담</label>
+                <select value={vehicleInsuranceBy} onChange={(e) => setVehicleInsuranceBy(e.target.value as 'lessor' | 'lessee')}
+                  className={`${inputCls} font-korean`}>
+                  <option value="lessor">임대인 (영업점) 부담</option>
+                  <option value="lessee">임차인 (기사) 부담</option>
+                </select>
+              </div>
+            </div>
+          </>
+        )}
+      </section>
+
+      {/* ═══ 7. 계약서 전송 ═══ */}
+      {principalId && contractTemplates.length > 0 ? (
+      <section className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 space-y-4">
+        <div>
+          <h2 className="text-base font-headline font-semibold text-on-surface font-korean">계약서 전송</h2>
+          <p className="text-xs text-on-surface-variant/60 mt-0.5 font-korean">
+            등록 완료 시 선택된 계약서가 기사 앱으로 즉시 전송됩니다
+          </p>
+        </div>
+
+        {/* 계약 기간 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className={labelCls}>계약 시작일</label>
+            <input type="date" value={contractStartDate}
+              onChange={(e) => setContractStartDate(e.target.value)}
+              className={`${inputCls} font-data`} />
+          </div>
+          <div>
+            <label className={labelCls}>계약 종료일</label>
+            <input type="date" value={contractEndDate}
+              onChange={(e) => setContractEndDate(e.target.value)}
+              className={`${inputCls} font-data`} />
+            <p className="text-[11px] text-on-surface-variant/60 mt-1 font-korean">비워두면 계약서에 종료일이 표시되지 않습니다</p>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          {contractTemplates.map((tmpl) => {
+            const checked = selectedTemplateIds.has(tmpl.id);
+            return (
+              <label
+                key={tmpl.id}
+                className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                  checked ? 'border-primary/40 bg-primary/5' : 'border-outline-variant/20 hover:border-outline-variant/40'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => {
+                    setSelectedTemplateIds((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(tmpl.id)) next.delete(tmpl.id);
+                      else next.add(tmpl.id);
+                      return next;
+                    });
+                  }}
+                  className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/30"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-body font-semibold text-on-surface font-korean">{tmpl.title}</p>
+                  {tmpl.principals?.name && (
+                    <p className="text-xs text-on-surface-variant/60 font-korean">{tmpl.principals.name}</p>
+                  )}
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-on-surface-variant/30 shrink-0">
+                  <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                </svg>
+              </label>
+            );
+          })}
+        </div>
+
+        {selectedTemplateIds.size > 0 && (
+          <div className="bg-tertiary/5 rounded-xl p-3 border border-tertiary/10">
+            <p className="text-[10px] text-tertiary font-korean font-semibold">
+              {selectedTemplateIds.size}건의 계약서가 기사 등록 완료 시 자동 전송됩니다
+            </p>
+            <p className="text-[10px] text-on-surface-variant/60 font-korean mt-0.5">
+              기사 정보(이름, 전화번호, 단가, 대리점명, 사업자정보, 계약기간 등)가 계약서에 자동 입력됩니다
+            </p>
+          </div>
+        )}
+      </section>
+      ) : principalId && contractTemplates.length === 0 ? (
+      <section className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6">
+        <div className="text-center space-y-2">
+          <p className="text-sm text-on-surface-variant font-korean">등록된 계약서 템플릿이 없습니다</p>
+          <p className="text-xs text-on-surface-variant/50 font-korean">
+            계약서 관리 &gt; 템플릿에서 계약서를 먼저 등록하세요
+          </p>
+        </div>
+      </section>
+      ) : null}
+
+      {/* ═══ Submit ═══ */}
+      <div className="flex items-center justify-between">
+        <button onClick={() => router.push('/portal/drivers')}
+          className="h-11 px-6 rounded-xl bg-surface-container-high text-on-surface-variant font-label text-sm hover:bg-surface-container-highest transition-colors font-korean">
+          취소
+        </button>
+        <button onClick={handleSubmit}
+          disabled={saving || !name.trim() || !phone.trim() || !principalId}
+          className="h-11 px-8 rounded-xl bg-power-gradient text-white font-label font-semibold text-sm hover:shadow-lg transition-shadow disabled:opacity-50 font-korean">
+          {saving ? '등록 중...' : '기사 등록'}
+        </button>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/renewal-check",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/integrity-check",
+      "schedule": "0 3 * * 0"
+    }
+  ]
+}
