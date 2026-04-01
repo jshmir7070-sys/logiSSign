@@ -7,6 +7,10 @@ import {
   StyleSheet,
   FlatList,
   RefreshControl,
+  Modal,
+  Image,
+  Linking,
+  Dimensions,
 } from 'react-native';
 import GradientView from '../../components/common/GradientView';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,10 +20,22 @@ import { useAuthStore } from '../../stores/authStore';
 import { formatKRW } from '../../lib/formatKRW';
 import { getDriverSettlements, type SettlementWithPrincipal } from '../../services/settlement.service';
 import { getDriverNotices, categoryLabel } from '../../services/notice.service';
+import { supabase } from '../../lib/supabase';
 import type { Row } from '../../types/database';
 import { colors, spacing, typography, borderRadius, shadows } from '../../constants/theme';
 
 type Notice = Row<'notices'>;
+
+/* ── 배너/팝업 타입 ── */
+interface BannerItem {
+  id: string;
+  type: 'popup' | 'banner';
+  image_url: string;
+  link_url: string | null;
+  is_active: boolean;
+}
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const STATUS_MAP = {
   draft: { label: '미정산', color: colors.error },
@@ -47,6 +63,9 @@ export default function HomeScreen() {
   const [settlements, setSettlements] = useState<SettlementWithPrincipal[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [banners, setBanners] = useState<BannerItem[]>([]);
+  const [popupBanner, setPopupBanner] = useState<BannerItem | null>(null);
+  const [showPopup, setShowPopup] = useState(false);
 
   const loadData = useCallback(async () => {
     if (driver?.id) {
@@ -55,6 +74,40 @@ export default function HomeScreen() {
     }
     const noticeResult = await getDriverNotices();
     if (noticeResult.data) setNotices(noticeResult.data.slice(0, 3));
+
+    // 배너/팝업 로드
+    const { data: bannerData } = await supabase
+      .from('notices')
+      .select('id, title, attachment_url, appstore_url, category')
+      .eq('status', 'published')
+      .not('attachment_url', 'is', null)
+      .order('published_at', { ascending: false })
+      .limit(5);
+
+    if (bannerData) {
+      const items: BannerItem[] = bannerData
+        .filter((b: Record<string, unknown>) => b.attachment_url)
+        .map((b: Record<string, unknown>) => ({
+          id: b.id as string,
+          type: (b.category === 'update' ? 'popup' : 'banner') as 'popup' | 'banner',
+          image_url: b.attachment_url as string,
+          link_url: b.appstore_url as string | null,
+          is_active: true,
+        }));
+
+      const stripBanners = items.filter(b => b.type === 'banner');
+      const popup = items.find(b => b.type === 'popup');
+
+      setBanners(stripBanners);
+      if (popup) {
+        const popupKey = `popup_shown_${popup.id}`;
+        const alreadyShown = false; // AsyncStorage 대신 세션 단위
+        if (!alreadyShown) {
+          setPopupBanner(popup);
+          setShowPopup(true);
+        }
+      }
+    }
   }, [driver?.id]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -117,6 +170,31 @@ export default function HomeScreen() {
             </View>
           </View>
         </GradientView>
+
+        {/* ── 띠배너 (홈 상단) ── */}
+        {banners.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.bannerScroll}
+            contentContainerStyle={styles.bannerScrollContent}
+          >
+            {banners.map((banner) => (
+              <TouchableOpacity
+                key={banner.id}
+                activeOpacity={0.9}
+                onPress={() => banner.link_url && Linking.openURL(banner.link_url)}
+                style={styles.bannerCard}
+              >
+                <Image
+                  source={{ uri: banner.image_url }}
+                  style={styles.bannerImage}
+                  resizeMode="cover"
+                />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
 
         <View style={styles.quickGrid}>
           {QUICK_ITEMS.map((item) => (
@@ -194,6 +272,33 @@ export default function HomeScreen() {
           )}
         </View>
       </ScrollView>
+      {/* ── 팝업 광고 모달 ── */}
+      <Modal visible={showPopup} transparent animationType="fade" onRequestClose={() => setShowPopup(false)}>
+        <View style={styles.popupOverlay}>
+          <View style={styles.popupContainer}>
+            {popupBanner && (
+              <TouchableOpacity
+                activeOpacity={0.95}
+                onPress={() => {
+                  if (popupBanner.link_url) Linking.openURL(popupBanner.link_url);
+                  setShowPopup(false);
+                }}
+              >
+                <Image
+                  source={{ uri: popupBanner.image_url }}
+                  style={styles.popupImage}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            )}
+            <View style={styles.popupButtons}>
+              <TouchableOpacity onPress={() => setShowPopup(false)} style={styles.popupCloseBtn}>
+                <Text style={styles.popupCloseText}>닫기</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -369,5 +474,56 @@ const styles = StyleSheet.create({
     ...typography.labelSmall,
     color: colors.outline,
     marginLeft: spacing.sm,
+  },
+  /* ── 띠배너 ── */
+  bannerScroll: {
+    marginTop: spacing.lg,
+  },
+  bannerScrollContent: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
+  bannerCard: {
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    ...shadows.sm,
+  },
+  bannerImage: {
+    width: SCREEN_WIDTH - spacing.lg * 2,
+    height: 80,
+    borderRadius: borderRadius.lg,
+  },
+  /* ── 팝업 광고 ── */
+  popupOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing['2xl'],
+  },
+  popupContainer: {
+    backgroundColor: colors.surfaceContainerLowest,
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    width: '100%',
+    maxWidth: 340,
+  },
+  popupImage: {
+    width: '100%',
+    height: 400,
+  },
+  popupButtons: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: colors.outlineVariant + '30',
+  },
+  popupCloseBtn: {
+    flex: 1,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+  },
+  popupCloseText: {
+    ...typography.labelLarge,
+    color: colors.onSurfaceVariant,
   },
 });
