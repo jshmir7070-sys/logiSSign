@@ -12,6 +12,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: '대시보드', icon: 'dashboard', href: '/admin/dashboard' },
   { label: '구독사 관리', icon: 'apartment', href: '/admin/agencies' },
+  { label: '계약서 템플릿', icon: 'description', href: '/admin/templates' },
   { label: '구독/결제', icon: 'payments', href: '/admin/billing' },
   { label: '매출 분석', icon: 'bar_chart', href: '/admin/revenue' },
   { label: '공지 관리', icon: 'campaign', href: '/admin/notices' },
