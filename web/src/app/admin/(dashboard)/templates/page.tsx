@@ -23,6 +23,9 @@ export default function AdminTemplatesPage() {
   const [formTitle, setFormTitle] = useState('');
   const [formContent, setFormContent] = useState('');
   const [formCategory, setFormCategory] = useState('standard');
+  const [formDescription, setFormDescription] = useState('');
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiExtracting, setAiExtracting] = useState(false);
 
   const supabase = createBrowserSupabaseClient();
 
@@ -43,8 +46,51 @@ export default function AdminTemplatesPage() {
     setFormTitle('');
     setFormContent('');
     setFormCategory('standard');
+    setFormDescription('');
     setShowForm(false);
     setEditingId(null);
+  };
+
+  // AI 본문 생성
+  const handleAiGenerate = async () => {
+    if (!formTitle.trim()) { alert('제목을 먼저 입력하세요'); return; }
+    setAiGenerating(true);
+    try {
+      const res = await fetch('/api/ai/generate-template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: formTitle, category: formCategory, description: formDescription }),
+      });
+      const data = await res.json();
+      if (data.error) { alert('AI 생성 실패: ' + data.error); }
+      else if (data.content) { setFormContent(data.content); }
+    } catch { alert('AI 요청 실패'); }
+    setAiGenerating(false);
+  };
+
+  // AI 문서 추출
+  const handleAiExtract = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAiExtracting(true);
+    try {
+      const text = await file.text();
+      const res = await fetch('/api/ai/extract-document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, fileName: file.name }),
+      });
+      const data = await res.json();
+      if (data.error) { alert('문서 분석 실패: ' + data.error); }
+      else {
+        if (data.content) setFormContent(data.content);
+        if (data.detectedVariables?.length) {
+          alert(`감지된 변수: ${data.detectedVariables.join(', ')}\n\n본문에 {{변수}} 형태로 자동 삽입되었습니다.`);
+        }
+      }
+    } catch { alert('문서 분석 요청 실패'); }
+    setAiExtracting(false);
+    e.target.value = '';
   };
 
   const handleEdit = (tmpl: SystemTemplate) => {
@@ -160,6 +206,35 @@ export default function AdminTemplatesPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* AI 도구 */}
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-violet-50 to-blue-50 border border-violet-200/30">
+            <span className="text-lg">🤖</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-violet-700 font-korean">AI 도우미</p>
+              <p className="text-[11px] text-violet-600/60 font-korean">제목과 분류를 입력 후 AI로 초안 생성하거나, 기존 문서를 업로드하여 변환</p>
+            </div>
+            <button
+              onClick={handleAiGenerate}
+              disabled={aiGenerating || !formTitle.trim()}
+              className="h-9 px-4 rounded-lg bg-violet-600 text-white text-xs font-semibold hover:bg-violet-700 disabled:opacity-40 transition-colors font-korean shrink-0"
+            >
+              {aiGenerating ? '생성 중...' : '✨ AI 초안 생성'}
+            </button>
+            <label className="h-9 px-4 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors font-korean shrink-0 flex items-center cursor-pointer">
+              {aiExtracting ? '분석 중...' : '📄 문서 변환'}
+              <input type="file" accept=".txt,.md,.docx" className="hidden" onChange={handleAiExtract} disabled={aiExtracting} />
+            </label>
+          </div>
+
+          {/* 추가 설명 (AI용) */}
+          <div>
+            <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">
+              AI 추가 지시사항 <span className="text-on-surface-variant/50">(선택 — AI 생성 시 참고)</span>
+            </label>
+            <input type="text" value={formDescription} onChange={e => setFormDescription(e.target.value)}
+              placeholder="예) 차량 임대 조건 포함, 야간배송 수당 조항 추가" className={inputCls} />
           </div>
 
           {/* 본문 */}
