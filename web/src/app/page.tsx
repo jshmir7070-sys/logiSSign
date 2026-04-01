@@ -227,6 +227,7 @@ export default function ComingSoonHomePage() {
         .logo-image {
           max-width: 360px;
           height: auto;
+          mix-blend-mode: screen;
         }
         .badge {
           display: inline-flex;
