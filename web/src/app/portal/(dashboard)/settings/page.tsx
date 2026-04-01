@@ -38,8 +38,8 @@ import {
   DELIVERY_STATUS_COLORS,
 } from '@/services/document-send.service';
 
-type SettingsTab = 'profile' | 'category' | 'seal' | 'documents' | 'billing' | 'notification' | 'admins';
-const VALID_TABS: SettingsTab[] = ['profile', 'category', 'seal', 'documents', 'billing', 'notification', 'admins'];
+type SettingsTab = 'profile' | 'category' | 'seal' | 'billing' | 'notification' | 'admins';
+const VALID_TABS: SettingsTab[] = ['profile', 'category', 'seal', 'billing', 'notification', 'admins'];
 
 export default function PortalSettingsPage() {
   const searchParams = useSearchParams();
@@ -68,7 +68,6 @@ export default function PortalSettingsPage() {
     { id: 'admins' as const, label: '관리자 계정' },
     { id: 'category' as const, label: '카테고리 관리' },
     { id: 'seal' as const, label: '도장/서명' },
-    { id: 'documents' as const, label: '문서 관리' },
     { id: 'billing' as const, label: '구독/결제' },
     { id: 'notification' as const, label: '알림 설정' },
   ];
@@ -120,7 +119,6 @@ export default function PortalSettingsPage() {
       {activeTab === 'admins' && agencyId && <AdminsTab agencyId={agencyId} plan={userPlan} />}
       {activeTab === 'category' && agencyId && <CategoryTab agencyId={agencyId} />}
       {activeTab === 'seal' && agencyId && <SealTab agencyId={agencyId} />}
-      {activeTab === 'documents' && agencyId && <DocumentsTab agencyId={agencyId} />}
       {activeTab === 'billing' && <BillingTab />}
       {activeTab === 'notification' && <NotificationTab />}
     </div>

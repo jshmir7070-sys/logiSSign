@@ -36,6 +36,7 @@ CREATE TABLE agencies (
   invite_code TEXT UNIQUE,
   excel_config JSONB,        -- 엑셀 업로드 컬럼 매핑 설정
   field_config JSONB,        -- 커스텀 필드 설정
+  templates_locked BOOLEAN DEFAULT false,  -- 템플릿 선택 확정 여부 (true면 변경 불가)
   created_at TIMESTAMPTZ DEFAULT now()
 );
 

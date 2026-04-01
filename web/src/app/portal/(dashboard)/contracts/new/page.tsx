@@ -43,6 +43,8 @@ export default function NewContractPage() {
 
   const [selectedDriverIds, setSelectedDriverIds] = useState<Set<string>>(new Set());
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<Set<string>>(new Set());
+  const [selectedDocIds, setSelectedDocIds] = useState<Set<string>>(new Set());
+  const [documents, setDocuments] = useState<{ id: string; title: string; field_count: number }[]>([]);
   const [contractStartDate, setContractStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [contractEndDate, setContractEndDate] = useState('');
 
@@ -86,6 +88,25 @@ export default function NewContractPage() {
         setSelectedTemplateIds(new Set(res.data.map((t) => t.id)));
       }
     });
+
+    // 외부문서 조회
+    supabase
+      .from('document_files')
+      .select('id, title')
+      .eq('agency_id', agencyId)
+      .in('status', ['draft', 'ready'])
+      .order('created_at', { ascending: false })
+      .then(async ({ data: docFiles }) => {
+        const docs: { id: string; title: string; field_count: number }[] = [];
+        for (const doc of (docFiles ?? [])) {
+          const { count } = await supabase
+            .from('document_sign_fields')
+            .select('id', { count: 'exact', head: true })
+            .eq('document_file_id', doc.id);
+          docs.push({ id: doc.id, title: doc.title, field_count: count ?? 0 });
+        }
+        setDocuments(docs);
+      });
 
     // 기사 조회 — 해당 카테고리 소속 기사 + 미분류 기사
     supabase
@@ -183,6 +204,23 @@ export default function NewContractPage() {
       );
       if (error) totalFailed += 1;
       else totalSent += created;
+    }
+
+    // 외부문서 전송
+    if (selectedDocIds.size > 0) {
+      const { sendDocuments } = await import('@/services/document-send.service');
+      for (const docId of Array.from(selectedDocIds)) {
+        const res = await sendDocuments({
+          agencyId,
+          driverIds: Array.from(selectedDriverIds),
+          sendType: 'general',
+          sendMethod: 'push',
+          title: documents.find(d => d.id === docId)?.title ?? '문서',
+          documentFileId: docId,
+        });
+        if (res.error) totalFailed += 1;
+        else totalSent += res.total;
+      }
     }
 
     setResult({ sent: totalSent, failed: totalFailed });
@@ -350,10 +388,58 @@ export default function NewContractPage() {
         </section>
       )}
 
-      {/* 4. 계약 기간 */}
-      {principalId && selectedDriverIds.size > 0 && selectedTemplateIds.size > 0 && (
+      {/* 4. 외부문서 선택 (선택사항) */}
+      {principalId && documents.length > 0 && (
         <section className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 space-y-4">
-          <h2 className="text-base font-headline font-semibold text-on-surface font-korean">4. 계약 기간</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-headline font-semibold text-on-surface font-korean">
+              4. 외부문서 선택 <span className="text-xs text-on-surface-variant font-normal">(선택사항)</span>
+            </h2>
+            <span className="text-xs text-on-surface-variant font-korean">{selectedDocIds.size}개 선택</span>
+          </div>
+          <p className="text-xs text-on-surface-variant font-korean -mt-2">
+            업로드한 외부문서(PDF)를 함께 발송합니다. 기사가 설정된 위치에 서명/입력합니다.
+          </p>
+          <div className="space-y-2">
+            {documents.map((doc) => {
+              const checked = selectedDocIds.has(doc.id);
+              return (
+                <label
+                  key={doc.id}
+                  className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                    checked ? 'border-tertiary/40 bg-tertiary/5' : 'border-outline-variant/15 hover:border-outline-variant/30'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => {
+                      setSelectedDocIds((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(doc.id)) next.delete(doc.id); else next.add(doc.id);
+                        return next;
+                      });
+                    }}
+                    className="w-4 h-4 rounded accent-tertiary"
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm font-body font-semibold text-on-surface font-korean">{doc.title}</p>
+                    <p className="text-xs text-on-surface-variant font-korean mt-0.5">
+                      서명 필드 {doc.field_count}개 배치됨
+                    </p>
+                  </div>
+                  <Badge label="외부문서" variant="warning" />
+                </label>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* 5. 계약 기간 */}
+      {principalId && selectedDriverIds.size > 0 && (selectedTemplateIds.size > 0 || selectedDocIds.size > 0) && (
+        <section className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 space-y-4">
+          <h2 className="text-base font-headline font-semibold text-on-surface font-korean">5. 계약 기간</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>계약 시작일</label>
@@ -372,23 +458,27 @@ export default function NewContractPage() {
       )}
 
       {/* 발송 요약 + 버튼 */}
-      {selectedDriverIds.size > 0 && selectedTemplateIds.size > 0 && (
+      {selectedDriverIds.size > 0 && (selectedTemplateIds.size > 0 || selectedDocIds.size > 0) && (
         <div className="bg-tertiary/5 rounded-2xl border border-tertiary/10 p-6 space-y-4">
-          <div className="flex items-center gap-4 text-sm font-korean">
+          <div className="flex items-center gap-4 text-sm font-korean flex-wrap">
             <span className="text-on-surface-variant">발송 대상: <strong className="text-on-surface">{selectedDriverIds.size}명</strong></span>
-            <span className="text-on-surface-variant">계약서: <strong className="text-on-surface">{selectedTemplateIds.size}건</strong></span>
-            <span className="text-on-surface-variant">총: <strong className="text-primary">{selectedDriverIds.size * selectedTemplateIds.size}건 발송</strong></span>
+            {selectedTemplateIds.size > 0 && (
+              <span className="text-on-surface-variant">계약서: <strong className="text-on-surface">{selectedTemplateIds.size}건</strong></span>
+            )}
+            {selectedDocIds.size > 0 && (
+              <span className="text-on-surface-variant">외부문서: <strong className="text-tertiary">{selectedDocIds.size}건</strong></span>
+            )}
+            <span className="text-on-surface-variant">총: <strong className="text-primary">{selectedDriverIds.size * (selectedTemplateIds.size + selectedDocIds.size)}건 발송</strong></span>
           </div>
           <p className="text-xs text-on-surface-variant font-korean">
-            기사 정보(이름, 전화번호, 사업자정보, 계약기간 등)가 계약서에 자동 입력됩니다.
-            발송 즉시 기사 앱에 표시됩니다.
+            계약서는 기사 정보가 자동 입력되어 전송됩니다. 외부문서는 설정된 서명/입력 필드 그대로 전송됩니다.
           </p>
           <button
             onClick={handleSend}
             disabled={sending}
             className="w-full h-12 rounded-xl bg-power-gradient text-white font-label font-semibold text-sm hover:shadow-lg transition-shadow disabled:opacity-50 font-korean"
           >
-            {sending ? '발송 중...' : `${selectedDriverIds.size * selectedTemplateIds.size}건 계약서 발송`}
+            {sending ? '발송 중...' : `${selectedDriverIds.size * (selectedTemplateIds.size + selectedDocIds.size)}건 일괄 발송`}
           </button>
         </div>
       )}

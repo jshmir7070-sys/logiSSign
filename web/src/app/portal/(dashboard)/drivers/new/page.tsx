@@ -563,6 +563,7 @@ export default function NewDriverPage() {
             <AddressSearch
               value={address}
               label="주소"
+              inline
               onChange={(addr: AddressValue) => setAddress(addr.fullAddress)}
             />
           </div>
@@ -700,6 +701,7 @@ export default function NewDriverPage() {
                 <AddressSearch
                   value={businessAddress}
                   label="사업장주소"
+                  inline
                   onChange={(addr: AddressValue) => setBusinessAddress(addr.fullAddress)}
                 />
               </div>

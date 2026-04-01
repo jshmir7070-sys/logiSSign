@@ -41,7 +41,7 @@ const navItems: NavItem[] = [
     children: [
       { label: '계약서 목록', href: '/portal/contracts' },
       { label: '계약서 양식', href: '/portal/contracts/templates' },
-      { label: '외부문서 서명', href: '/portal/documents/field-editor' },
+      { label: '외부문서 관리', href: '/portal/documents' },
     ],
   },
   {

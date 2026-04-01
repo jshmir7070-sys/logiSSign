@@ -33,6 +33,8 @@ interface AddressSearchProps {
   required?: boolean
   disabled?: boolean
   className?: string
+  /** true이면 우편번호·주소·상세주소를 한 행에 가로 배치 */
+  inline?: boolean
 }
 
 const INPUT_CLS =
@@ -47,6 +49,7 @@ export default function AddressSearch({
   required = false,
   disabled = false,
   className = '',
+  inline = false,
 }: AddressSearchProps) {
   const [zonecode, setZonecode] = useState(zonecodeValue)
   const [address, setAddress] = useState(value)
@@ -163,7 +166,60 @@ export default function AddressSearch({
         {label}{required && <span className="text-error ml-0.5">*</span>}
       </label>
 
-      {/* 1행: 우편번호 + 돋보기 (입력창 안쪽 우측 아이콘) */}
+      {inline ? (
+        /* ── 인라인 모드: 우편번호 | 주소 | 상세주소 한 행 ── */
+        <div className="flex gap-2">
+          {/* 우편번호 */}
+          <div className="relative w-32 shrink-0">
+            <input
+              type="text"
+              readOnly
+              value={zonecode}
+              placeholder="우편번호"
+              onClick={openSearch}
+              disabled={disabled}
+              className={`w-full h-11 pl-4 pr-9 rounded-xl bg-surface-container-low text-on-surface text-sm font-data cursor-pointer placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-2 focus:ring-primary/30 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            />
+            <button
+              type="button"
+              onClick={openSearch}
+              disabled={disabled}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant/60 hover:text-on-surface transition-colors disabled:opacity-50"
+              aria-label="주소 검색"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
+              </svg>
+            </button>
+          </div>
+          {/* 주소 */}
+          <input
+            type="text"
+            readOnly
+            value={address}
+            placeholder="주소 검색 →"
+            onClick={openSearch}
+            disabled={disabled}
+            className={`flex-1 ${INPUT_CLS} cursor-pointer ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          />
+          {/* 상세주소 */}
+          <input
+            ref={detailRef}
+            type="text"
+            value={detail}
+            onChange={handleDetailChange}
+            onKeyDown={handleDetailKeyDown}
+            onBlur={() => emitChange(address, detail, zonecode, roadAddress, jibunAddress, buildingName)}
+            placeholder="상세주소"
+            disabled={disabled || !address}
+            className={`flex-1 ${INPUT_CLS} ${!address ? 'opacity-40' : ''}`}
+          />
+        </div>
+      ) : (
+        /* ── 기본 모드: 세로 3줄 ── */
+        <>
+          {/* 1행: 우편번호 + 돋보기 */}
       <div className="relative w-40">
         <input
           type="text"
@@ -216,6 +272,8 @@ export default function AddressSearch({
             className={INPUT_CLS}
           />
         </div>
+      )}
+        </>
       )}
 
       {/* 주소 검색 모달 오버레이 — react-daum-postcode 사용 */}
