@@ -606,6 +606,57 @@ export default function DriverDetailPage() {
           </div>
         )}
       </div>
+
+      {/* ═══ Section 4: 서류 관리 ═══ */}
+      <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 mt-6">
+        <h2 className="text-base font-headline font-semibold text-on-surface font-korean mb-4">
+          📎 서류 관리
+          <span className="ml-2 text-xs font-label text-on-surface-variant font-normal">
+            (기사가 앱에서 업로드)
+          </span>
+        </h2>
+        {driverDocs.length === 0 ? (
+          <p className="text-sm text-on-surface-variant/60 font-korean py-4 text-center">
+            기사가 앱에서 서류를 업로드하면 여기에 표시됩니다
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {driverDocs.map((doc, i) => {
+              const typeLabels: Record<string, string> = {
+                vehicle_registration: '차량등록증',
+                license: '운전면허증',
+                cargo_license: '화물운송자격증',
+                bankbook: '통장사본',
+                insurance: '보험증권',
+                id_card: '신분증',
+                business_reg: '사업자등록증',
+                other: '기타',
+              };
+              return (
+                <a
+                  key={i}
+                  href={doc.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-4 rounded-xl border border-outline-variant/15 hover:border-primary/30 hover:bg-primary/[0.02] transition-all"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-tertiary/10 flex items-center justify-center shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-on-surface font-korean">{typeLabels[doc.type] ?? doc.title ?? doc.type}</p>
+                    <p className="text-xs text-on-surface-variant font-data">{new Date(doc.uploaded_at).toLocaleDateString('ko-KR')}</p>
+                  </div>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </a>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
