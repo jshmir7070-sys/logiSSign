@@ -44,7 +44,7 @@ export default function RegisterScreen() {
   const [agreePrivacy, setAgreePrivacy] = useState(false);
   const [agreeAge, setAgreeAge] = useState(false);
 
-  /** 초대코드 검증 → API route로 (RLS 우회) */
+  /** 초대코드 검증 → 서버 API로 검증 (가입 API의 사전 확인) */
   const validateInviteCode = async () => {
     if (!inviteCode.trim()) {
       Alert.alert('입력 오류', '초대코드를 입력해주세요.');
@@ -53,20 +53,21 @@ export default function RegisterScreen() {
 
     setIsValidating(true);
     try {
+      // driver-signup API에 validate 모드로 호출
       const APP_URL = process.env.EXPO_PUBLIC_APP_URL || 'https://logissign.com';
-      const res = await fetch(`${APP_URL}/api/auth/verify-invite`, {
+      const res = await fetch(`${APP_URL}/api/auth/driver-signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inviteCode: inviteCode.trim().toUpperCase() }),
+        body: JSON.stringify({ inviteCode: inviteCode.trim().toUpperCase(), validateOnly: true }),
       });
       const data = await res.json();
       setIsValidating(false);
 
-      if (!res.ok || !data.id) {
+      if (!res.ok || data.error) {
         Alert.alert('인증 실패', data.error || '유효하지 않은 초대코드입니다.');
         return;
       }
-      setAgency({ id: data.id, name: data.name });
+      setAgency({ id: data.agencyId ?? '', name: data.agencyName ?? '' });
     } catch {
       setIsValidating(false);
       Alert.alert('오류', '초대코드 검증 중 문제가 발생했습니다.');
@@ -104,54 +105,33 @@ export default function RegisterScreen() {
     setIsSubmitting(true);
 
     try {
-      // 1. Supabase Auth 계정 생성 (이메일)
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: {
-            name: name.trim(),
-            role: 'driver',
-            agency_id: agency?.id,
-          },
-        },
+      // 서버 API 한 번 호출로 Auth 생성 + driver 연결 원자적 처리
+      const APP_URL = process.env.EXPO_PUBLIC_APP_URL || 'https://logissign.com';
+      const res = await fetch(`${APP_URL}/api/auth/driver-signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          inviteCode: inviteCode.trim().toUpperCase(),
+          name: name.trim(),
+          phone: phone.trim(),
+          email: email.trim(),
+          password,
+          birthDate: birthDate.trim() || null,
+        }),
       });
 
-      if (signUpError) {
-        setIsSubmitting(false);
-        if (signUpError.message.includes('already registered')) {
-          Alert.alert('가입 실패', '이미 등록된 이메일입니다.');
-        } else {
-          Alert.alert('가입 실패', signUpError.message);
-        }
-        return;
-      }
+      const result = await res.json();
 
-      // 2. driver row 연결 — API route로 (RLS 우회)
-      if (signUpData.user) {
-        try {
-          const APP_URL = process.env.EXPO_PUBLIC_APP_URL || 'https://logissign.com';
-          await fetch(`${APP_URL}/api/auth/link-driver`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: signUpData.user.id,
-              agencyId: agency?.id,
-              name: name.trim(),
-              phone: phone.trim(),
-              email: email.trim(),
-              birthDate: birthDate.trim() || null,
-            }),
-          });
-        } catch {
-          // driver 연결 실패 — 다음 로그인 시 재시도 가능
-        }
+      if (!res.ok || !result.success) {
+        setIsSubmitting(false);
+        Alert.alert('가입 실패', result.error || '회원가입에 실패했습니다.');
+        return;
       }
 
       setIsSubmitting(false);
       Alert.alert(
         '가입 완료',
-        '회원가입이 완료되었습니다.\n로그인해주세요.',
+        `${result.agencyName} 소속으로 가입되었습니다.\n로그인해주세요.`,
         [{ text: '로그인하기', onPress: () => router.replace('/(auth)/login') }]
       );
     } catch (err) {

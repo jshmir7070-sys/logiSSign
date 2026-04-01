@@ -371,8 +371,8 @@ export async function finalizeDocumentSigning(
 
     if (uploadErr) throw new Error(`업로드 실패: ${uploadErr.message}`)
 
-    const { data: urlData } = supabase.storage.from('documents').getPublicUrl(path)
-    const signedPdfUrl = urlData.publicUrl
+    const { data: urlData } = await supabase.storage.from('documents').createSignedUrl(path, 60 * 60 * 24 * 365)
+    const signedPdfUrl = urlData?.signedUrl ?? null
 
     // 7. 상태 업데이트
     await supabase

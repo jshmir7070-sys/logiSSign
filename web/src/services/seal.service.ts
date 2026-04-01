@@ -1207,8 +1207,8 @@ export async function uploadDocumentFile(
   const path = `documents/${agencyId}/${Date.now()}_${file.name}`
   const { error } = await supabase.storage.from('documents').upload(path, file)
   if (error) return { url: null, error: error.message }
-  const { data: urlData } = supabase.storage.from('documents').getPublicUrl(path)
-  return { url: urlData.publicUrl, error: null }
+  const { data: urlData } = await supabase.storage.from('documents').createSignedUrl(path, 60 * 60 * 24 * 365)
+  return { url: urlData?.signedUrl ?? null, error: null }
 }
 
 /** 문서파일 레코드 저장 */

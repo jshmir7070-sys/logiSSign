@@ -37,8 +37,8 @@ export async function generateAuditCertificatePdf(
 
     if (uploadErr) throw new Error('감사추적인증서 업로드 실패')
 
-    const { data: urlData } = supabase.storage.from('contracts').getPublicUrl(fileName)
-    const pdfUrl = urlData?.publicUrl ?? null
+    const { data: urlData } = await supabase.storage.from('contracts').createSignedUrl(fileName, 60 * 60 * 24 * 365)
+    const pdfUrl = urlData?.signedUrl ?? null
 
     // contract_signatures에 감사인증서 URL 저장
     if (pdfUrl) {

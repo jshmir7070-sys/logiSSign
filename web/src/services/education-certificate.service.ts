@@ -126,8 +126,8 @@ export async function generateCertificatePdf(
 
     if (uploadErr) throw new Error('PDF 업로드 실패: ' + uploadErr.message)
 
-    const { data: urlData } = supabase.storage.from('education').getPublicUrl(fileName)
-    const pdfUrl = urlData?.publicUrl ?? null
+    const { data: urlData } = await supabase.storage.from('education').createSignedUrl(fileName, 60 * 60 * 24 * 365)
+    const pdfUrl = urlData?.signedUrl ?? null
 
     // 4. 이수 기록에 URL 저장
     if (pdfUrl) {

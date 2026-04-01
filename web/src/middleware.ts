@@ -12,9 +12,8 @@ const PUBLIC_ROUTES = [
   "/portal/signup", // 대리점 회원가입
   "/verify",        // 공개 진위확인 페이지
   "/api/verify",    // 공개 진위확인 API
-  "/api/auth/signup", // 회원가입 API
-  "/api/auth/verify-invite", // 초대코드 검증 (기사 가입 전)
-  "/api/auth/link-driver",   // 기사 driver row 연결 (가입 직후)
+  "/api/auth/signup", // 운영사 회원가입 API
+  "/api/auth/driver-signup", // 기사 가입 API (초대코드+계정+driver 연결 원자적)
   "/api/cron",      // CRON (자체 시크릿 인증)
   "/_next",
   "/favicon.ico",
