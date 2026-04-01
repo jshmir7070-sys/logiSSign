@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>logiSSign — 도장 만들기</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700;900&family=Nanum+Myeongjo:wght@400;700;800&family=Nanum+Gothic:wght@700;800;900&family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --seal-red: #C42B2B; --seal-red-dark: #9A1F1F;
+  --primary: #4F46E5; --primary-light: #6366F1;
+  --surface: #FAFAFA; --on-surface: #1C1B1F;
+  --on-surface-variant: #49454F; --outline-variant: #CAC4D0;
+  --amber: #F59E0B; --amber-dark: #D97706;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:linear-gradient(135deg,#f8f7ff,#f0f0f8);font-family:'Noto Serif KR',-apple-system,sans-serif;color:var(--on-surface);min-height:100vh}
+.app{max-width:780px;margin:0 auto;padding:32px 20px}
+.header{text-align:center;margin-bottom:28px}
+.header h1{font-size:28px;font-weight:900;background:linear-gradient(135deg,var(--seal-red),var(--seal-red-dark));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px}
+.header p{font-size:13px;color:var(--on-surface-variant)}
+.card{background:#fff;border-radius:20px;box-shadow:0 2px 20px rgba(0,0,0,.06),0 0 0 1px rgba(0,0,0,.03);overflow:hidden}
+
+/* 탭 */
+.tabs{display:flex;border-bottom:1px solid rgba(0,0,0,.06)}
+.tab{flex:1;padding:15px 12px;text-align:center;font-size:14px;font-weight:600;color:var(--on-surface-variant);cursor:pointer;position:relative;background:none;border:none;font-family:inherit;transition:color .2s}
+.tab:hover{color:var(--on-surface)}
+.tab.active{color:var(--on-surface)}
+.tab.active::after{content:'';position:absolute;bottom:0;left:20%;right:20%;height:3px;background:var(--amber);border-radius:3px 3px 0 0}
+
+/* 입력 영역 */
+.input-section{padding:20px 24px}
+.input-row{display:flex;align-items:center;gap:10px}
+.input-row input{flex:1;height:46px;padding:0 16px;border-radius:12px;border:1.5px solid var(--outline-variant);font-size:15px;font-family:inherit;color:var(--on-surface);transition:all .2s}
+.input-row input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+.input-row input::placeholder{color:#aaa}
+.generate-btn{height:46px;padding:0 24px;border-radius:12px;background:var(--seal-red);color:#fff;font-size:14px;font-weight:700;font-family:inherit;border:none;cursor:pointer;transition:all .2s;white-space:nowrap}
+.generate-btn:hover{background:var(--seal-red-dark)}
+.generate-btn:active{transform:scale(.97)}
+.generate-btn:disabled{opacity:.4;cursor:not-allowed}
+.corp-inputs{display:flex;gap:10px;margin-top:10px}
+.corp-inputs input{flex:1}
+.corp-inputs input.short{max-width:160px}
+
+/* 도장 그리드 */
+.seal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:0 24px 20px}
+.seal-cell{position:relative;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:16px;border:2.5px solid rgba(0,0,0,.06);cursor:pointer;transition:all .2s;background:#fff;overflow:hidden}
+.seal-cell:hover{border-color:rgba(196,43,43,.3);box-shadow:0 2px 12px rgba(196,43,43,.08)}
+.seal-cell.selected{border-color:var(--seal-red);background:rgba(196,43,43,.03);box-shadow:0 4px 20px rgba(196,43,43,.15)}
+.seal-cell.selected::after{content:'✓';position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;background:var(--seal-red);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.seal-cell canvas{width:82%;height:82%}
+.seal-label{position:absolute;bottom:4px;font-size:9px;color:var(--on-surface-variant);font-weight:600;background:rgba(255,255,255,.85);padding:1px 5px;border-radius:5px}
+
+/* 액션 버튼 */
+.actions{display:flex;justify-content:flex-end;gap:10px;padding:0 24px 20px}
+.btn-outline{height:42px;padding:0 18px;border-radius:12px;border:1.5px solid var(--outline-variant);background:#fff;color:var(--on-surface-variant);font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;transition:all .2s}
+.btn-outline:hover{border-color:var(--on-surface-variant);background:var(--surface)}
+.btn-primary{height:42px;padding:0 24px;border-radius:12px;border:none;background:var(--primary);color:#fff;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .2s}
+.btn-primary:hover{background:var(--primary-light)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+
+/* 모달 */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);z-index:100;align-items:center;justify-content:center}
+.overlay.show{display:flex}
+.modal{background:#fff;border-radius:24px;padding:32px;text-align:center;max-width:360px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.15);animation:popIn .3s ease}
+@keyframes popIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+.modal h3{font-size:17px;font-weight:700;margin-bottom:4px}
+.modal .desc{font-size:12px;color:var(--on-surface-variant);margin-bottom:16px}
+.modal-seal{width:180px;height:180px;margin:0 auto 16px;border-radius:16px;background:linear-gradient(45deg,#f5f5f5 25%,transparent 25%,transparent 75%,#f5f5f5 75%),linear-gradient(45deg,#f5f5f5 25%,transparent 25%,transparent 75%,#f5f5f5 75%);background-size:16px 16px;background-position:0 0,8px 8px;display:flex;align-items:center;justify-content:center;padding:12px}
+.modal-seal img{width:100%;height:100%;object-fit:contain}
+.modal-actions{display:flex;gap:10px;justify-content:center}
+.modal-actions button{flex:1}
+@media(max-width:600px){.app{padding:16px 12px}.seal-grid{grid-template-columns:repeat(4,1fr);gap:8px;padding:0 16px 16px}.input-section{padding:16px}.header h1{font-size:22px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>logiSSign 도장 만들기</h1>
+    <p>양각 원형 인감 — 일반 도장 8가지 서체 · 법인 도장 이중 원 구조</p>
+  </div>
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" data-tab="personal">일반 도장</button>
+      <button class="tab" data-tab="corporate">법인 도장</button>
+    </div>
+
+    <!-- 일반 도장 입력 -->
+    <div class="input-section" id="personalInput">
+      <div class="input-row">
+        <input type="text" id="nameInput" placeholder="이름 입력 (예: 홍길동인)" maxlength="12" value="홍길동인">
+        <button class="generate-btn" id="personalGenBtn">만들기</button>
+      </div>
+    </div>
+
+    <!-- 법인 도장 입력 -->
+    <div class="input-section" id="corpInput" style="display:none">
+      <div class="input-row">
+        <input type="text" id="companyInput" placeholder="회사명 (예: 주식회사 로지사인)" value="주식회사 로지사인">
+        <button class="generate-btn" id="corpGenBtn">만들기</button>
+      </div>
+      <div class="corp-inputs">
+        <input type="text" id="titleInput" class="short" placeholder="직함 (예: 대표이사인)" value="대표이사인">
+      </div>
+    </div>
+
+    <div id="sealGrid"></div>
+    <div class="actions" id="actions" style="display:none">
+      <button class="btn-outline" id="downloadBtn">PNG 다운로드</button>
+      <button class="btn-primary" id="selectBtn" disabled>등록하기</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3>도장이 등록되었습니다</h3>
+    <p class="desc" id="modalDesc"></p>
+    <div class="modal-seal"><img id="modalImg" src="" alt=""></div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal()">닫기</button>
+      <button class="btn-primary" onclick="downloadModal()">PNG 저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   렌더링 엔진 — 양각 전용
+   ═══════════════════════════════════════════════ */
+
+const SEAL_COLOR = '#C42B2B';
+const SEAL_COLOR_DARK = '#9A1F1F';
+
+/* ── 일반 도장 8가지 스타일 ── */
+const PERSONAL_STYLES = [
+  { id:'gibon',   name:'기본체',  font:'"Noto Serif KR",serif',     w:'900', sp:[.20,.12,.06], cs:1.0,  bs:1.0  },
+  { id:'myeongjo',name:'명조체',  font:'"Nanum Myeongjo",serif',    w:'800', sp:[.18,.10,.05], cs:1.05, bs:1.0  },
+  { id:'gothic',  name:'고딕체',  font:'"Nanum Gothic",sans-serif', w:'900', sp:[.26,.18,.10,.05],cs:.92,bs:1.1  },
+  { id:'batang',  name:'바탕체',  font:'"Gowun Batang",serif',      w:'700', sp:[.16,.09,.04], cs:1.02, bs:.9   },
+  { id:'heavy',   name:'중후체',  font:'"Noto Serif KR",serif',     w:'900', sp:[.30,.22,.15,.08,.03],cs:.88,bs:1.4},
+  { id:'elegant', name:'세필체',  font:'"Gowun Batang",serif',      w:'700', sp:[.10,.04],     cs:1.12, bs:.7   },
+  { id:'modern',  name:'모던체',  font:'"Nanum Gothic",sans-serif', w:'900', sp:[.20,.12,.06], cs:.95,  bs:1.0, ib:true },
+  { id:'classic', name:'고전체',  font:'"Nanum Myeongjo",serif',    w:'800', sp:[.22,.14,.08,.03],cs:.93,bs:.9,db:true },
+];
+
+/* ── 법인 도장 4가지 스타일 ── */
+const CORP_STYLES = [
+  { id:'corp1', name:'명조 법인',  font:'"Noto Serif KR",serif',     w:'900', sp:[.20,.12,.06], obw:1.2, ibw:1.0 },
+  { id:'corp2', name:'바탕 법인',  font:'"Gowun Batang",serif',      w:'700', sp:[.16,.09,.04], obw:1.0, ibw:0.8 },
+  { id:'corp3', name:'고딕 법인',  font:'"Nanum Gothic",sans-serif', w:'900', sp:[.24,.16,.08,.03], obw:1.1, ibw:1.0 },
+  { id:'corp4', name:'클래식 법인',font:'"Nanum Myeongjo",serif',    w:'800', sp:[.18,.10,.05], obw:0.9, ibw:0.7 },
+];
+
+
+/* ── 다중 stroke 두꺼운 글자 ── */
+function drawSealChar(ctx,char,x,y,fontSize,fontFam,fontW,strokePasses){
+  ctx.font=`${fontW} ${fontSize}px ${fontFam}`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle=SEAL_COLOR; ctx.strokeStyle=SEAL_COLOR;
+  ctx.lineJoin='round'; ctx.lineCap='round';
+  for(const ratio of strokePasses){
+    ctx.lineWidth=Math.max(1,fontSize*ratio);
+    ctx.strokeText(char,x,y);
+  }
+  ctx.fillText(char,x,y);
+}
+
+/* ── 원호 위 글자 (법인 외곽용) ── */
+function drawCharOnArc(ctx,char,cx,cy,r,angleDeg,fontSize,fontFam,fontW,strokePasses){
+  const rad=angleDeg*Math.PI/180 - Math.PI/2;
+  ctx.save();
+  ctx.translate(cx+r*Math.cos(rad), cy+r*Math.sin(rad));
+  ctx.rotate(rad+Math.PI/2);
+  ctx.font=`${fontW} ${fontSize}px ${fontFam}`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle=SEAL_COLOR; ctx.strokeStyle=SEAL_COLOR;
+  ctx.lineJoin='round'; ctx.lineCap='round';
+  for(const ratio of strokePasses){
+    ctx.lineWidth=Math.max(1,fontSize*ratio);
+    ctx.strokeText(char,0,0);
+  }
+  ctx.fillText(char,0,0);
+  ctx.restore();
+}
+
+/* ── 잉크 질감 ── */
+function addInkTexture(ctx,w,h){
+  const d=ctx.getImageData(0,0,w,h), px=d.data;
+  const cxI=w/2,cyI=h/2,maxD=Math.hypot(cxI,cyI);
+  for(let i=0;i<px.length;i+=4){
+    if(px[i+3]>0){
+      const n=Math.random();
+      if(n<.04)px[i+3]=Math.max(0,px[i+3]-40-~~(Math.random()*80));
+      else if(n<.09)px[i+3]=Math.max(0,px[i+3]-~~(Math.random()*35));
+      else if(n<.14)px[i+3]=Math.max(0,px[i+3]-~~(Math.random()*12));
+      const x=(i/4)%w,y=~~((i/4)/w);
+      if(Math.hypot(x-cxI,y-cyI)/maxD>.80&&Math.random()<.25)
+        px[i+3]=Math.max(0,px[i+3]-~~(Math.random()*50));
+    }
+  }
+  ctx.putImageData(d,0,0);
+}
+
+
+/* ═══════════ 일반 도장 렌더링 ═══════════ */
+
+function renderPersonalSeal(name,style,size){
+  const c=document.createElement('canvas'); c.width=size; c.height=size;
+  const ctx=c.getContext('2d');
+  const cx=size/2, cy=size/2, pad=size*.06;
+  const bw=size*.038*(style.bs||1);
+  const outerR=size/2-pad, usableR=outerR-bw*1.2;
+  const scale=style.cs||1;
+
+  ctx.lineWidth=bw; ctx.strokeStyle=SEAL_COLOR;
+  ctx.beginPath(); ctx.arc(cx,cy,outerR,0,Math.PI*2); ctx.stroke();
+  if(style.db){ctx.lineWidth=Math.max(1,bw*.4);ctx.beginPath();ctx.arc(cx,cy,outerR-bw*2,0,Math.PI*2);ctx.stroke();}
+  if(style.ib){ctx.lineWidth=Math.max(1,bw*.35);ctx.beginPath();ctx.arc(cx,cy,usableR*.93,0,Math.PI*2);ctx.stroke();}
+
+  const chars=name.replace(/\s/g,'');
+  const f=style.font, w=style.w, sp=style.sp;
+
+  if(chars.length===1){
+    drawSealChar(ctx,chars,cx,cy,usableR*1.7*scale,f,w,sp);
+  }else if(chars.length===2){
+    const fs=usableR*1.05*scale, g=fs*.52;
+    drawSealChar(ctx,chars[0],cx,cy-g,fs,f,w,sp);
+    drawSealChar(ctx,chars[1],cx,cy+g,fs,f,w,sp);
+  }else if(chars.length===3){
+    const fs=usableR*.82*scale, gv=fs*.50, gh=fs*.50;
+    drawSealChar(ctx,chars[0],cx,cy-gv,fs,f,w,sp);
+    drawSealChar(ctx,chars[1],cx-gh,cy+gv*.85,fs,f,w,sp);
+    drawSealChar(ctx,chars[2],cx+gh,cy+gv*.85,fs,f,w,sp);
+  }else if(chars.length===4){
+    const fs=usableR*.78*scale, gx=usableR*.38, gy=usableR*.38;
+    drawSealChar(ctx,chars[0],cx+gx,cy-gy,fs,f,w,sp);
+    drawSealChar(ctx,chars[1],cx+gx,cy+gy,fs,f,w,sp);
+    drawSealChar(ctx,chars[2],cx-gx,cy-gy,fs,f,w,sp);
+    drawSealChar(ctx,chars[3],cx-gx,cy+gy,fs,f,w,sp);
+  }else{
+    const half=Math.ceil(chars.length/2), fs=usableR*.52*scale, cg=usableR*.33;
+    const rCol=chars.slice(0,half), lCol=chars.slice(half);
+    const rStep=(usableR*1.5)/Math.max(rCol.length,1), rS=cy-(rCol.length-1)*rStep/2;
+    for(let i=0;i<rCol.length;i++) drawSealChar(ctx,rCol[i],cx+cg,rS+i*rStep,fs,f,w,sp);
+    const lStep=(usableR*1.5)/Math.max(lCol.length,1), lS=cy-(lCol.length-1)*lStep/2;
+    for(let i=0;i<lCol.length;i++) drawSealChar(ctx,lCol[i],cx-cg,lS+i*lStep,fs,f,w,sp);
+  }
+  addInkTexture(ctx,size,size);
+  return c;
+}
+
+
+/* ═══════════ 법인 도장 렌더링 (이중 원 + 원호 텍스트) ═══════════ */
+
+function renderCorporateSeal(companyName,centerTitle,style,size){
+  const c=document.createElement('canvas'); c.width=size; c.height=size;
+  const ctx=c.getContext('2d');
+  const cx=size/2, cy=size/2, pad=size*.06;
+
+  const outerBW=size*.038*(style.obw||1);
+  const innerBW=size*.025*(style.ibw||1);
+  const outerR=size/2-pad;
+  const innerR=outerR*.55;
+
+  /* 이중 원 */
+  ctx.lineWidth=outerBW; ctx.strokeStyle=SEAL_COLOR;
+  ctx.beginPath(); ctx.arc(cx,cy,outerR,0,Math.PI*2); ctx.stroke();
+  ctx.lineWidth=innerBW;
+  ctx.beginPath(); ctx.arc(cx,cy,innerR,0,Math.PI*2); ctx.stroke();
+
+  /* 외곽 원호에 회사명 배치 */
+  const ringR=(outerR+innerR)/2;
+  const ringFS=(outerR-innerR)*.60;
+  const starFS=ringFS*.50;
+  const company=companyName.replace(/\s/g,'');
+  const total=company.length+2; // ★ + 글자들 + ★
+  const arcSpan=Math.min(170+company.length*5,320);
+  const step=arcSpan/total;
+  const start=-(arcSpan/2);
+  const ringSP=style.sp.map(v=>v*.7); // 원호 글자는 약간 얇게
+
+  drawCharOnArc(ctx,'★',cx,cy,ringR, start+step*.5, starFS, style.font,style.w,ringSP);
+  for(let i=0;i<company.length;i++){
+    drawCharOnArc(ctx,company[i],cx,cy,ringR, start+step*(i+1.5), ringFS, style.font,style.w,ringSP);
+  }
+  drawCharOnArc(ctx,'★',cx,cy,ringR, start+step*(company.length+1.5), starFS, style.font,style.w,ringSP);
+
+  /* 내곽 원 안에 직함 */
+  const title=centerTitle.replace(/\s/g,'');
+  const usIR=innerR-innerBW*2;
+  const f=style.font, w=style.w, sp=style.sp;
+
+  // 4자 이상이면 십자 구분선
+  if(title.length>=4){
+    ctx.strokeStyle=SEAL_COLOR; ctx.lineWidth=Math.max(1,innerBW*.7);
+    const ext=usIR*.82;
+    ctx.beginPath(); ctx.moveTo(cx-ext,cy); ctx.lineTo(cx+ext,cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx,cy-ext); ctx.lineTo(cx,cy+ext); ctx.stroke();
+  }
+
+  if(title.length<=3){
+    const fs=usIR*.65;
+    const spacing=fs*1.05;
+    const totalH=title.length*spacing;
+    const startY=cy-totalH/2+spacing/2;
+    for(let i=0;i<title.length;i++)
+      drawSealChar(ctx,title[i],cx,startY+i*spacing,fs,f,w,sp);
+  }else if(title.length===4){
+    const fs=usIR*.55;
+    const gx=usIR*.32, gy=usIR*.32;
+    drawSealChar(ctx,title[0],cx+gx,cy-gy,fs,f,w,sp);
+    drawSealChar(ctx,title[1],cx+gx,cy+gy,fs,f,w,sp);
+    drawSealChar(ctx,title[2],cx-gx,cy-gy,fs,f,w,sp);
+    drawSealChar(ctx,title[3],cx-gx,cy+gy,fs,f,w,sp);
+  }else{
+    const fs=usIR*.42;
+    const colG=usIR*.30, spacing=fs*.95;
+    const col1=title.slice(0,3), col2=title.slice(3);
+    const s1=cy-spacing;
+    for(let i=0;i<col1.length;i++) drawSealChar(ctx,col1[i],cx+colG,s1+i*spacing,fs,f,w,sp);
+    const s2=cy-spacing*(col2.length-1)/2;
+    for(let i=0;i<col2.length;i++) drawSealChar(ctx,col2[i],cx-colG,s2+i*spacing,fs,f,w,sp);
+  }
+
+  addInkTexture(ctx,size,size);
+  return c;
+}
+
+
+/* ═══════════ UI ═══════════ */
+
+let currentTab='personal', variants=[], selectedId=null;
+
+const tabs=document.querySelectorAll('.tab');
+const sealGrid=document.getElementById('sealGrid');
+const actions=document.getElementById('actions');
+const selectBtn=document.getElementById('selectBtn');
+const downloadBtn=document.getElementById('downloadBtn');
+const overlay=document.getElementById('overlay');
+
+/* 탭 전환 */
+tabs.forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    tabs.forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    currentTab=tab.dataset.tab;
+    document.getElementById('personalInput').style.display=currentTab==='personal'?'':'none';
+    document.getElementById('corpInput').style.display=currentTab==='corporate'?'':'none';
+    clearGrid();
+  });
+});
+
+/* 일반 도장 생성 */
+document.getElementById('personalGenBtn').addEventListener('click',generatePersonal);
+document.getElementById('nameInput').addEventListener('keydown',e=>{if(e.key==='Enter')generatePersonal();});
+
+function generatePersonal(){
+  const name=document.getElementById('nameInput').value.trim();
+  if(!name)return;
+  variants=[]; selectedId=null;
+  sealGrid.className='seal-grid'; sealGrid.innerHTML='';
+  const SIZE=240;
+  PERSONAL_STYLES.forEach(s=>{
+    const canvas=renderPersonalSeal(name,s,SIZE);
+    const dataUri=canvas.toDataURL('image/png');
+    variants.push({id:s.id,name:s.name,canvas,dataUri});
+    addCell(s.id,s.name,canvas);
+  });
+  actions.style.display='flex'; selectBtn.disabled=true;
+}
+
+/* 법인 도장 생성 */
+document.getElementById('corpGenBtn').addEventListener('click',generateCorporate);
+document.getElementById('companyInput').addEventListener('keydown',e=>{if(e.key==='Enter')generateCorporate();});
+
+function generateCorporate(){
+  const company=document.getElementById('companyInput').value.trim();
+  const title=document.getElementById('titleInput').value.trim()||'대표이사인';
+  if(!company)return;
+  variants=[]; selectedId=null;
+  sealGrid.className='seal-grid'; sealGrid.innerHTML='';
+  const SIZE=240;
+  CORP_STYLES.forEach(s=>{
+    const canvas=renderCorporateSeal(company,title,s,SIZE);
+    const dataUri=canvas.toDataURL('image/png');
+    variants.push({id:s.id,name:s.name,canvas,dataUri});
+    addCell(s.id,s.name,canvas);
+  });
+  actions.style.display='flex'; selectBtn.disabled=true;
+}
+
+function addCell(id,name,canvas){
+  const cell=document.createElement('div');
+  cell.className='seal-cell'; cell.dataset.id=id;
+  cell.appendChild(canvas);
+  const label=document.createElement('span');
+  label.className='seal-label'; label.textContent=name;
+  cell.appendChild(label);
+  cell.addEventListener('click',()=>selectSeal(id));
+  sealGrid.appendChild(cell);
+}
+
+function clearGrid(){
+  sealGrid.innerHTML=''; sealGrid.className='';
+  actions.style.display='none'; variants=[]; selectedId=null;
+}
+
+function selectSeal(id){
+  selectedId=id;
+  document.querySelectorAll('.seal-cell').forEach(c=>c.classList.toggle('selected',c.dataset.id===id));
+  selectBtn.disabled=false;
+}
+
+selectBtn.addEventListener('click',()=>{
+  const v=variants.find(x=>x.id===selectedId);
+  if(!v)return;
+  document.getElementById('modalImg').src=v.dataUri;
+  document.getElementById('modalDesc').textContent=v.name;
+  overlay.classList.add('show');
+});
+
+downloadBtn.addEventListener('click',doDownload);
+function doDownload(){
+  const v=variants.find(x=>x.id===selectedId);
+  if(!v)return;
+  const a=document.createElement('a');
+  a.href=v.dataUri; a.download=`seal_${v.name}.png`; a.click();
+}
+function closeModal(){overlay.classList.remove('show')}
+function downloadModal(){doDownload();closeModal()}
+overlay.addEventListener('click',e=>{if(e.target===overlay)closeModal()});
+
+/* 자동 생성 */
+window.addEventListener('load',()=>setTimeout(generatePersonal,300));
+</script>
+</body>
+</html>
