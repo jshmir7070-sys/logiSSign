@@ -8,7 +8,11 @@ export default function ComingSoonHomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    const handleKeyDown = () => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // F5, Ctrl+R 등 브라우저 단축키는 무시
+      if (e.key === 'F5' || e.ctrlKey || e.metaKey || e.altKey) return;
+      // ESC, Tab 등 기능키 무시
+      if (['Escape', 'Tab', 'Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(e.key)) return;
       router.push('/about');
     };
     window.addEventListener('keydown', handleKeyDown);
