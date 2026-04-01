@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-  PieChart, Pie, Cell,
 } from 'recharts';
 
 function formatKRW(n: number) { return `₩${n.toLocaleString('ko-KR')}` }

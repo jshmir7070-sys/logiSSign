@@ -5,7 +5,6 @@ import Badge from '@/components/shared/Badge';
 import { toastSuccess, toastError, toastWarning } from '@/components/shared/Toast';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
 import { getPrincipals, type Principal, type ItemType, ITEM_LABELS, normalizeFieldConfig, buildExcelHeaders, type FieldConfig, type SettlementDisplayConfig, DEFAULT_SETTLEMENT_DISPLAY } from '@/services/principal.service';
-import * as XLSX from 'xlsx';
 import {
   getSettlements,
   getSettlementSummary,
@@ -288,6 +287,7 @@ export default function SettlementsGeneratePage() {
       }
     }
 
+    const XLSX = await import('xlsx');
     const ws = XLSX.utils.aoa_to_sheet(rows);
     ws['!cols'] = headers.map(() => ({ wch: 15 }));
     const wb = XLSX.utils.book_new();
@@ -307,6 +307,7 @@ export default function SettlementsGeneratePage() {
     const fc = normalizeFieldConfig(principal.field_config);
 
     const data = await file.arrayBuffer();
+    const XLSX = await import('xlsx');
     const wb = XLSX.read(data);
     const ws = wb.Sheets[wb.SheetNames[0]];
     const rows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(ws);

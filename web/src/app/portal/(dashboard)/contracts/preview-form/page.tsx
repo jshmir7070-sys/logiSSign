@@ -1,10 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import {
-  GOVERNMENT_FORM_TEMPLATE_IDS,
-  previewGovernmentFormPdf,
-} from '@/services/government-form-pdf.service'
 import type { ContractBindingData } from '@/services/contract.service'
 
 /**
@@ -62,6 +58,7 @@ export default function PreviewFormPage() {
     setPdfUrl(null)
 
     try {
+      const { previewGovernmentFormPdf } = await import('@/services/government-form-pdf.service')
       const url = await previewGovernmentFormPdf(
         selectedTemplate,
         SAMPLE_DATA as ContractBindingData

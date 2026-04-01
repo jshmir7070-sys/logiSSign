@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>logiSSign 3차 재검토 리포트 | 2026-04-01</title>
+<style>
+  :root { --bg:#0f1117; --surface:#1a1d27; --surface2:#242834; --border:#2e3344; --text:#e4e6ed; --dim:#8b8fa3; --accent:#5b8af5; --red:#f55b5b; --orange:#f5a05b; --yellow:#f5d45b; --green:#5bf58e; --purple:#a05bf5; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }
+  .container { max-width:1200px; margin:0 auto; padding:32px 24px; }
+  header { border-bottom:1px solid var(--border); padding-bottom:32px; margin-bottom:40px; }
+  header h1 { font-size:28px; font-weight:700; margin-bottom:8px; }
+  header .sub { font-size:15px; color:var(--accent); margin-bottom:4px; }
+  header .meta { color:var(--dim); font-size:14px; }
+  section { margin-bottom:48px; }
+  section h2 { font-size:20px; font-weight:600; margin-bottom:20px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+  section h3 { font-size:16px; font-weight:600; margin:24px 0 12px; color:var(--accent); }
+  .score-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:40px; }
+  .score-card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:20px; }
+  .score-card .label { font-size:13px; color:var(--dim); margin-bottom:8px; }
+  .score-card .value { font-size:32px; font-weight:700; }
+  .score-card .sub { font-size:12px; color:var(--dim); margin-top:4px; }
+  .sev { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; }
+  .sev.crit { background:rgba(245,91,91,.15); color:var(--red); }
+  .sev.high { background:rgba(245,160,91,.15); color:var(--orange); }
+  .sev.med { background:rgba(245,212,91,.15); color:var(--yellow); }
+  .sev.low { background:rgba(91,245,142,.15); color:var(--green); }
+  .sev.ok { background:rgba(91,245,142,.15); color:var(--green); }
+  .sev.new { background:rgba(160,91,245,.15); color:var(--purple); }
+  table { width:100%; border-collapse:collapse; margin:16px 0; font-size:14px; }
+  th,td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--border); }
+  th { color:var(--dim); font-weight:500; font-size:12px; text-transform:uppercase; letter-spacing:.5px; background:var(--surface); }
+  tr:hover td { background:var(--surface); }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:20px; margin:12px 0; }
+  .card.g { border-left:3px solid var(--green); }
+  .card.r { border-left:3px solid var(--red); }
+  .card.y { border-left:3px solid var(--yellow); }
+  .card.p { border-left:3px solid var(--purple); }
+  .card .t { font-weight:600; margin-bottom:8px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .card .b { font-size:14px; color:var(--dim); }
+  .card .b code { background:var(--surface2); padding:2px 6px; border-radius:3px; font-size:13px; color:var(--text); }
+  .card .f { margin-top:12px; padding-top:12px; border-top:1px solid var(--border); font-size:13px; }
+  .card .f strong { color:var(--green); }
+  .compare { display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; margin:20px 0; }
+  @media(max-width:768px){ .compare{grid-template-columns:1fr;} }
+  .compare-box { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:20px; text-align:center; }
+  .compare-box h4 { font-size:13px; color:var(--dim); margin-bottom:12px; }
+  .compare-box .big { font-size:42px; font-weight:700; }
+  .checklist { list-style:none; }
+  .checklist li { padding:8px 0; border-bottom:1px solid var(--border); font-size:14px; display:flex; align-items:flex-start; gap:8px; }
+  .checklist li:last-child { border:none; }
+  .ck { display:inline-block; width:18px; height:18px; border:2px solid var(--border); border-radius:3px; flex-shrink:0; margin-top:2px; text-align:center; line-height:14px; font-size:11px; }
+  .ck.done { background:var(--green); border-color:var(--green); color:var(--bg); }
+  .feature-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media(max-width:768px){ .feature-grid{grid-template-columns:1fr;} }
+  .fi { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:14px 16px; font-size:14px; display:flex; justify-content:space-between; align-items:center; }
+  .fi .st { font-size:12px; font-weight:600; }
+  .fi .st.done { color:var(--green); }
+  .fi .st.part { color:var(--orange); }
+  .fi .st.no { color:var(--red); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <div class="sub">3차 재검토 (Third Follow-up Review)</div>
+  <h1>logiSSign 프로젝트 3차 재검토 리포트</h1>
+  <div class="meta">검토일: 2026-04-01 &nbsp;|&nbsp; 최신 커밋: f3db1fe "P0 완료: 모바일 본인인증 포트원 연동, 포트원 토큰 캐싱, 결제 에러 정제" &nbsp;|&nbsp; 누적 커밋: 21건</div>
+</header>
+
+<!-- ============ EVOLUTION ============ -->
+<section>
+  <h2>검토 변천 추이</h2>
+  <div class="compare">
+    <div class="compare-box">
+      <h4>1차 검토</h4>
+      <div class="big" style="color:var(--orange)">78%</div>
+      <div style="color:var(--dim); margin-top:8px; font-size:13px">CRITICAL 4 / HIGH 4<br>보안 62/100</div>
+    </div>
+    <div class="compare-box">
+      <h4>2차 재검토</h4>
+      <div class="big" style="color:var(--green)">88%</div>
+      <div style="color:var(--dim); margin-top:8px; font-size:13px">CRITICAL 2 / HIGH 2<br>보안 79/100</div>
+    </div>
+    <div class="compare-box">
+      <h4>3차 재검토 (현재)</h4>
+      <div class="big" style="color:var(--green)">91%</div>
+      <div style="color:var(--dim); margin-top:8px; font-size:13px">CRITICAL 1(신규) / HIGH 1<br>보안 85/100</div>
+    </div>
+  </div>
+
+  <div class="score-grid">
+    <div class="score-card">
+      <div class="label">누적 해결 이슈</div>
+      <div class="value" style="color:var(--green)">11 / 14</div>
+      <div class="sub">1차부터 누적 CRITICAL+HIGH+P1 기준</div>
+    </div>
+    <div class="score-card">
+      <div class="label">Web 완성도</div>
+      <div class="value" style="color:var(--green)">93%</div>
+      <div class="sub">파일 손상 2건 복구 필요</div>
+    </div>
+    <div class="score-card">
+      <div class="label">Mobile 완성도</div>
+      <div class="value" style="color:var(--green)">85%</div>
+      <div class="sub">82% → 85% (+3%)</div>
+    </div>
+    <div class="score-card">
+      <div class="label">보안 점수</div>
+      <div class="value" style="color:var(--green)">85/100</div>
+      <div class="sub">79 → 85 (+6점)</div>
+    </div>
+    <div class="score-card">
+      <div class="label">잔여 배포 차단</div>
+      <div class="value" style="color:var(--red)">1건</div>
+      <div class="sub">파일 손상 (빌드 불가)</div>
+    </div>
+    <div class="score-card">
+      <div class="label">테스트 커버리지</div>
+      <div class="value" style="color:var(--red)">0%</div>
+      <div class="sub">여전히 테스트 없음</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ P0 TRACKING ============ -->
+<section>
+  <h2>이전 P0 이슈 최종 추적</h2>
+
+  <div class="card g">
+    <div class="t"><span class="sev ok">RESOLVED</span> 모바일 본인인증 — 포트원 V2 연동</div>
+    <div class="b">
+      <code>identity.service.ts</code>에서 개발모드 패스쓰루가 완전히 제거되고, 포트원 V2 본인인증 WebView 연동이 구현되었습니다. <code>Linking.openURL()</code>로 외부 브라우저 호출 후 3초 간격 폴링(최대 3분)으로 서버 검증 결과를 확인합니다. 단, 파일 마지막 부분(타임아웃 처리)이 잘려 있어 복구 필요합니다.
+    </div>
+  </div>
+
+  <div class="card g">
+    <div class="t"><span class="sev ok">RESOLVED</span> 결제 API — 포트원 토큰 + 에러 메시지 정제</div>
+    <div class="b">
+      <code>payment/route.ts</code>에서 포트원 API로 빌링 키 유효성 검증 구현. 에러 메시지가 <code>'카드 등록에 실패했습니다. 다시 시도해주세요.'</code>로 정제되어 내부 정보 노출 방지. 단, 파일 91행에서 잘려 있어(charge 액션 불완전) 복구 필요합니다.
+    </div>
+  </div>
+
+  <div class="card y">
+    <div class="t"><span class="sev med">PARTIALLY</span> 환경변수 — .gitignore는 정상, 파일은 여전히 존재</div>
+    <div class="b">
+      <code>.gitignore</code>에 <code>.env.local</code>과 <code>mobile/.env</code>가 정상 등록되어 있습니다. 새로운 커밋에서는 추적되지 않을 것입니다. 다만 이전 커밋에 이미 포함되었다면 <code>git filter-repo</code>로 히스토리 정리가 필요합니다. 실제 키 로테이션(재발급) 여부는 외부에서 확인 필요합니다.
+    </div>
+  </div>
+</section>
+
+<!-- ============ NEW CRITICAL: FILE CORRUPTION ============ -->
+<section>
+  <h2>신규 발견: 파일 손상 (CRITICAL)</h2>
+  <p style="color:var(--dim); margin-bottom:16px; font-size:14px;">최신 커밋(f3db1fe)에서 4개 파일이 중간에 잘려 있습니다. 빌드 불가 상태이므로 즉시 복구가 필요합니다.</p>
+
+  <table>
+    <thead>
+      <tr><th>파일</th><th>현재 줄수</th><th>잘린 위치</th><th>영향</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="sev crit">CRITICAL</span> <code>web/package.json</code></td>
+        <td>~38줄</td>
+        <td><code>"tailwindcss":</code> 에서 잘림 — 버전/닫는 괄호 없음</td>
+        <td>npm install / next build 전부 실패 (JSON 파싱 에러)</td>
+      </tr>
+      <tr>
+        <td><span class="sev crit">CRITICAL</span> <code>web/src/app/api/payment/route.ts</code></td>
+        <td>91줄</td>
+        <td><code>await import('@/servic</code> 에서 잘림</td>
+        <td>charge 액션 불완전, 정기결제 기능 동작 불가</td>
+      </tr>
+      <tr>
+        <td><span class="sev high">HIGH</span> <code>mobile/services/identity.service.ts</code></td>
+        <td>73줄</td>
+        <td><code>// 타임아웃 (3</code> + UTF-8 깨짐에서 잘림</td>
+        <td>본인인증 타임아웃 처리/에러 반환 불가, 함수가 undefined 반환</td>
+      </tr>
+      <tr>
+        <td><span class="sev high">HIGH</span> <code>mobile/services/push.service.ts</code></td>
+        <td>12줄</td>
+        <td>주석/설명만 있고 함수 구현 전체가 잘림</td>
+        <td>registerPushToken, 리스너 등 모든 푸시 기능 미동작</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="card r">
+    <div class="t"><span class="sev crit">CRITICAL</span> 즉시 조치 필요</div>
+    <div class="b">
+      위 4개 파일이 복구되지 않으면 웹 빌드 자체가 불가능하고, 모바일의 핵심 기능(본인인증, 푸시)이 동작하지 않습니다. Git 히스토리에서 이전 정상 버전을 확인하거나, 잘린 부분을 재작성해야 합니다.
+    </div>
+    <div class="f">
+      <strong>복구 방법:</strong><br>
+      1. <code>git show f0725c5:web/package.json</code> 등으로 이전 정상 버전 확인<br>
+      2. 잘린 부분 재작성 (package.json은 버전만 추가, 나머지는 로직 완성)<br>
+      3. 빌드 테스트 후 커밋
+    </div>
+  </div>
+</section>
+
+<!-- ============ RESOLVED ITEMS SINCE 2nd REVIEW ============ -->
+<section>
+  <h2>2차 이후 해결된 이슈</h2>
+
+  <div class="card g">
+    <div class="t"><span class="sev ok">RESOLVED</span> api-schemas.ts validateInput() 함수 완성</div>
+    <div class="b"><code>result.data</code> 반환 + 에러 메시지 조합 (<code>result.error.issues.map(i => i.message).join(', ')</code>) 정상 구현 확인. 71줄 완전한 파일.</div>
+  </div>
+
+  <div class="card g">
+    <div class="t"><span class="sev ok">RESOLVED</span> AI extract-document API catch 블록 완성</div>
+    <div class="b">69줄, catch 블록에 <code>return NextResponse.json(&#123; error: '문서 분석 실패' &#125;, &#123; status: 500 &#125;)</code> 정상 구현.</div>
+  </div>
+
+  <div class="card g">
+    <div class="t"><span class="sev ok">RESOLVED</span> 결제 에러 메시지 정제 (포트원 내부 정보 미노출)</div>
+    <div class="b">에러는 <code>console.error</code>로 서버 로그에만 기록, 클라이언트에는 <code>'카드 등록에 실패했습니다'</code> 등 일반화된 메시지만 반환.</div>
+  </div>
+</section>
+
+<!-- ============ REMAINING ISSUES ============ -->
+<section>
+  <h2>잔여 이슈 전체 목록</h2>
+
+  <table>
+    <thead>
+      <tr><th>우선순위</th><th>이슈</th><th>상태</th><th>예상 작업</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="sev crit">P0</span></td><td>파일 손상 4건 복구 (package.json, payment, identity, push)</td><td>빌드 불가</td><td>1~2시간</td></tr>
+      <tr><td><span class="sev high">P1</span></td><td>RPC approve_amendment_with_period() 내부 권한 검증</td><td>미해결</td><td>1시간</td></tr>
+      <tr><td><span class="sev high">P1</span></td><td>SignaturePad 실제 이미지 캡처 (ViewShot)</td><td>시뮬레이션</td><td>1일</td></tr>
+      <tr><td><span class="sev med">P2</span></td><td>CSRF 토큰 미들웨어</td><td>미구현</td><td>1일</td></tr>
+      <tr><td><span class="sev med">P2</span></td><td>Rate Limiting Redis 전환</td><td>메모리 기반</td><td>2시간</td></tr>
+      <tr><td><span class="sev med">P2</span></td><td>CSP unsafe-eval 제거</td><td>Daum Postcode 의존</td><td>검토 필요</td></tr>
+      <tr><td><span class="sev med">P2</span></td><td>환경변수 키 로테이션 확인</td><td>외부 확인 필요</td><td>30분</td></tr>
+      <tr><td><span class="sev low">P3</span></td><td>as any 타입 어설션 7건</td><td>경고 수준</td><td>2시간</td></tr>
+      <tr><td><span class="sev low">P3</span></td><td>대형 컴포넌트 분해 (principals 1,370줄, drivers/new 1,419줄)</td><td>리팩토링</td><td>3~5일</td></tr>
+      <tr><td><span class="sev low">P3</span></td><td>테스트 코드 작성</td><td>0%</td><td>1~2주</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ SECURITY STATUS ============ -->
+<section>
+  <h2>보안 상태 종합</h2>
+
+  <div class="feature-grid">
+    <div class="fi" style="border-left:3px solid var(--green)"><span>RLS 정책 (5개 테이블 수정)</span><span class="st done">해결</span></div>
+    <div class="fi" style="border-left:3px solid var(--green)"><span>스토리지 버킷 private 전환</span><span class="st done">해결</span></div>
+    <div class="fi" style="border-left:3px solid var(--green)"><span>결제 빌링 키 PG사 검증</span><span class="st done">해결</span></div>
+    <div class="fi" style="border-left:3px solid var(--green)"><span>기사 가입 통합 + 롤백</span><span class="st done">해결</span></div>
+    <div class="fi" style="border-left:3px solid var(--green)"><span>API 입력 검증 (Zod)</span><span class="st done">해결</span></div>
+    <div class="fi" style="border-left:3px solid var(--green)"><span>보안 헤더 (HSTS, CSP, X-Frame)</span><span class="st done">해결</span></div>
+    <div class="fi" style="border-left:3px solid var(--green)"><span>결제 에러 메시지 정제</span><span class="st done">해결</span></div>
+    <div class="fi" style="border-left:3px solid var(--green)"><span>AI 입력 크기 제한 (50KB)</span><span class="st done">해결</span></div>
+    <div class="fi" style="border-left:3px solid var(--green)"><span>signed-pdf 소유권 검사</span><span class="st done">해결</span></div>
+    <div class="fi" style="border-left:3px solid var(--green)"><span>agency_id 노출 제거</span><span class="st done">해결</span></div>
+    <div class="fi" style="border-left:3px solid var(--green)"><span>dangerouslySetInnerHTML / eval 없음</span><span class="st done">양호</span></div>
+    <div class="fi" style="border-left:3px solid var(--green)"><span>소스코드 내 하드코딩 시크릿 없음</span><span class="st done">양호</span></div>
+    <div class="fi" style="border-left:3px solid var(--yellow)"><span>CSRF 토큰</span><span class="st part">미구현</span></div>
+    <div class="fi" style="border-left:3px solid var(--yellow)"><span>Rate Limiting (분산 환경)</span><span class="st part">메모리 기반</span></div>
+    <div class="fi" style="border-left:3px solid var(--yellow)"><span>RPC 함수 권한 검증</span><span class="st part">API 레이어만</span></div>
+    <div class="fi" style="border-left:3px solid var(--yellow)"><span>CSP unsafe-eval</span><span class="st part">허용 중</span></div>
+  </div>
+</section>
+
+<!-- ============ DEPLOYMENT CHECKLIST ============ -->
+<section>
+  <h2>배포 전 최종 체크리스트</h2>
+
+  <h3>P0 — 배포 차단 (빌드 불가)</h3>
+  <ul class="checklist">
+    <li><span class="ck done">&#10003;</span><s>RLS 오버퍼미시브 정책</s> (1차)</li>
+    <li><span class="ck done">&#10003;</span><s>스토리지 버킷 private 전환</s> (2차)</li>
+    <li><span class="ck done">&#10003;</span><s>결제 빌링 키 PG사 검증</s> (2차)</li>
+    <li><span class="ck done">&#10003;</span><s>기사 가입 API 통합</s> (2차)</li>
+    <li><span class="ck done">&#10003;</span><s>누락 컬럼 + 인덱스</s> (2차)</li>
+    <li><span class="ck done">&#10003;</span><s>api-schemas.ts 복구</s> (3차)</li>
+    <li><span class="ck done">&#10003;</span><s>extract-document catch 블록</s> (3차)</li>
+    <li><span class="ck done">&#10003;</span><s>결제 에러 메시지 정제</s> (3차)</li>
+    <li><span class="ck"></span><b style="color:var(--red)">파일 손상 4건 복구</b> — package.json, payment/route.ts, identity.service.ts, push.service.ts</li>
+  </ul>
+
+  <h3>P1 — 런칭 전 권장</h3>
+  <ul class="checklist">
+    <li><span class="ck"></span>RPC approve_amendment_with_period() 내부 권한 검증 추가</li>
+    <li><span class="ck"></span>SignaturePad 실제 이미지 캡처 구현 (ViewShot)</li>
+    <li><span class="ck"></span>환경변수 키 로테이션 확인 (Supabase, SolAPI, CRON)</li>
+  </ul>
+
+  <h3>P2 — 런칭 후 1개월 내</h3>
+  <ul class="checklist">
+    <li><span class="ck"></span>CSRF 토큰 미들웨어</li>
+    <li><span class="ck"></span>Rate Limiting Redis 전환</li>
+    <li><span class="ck"></span>CSP unsafe-eval 제거</li>
+    <li><span class="ck"></span>테스트 코드 작성</li>
+    <li><span class="ck"></span>대형 컴포넌트 분해</li>
+  </ul>
+</section>
+
+<!-- ============ FINAL ============ -->
+<section>
+  <h2>최종 판정</h2>
+  <div class="score-grid">
+    <div class="score-card" style="grid-column:span 2;">
+      <div class="label">배포 가능 여부</div>
+      <div class="value" style="color:var(--yellow)">파일 복구 후 가능</div>
+      <div class="sub">손상된 4개 파일 복구(1~2시간) → 빌드 확인 → 즉시 배포 가능</div>
+    </div>
+    <div class="score-card">
+      <div class="label">보안 성숙도</div>
+      <div class="value" style="color:var(--green)">상</div>
+      <div class="sub">85/100 (1차 62 → 2차 79 → 3차 85)</div>
+    </div>
+    <div class="score-card">
+      <div class="label">프로젝트 진행률</div>
+      <div class="value" style="color:var(--green)">91%</div>
+      <div class="sub">1차 78% → 2차 88% → 3차 91%</div>
+    </div>
+  </div>
+
+  <div class="card" style="border-left:3px solid var(--accent); margin-top:24px;">
+    <div class="t" style="font-size:16px;">종합 평가</div>
+    <div class="b" style="font-size:15px; color:var(--text); line-height:1.8;">
+      1차 검토 이후 <strong style="color:var(--green)">21건의 커밋</strong>으로 주요 보안 이슈 대부분이 해결되었습니다. 보안 점수는 62 → 85로 <strong style="color:var(--green)">+23점</strong> 향상되었고, 완성도는 78% → 91%로 <strong style="color:var(--green)">+13%</strong> 개선되었습니다.<br><br>
+      <strong style="color:var(--green)">주요 성과:</strong> RLS 보안 강화, 포트원 V2 결제/본인인증 연동, 기사가입 통합, 스토리지 private 전환, 감사 로그, 개인정보보호, AI 도우미, 푸시 알림 서버 등 12개 이상 신규 기능 추가.<br><br>
+      <strong style="color:var(--red)">유일한 배포 차단 이슈:</strong> 최신 커밋에서 4개 파일이 중간에 잘려 있어 빌드가 불가능합니다. <code>package.json</code>(tailwindcss 버전 누락), <code>payment/route.ts</code>(charge 로직 잘림), <code>identity.service.ts</code>(타임아웃 잘림), <code>push.service.ts</code>(함수 구현 잘림)를 복구하면 <strong style="color:var(--green)">즉시 프로덕션 배포가 가능</strong>합니다.
+    </div>
+  </div>
+</section>
+
+</div>
+</body>
+</html>

@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import KpiCard from '@/components/portal/KpiCard';
 import Badge from '@/components/shared/Badge';
-import RevenueChart from '@/components/portal/charts/RevenueChart';
-import ExpenseDonut from '@/components/portal/charts/ExpenseDonut';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
 import { getDashboardStats, type DashboardStats } from '@/services/dashboard.service';
 import { getSettlements, type SettlementWithDriver } from '@/services/settlement.service';
+
+const RevenueChart = dynamic(() => import('@/components/portal/charts/RevenueChart'), { ssr: false, loading: () => <div className="h-64 bg-surface-container-low rounded-xl animate-pulse" /> });
+const ExpenseDonut = dynamic(() => import('@/components/portal/charts/ExpenseDonut'), { ssr: false, loading: () => <div className="h-64 bg-surface-container-low rounded-xl animate-pulse" /> });
 
 /* ── 구독 정보 타입 ── */
 interface SubscriptionInfo {
