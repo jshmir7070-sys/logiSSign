@@ -759,11 +759,11 @@ function SignupContent() {
               <div className="space-y-2.5 mt-1">
                 <label className="flex items-center gap-2.5 cursor-pointer">
                   <input type="checkbox" checked={form.agreeTerms} onChange={(e) => updateForm({ agreeTerms: e.target.checked })} className="w-4 h-4 rounded accent-primary" />
-                  <span className="text-xs text-on-surface-variant"><span className="text-primary underline">이용약관</span>에 동의합니다 (필수)</span>
+                  <span className="text-xs text-on-surface-variant"><a href="/terms" target="_blank" className="text-primary underline">이용약관</a>에 동의합니다 (필수)</span>
                 </label>
                 <label className="flex items-center gap-2.5 cursor-pointer">
                   <input type="checkbox" checked={form.agreePrivacy} onChange={(e) => updateForm({ agreePrivacy: e.target.checked })} className="w-4 h-4 rounded accent-primary" />
-                  <span className="text-xs text-on-surface-variant"><span className="text-primary underline">개인정보처리방침</span>에 동의합니다 (필수)</span>
+                  <span className="text-xs text-on-surface-variant"><a href="/privacy" target="_blank" className="text-primary underline">개인정보처리방침</a>에 동의합니다 (필수)</span>
                 </label>
               </div>
 

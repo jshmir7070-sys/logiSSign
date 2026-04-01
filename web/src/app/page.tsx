@@ -1019,8 +1019,8 @@ export default function LandingPage() {
               © 2026 logiSSign. All rights reserved.
             </p>
             <div className="flex gap-6 text-xs text-gray-600">
-              <a href="#" className="hover:text-gray-400 transition-colors">이용약관</a>
-              <a href="#" className="hover:text-gray-400 transition-colors">개인정보처리방침</a>
+              <Link href="/terms" className="hover:text-gray-400 transition-colors">이용약관</Link>
+              <Link href="/privacy" className="hover:text-gray-400 transition-colors">개인정보처리방침</Link>
             </div>
           </div>
         </div>
