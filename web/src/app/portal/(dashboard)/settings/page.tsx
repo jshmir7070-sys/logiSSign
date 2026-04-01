@@ -64,7 +64,7 @@ export default function PortalSettingsPage() {
   }, []);
 
   const tabs = [
-    { id: 'profile' as const, label: '대리점 정보' },
+    { id: 'profile' as const, label: '프로필' },
     { id: 'admins' as const, label: '관리자 계정' },
     { id: 'category' as const, label: '카테고리 관리' },
     { id: 'seal' as const, label: '도장/서명' },
@@ -294,6 +294,15 @@ function ProfileTab() {
         .single();
 
       if (data) {
+        let inviteCode = (data as Record<string, string>).invite_code ?? '';
+        
+        // 초대코드가 없으면 자동 생성
+        if (!inviteCode) {
+          const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+          for (let i = 0; i < 6; i++) inviteCode += chars[Math.floor(Math.random() * chars.length)];
+          await supabase.from('agencies').update({ invite_code: inviteCode }).eq('id', aid);
+        }
+
         setForm({
           name: (data as Record<string, string>).name ?? '',
           owner_name: (data as Record<string, string>).owner_name ?? '',
@@ -302,7 +311,7 @@ function ProfileTab() {
           address_detail: (data as Record<string, string>).address_detail ?? '',
           business_number: (data as Record<string, string>).business_number ?? '',
           email: (data as Record<string, string>).email ?? '',
-          invite_code: (data as Record<string, string>).invite_code ?? '',
+          invite_code: inviteCode,
         });
       }
       setLoading(false);
