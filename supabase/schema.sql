@@ -87,7 +87,8 @@ CREATE TABLE drivers (
 CREATE TABLE driver_documents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   driver_id UUID REFERENCES drivers(id) ON DELETE CASCADE,
-  type TEXT CHECK (type IN ('license','bankbook','insurance','id_card','other')),
+  type TEXT CHECK (type IN ('license','vehicle_registration','cargo_license','bankbook','insurance','id_card','business_reg','other')),
+  title TEXT,
   file_url TEXT,
   uploaded_at TIMESTAMPTZ DEFAULT now()
 );

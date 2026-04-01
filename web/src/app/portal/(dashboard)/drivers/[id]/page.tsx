@@ -54,6 +54,7 @@ export default function DriverDetailPage() {
   const [deductions, setDeductions] = useState<DriverDeduction[]>([]);
   const [periods, setPeriods] = useState<DriverContractPeriod[]>([]);
   const [newDeductions, setNewDeductions] = useState<{ name: string; deduction_type: DeductionType; amount: string }[]>([]);
+  const [driverDocs, setDriverDocs] = useState<{ type: string; title: string | null; file_url: string; uploaded_at: string }[]>([]);
 
   /* ── New route rate form ── */
   const [newRoutes, setNewRoutes] = useState<{ route_code: string; delivery_rate: string; return_rate: string }[]>([
@@ -98,6 +99,14 @@ export default function DriverDetailPage() {
 
     const periodsResult = await getDriverPeriods(id);
     if (periodsResult.data) setPeriods(periodsResult.data);
+
+    // 서류 조회
+    const { data: docs } = await supabase
+      .from('driver_documents')
+      .select('type, title, file_url, uploaded_at')
+      .eq('driver_id', id)
+      .order('uploaded_at', { ascending: false });
+    if (docs) setDriverDocs(docs as { type: string; title: string | null; file_url: string; uploaded_at: string }[]);
 
     setLoading(false);
   }, [id]);

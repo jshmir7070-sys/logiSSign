@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,16 @@ import {
   StyleSheet,
   Switch,
   Alert,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import GradientView from '../../components/common/GradientView';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../stores/authStore';
+import { supabase } from '../../lib/supabase';
 import { colors, spacing, typography, borderRadius, shadows } from '../../constants/theme';
 
 interface MenuItem {
@@ -22,11 +26,17 @@ interface MenuItem {
 }
 
 const MENU_ITEMS: MenuItem[] = [
-  { id: '1', icon: 'person-outline', label: '내 정보' },
-  { id: '2', icon: 'phone', label: '연락처' },
-  { id: '3', icon: 'directions-car', label: '차량번호' },
-  { id: '4', icon: 'folder-open', label: '문서함' },
-  { id: '5', icon: 'verified', label: '도장/서명 관리' },
+  { id: 'info', icon: 'person-outline', label: '내 정보' },
+  { id: 'phone', icon: 'phone', label: '연락처' },
+  { id: 'vehicle', icon: 'directions-car', label: '차량번호' },
+  { id: 'documents', icon: 'folder-open', label: '문서함' },
+  { id: 'seal', icon: 'verified', label: '도장/서명 관리' },
+];
+
+const DOC_UPLOAD_ITEMS: MenuItem[] = [
+  { id: 'vehicle_registration', icon: 'directions-car', label: '차량등록증' },
+  { id: 'license', icon: 'badge', label: '운전면허증' },
+  { id: 'cargo_license', icon: 'local-shipping', label: '화물운송자격증' },
 ];
 
 const APP_INFO_ITEMS: MenuItem[] = [
@@ -42,6 +52,88 @@ export default function ProfileScreen() {
   const [settlementNotif, setSettlementNotif] = useState(true);
   const [noticeNotif, setNoticeNotif] = useState(true);
   const [contractNotif, setContractNotif] = useState(true);
+
+  // 서류 업로드 상태
+  const [documents, setDocuments] = useState<Record<string, { url: string; date: string } | null>>({});
+  const [uploading, setUploading] = useState<string | null>(null);
+
+  // 기존 서류 로드
+  const loadDocuments = useCallback(async () => {
+    if (!driver?.id) return;
+    const { data } = await supabase
+      .from('driver_documents')
+      .select('type, file_url, uploaded_at')
+      .eq('driver_id', driver.id);
+    if (data) {
+      const map: Record<string, { url: string; date: string }> = {};
+      for (const doc of data) {
+        map[doc.type as string] = {
+          url: doc.file_url as string,
+          date: new Date(doc.uploaded_at as string).toLocaleDateString('ko-KR'),
+        };
+      }
+      setDocuments(map);
+    }
+  }, [driver?.id]);
+
+  useEffect(() => { loadDocuments(); }, [loadDocuments]);
+
+  // 서류 업로드 핸들러
+  const handleDocUpload = async (docType: string, label: string) => {
+    if (!driver?.id) return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: false,
+      quality: 0.8,
+    });
+
+    if (result.canceled || !result.assets?.[0]) return;
+
+    setUploading(docType);
+    try {
+      const asset = result.assets[0];
+      const ext = asset.uri.split('.').pop() ?? 'jpg';
+      const fileName = `driver-docs/${driver.id}/${docType}_${Date.now()}.${ext}`;
+
+      // base64로 읽어서 업로드
+      const response = await fetch(asset.uri);
+      const blob = await response.blob();
+
+      const { error: uploadErr } = await supabase.storage
+        .from('documents')
+        .upload(fileName, blob, { contentType: `image/${ext}`, upsert: true });
+
+      if (uploadErr) {
+        Alert.alert('업로드 실패', uploadErr.message);
+        setUploading(null);
+        return;
+      }
+
+      const { data: urlData } = supabase.storage.from('documents').getPublicUrl(fileName);
+      const fileUrl = urlData?.publicUrl ?? '';
+
+      // DB 저장 (기존 삭제 후 재삽입)
+      await supabase
+        .from('driver_documents')
+        .delete()
+        .eq('driver_id', driver.id)
+        .eq('type', docType as import('../../types/database').DocumentType);
+
+      await supabase.from('driver_documents').insert({
+        driver_id: driver.id,
+        type: docType as import('../../types/database').DocumentType,
+        title: label,
+        file_url: fileUrl,
+      });
+
+      await loadDocuments();
+      Alert.alert('완료', `${label}이(가) 업로드되었습니다.`);
+    } catch (err) {
+      Alert.alert('오류', '파일 업로드 중 문제가 발생했습니다.');
+    }
+    setUploading(null);
+  };
 
   const getInitials = (name: string | undefined): string => {
     if (!name) return '?';
@@ -108,8 +200,8 @@ export default function ProfileScreen() {
           {MENU_ITEMS.map((item) => (
             <TouchableOpacity key={item.id} style={styles.menuItem} activeOpacity={0.7}
               onPress={() => {
-                if (item.id === '4') router.push('/documents');
-                if (item.id === '5') router.push('/seal');
+                if (item.id === 'documents') router.push('/documents');
+                if (item.id === 'seal') router.push('/seal');
               }}>
               <View style={styles.menuLeft}>
                 <MaterialIcons
@@ -126,6 +218,57 @@ export default function ProfileScreen() {
               />
             </TouchableOpacity>
           ))}
+        </View>
+
+        {/* 서류 업로드 */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>서류 관리</Text>
+          <Text style={styles.sectionDesc}>필수 서류를 촬영하여 업로드하세요</Text>
+          {DOC_UPLOAD_ITEMS.map((item) => {
+            const doc = documents[item.id];
+            const isUploading = uploading === item.id;
+            return (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.docItem}
+                activeOpacity={0.7}
+                onPress={() => handleDocUpload(item.id, item.label)}
+                disabled={isUploading}
+              >
+                <View style={styles.menuLeft}>
+                  <View style={[styles.docIconWrap, doc ? styles.docIconDone : styles.docIconEmpty]}>
+                    <MaterialIcons
+                      name={doc ? 'check-circle' : item.icon}
+                      size={22}
+                      color={doc ? colors.tertiary : colors.onSurfaceVariant}
+                    />
+                  </View>
+                  <View>
+                    <Text style={styles.menuLabel}>{item.label}</Text>
+                    {doc ? (
+                      <Text style={styles.docDate}>업로드: {doc.date}</Text>
+                    ) : (
+                      <Text style={styles.docEmpty}>미등록</Text>
+                    )}
+                  </View>
+                </View>
+                {isUploading ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <View style={styles.docUploadBtn}>
+                    <MaterialIcons
+                      name={doc ? 'refresh' : 'file-upload'}
+                      size={18}
+                      color={doc ? colors.onSurfaceVariant : colors.primary}
+                    />
+                    <Text style={[styles.docUploadText, doc ? styles.docReupload : null]}>
+                      {doc ? '재업로드' : '업로드'}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <View style={styles.sectionCard}>
@@ -340,5 +483,59 @@ const styles = StyleSheet.create({
   logoutText: {
     ...typography.labelLarge,
     color: colors.error,
+  },
+  sectionDesc: {
+    ...typography.bodySmall,
+    color: colors.onSurfaceVariant,
+    marginBottom: spacing.md,
+    marginTop: -spacing.sm,
+  },
+  docItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.outlineVariant + '40',
+  },
+  docIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  docIconDone: {
+    backgroundColor: colors.tertiary + '15',
+  },
+  docIconEmpty: {
+    backgroundColor: colors.surfaceContainerHigh,
+  },
+  docDate: {
+    ...typography.labelSmall,
+    color: colors.tertiary,
+    marginTop: 2,
+  },
+  docEmpty: {
+    ...typography.labelSmall,
+    color: colors.outline,
+    marginTop: 2,
+  },
+  docUploadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surfaceContainerLow,
+  },
+  docUploadText: {
+    ...typography.labelSmall,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  docReupload: {
+    color: colors.onSurfaceVariant,
   },
 });

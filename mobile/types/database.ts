@@ -9,7 +9,7 @@ export type AgencyPlan = 'free' | 'basic' | 'standard' | 'enterprise';
 export type AgencyStatus = 'active' | 'suspended' | 'cancelled';
 export type DriverStatus = 'active' | 'inactive';
 export type DriverTaxType = 'individual' | 'business' | 'vat_invoice' | 'withholding_3_3' | 'manual_reverse' | 'none';
-export type DocumentType = 'license' | 'bankbook' | 'insurance' | 'id_card' | 'other';
+export type DocumentType = 'license' | 'vehicle_registration' | 'cargo_license' | 'bankbook' | 'insurance' | 'id_card' | 'business_reg' | 'other';
 export type PackageType = 'normal' | 'large' | 'frozen' | string;
 export type SettlementStatus = 'draft' | 'sent' | 'confirmed';
 export type InvoiceType = 'tax' | 'cash_receipt' | 'none';
@@ -143,6 +143,7 @@ export interface Database {
           id: string;
           driver_id: string | null;
           type: DocumentType;
+          title: string | null;
           file_url: string | null;
           uploaded_at: string;
         };
@@ -150,6 +151,7 @@ export interface Database {
           id?: string;
           driver_id?: string | null;
           type: DocumentType;
+          title?: string | null;
           file_url?: string | null;
           uploaded_at?: string;
         };
