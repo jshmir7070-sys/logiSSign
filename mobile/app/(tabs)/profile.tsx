@@ -9,6 +9,7 @@ import {
   Alert,
   Image,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import GradientView from '../../components/common/GradientView';
@@ -317,7 +318,15 @@ export default function ProfileScreen() {
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>앱 정보</Text>
           {APP_INFO_ITEMS.map((item) => (
-            <TouchableOpacity key={item.id} style={styles.menuItem} activeOpacity={0.7}>
+            <TouchableOpacity
+              key={item.id}
+              style={styles.menuItem}
+              activeOpacity={0.7}
+              onPress={() => {
+                if (item.id === 'terms') Linking.openURL('https://logissign.com/terms');
+                if (item.id === 'privacy') Linking.openURL('https://logissign.com/privacy');
+              }}
+            >
               <View style={styles.menuLeft}>
                 <MaterialIcons
                   name={item.icon}

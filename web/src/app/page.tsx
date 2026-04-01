@@ -141,6 +141,10 @@ export default function ComingSoonHomePage() {
             <a href="/portal/login">대리점 포털</a>
             <span>·</span>
             <a href="/admin/login">관리자</a>
+            <span>·</span>
+            <a href="/terms">이용약관</a>
+            <span>·</span>
+            <a href="/privacy">개인정보처리방침</a>
           </p>
         </footer>
       </main>

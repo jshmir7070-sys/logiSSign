@@ -39,6 +39,11 @@ export default function RegisterScreen() {
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Step 3: 동의 항목
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [agreePrivacy, setAgreePrivacy] = useState(false);
+  const [agreeAge, setAgreeAge] = useState(false);
+
   /** 초대코드 검증 → agency 매칭 */
   const validateInviteCode = async () => {
     if (!inviteCode.trim()) {
@@ -83,6 +88,10 @@ export default function RegisterScreen() {
     }
     if (password !== passwordConfirm) {
       Alert.alert('입력 오류', '비밀번호가 일치하지 않습니다.');
+      return;
+    }
+    if (!agreeTerms || !agreePrivacy || !agreeAge) {
+      Alert.alert('동의 필요', '필수 약관에 모두 동의해주세요.');
       return;
     }
 
@@ -317,6 +326,50 @@ export default function RegisterScreen() {
                 />
               </View>
 
+              {/* 약관 동의 */}
+              <View style={styles.consentSection}>
+                <Text style={styles.consentTitle}>약관 동의</Text>
+
+                <TouchableOpacity
+                  style={styles.consentRow}
+                  onPress={() => {
+                    const allChecked = agreeTerms && agreePrivacy && agreeAge;
+                    setAgreeTerms(!allChecked);
+                    setAgreePrivacy(!allChecked);
+                    setAgreeAge(!allChecked);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.checkbox, (agreeTerms && agreePrivacy && agreeAge) && styles.checkboxChecked]}>
+                    {(agreeTerms && agreePrivacy && agreeAge) && <Text style={styles.checkmark}>✓</Text>}
+                  </View>
+                  <Text style={styles.consentAllLabel}>전체 동의</Text>
+                </TouchableOpacity>
+
+                <View style={styles.consentDivider} />
+
+                <TouchableOpacity style={styles.consentRow} onPress={() => setAgreeTerms(!agreeTerms)} activeOpacity={0.7}>
+                  <View style={[styles.checkbox, agreeTerms && styles.checkboxChecked]}>
+                    {agreeTerms && <Text style={styles.checkmark}>✓</Text>}
+                  </View>
+                  <Text style={styles.consentLabel}>[필수] 서비스 이용약관 동의</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.consentRow} onPress={() => setAgreePrivacy(!agreePrivacy)} activeOpacity={0.7}>
+                  <View style={[styles.checkbox, agreePrivacy && styles.checkboxChecked]}>
+                    {agreePrivacy && <Text style={styles.checkmark}>✓</Text>}
+                  </View>
+                  <Text style={styles.consentLabel}>[필수] 개인정보 수집·이용 동의</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.consentRow} onPress={() => setAgreeAge(!agreeAge)} activeOpacity={0.7}>
+                  <View style={[styles.checkbox, agreeAge && styles.checkboxChecked]}>
+                    {agreeAge && <Text style={styles.checkmark}>✓</Text>}
+                  </View>
+                  <Text style={styles.consentLabel}>[필수] 만 14세 이상 확인</Text>
+                </TouchableOpacity>
+              </View>
+
               <TouchableOpacity
                 onPress={handleRegister}
                 disabled={isSubmitting}
@@ -438,5 +491,56 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     ...typography.titleSmall,
     color: colors.surfaceContainerLowest,
+  },
+  consentSection: {
+    marginTop: spacing.xl,
+    padding: spacing.lg,
+    backgroundColor: colors.surfaceContainerLow,
+    borderRadius: borderRadius.lg,
+  },
+  consentTitle: {
+    ...typography.labelLarge,
+    color: colors.onSurface,
+    marginBottom: spacing.md,
+    fontWeight: '700',
+  },
+  consentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: colors.outlineVariant,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  checkmark: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  consentAllLabel: {
+    ...typography.bodyMedium,
+    color: colors.onSurface,
+    fontWeight: '700',
+  },
+  consentLabel: {
+    ...typography.bodySmall,
+    color: colors.onSurfaceVariant,
+  },
+  consentDivider: {
+    height: 1,
+    backgroundColor: colors.outlineVariant,
+    opacity: 0.4,
+    marginVertical: spacing.sm,
   },
 });
