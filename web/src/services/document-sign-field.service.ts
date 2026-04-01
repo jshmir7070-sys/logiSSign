@@ -11,7 +11,7 @@
  */
 
 import { createBrowserSupabaseClient } from '@/lib/supabase'
-import { PDFDocument, rgb, degrees } from 'pdf-lib'
+import { PDFDocument, rgb } from 'pdf-lib'
 
 /* ══════════════════════ Types ══════════════════════ */
 

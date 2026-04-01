@@ -11,11 +11,9 @@ function formatKRW(n: number) { return `₩${n.toLocaleString('ko-KR')}` }
 interface MonthlyStat { month: string; revenue: number; expense: number; profit: number }
 interface DriverShare { name: string; total: number }
 
-const PIE_COLORS = ['#004ac6', '#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe']
-
 export default function ReportsPage() {
   const [monthly, setMonthly] = useState<MonthlyStat[]>([])
-  const [driverShares, setDriverShares] = useState<DriverShare[]>([])
+  const [_driverShares, setDriverShares] = useState<DriverShare[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {

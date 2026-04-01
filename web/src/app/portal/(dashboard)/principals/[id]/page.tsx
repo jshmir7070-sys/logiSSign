@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toastError, toastWarning } from '@/components/shared/Toast';
 import { formatPhoneNumber } from '@/lib/formatters';
-import { createBrowserSupabaseClient } from '@/lib/supabase';
 import {
   getPrincipalFull,
   updatePrincipal,
@@ -14,10 +13,7 @@ import {
   type FieldConfig,
   type ItemType,
   type RateMode,
-  type ExcelConfig,
   type AdditionalItemType,
-  COMPANY_OPTIONS,
-  ITEM_LABELS,
   ADDITIONAL_ITEM_LABELS,
   ADDITIONAL_ITEM_DESCS,
   DEFAULT_FIELD_CONFIG,
@@ -25,7 +21,6 @@ import {
   buildExcelHeaders,
   getUnitPriceFields,
   DELIVERY_RATE_OPTIONS,
-  RETURN_RATE_OPTIONS,
   PICKUP_RATE_OPTIONS,
   INSURANCE_SPLIT_OPTIONS,
   CARGO_ACCIDENT_OPTIONS,
@@ -34,7 +29,6 @@ import {
   SETTLEMENT_VIEW_OPTIONS,
   SETTLEMENT_DISPLAY_LABELS,
   SETTLEMENT_DISPLAY_GROUPS,
-  type SettlementDisplayConfig,
 } from '@/services/principal.service';
 
 /* ═══════════════════════ Radio Option Component ═══════════════════════ */
@@ -137,12 +131,6 @@ const TruckIcon = (
     <path d="M15 18H9" />
     <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14" />
     <circle cx="7" cy="18" r="2" /><circle cx="17" cy="18" r="2" />
-  </svg>
-);
-const ReturnIcon = (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="1 4 1 10 7 10" />
-    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
   </svg>
 );
 const PickupIcon = (

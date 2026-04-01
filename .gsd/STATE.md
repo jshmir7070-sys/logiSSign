@@ -9,6 +9,7 @@
 - ✅ **M001:** Full-Stack Foundation — Mobile + Web + Supabase Integration
 - ✅ **M002:** M002: 나머지 페이지 완성 — 웹 포털/어드민 + 모바일 전체 화면
 - 🔄 **M003:** M003
+- ⬜ **M004:** M004
 
 ## Recent Decisions
 - None recorded

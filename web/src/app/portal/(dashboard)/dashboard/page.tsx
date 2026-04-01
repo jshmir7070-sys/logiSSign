@@ -353,21 +353,6 @@ export default function DashboardPage() {
 
 /* ── 최근 활동 로그 컴포넌트 ── */
 
-interface ActivityItem {
-  id: string
-  type: 'contract' | 'settlement' | 'driver' | 'notice'
-  action: string
-  target: string
-  created_at: string
-}
-
-const typeIcons: Record<string, string> = {
-  contract: '📝',
-  settlement: '💰',
-  driver: '👤',
-  notice: '📢',
-}
-
 function RecentActivityLog({ agencyId: _agencyId }: { agencyId?: string }) {
   return (
     <div className="space-y-4">

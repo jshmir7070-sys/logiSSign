@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Badge from '@/components/shared/Badge';
-import { toastError, toastSuccess, toastWarning } from '@/components/shared/Toast';
+import { toastError } from '@/components/shared/Toast';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
 import { getContracts, type ContractWithDriver } from '@/services/contract.service';
 

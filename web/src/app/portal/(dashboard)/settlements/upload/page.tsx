@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Badge from '@/components/shared/Badge';
 import { toastSuccess, toastError } from '@/components/shared/Toast';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
-import { getPrincipals, getUploadMapping, saveUploadMapping, UPLOAD_MAPPING_PRESETS, EXCEL_TYPE_LABELS, type Principal, type ExcelType, type UploadColumnMapping } from '@/services/principal.service';
+import { getPrincipals, getUploadMapping, saveUploadMapping, UPLOAD_MAPPING_PRESETS, EXCEL_TYPE_LABELS, type Principal, type ExcelType } from '@/services/principal.service';
 import {
   parseExcelData,
   matchDrivers,
@@ -74,7 +74,7 @@ export default function SettlementUploadPage() {
   const xlsxRef = useRef<any>(null);
 
   /* ── Coupang raw rows (array of arrays) ── */
-  const [coupangRawRows, setCoupangRawRows] = useState<unknown[][]>([]);
+  const [_coupangRawRows, setCoupangRawRows] = useState<unknown[][]>([]);
 
   /* ── Column mapping ── */
   const [mapping, setMapping] = useState<ExcelColumnMapping>({
@@ -232,7 +232,7 @@ export default function SettlementUploadPage() {
   }
 
   /* ── Load Coupang summary sheet ── */
-  function loadCoupangSheet(sheetName: string) {
+  function _loadCoupangSheet(sheetName: string) {
     if (!workbookRef.current || !xlsxRef.current) return;
     const XLSX = xlsxRef.current;
     const ws = workbookRef.current.Sheets[sheetName];
@@ -355,7 +355,6 @@ export default function SettlementUploadPage() {
   const totalFreshIncentive = settlements.reduce((s, r) => s + (r.fresh_incentive ?? 0), 0);
   const totalExtraIncentive = settlements.reduce((s, r) => s + (r.extra_incentive ?? 0), 0);
   const totalDeduction = settlements.reduce((s, r) => s + r.total_deduction, 0);
-  const totalNet = settlements.reduce((s, r) => s + r.net_amount, 0);
   const totalVat = settlements.reduce((s, r) => s + (r.vat_amount ?? 0), 0);
   const totalWithholding = settlements.reduce((s, r) => s + (r.withholding_amount ?? 0), 0);
   const totalFinal = settlements.reduce((s, r) => s + (r.final_amount ?? r.net_amount), 0);

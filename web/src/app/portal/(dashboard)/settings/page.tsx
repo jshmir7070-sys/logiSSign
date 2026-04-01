@@ -31,7 +31,6 @@ import {
   sendDocuments,
   getDocumentDeliveries,
   type SendMethod,
-  type DocumentSendType,
   type DocumentDelivery,
   SEND_METHOD_LABELS,
   DELIVERY_STATUS_LABELS,
@@ -577,7 +576,7 @@ function SealTab({ agencyId }: { agencyId: string }) {
 /* ════════════════════════════════════════════
    문서 관리 탭
    ════════════════════════════════════════════ */
-function DocumentsTab({ agencyId }: { agencyId: string }) {
+function _DocumentsTab({ agencyId }: { agencyId: string }) {
   const [docs, setDocs] = useState<DocumentFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);

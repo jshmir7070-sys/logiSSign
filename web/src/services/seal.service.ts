@@ -106,7 +106,7 @@ export const SEAL_SCRIPT_OPTIONS: { value: SealScript; label: string }[] = [
 
 // 도장 색상 (전통 인감 빨간색)
 const SEAL_COLOR = '#C42B2B'
-const SEAL_COLOR_LIGHT = '#D94444'
+const _SEAL_COLOR_LIGHT = '#D94444'
 const SEAL_COLOR_DARK = '#9A1F1F'
 
 /* ══════════════════════ 한글 → 한자 변환 ══════════════════════ */
@@ -228,14 +228,14 @@ const MODERN_SEAL_FONTS: { family: string; label: string; weight: string }[] = [
 ]
 
 // 한글/한자 구분 없이 전체 폰트 풀 (전통 + 붓글씨 + 현대)
-const HANGUL_FONTS = [...CLASSIC_SEAL_FONTS, ...BRUSH_SEAL_FONTS.slice(0, 2), ...MODERN_SEAL_FONTS.slice(0, 2)]
-const HANJA_FONTS = [...CLASSIC_SEAL_FONTS, ...BRUSH_SEAL_FONTS.slice(0, 2), ...MODERN_SEAL_FONTS.slice(0, 2)]
+const _HANGUL_FONTS = [...CLASSIC_SEAL_FONTS, ...BRUSH_SEAL_FONTS.slice(0, 2), ...MODERN_SEAL_FONTS.slice(0, 2)]
+const _HANJA_FONTS = [...CLASSIC_SEAL_FONTS, ...BRUSH_SEAL_FONTS.slice(0, 2), ...MODERN_SEAL_FONTS.slice(0, 2)]
 
 /** 전체 폰트 목록 (중복 제거) — UI에서 폰트 이름 표시용 */
 export const ALL_SEAL_FONTS = [...CLASSIC_SEAL_FONTS, ...BRUSH_SEAL_FONTS, ...MODERN_SEAL_FONTS]
 
 // 도장 모양 (인감도장은 원형이 기본, 사각도 포함)
-const SHAPES: { shape: SealShape; label: string }[] = [
+const _SHAPES: { shape: SealShape; label: string }[] = [
   { shape: 'circle', label: '원형' },
   { shape: 'square', label: '사각' },
   { shape: 'oval', label: '타원' },
@@ -400,7 +400,7 @@ interface RenderSealOptions {
 
 /** 단일 도장 Canvas 렌더링 → data URI */
 function renderSealCanvas(opts: RenderSealOptions): string {
-  const { name, category, shape, fontFamily, fontWeight, size, corporateTitle, intaglio = false, extraStroke = 0, showDot = false } = opts
+  const { name, category, shape, fontFamily, fontWeight, size, corporateTitle, intaglio = false, extraStroke: _extraStroke = 0, showDot = false } = opts
   const canvas = document.createElement('canvas')
 
   // 타원형은 가로가 더 길도록
@@ -1034,7 +1034,7 @@ export function removeWhiteBackground(imageDataUri: string): Promise<string> {
         const brightness = (r + g + b) / 3
         if (brightness > 200) {
           // 완전 흰색에 가까울수록 완전 투명
-          const alpha = Math.max(0, Math.min(255, (200 - brightness) * 5 + 255))
+          const _alpha = Math.max(0, Math.min(255, (200 - brightness) * 5 + 255))
           d[i + 3] = Math.min(d[i + 3], Math.max(0, 255 - Math.floor((brightness - 180) * 3.4)))
         }
         // 회색 영역도 반투명 처리
@@ -1065,7 +1065,7 @@ export function fileToDataUri(file: File): Promise<string> {
 /* ══════════════════════ Supabase Storage ══════════════════════ */
 
 const SEAL_BUCKET = 'seals'
-const DOC_BUCKET = 'documents'
+const _DOC_BUCKET = 'documents'
 
 function dataURItoBlob(dataURI: string): Blob {
   const [header, base64] = dataURI.split(',')

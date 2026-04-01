@@ -67,7 +67,7 @@ async function buildAuditPdf(data: AuditCertificateData): Promise<Uint8Array> {
   const W = 595 // A4
   const H = 841
   const M = 50
-  const maxW = W - M * 2
+  const _maxW = W - M * 2
 
   let page = doc.addPage([W, H])
   let y = H - M

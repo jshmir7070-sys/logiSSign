@@ -58,7 +58,7 @@ export default function SealGenerator({ defaultName = '', onComplete, onCancel }
 
   // 한글/한자 선택
   const [useHanja, setUseHanja] = useState(false)
-  const [hanjaText, setHanjaText] = useState('')       // 미리보기용 한자 텍스트
+  const [_hanjaText, setHanjaText] = useState('')       // 미리보기용 한자 텍스트
   const [hanjaOverride, setHanjaOverride] = useState('')  // 사용자 직접 선택한 한자
   const [showDot, setShowDot] = useState(true)          // 글자 사이 점(·)
   const [editingCharIdx, setEditingCharIdx] = useState<number | null>(null)  // 한자 후보 선택 중인 글자 인덱스
@@ -117,7 +117,7 @@ export default function SealGenerator({ defaultName = '', onComplete, onCancel }
   // 현재 카테고리에 맞는 사이즈 옵션
   const currentCategory = activeTab === 'corporate' ? 'corporate' : 'personal'
   const sizeOptions = getSealSizesForCategory(currentCategory)
-  const currentSize = getSealSizeById(sealSizeId)
+  const _currentSize = getSealSizeById(sealSizeId)
 
   // 만들기 클릭
   const handleGenerate = useCallback(() => {

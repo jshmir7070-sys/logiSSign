@@ -4,7 +4,6 @@ import { loadKoreanFonts } from '@/lib/pdf-fonts'
 import { createAdminSupabaseClient } from '@/lib/supabase'
 import {
   finalizeContractVerification,
-  type DocumentVerification,
 } from './verification.service'
 import { generateAuditCertificatePdf } from './audit-certificate.service'
 import {

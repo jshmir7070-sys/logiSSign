@@ -146,7 +146,6 @@ export default function ContractTemplatesPage() {
 
   // 활성화된 기본 템플릿 수
   const activeDefaultCount = systemTemplates.filter((t) => t.is_active).length;
-  const canActivateDefault = activeDefaultCount < limits.maxDefaultTemplates;
   const canLockTemplates = activeDefaultCount === limits.maxDefaultTemplates && !templatesLocked && paid;
 
   // 템플릿 확정

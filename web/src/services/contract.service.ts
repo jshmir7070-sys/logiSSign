@@ -223,7 +223,7 @@ export function bindContractVariables(content: string, data: Record<string, stri
 }
 
 /** SHA-256 해시 생성 (브라우저용) */
-async function sha256(text: string): Promise<string> {
+async function _sha256(text: string): Promise<string> {
   const encoder = new TextEncoder()
   const data = encoder.encode(text)
   const hashBuffer = await crypto.subtle.digest('SHA-256', data)

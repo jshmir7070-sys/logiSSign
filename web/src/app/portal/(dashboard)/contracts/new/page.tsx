@@ -6,11 +6,7 @@ import Badge from '@/components/shared/Badge';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
 import {
   getContractTemplates,
-  createAndSendContracts,
-  bindContractVariables,
-  CONTRACT_VARIABLES,
   type ContractTemplate,
-  type ContractBindingData,
 } from '@/services/contract.service';
 import { getPrincipals, normalizeFieldConfig, type Principal } from '@/services/principal.service';
 

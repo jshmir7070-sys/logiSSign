@@ -176,10 +176,10 @@ export async function notifyAmendmentRequest(
 // ── 변경 요청 응답 알림 (대리점에게) ──
 
 export async function notifyAmendmentResponse(
-  driverId: string,
-  driverName: string,
-  amendmentTitle: string,
-  accepted: boolean
+  _driverId: string,
+  _driverName: string,
+  _amendmentTitle: string,
+  _accepted: boolean
 ): Promise<void> {
   // 대리점 담당자에게 알릴 때는 기사 이름 포함
   // 현재는 로그용. 추후 대리점 포털 알림 확장 가능

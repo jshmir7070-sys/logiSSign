@@ -14,7 +14,7 @@ interface LoginFormState {
 }
 
 export default function PortalLoginPage() {
-  const router = useRouter();
+  const _router = useRouter();
   const [form, setForm] = useState<LoginFormState>({
     email: "",
     password: "",

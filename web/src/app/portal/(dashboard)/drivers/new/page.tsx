@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
-import { getPrincipals, type Principal, normalizeFieldConfig, getUnitPriceFields, getPercentageFields, buildExcelHeaders, type CustomIncomeItem, type CustomDeductionItem, type FieldConfig, DEDUCTION_CALC_OPTIONS, COUNT_FIELD_OPTIONS, INSURANCE_PRESETS, ITEM_LABELS, DELIVERY_RATE_OPTIONS, RETURN_RATE_OPTIONS, PICKUP_RATE_OPTIONS } from '@/services/principal.service';
+import { getPrincipals, type Principal, normalizeFieldConfig, type CustomIncomeItem } from '@/services/principal.service';
 import { createDriver } from '@/services/driver.service';
 import { bulkUpsertDriverRouteRates } from '@/services/driver-route-rate.service';
 import { bulkUpsertDriverDeductions } from '@/services/driver-deduction.service';
@@ -95,11 +95,6 @@ export default function NewDriverPage() {
 
   const selectedPrincipal = principals.find((p) => p.id === principalId);
   const fieldConfig = selectedPrincipal ? normalizeFieldConfig(selectedPrincipal.field_config) : null;
-  const unitPriceFields = fieldConfig ? getUnitPriceFields(fieldConfig) : [];
-  const percentageFields = fieldConfig ? getPercentageFields(fieldConfig) : [];
-  const excelHeaders = fieldConfig ? buildExcelHeaders(fieldConfig) : [];
-  const hasCustomFields = unitPriceFields.length > 0;
-  const hasPercentageFields = percentageFields.length > 0;
 
   function handlePrincipalChange(pid: string) {
     setPrincipalId(pid);

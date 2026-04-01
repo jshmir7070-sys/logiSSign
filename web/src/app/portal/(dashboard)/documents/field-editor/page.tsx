@@ -13,7 +13,6 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase'
 import {
-  type SignField,
   type SignFieldInput,
   type SignFieldType,
   FIELD_TYPE_META,
@@ -41,7 +40,7 @@ export default function FieldEditorPage() {
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
+  const [totalPages, _setTotalPages] = useState(1)
   const [dragging, setDragging] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null)
 
   const containerRef = useRef<HTMLDivElement>(null)
@@ -312,7 +311,7 @@ export default function FieldEditorPage() {
             </p>
           ) : (
             <div className="space-y-1.5">
-              {fields.map((f, i) => {
+              {fields.map((f) => {
                 const meta = FIELD_TYPE_META[f.field_type]
                 const isSelected = selectedId === f._id
                 return (

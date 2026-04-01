@@ -14,7 +14,6 @@ import {
   type ItemType,
   type RateMode,
   type AdditionalItemType,
-  type SettlementDisplayConfig,
   COMPANY_OPTIONS,
   ITEM_LABELS,
   ADDITIONAL_ITEM_LABELS,
@@ -349,24 +348,6 @@ export default function PrincipalsPage() {
 
   const inputCls = 'w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-on-surface-variant/40';
   const labelCls = 'block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean';
-
-  function itemSummary(fc: FieldConfig): string {
-    const parts: string[] = [];
-    const types: ItemType[] = ['delivery', 'return', 'pickup'];
-    const modeLabels: Record<RateMode, string> = {
-      unit_price: '단가',
-      percentage: '요율%',
-      fixed_salary: '고정급여',
-      mixed_count: '배송+반품 단가',
-    };
-    for (const t of types) {
-      const cfg = fc.items[t];
-      if (cfg?.enabled) {
-        parts.push(`${ITEM_LABELS[t]}(${modeLabels[cfg.rate_mode] ?? cfg.rate_mode})`);
-      }
-    }
-    return parts.join(' · ') || '항목 미설정';
-  }
 
   const previewHeaders = buildExcelHeaders(fieldConfig);
 

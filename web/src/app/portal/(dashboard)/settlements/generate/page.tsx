@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import Badge from '@/components/shared/Badge';
-import { toastSuccess, toastError, toastWarning } from '@/components/shared/Toast';
+import { toastSuccess, toastWarning } from '@/components/shared/Toast';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
-import { getPrincipals, type Principal, type ItemType, ITEM_LABELS, normalizeFieldConfig, buildExcelHeaders, type FieldConfig, type SettlementDisplayConfig, DEFAULT_SETTLEMENT_DISPLAY } from '@/services/principal.service';
+import { getPrincipals, type Principal, type ItemType, ITEM_LABELS, normalizeFieldConfig, buildExcelHeaders, type SettlementDisplayConfig, DEFAULT_SETTLEMENT_DISPLAY } from '@/services/principal.service';
 import {
   getSettlements,
   getSettlementSummary,
@@ -248,7 +248,6 @@ export default function SettlementsGeneratePage() {
       }
 
       const itemTypes: ('delivery' | 'return' | 'pickup')[] = ['delivery', 'return', 'pickup'];
-      const typeLabels: Record<string, string> = { delivery: '배송', return: '반품', pickup: '집하' };
 
       for (const d of (drivers ?? []) as { id: string; name: string; employee_code: string | null; custom_values: Record<string, unknown> | null }[]) {
         const row: (string | number)[] = [d.name, d.employee_code ?? ''];

@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
     // 4. 구독(subscriptions) 레코드 생성
     const planPrices: Record<string, number> = { free: 0, basic: 49900, standard: 99000, enterprise: 0 };
     const monthlyAmount = planPrices[validated.plan] ?? 0;
-    const billingCycle = validated.billing ?? 'monthly';
+    const _billingCycle = validated.billing ?? 'monthly';
 
     const { error: subError } = await supabaseAdmin
       .from('subscriptions')

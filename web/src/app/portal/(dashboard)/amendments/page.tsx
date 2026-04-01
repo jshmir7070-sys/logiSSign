@@ -169,7 +169,7 @@ export default function AmendmentsPage() {
           .order('created_at', { ascending: false });
         if (data) setAmendments(data as ContractAmendment[]);
       }
-    } catch (err) {
+    } catch {
       toastError('전송 실패');
     }
 

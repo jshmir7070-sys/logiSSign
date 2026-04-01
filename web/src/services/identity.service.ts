@@ -79,7 +79,7 @@ export async function createVerificationSession(
 }> {
   const apiKey = process.env.NEXT_PUBLIC_IDENTITY_API_KEY
   const providerId = process.env.NEXT_PUBLIC_IDENTITY_PROVIDER_ID
-  const callbackUrl = process.env.NEXT_PUBLIC_IDENTITY_CALLBACK_URL
+  const _callbackUrl = process.env.NEXT_PUBLIC_IDENTITY_CALLBACK_URL
 
   if (!apiKey || !providerId) {
     // 프로덕션에서 API 키 미설정 시 차단
