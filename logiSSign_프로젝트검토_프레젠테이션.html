@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>logiSSign (DeliSign) - 프로젝트 검토 리포트</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&display=swap');
+
+  :root {
+    --primary: #6C5CE7;
+    --primary-light: #A29BFE;
+    --primary-dark: #4A3CB5;
+    --accent: #00CEC9;
+    --accent2: #FD79A8;
+    --bg: #0F0E17;
+    --bg2: #1A1930;
+    --bg3: #232145;
+    --text: #FFFFFE;
+    --text-muted: #A7A9BE;
+    --success: #00B894;
+    --warning: #FDCB6E;
+    --danger: #FF7675;
+    --card-bg: rgba(26, 25, 48, 0.85);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-snap-type: y mandatory;
+    overflow-y: scroll;
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  section {
+    scroll-snap-align: start;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .slide-inner {
+    max-width: 1100px;
+    width: 100%;
+    z-index: 2;
+    animation: fadeUp 0.6s ease-out;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .slide-number {
+    position: absolute;
+    top: 30px;
+    right: 40px;
+    font-size: 14px;
+    color: var(--text-muted);
+    font-weight: 300;
+    letter-spacing: 2px;
+  }
+
+  h1 {
+    font-size: 3.2rem;
+    font-weight: 900;
+    line-height: 1.2;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, var(--primary-light), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  h2 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 32px;
+    color: var(--text);
+  }
+
+  h2 .accent { color: var(--primary-light); }
+
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+
+  p { font-size: 1.1rem; line-height: 1.7; color: var(--text-muted); }
+  .subtitle { font-size: 1.4rem; color: var(--text-muted); font-weight: 300; margin-bottom: 40px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; }
+
+  .card {
+    background: var(--card-bg);
+    border: 1px solid rgba(108, 92, 231, 0.15);
+    border-radius: 16px;
+    padding: 28px;
+    backdrop-filter: blur(10px);
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(108, 92, 231, 0.4);
+  }
+
+  .card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-body { font-size: 0.9rem; color: var(--text-muted); line-height: 1.6; }
+
+  .badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .badge-success { background: rgba(0, 184, 148, 0.2); color: var(--success); }
+  .badge-warning { background: rgba(253, 203, 110, 0.2); color: var(--warning); }
+  .badge-danger { background: rgba(255, 118, 117, 0.2); color: var(--danger); }
+  .badge-primary { background: rgba(108, 92, 231, 0.2); color: var(--primary-light); }
+
+  .stat-card {
+    text-align: center;
+    background: var(--card-bg);
+    border: 1px solid rgba(108, 92, 231, 0.15);
+    border-radius: 16px;
+    padding: 24px 16px;
+  }
+  .stat-number {
+    font-size: 2.8rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--primary-light), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .stat-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 6px;
+    font-weight: 400;
+  }
+
+  .progress-bar {
+    height: 8px;
+    background: var(--bg3);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 8px 0;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 1s ease;
+  }
+  .fill-success { background: linear-gradient(90deg, var(--success), var(--accent)); }
+  .fill-primary { background: linear-gradient(90deg, var(--primary), var(--primary-light)); }
+  .fill-warning { background: linear-gradient(90deg, var(--warning), #e17055); }
+
+  .milestone {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 20px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  .milestone:last-child { border-bottom: none; }
+  .milestone-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin-top: 4px;
+    flex-shrink: 0;
+  }
+  .dot-complete { background: var(--success); box-shadow: 0 0 12px rgba(0, 184, 148, 0.4); }
+  .dot-progress { background: var(--warning); box-shadow: 0 0 12px rgba(253, 203, 110, 0.4); }
+
+  .tech-badge {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin: 4px;
+    background: var(--bg3);
+    border: 1px solid rgba(108, 92, 231, 0.2);
+    color: var(--text);
+  }
+
+  .list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 0;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .list-icon { flex-shrink: 0; font-size: 1rem; margin-top: 2px; }
+
+  .bg-glow {
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.08;
+    z-index: 0;
+  }
+  .glow-purple { background: var(--primary); }
+  .glow-teal { background: var(--accent); }
+  .glow-pink { background: var(--accent2); }
+
+  .nav-dots {
+    position: fixed;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .nav-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    transition: all 0.3s;
+    border: none;
+  }
+  .nav-dot.active {
+    background: var(--primary-light);
+    box-shadow: 0 0 8px rgba(162, 155, 254, 0.5);
+    transform: scale(1.4);
+  }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
+
+  .risk-item {
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+  }
+  .risk-critical { background: rgba(255, 118, 117, 0.1); border-left: 3px solid var(--danger); }
+  .risk-high { background: rgba(253, 203, 110, 0.1); border-left: 3px solid var(--warning); }
+  .risk-medium { background: rgba(108, 92, 231, 0.1); border-left: 3px solid var(--primary-light); }
+
+  .timeline-item {
+    padding: 20px;
+    border-left: 2px solid var(--primary);
+    margin-left: 12px;
+    padding-left: 28px;
+    position: relative;
+    margin-bottom: 8px;
+  }
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -7px;
+    top: 24px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--primary-light);
+  }
+
+  @media (max-width: 768px) {
+    h1 { font-size: 2rem; }
+    h2 { font-size: 1.5rem; }
+    .grid-2, .grid-3, .grid-4, .two-col { grid-template-columns: 1fr; }
+    section { padding: 40px 20px; }
+    .nav-dots { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav-dots" id="navDots"></nav>
+
+<!-- SLIDE 1: COVER -->
+<section id="s1">
+  <div class="bg-glow glow-purple" style="top:-100px;left:-200px;"></div>
+  <div class="bg-glow glow-teal" style="bottom:-150px;right:-100px;"></div>
+  <span class="slide-number">01 / 13</span>
+  <div class="slide-inner" style="text-align:center;">
+    <h3>PROJECT REVIEW REPORT</h3>
+    <h1 style="font-size:4rem;">logiSSign</h1>
+    <p class="subtitle">DeliSign &mdash; 라스트마일 배송 정산/계약 SaaS 플랫폼</p>
+    <div style="display:flex;justify-content:center;gap:16px;margin-top:32px;flex-wrap:wrap;">
+      <span class="tech-badge">2026.03.31 기준</span>
+      <span class="tech-badge">웹 + 모바일 풀스택</span>
+      <span class="tech-badge">Supabase + PostgreSQL</span>
+    </div>
+    <p style="margin-top:48px;font-size:0.9rem;color:var(--text-muted);">
+      스크롤하여 계속 &darr;
+    </p>
+  </div>
+</section>
+
+<!-- SLIDE 2: PROJECT OVERVIEW -->
+<section id="s2">
+  <div class="bg-glow glow-purple" style="top:100px;right:-200px;"></div>
+  <span class="slide-number">02 / 13</span>
+  <div class="slide-inner">
+    <h3>PROJECT OVERVIEW</h3>
+    <h2>프로젝트 <span class="accent">개요</span></h2>
+    <div class="grid-2">
+      <div>
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-title">&#128640; 도메인</div>
+          <div class="card-body">라스트마일 배송 관리 SaaS 플랫폼</div>
+        </div>
+        <div class="card">
+          <div class="card-title">&#127919; 타겟 사용자</div>
+          <div class="card-body">배송 대리점 (기사 관리, 정산, 계약 업무 담당)</div>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-title">&#9889; 핵심 기능</div>
+          <div class="card-body">
+            <div class="list-item"><span class="list-icon">&#9679;</span> 기사 정산 자동 계산</div>
+            <div class="list-item"><span class="list-icon">&#9679;</span> 전자계약 관리 및 서명</div>
+            <div class="list-item"><span class="list-icon">&#9679;</span> 교육/훈련 시스템</div>
+            <div class="list-item"><span class="list-icon">&#9679;</span> 멀티테넌트 운영</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">&#128241; 플랫폼 구성</div>
+          <div class="card-body">웹 포털 (대리점 관리자) + 모바일 앱 (배송 기사)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 3: TECH STACK -->
+<section id="s3">
+  <div class="bg-glow glow-teal" style="bottom:-100px;left:-150px;"></div>
+  <span class="slide-number">03 / 13</span>
+  <div class="slide-inner">
+    <h3>TECH STACK</h3>
+    <h2>기술 <span class="accent">스택</span></h2>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">&#128421; 웹 프론트엔드</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;">
+          <span class="tech-badge">Next.js 14</span>
+          <span class="tech-badge">React 18</span>
+          <span class="tech-badge">TypeScript</span>
+          <span class="tech-badge">Tailwind CSS</span>
+          <span class="tech-badge">App Router</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128241; 모바일</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;">
+          <span class="tech-badge">Expo SDK 54</span>
+          <span class="tech-badge">React Native 0.79</span>
+          <span class="tech-badge">Expo Router v5</span>
+          <span class="tech-badge">Zustand</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#9881; 백엔드</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;">
+          <span class="tech-badge">Supabase</span>
+          <span class="tech-badge">PostgreSQL</span>
+          <span class="tech-badge">Supabase Auth</span>
+          <span class="tech-badge">RLS 20+ 정책</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#127912; 디자인 시스템</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;">
+          <span class="tech-badge">Material Design 3</span>
+          <span class="tech-badge">디자인 토큰</span>
+          <span class="tech-badge">웹/모바일 통일</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 4: MILESTONES -->
+<section id="s4">
+  <div class="bg-glow glow-pink" style="top:-50px;right:-100px;"></div>
+  <span class="slide-number">04 / 13</span>
+  <div class="slide-inner">
+    <h3>MILESTONES</h3>
+    <h2>마일스톤 <span class="accent">진행 현황</span></h2>
+    <div class="grid-4" style="margin-bottom:36px;">
+      <div class="stat-card">
+        <div class="stat-number">66%</div>
+        <div class="stat-label">전체 진행률</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">2/3</div>
+        <div class="stat-label">마일스톤 완료</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">30+</div>
+        <div class="stat-label">웹 페이지</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">26</div>
+        <div class="stat-label">DB 테이블</div>
+      </div>
+    </div>
+    <div class="milestone">
+      <div class="milestone-dot dot-complete"></div>
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <strong>M001: Full-Stack Foundation</strong>
+          <span class="badge badge-success">COMPLETE</span>
+        </div>
+        <p style="font-size:0.9rem;">19테이블 DB 스키마 배포, 웹 정산/계약 페이지, 모바일 전자서명 구현</p>
+      </div>
+    </div>
+    <div class="milestone">
+      <div class="milestone-dot dot-complete"></div>
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <strong>M002: All Pages Complete</strong>
+          <span class="badge badge-success">COMPLETE</span>
+        </div>
+        <p style="font-size:0.9rem;">웹 30페이지 (포털 20 + 관리자 10), 모바일 5탭 레이아웃, 정산 표시 설정</p>
+      </div>
+    </div>
+    <div class="milestone">
+      <div class="milestone-dot dot-progress"></div>
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <strong>M003: Real Data Testing</strong>
+          <span class="badge badge-warning">IN PROGRESS</span>
+        </div>
+        <p style="font-size:0.9rem;">실데이터 기반 웹 포털 품질 게이트 평가 진행중</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 5: WEB PORTAL -->
+<section id="s5">
+  <div class="bg-glow glow-purple" style="bottom:-200px;left:-100px;"></div>
+  <span class="slide-number">05 / 13</span>
+  <div class="slide-inner">
+    <h3>WEB PORTAL</h3>
+    <h2>웹 포털 <span class="accent">기능 현황</span> <span class="badge badge-primary">20 Pages</span></h2>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-title">&#128202; 대시보드</div>
+        <div class="card-body">KPI 차트 및 주요 지표 실시간 모니터링</div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128100; 기사 관리</div>
+        <div class="card-body">기사 등록/수정/삭제, 프로필 및 서류 관리</div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128176; 정산 시스템</div>
+        <div class="card-body">계층적 단가 체계 (3단계 오버라이드), 엑셀 업로드 (쿠팡/CJ/한진)</div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128196; 계약 관리</div>
+        <div class="card-body">계약 템플릿 관리, 기사에게 발송, 전자서명 수집</div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128203; 세금계산서</div>
+        <div class="card-body">자동 생성, 인쇄 및 관리</div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128227; 기타 기능</div>
+        <div class="card-body">주선사/고객 관리, 공지사항, 매출 리포트</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 6: ADMIN + MOBILE -->
+<section id="s6">
+  <div class="bg-glow glow-teal" style="top:-150px;right:-200px;"></div>
+  <span class="slide-number">06 / 13</span>
+  <div class="slide-inner">
+    <h3>ADMIN & MOBILE</h3>
+    <h2>관리자 대시보드 + <span class="accent">모바일 앱</span></h2>
+    <div class="grid-2">
+      <div>
+        <h3 style="margin-bottom:16px;">ADMIN DASHBOARD <span class="badge badge-primary">10 Pages</span></h3>
+        <div class="card" style="margin-bottom:12px;">
+          <div class="card-body">
+            <div class="list-item"><span class="list-icon">&#9654;</span> 제공자 관리자 로그인</div>
+            <div class="list-item"><span class="list-icon">&#9654;</span> 대리점 관리 (등록/수정/삭제)</div>
+            <div class="list-item"><span class="list-icon">&#9654;</span> 요금제/구독 관리</div>
+            <div class="list-item"><span class="list-icon">&#9654;</span> SaaS 지표: MRR, 요금제 분포</div>
+            <div class="list-item"><span class="list-icon">&#9654;</span> 빌링 및 서버 설정</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3 style="margin-bottom:16px;">MOBILE DRIVER APP <span class="badge badge-primary">5 Tabs</span></h3>
+        <div class="card" style="margin-bottom:12px;">
+          <div class="card-body">
+            <div class="list-item"><span class="list-icon">&#127968;</span> <strong>홈</strong> &mdash; 대시보드 요약 정보</div>
+            <div class="list-item"><span class="list-icon">&#128176;</span> <strong>정산</strong> &mdash; 월별 정산 내역 상세</div>
+            <div class="list-item"><span class="list-icon">&#128196;</span> <strong>계약</strong> &mdash; 전자서명 (PanResponder+SVG)</div>
+            <div class="list-item"><span class="list-icon">&#128218;</span> <strong>교육</strong> &mdash; 과정 및 퀴즈 추적</div>
+            <div class="list-item"><span class="list-icon">&#128100;</span> <strong>프로필</strong> &mdash; 개인정보 관리</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 7: DATABASE -->
+<section id="s7">
+  <div class="bg-glow glow-pink" style="bottom:-100px;left:200px;"></div>
+  <span class="slide-number">07 / 13</span>
+  <div class="slide-inner">
+    <h3>DATABASE ARCHITECTURE</h3>
+    <h2>데이터베이스 <span class="accent">아키텍처</span> <span class="badge badge-primary">26 Tables</span></h2>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-title">&#128101; 사용자</div>
+        <div class="card-body">providers, agencies, drivers, users, driver_auth_logs</div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128176; 정산</div>
+        <div class="card-body">settlement_rules, driver_rates, driver_route_rates, settlements, settlement_items, deduction_items</div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128196; 계약</div>
+        <div class="card-body">contracts, contract_signing_sessions, signatures</div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128218; 교육</div>
+        <div class="card-body">education_courses, education_activities</div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128203; 인프라</div>
+        <div class="card-body">tax_invoices, notices, subscriptions, audit_log, excel_mappings</div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128279; 계층적 단가</div>
+        <div class="card-body" style="font-family:monospace;font-size:0.85rem;">
+          settlement_rules<br>
+          &nbsp;&nbsp;&darr; override<br>
+          driver_rates<br>
+          &nbsp;&nbsp;&darr; override<br>
+          driver_route_rates
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:24px;text-align:center;">
+      <span class="tech-badge">RLS 정책 20+개</span>
+      <span class="tech-badge">agency_id 기반 멀티테넌트 격리</span>
+      <span class="tech-badge">인덱스 15+개</span>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 8: CODE QUALITY -->
+<section id="s8">
+  <div class="bg-glow glow-purple" style="top:0;right:-150px;"></div>
+  <span class="slide-number">08 / 13</span>
+  <div class="slide-inner">
+    <h3>CODE QUALITY</h3>
+    <h2>코드 <span class="accent">품질 지표</span></h2>
+    <div class="grid-2" style="margin-bottom:30px;">
+      <div>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title">TypeScript Strict Mode</div>
+          <div class="card-body">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+              <span>웹 + 모바일</span>
+              <span style="color:var(--success);font-weight:700;">에러 0건</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill fill-success" style="width:100%"></div></div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title">배포 준비도</div>
+          <div class="card-body">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+              <span>보안 이슈 해결 필요</span>
+              <span style="color:var(--warning);font-weight:700;">70%</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill fill-warning" style="width:70%"></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">코드 품질</div>
+          <div class="card-body">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+              <span>아키텍처 양호, 에러핸들링 표준화 필요</span>
+              <span style="color:var(--primary-light);font-weight:700;">75%</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill fill-primary" style="width:75%"></div></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="grid-2" style="gap:12px;">
+          <div class="stat-card">
+            <div class="stat-number">21</div>
+            <div class="stat-label">웹 서비스</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">7</div>
+            <div class="stat-label">모바일 서비스</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">35</div>
+            <div class="stat-label">페이지 파일</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">854</div>
+            <div class="stat-label">스키마 줄수</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 9: STRENGTHS -->
+<section id="s9">
+  <div class="bg-glow glow-teal" style="bottom:-200px;right:-100px;"></div>
+  <span class="slide-number">09 / 13</span>
+  <div class="slide-inner">
+    <h3>STRENGTHS</h3>
+    <h2>아키텍처 <span class="accent">강점</span></h2>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">&#128736; 서비스 레이어 추상화</div>
+        <div class="card-body">UI와 비즈니스 로직 완전 분리. 웹 21개 + 모바일 7개의 독립적 서비스 파일로 관심사 분리 달성.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128451; 도메인 정합 DB 설계</div>
+        <div class="card-body">배송 정산 도메인의 복잡성을 정확히 반영한 26테이블 스키마. 계층적 단가 오버라이드 시스템.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#127912; 통일된 디자인 시스템</div>
+        <div class="card-body">Material Design 3 토큰을 웹/모바일에 체계적으로 적용. 일관된 사용자 경험 제공.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128274; 멀티테넌트 격리</div>
+        <div class="card-body">agency_id 기반 RLS 정책 20+개로 테넌트 간 완벽한 데이터 격리 보장.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#9997; 커스텀 전자서명</div>
+        <div class="card-body">외부 의존성 없이 PanResponder + SVG로 구현. 법적 요건을 위한 서명 데이터 저장 구조.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128200; 유연한 정산 규칙</div>
+        <div class="card-body">3단계 오버라이드: 대리점 규칙 &rarr; 기사별 단가 &rarr; 노선별 단가. 다양한 정산 시나리오 지원.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 10: SECURITY & RISKS -->
+<section id="s10">
+  <div class="bg-glow glow-pink" style="top:-100px;left:-200px;"></div>
+  <span class="slide-number">10 / 13</span>
+  <div class="slide-inner">
+    <h3>SECURITY & RISKS</h3>
+    <h2>보안 및 <span class="accent">리스크</span></h2>
+    <div class="risk-item risk-critical">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span class="badge badge-danger">CRITICAL</span>
+        <strong>긴급 해결 필요</strong>
+      </div>
+      <div class="card-body">
+        <div class="list-item"><span class="list-icon" style="color:var(--danger);">&#9888;</span> Service Role Key .env.local 관리 &mdash; git history 정리 및 키 로테이션 필요</div>
+        <div class="list-item"><span class="list-icon" style="color:var(--danger);">&#9888;</span> API Route 인증 검증 누락 &mdash; user/agency 유효성 미검사</div>
+        <div class="list-item"><span class="list-icon" style="color:var(--danger);">&#9888;</span> 민감 키(NEXT_PUBLIC_SOLAPI_*) &mdash; 서버 전용 환경변수로 이동 필요</div>
+      </div>
+    </div>
+    <div class="risk-item risk-high">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span class="badge badge-warning">HIGH</span>
+        <strong>높은 우선순위</strong>
+      </div>
+      <div class="card-body">
+        <div class="list-item"><span class="list-icon" style="color:var(--warning);">&#9679;</span> RLS 서브쿼리 성능 &mdash; JWT custom claims 고려</div>
+        <div class="list-item"><span class="list-icon" style="color:var(--warning);">&#9679;</span> 은행 계좌 데이터 &mdash; Vault 또는 컬럼 레벨 암호화 필요</div>
+        <div class="list-item"><span class="list-icon" style="color:var(--warning);">&#9679;</span> 계약 서명 토큰 &mdash; 사용 후 무효화 로직 추가</div>
+      </div>
+    </div>
+    <div class="risk-item risk-medium">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span class="badge badge-primary">MEDIUM</span>
+        <strong>중간 우선순위</strong>
+      </div>
+      <div class="card-body">
+        <div class="list-item"><span class="list-icon" style="color:var(--primary-light);">&#9679;</span> 정산/인보이스 로직 API Route 이전</div>
+        <div class="list-item"><span class="list-icon" style="color:var(--primary-light);">&#9679;</span> updated_at 컬럼 추가 (감사 추적)</div>
+        <div class="list-item"><span class="list-icon" style="color:var(--primary-light);">&#9679;</span> JSONB 필드 유효성 검사 강화</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 11: UNIMPLEMENTED -->
+<section id="s11">
+  <div class="bg-glow glow-purple" style="bottom:-150px;right:-100px;"></div>
+  <span class="slide-number">11 / 13</span>
+  <div class="slide-inner">
+    <h3>UNIMPLEMENTED FEATURES</h3>
+    <h2>미구현 <span class="accent">기능</span></h2>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-title">&#128172; SMS 알림</div>
+        <div class="card-body">Solapi API 서비스 코드 존재. API 키 미설정 상태.</div>
+        <div style="margin-top:8px;"><span class="badge badge-warning">코드 존재</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128276; 푸시 알림</div>
+        <div class="card-body">Expo SDK 54 호환 이슈로 현재 비활성화.</div>
+        <div style="margin-top:8px;"><span class="badge badge-danger">비활성화</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128272; 본인인증</div>
+        <div class="card-body">PASS/카카오 연동. 현재 개발모드 목업 상태.</div>
+        <div style="margin-top:8px;"><span class="badge badge-warning">목업</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128179; 결제/구독</div>
+        <div class="card-body">subscriptions DB 테이블 존재. 결제 로직 미구현.</div>
+        <div style="margin-top:8px;"><span class="badge badge-danger">미구현</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#128196; PDF 서명 저장</div>
+        <div class="card-body">인프라(테이블/스토리지) 존재. 실제 연결 미완료.</div>
+        <div style="margin-top:8px;"><span class="badge badge-warning">미연결</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">&#129514; 테스트 코드</div>
+        <div class="card-body">단위/통합 테스트 전무. 도입 필요.</div>
+        <div style="margin-top:8px;"><span class="badge badge-danger">없음</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 12: ROADMAP -->
+<section id="s12">
+  <div class="bg-glow glow-teal" style="top:50px;left:-200px;"></div>
+  <span class="slide-number">12 / 13</span>
+  <div class="slide-inner">
+    <h3>ROADMAP</h3>
+    <h2>향후 <span class="accent">로드맵</span></h2>
+    <div class="timeline-item">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <strong style="font-size:1.1rem;">단기 목표</strong>
+        <span class="badge badge-danger">URGENT</span>
+      </div>
+      <div class="card-body">
+        <div class="list-item"><span class="list-icon">&#9670;</span> M003 완료: 실데이터 기반 웹 포털 품질 게이트 통과</div>
+        <div class="list-item"><span class="list-icon">&#9670;</span> 보안 이슈 해결: 키 관리 체계화, API Route 인증, 데이터 암호화</div>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <strong style="font-size:1.1rem;">중기 목표</strong>
+        <span class="badge badge-warning">NEXT</span>
+      </div>
+      <div class="card-body">
+        <div class="list-item"><span class="list-icon">&#9670;</span> 미구현 기능 개발: SMS 알림, 푸시 알림, 본인인증, 결제 시스템</div>
+        <div class="list-item"><span class="list-icon">&#9670;</span> 테스트 코드 도입: 핵심 비즈니스 로직 단위 테스트 우선</div>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <strong style="font-size:1.1rem;">장기 목표</strong>
+        <span class="badge badge-success">FUTURE</span>
+      </div>
+      <div class="card-body">
+        <div class="list-item"><span class="list-icon">&#9670;</span> Server Component 최적화: 초기 로딩 성능 개선</div>
+        <div class="list-item"><span class="list-icon">&#9670;</span> RLS 쿼리 튜닝: JWT custom claims 도입</div>
+        <div class="list-item"><span class="list-icon">&#9670;</span> 프로덕션 배포 및 운영 모니터링 구축</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 13: CONCLUSION -->
+<section id="s13">
+  <div class="bg-glow glow-purple" style="top:-100px;left:30%;"></div>
+  <div class="bg-glow glow-teal" style="bottom:-100px;right:20%;"></div>
+  <span class="slide-number">13 / 13</span>
+  <div class="slide-inner" style="text-align:center;">
+    <h3>CONCLUSION</h3>
+    <h1>결론 및 요약</h1>
+    <div class="grid-3" style="margin:40px 0;">
+      <div class="card" style="text-align:left;">
+        <div class="card-title" style="color:var(--success);">&#9989; 달성 사항</div>
+        <div class="card-body">
+          <div class="list-item"><span class="list-icon">&#9679;</span> MVP 수준 도달</div>
+          <div class="list-item"><span class="list-icon">&#9679;</span> 핵심 도메인 로직 구현 완료</div>
+          <div class="list-item"><span class="list-icon">&#9679;</span> 주요 워크플로우 동작 확인</div>
+          <div class="list-item"><span class="list-icon">&#9679;</span> TS strict 에러 0건</div>
+        </div>
+      </div>
+      <div class="card" style="text-align:left;">
+        <div class="card-title" style="color:var(--primary-light);">&#11088; 핵심 강점</div>
+        <div class="card-body">
+          <div class="list-item"><span class="list-icon">&#9679;</span> 견고한 아키텍처 설계</div>
+          <div class="list-item"><span class="list-icon">&#9679;</span> 도메인 정합성 높은 DB</div>
+          <div class="list-item"><span class="list-icon">&#9679;</span> 체계적 디자인 시스템</div>
+          <div class="list-item"><span class="list-icon">&#9679;</span> 멀티테넌트 보안 격리</div>
+        </div>
+      </div>
+      <div class="card" style="text-align:left;">
+        <div class="card-title" style="color:var(--warning);">&#128736; 남은 과제</div>
+        <div class="card-body">
+          <div class="list-item"><span class="list-icon">&#9679;</span> 보안 취약점 해결</div>
+          <div class="list-item"><span class="list-icon">&#9679;</span> 미구현 기능 완성</div>
+          <div class="list-item"><span class="list-icon">&#9679;</span> 테스트 커버리지 확보</div>
+          <div class="list-item"><span class="list-icon">&#9679;</span> 프로덕션 배포 준비</div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:40px;">
+      <p style="font-size:1.3rem;color:var(--text);font-weight:600;">
+        프로덕션 배포를 위한 품질 게이트 통과가 최우선 목표
+      </p>
+      <p style="margin-top:12px;font-size:0.9rem;">logiSSign (DeliSign) &mdash; 2026.03.31</p>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Navigation dots
+  const sections = document.querySelectorAll('section');
+  const navContainer = document.getElementById('navDots');
+
+  sections.forEach((s, i) => {
+    const dot = document.createElement('button');
+    dot.className = 'nav-dot';
+    dot.title = `Slide ${i + 1}`;
+    dot.addEventListener('click', () => s.scrollIntoView({ behavior: 'smooth' }));
+    navContainer.appendChild(dot);
+  });
+
+  const dots = document.querySelectorAll('.nav-dot');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const idx = Array.from(sections).indexOf(e.target);
+        dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+      }
+    });
+  }, { threshold: 0.5 });
+
+  sections.forEach(s => observer.observe(s));
+
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    const current = Array.from(sections).findIndex(s => {
+      const rect = s.getBoundingClientRect();
+      return rect.top >= -100 && rect.top < window.innerHeight / 2;
+    });
+    if (e.key === 'ArrowDown' || e.key === ' ' || e.key === 'PageDown') {
+      e.preventDefault();
+      if (current < sections.length - 1) sections[current + 1].scrollIntoView({ behavior: 'smooth' });
+    }
+    if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+      e.preventDefault();
+      if (current > 0) sections[current - 1].scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+</script>
+</body>
+</html>

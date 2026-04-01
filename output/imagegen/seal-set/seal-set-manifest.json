@@ -1,0 +1,106 @@
+﻿{
+    "corporate":  [
+                      {
+                          "id":  "C1",
+                          "title":  "Round double legal",
+                          "png":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\corporate\\corporate-c1.png",
+                          "svg":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\corporate\\corporate-c1.svg"
+                      },
+                      {
+                          "id":  "C2",
+                          "title":  "Round clean official",
+                          "png":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\corporate\\corporate-c2.png",
+                          "svg":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\corporate\\corporate-c2.svg"
+                      },
+                      {
+                          "id":  "C3",
+                          "title":  "Square grid legal",
+                          "png":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\corporate\\corporate-c3.png",
+                          "svg":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\corporate\\corporate-c3.svg"
+                      },
+                      {
+                          "id":  "C4",
+                          "title":  "Rounded square official",
+                          "png":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\corporate\\corporate-c4.png",
+                          "svg":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\corporate\\corporate-c4.svg"
+                      },
+                      {
+                          "id":  "C5",
+                          "title":  "Oval full-name legal",
+                          "png":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\corporate\\corporate-c5.png",
+                          "svg":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\corporate\\corporate-c5.svg"
+                      },
+                      {
+                          "id":  "C6",
+                          "title":  "Oval confirmation official",
+                          "png":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\corporate\\corporate-c6.png",
+                          "svg":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\corporate\\corporate-c6.svg"
+                      },
+                      {
+                          "id":  "C7",
+                          "title":  "Tall traditional legal",
+                          "png":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\corporate\\corporate-c7.png",
+                          "svg":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\corporate\\corporate-c7.svg"
+                      },
+                      {
+                          "id":  "C8",
+                          "title":  "Tall double official",
+                          "png":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\corporate\\corporate-c8.png",
+                          "svg":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\corporate\\corporate-c8.svg"
+                      }
+                  ],
+    "personal":  [
+                     {
+                         "id":  "P1",
+                         "title":  "Round traditional",
+                         "png":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\personal\\personal-p1.png",
+                         "svg":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\personal\\personal-p1.svg"
+                     },
+                     {
+                         "id":  "P2",
+                         "title":  "Round modern",
+                         "png":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\personal\\personal-p2.png",
+                         "svg":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\personal\\personal-p2.svg"
+                     },
+                     {
+                         "id":  "P3",
+                         "title":  "Square classic",
+                         "png":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\personal\\personal-p3.png",
+                         "svg":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\personal\\personal-p3.svg"
+                     },
+                     {
+                         "id":  "P4",
+                         "title":  "Rounded minimal",
+                         "png":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\personal\\personal-p4.png",
+                         "svg":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\personal\\personal-p4.svg"
+                     },
+                     {
+                         "id":  "P5",
+                         "title":  "Oval practical",
+                         "png":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\personal\\personal-p5.png",
+                         "svg":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\personal\\personal-p5.svg"
+                     },
+                     {
+                         "id":  "P6",
+                         "title":  "Tall gungsuh",
+                         "png":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\personal\\personal-p6.png",
+                         "svg":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\personal\\personal-p6.svg"
+                     },
+                     {
+                         "id":  "P7",
+                         "title":  "Tall double border",
+                         "png":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\personal\\personal-p7.png",
+                         "svg":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\personal\\personal-p7.svg"
+                     },
+                     {
+                         "id":  "P8",
+                         "title":  "Square clean",
+                         "png":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\personal\\personal-p8.png",
+                         "svg":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\personal\\personal-p8.svg"
+                     }
+                 ],
+    "preview":  {
+                    "corporateBoard":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\preview\\corporate-selection-board.png",
+                    "personalBoard":  "C:\\Users\\jshmi\\Downloads\\logiSSign\\output\\imagegen\\seal-set\\preview\\personal-selection-board.png"
+                }
+}

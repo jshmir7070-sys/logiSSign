@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
+  <defs>
+    <filter id="stampTexture" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="12" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="softInk" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="0.8"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#stampTexture)" transform="rotate(-3 512 512)">
+    <circle cx="512" cy="512" r="410" stroke="#C91924" stroke-width="34"/>
+    <circle cx="512" cy="512" r="368" stroke="#C91924" stroke-width="8" opacity="0.92"/>
+
+    <path
+      d="M320 315H704V709H320Z
+         M512 315V709
+         M320 512H704"
+      stroke="#C91924"
+      stroke-width="28"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+
+    <text
+      x="414"
+      y="458"
+      fill="#C91924"
+      font-size="122"
+      font-weight="800"
+      text-anchor="middle"
+      font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif"
+    >모</text>
+    <text
+      x="610"
+      y="458"
+      fill="#C91924"
+      font-size="122"
+      font-weight="800"
+      text-anchor="middle"
+      font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif"
+    >두</text>
+    <text
+      x="414"
+      y="653"
+      fill="#C91924"
+      font-size="122"
+      font-weight="800"
+      text-anchor="middle"
+      font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif"
+    >사</text>
+    <text
+      x="610"
+      y="653"
+      fill="#C91924"
+      font-size="122"
+      font-weight="800"
+      text-anchor="middle"
+      font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif"
+    >인</text>
+
+    <g opacity="0.92">
+      <text
+        x="512"
+        y="186"
+        fill="#C91924"
+        font-size="42"
+        font-weight="700"
+        text-anchor="middle"
+        letter-spacing="18"
+        font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif"
+      >전자문서 서명</text>
+      <text
+        x="512"
+        y="858"
+        fill="#C91924"
+        font-size="36"
+        font-weight="700"
+        text-anchor="middle"
+        letter-spacing="8"
+        font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif"
+      >서명완료</text>
+    </g>
+  </g>
+
+  <g opacity="0.12" filter="url(#softInk)">
+    <circle cx="510" cy="514" r="414" stroke="#C91924" stroke-width="42"/>
+  </g>
+</svg>

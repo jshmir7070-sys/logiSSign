@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exported_at": "2026-03-29T09:39:55.386Z",
+  "exported_at": "2026-04-01T00:35:56.294Z",
   "milestones": [
     {
       "id": "M001",
@@ -111,6 +111,54 @@
       ],
       "requirement_coverage": "Covers all remaining pages across web portal, web admin, and mobile app",
       "boundary_map_markdown": "```\\n[S01 Web Portal] → Dashboard, Drivers detail, Tax invoices, Reports, Settings\\n[S02 Web Admin] → Super admin dashboard, Agencies, Billing, Revenue\\n[S03 Mobile] → Tab bar fix, Home, Notice, Profile, Contract tab\\n```"
+    },
+    {
+      "id": "M003",
+      "title": "",
+      "status": "queued",
+      "depends_on": [],
+      "created_at": "2026-03-29T09:46:10.301Z",
+      "completed_at": null,
+      "vision": "schema.sql을 라이브 Supabase에 배포하고, 웹/모바일 앱이 실제 데이터로 작동하는지 확인한다.",
+      "success_criteria": [
+        "Supabase에 19개 테이블 + RLS 배포",
+        "웹 포털 로그인/CRUD 작동",
+        "모바일 앱 로그인/조회 작동"
+      ],
+      "key_risks": [
+        {
+          "risk": "RLS 정책이 쿠리를 차단할 수 있음",
+          "whyItMatters": "기사/운영사가 데이터를 볼 수 없으면 앱이 작동하지 않음"
+        },
+        {
+          "risk": "스키마에 누락된 컨텍스트 항목이 있을 수 있음",
+          "whyItMatters": "프로덕션 데이터 손실 위험"
+        }
+      ],
+      "proof_strategy": [
+        {
+          "riskOrUnknown": "Schema deployment",
+          "retireIn": "S01",
+          "whatWillBeProven": "All 19 tables exist in Supabase"
+        },
+        {
+          "riskOrUnknown": "RLS blocks queries",
+          "retireIn": "S02",
+          "whatWillBeProven": "Web portal can CRUD with agency_admin role"
+        }
+      ],
+      "verification_contract": "SQL 실행 성공, 테이블 존재 확인",
+      "verification_integration": "웹/모바일에서 Supabase 쿼리 성공",
+      "verification_operational": "RLS가 역할별로 올바르게 작동",
+      "verification_uat": "회원가입 → 로그인 → 데이터 조회 플로우",
+      "definition_of_done": [
+        "Supabase에 19개 테이블 생성됨",
+        "RLS 정책 활성화",
+        "웹 포털 로그인 → 데이터 조회 작동",
+        "모바일 앱 로그인 → 데이터 조회 작동"
+      ],
+      "requirement_coverage": "Supabase \\uc5f0\\ub3d9 + \\uc2e4\\ub370\\uc774\\ud130 \\ud14c\\uc2a4\\ud2b8",
+      "boundary_map_markdown": "```\\n[S01 Schema Deploy] → Supabase에 테이블/RLS 생성\\n[S02 Web Test] → 웹 포털 실제 데이터 테스트\\n[S03 Mobile Test] → 모바일 앱 실제 데이터 테스트\\n```"
     }
   ],
   "slices": [
@@ -258,6 +306,202 @@
       "proof_level": "npx tsc --noEmit 통과",
       "integration_closure": "M001 컴포넌트/서비스/타입 사용",
       "observability_impact": "로딩/에러 상태",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M003",
+      "id": "S01",
+      "title": "Supabase 스키마 배포",
+      "status": "complete",
+      "risk": "medium",
+      "depends": [],
+      "demo": "Supabase 대시보드에서 19개 테이블 확인 가능",
+      "created_at": "2026-03-29T09:46:53.292Z",
+      "completed_at": "2026-03-29T09:48:50.661Z",
+      "full_summary_md": "---\nid: S01\nparent: M003\nmilestone: M003\nprovides:\n  - Verified Supabase connection for S02\nrequires:\n  []\naffects:\n  - S02\nkey_files:\n  - mobile/.env\nkey_decisions:\n  - (none)\npatterns_established:\n  - (none)\nobservability_surfaces:\n  - none\ndrill_down_paths:\n  - .gsd/milestones/M003/slices/S01/tasks/T01-SUMMARY.md\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-03-29T09:48:50.777Z\nblocker_discovered: false\n---\n\n# S01: Supabase 스키마 배포\n\n**Supabase 19 테이블 확인 + 모바일 env 설정**\n\n## What Happened\n\nAll 19 tables confirmed in Supabase with new columns. Mobile env configured.\n\n## Verification\n\nAll 19 tables queryable via anon key.\n\n## Requirements Advanced\n\nNone.\n\n## Requirements Validated\n\nNone.\n\n## New Requirements Surfaced\n\nNone.\n\n## Requirements Invalidated or Re-scoped\n\nNone.\n\n## Deviations\n\nSchema already deployed — verification only.\n\n## Known Limitations\n\nservice_role key is placeholder.\n\n## Follow-ups\n\nSet real SUPABASE_SERVICE_ROLE_KEY in web/.env.local.\n\n## Files Created/Modified\n\n- `mobile/.env` — Created with Supabase URL and anon key\n",
+      "full_uat_md": "# S01: Supabase 스키마 배포 — UAT\n\n**Milestone:** M003\n**Written:** 2026-03-29T09:48:50.778Z\n\n## UAT: Supabase Schema\\n\\n- [x] 19/19 tables accessible via anon key\\n- [x] New columns (employee_code, delivery_area, field_config etc) confirmed\\n- [x] Existing data preserved (providers, agencies, principals, notices)\\n- [x] Mobile .env created\n",
+      "goal": "Supabase 스키마 확인 + service_role key 설정",
+      "success_criteria": "19개 테이블 모두 쿼리 가능",
+      "proof_level": "테이블 쿼리 성공",
+      "integration_closure": "기존 .env.local 사용",
+      "observability_impact": "없음",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M003",
+      "id": "S02",
+      "title": "Auth 수정 + Seed 데이터",
+      "status": "pending",
+      "risk": "high",
+      "depends": [
+        "S01"
+      ],
+      "demo": "포털 로그인 → 대시보드 진입, 기사/원청사 목록에 seed 데이터 표시",
+      "created_at": "2026-03-29T09:46:53.293Z",
+      "completed_at": null,
+      "full_summary_md": "",
+      "full_uat_md": "",
+      "goal": "웹 포털을 실행하고 브라우저에서 실제 Supabase 데이터로 테스트",
+      "success_criteria": "웹 포털 로그인 페이지 렌더링, 대시보드 로드",
+      "proof_level": "브라우저에서 페이지 렌더링 확인",
+      "integration_closure": "S01에서 확인한 Supabase 연결 사용",
+      "observability_impact": "브라우저 콘솔에서 API 에러 확인",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M003",
+      "id": "S03",
+      "title": "Server-side Auth 컨텍스트 수정",
+      "status": "complete",
+      "risk": "high",
+      "depends": [
+        "S02"
+      ],
+      "demo": "로그인한 운영사만 자기 데이터 조회 가능, 타 운영사 데이터 차단",
+      "created_at": "2026-04-01T00:19:46.888Z",
+      "completed_at": "2026-04-01T00:27:20.103Z",
+      "full_summary_md": "---\nid: S03\nparent: M003\nmilestone: M003\nprovides:\n  - Cookie-based server Supabase client for S04, S08\nrequires:\n  []\naffects:\n  - S04\n  - S08\nkey_files:\n  - web/src/lib/supabase.ts\n  - web/src/lib/auth.ts\nkey_decisions:\n  - createServerSupabaseClient async로 변경, getAll/setAll 패턴 사용\npatterns_established:\n  - createServerSupabaseClient()는 항상 await 필요 — async 함수\nobservability_surfaces:\n  - none\ndrill_down_paths:\n  - .gsd/milestones/M003/slices/S03/tasks/T01-SUMMARY.md\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-01T00:27:20.104Z\nblocker_discovered: false\n---\n\n# S03: Server-side Auth 컨텍스트 수정\n\n**createServerSupabaseClient를 쿠키 기반 SSR 클라이언트로 교체하여 서버사이드 RLS 정상 동작**\n\n## What Happened\n\nServer-side Supabase 클라이언트가 쿠키 기반 세션을 읽도록 수정. 이제 서버 컴포넌트/API 라우트에서 auth.jwt()를 참조하는 RLS 정책이 정상 작동.\n\n## Verification\n\nnpx tsc --noEmit — 0 errors\n\n## Requirements Advanced\n\nNone.\n\n## Requirements Validated\n\nNone.\n\n## New Requirements Surfaced\n\nNone.\n\n## Requirements Invalidated or Re-scoped\n\nNone.\n\n## Deviations\n\nidentity.service.ts, integrity-check route도 함께 수정 (동일 패턴)\n\n## Known Limitations\n\nNone.\n\n## Follow-ups\n\nNone.\n\n## Files Created/Modified\n\n- `web/src/lib/supabase.ts` — createServerSupabaseClient를 @supabase/ssr createServerClient + cookies()로 교체\n- `web/src/lib/auth.ts` — getSessionUser()에서 await 추가\n- `web/src/services/identity.service.ts` — saveVerificationToSignature에서 await 추가\n- `web/src/app/api/integrity-check/route.ts` — POST/GET에서 await 추가\n",
+      "full_uat_md": "# S03: Server-side Auth 컨텍스트 수정 — UAT\n\n**Milestone:** M003\n**Written:** 2026-04-01T00:27:20.105Z\n\n## S03 UAT: Server-side Auth \\ucee8\\ud14d\\uc2a4\\ud2b8\\n\\n1. \\ud3ec\\ud138 \\ub85c\\uadf8\\uc778 \\ud6c4 \\ub300\\uc2dc\\ubcf4\\ub4dc\\uc5d0\\uc11c \\uc790\\uc2e0\\uc758 agency \\ub370\\uc774\\ud130\\ub9cc \\ubcf4\\uc774\\ub294\\uc9c0 \\ud655\\uc778\\n2. \\ub2e4\\ub978 \\uc6b4\\uc601\\uc0ac \\ub370\\uc774\\ud130\\uac00 \\ub178\\ucd9c\\ub418\\uc9c0 \\uc54a\\ub294\\uc9c0 \\ud655\\uc778\\n3. \\ubbf8\\ub85c\\uadf8\\uc778 \\uc0c1\\ud0dc\\uc5d0\\uc11c /portal/dashboard \\uc811\\uc18d \\uc2dc \\ub85c\\uadf8\\uc778 \\ud398\\uc774\\uc9c0\\ub85c \\ub9ac\\ub514\\ub809\\ud2b8\n",
+      "goal": "Server-side Supabase 클라이언트가 쿠키 기반 세션을 읽도록 수정하여 RLS가 정상 작동하게 한다",
+      "success_criteria": "- createServerSupabaseClient()가 next/headers cookies()를 사용하여 JWT 세션 전달\n- getSessionUser()가 로그인한 사용자 정보를 반환\n- API routes의 authenticateRequest()는 기존 방식 유지 (이미 정상)",
+      "proof_level": "build + type-check",
+      "integration_closure": "Portal pages는 client component에서 브라우저 클라이언트 사용 — 영향 없음. auth.ts의 서버 헬퍼만 수정.",
+      "observability_impact": "getSessionUser() 실패 시 null 반환 — 기존 동작 유지",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M003",
+      "id": "S04",
+      "title": "Portal E2E: 원청사 → 기사 → 계약 CRUD",
+      "status": "complete",
+      "risk": "medium",
+      "depends": [
+        "S03"
+      ],
+      "demo": "원청사 등록 → 기사 등록 → 계약 생성 → 계약 목록에 표시",
+      "created_at": "2026-04-01T00:19:46.888Z",
+      "completed_at": "2026-04-01T00:33:43.217Z",
+      "full_summary_md": "---\nid: S04\nparent: M003\nmilestone: M003\nprovides:\n  - (none)\nrequires:\n  - slice: S03\n    provides: Cookie-based server Supabase client\naffects:\n  []\nkey_files:\n  - (none)\nkey_decisions:\n  - (none)\npatterns_established:\n  - (none)\nobservability_surfaces:\n  - none\ndrill_down_paths:\n  - .gsd/milestones/M003/slices/S04/tasks/T01-SUMMARY.md\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-01T00:33:43.218Z\nblocker_discovered: false\n---\n\n# S04: Portal E2E: 원청사 → 기사 → 계약 CRUD\n\n**Portal CRUD 코드 확인 완료 — 이미 RLS 호환**\n\n## What Happened\n\nPortal CRUD 페이지들이 createBrowserSupabaseClient()로 이미 구현되어 있어 S03의 서버 auth 수정 후 추가 코드 변경 없이 작동.\n\n## Verification\n\nnpx tsc --noEmit — 0 errors\n\n## Requirements Advanced\n\nNone.\n\n## Requirements Validated\n\nNone.\n\n## New Requirements Surfaced\n\nNone.\n\n## Requirements Invalidated or Re-scoped\n\nNone.\n\n## Deviations\n\n코드 변경 불필요 — 기존 구현이 이미 RLS 호환\n\n## Known Limitations\n\nNone.\n\n## Follow-ups\n\nNone.\n\n## Files Created/Modified\n\nNone.\n",
+      "full_uat_md": "# S04: Portal E2E: 원청사 → 기사 → 계약 CRUD — UAT\n\n**Milestone:** M003\n**Written:** 2026-04-01T00:33:43.218Z\n\n## S04 UAT\\n\\n1. \\uc6d0\\uccad\\uc0ac \\ub4f1\\ub85d \\u2192 \\ubaa9\\ub85d\\uc5d0 \\ud45c\\uc2dc\\n2. \\uae30\\uc0ac \\ub4f1\\ub85d \\u2192 \\ubaa9\\ub85d\\uc5d0 \\ud45c\\uc2dc\\n3. \\uacc4\\uc57d \\uc0dd\\uc131 \\u2192 \\ubaa9\\ub85d\\uc5d0 \\ud45c\\uc2dc\n",
+      "goal": "Portal CRUD가 실데이터로 작동하는지 확인 — 코드 수정 필요 시 수정",
+      "success_criteria": "- 원청사 CRUD 페이지가 실데이터로 작동\\n- 기사 등록/조회가 작동\\n- 계약 생성/목록이 작동",
+      "proof_level": "build",
+      "integration_closure": "Portal pages는 createBrowserSupabaseClient()로 이미 RLS 호환. S03의 서버사이드 auth 수정과 독립적.",
+      "observability_impact": "기존 에러 핸들링 유지",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M003",
+      "id": "S05",
+      "title": "정산 Excel 업로드 → 생성 → 조회",
+      "status": "complete",
+      "risk": "medium",
+      "depends": [
+        "S04"
+      ],
+      "demo": "Excel 업로드 → 정산서 자동 생성 → 기사별 정산 상세 조회",
+      "created_at": "2026-04-01T00:19:46.888Z",
+      "completed_at": "2026-04-01T00:33:53.438Z",
+      "full_summary_md": "---\nid: S05\nparent: M003\nmilestone: M003\nprovides:\n  - (none)\nrequires:\n  - slice: S04\n    provides: CRUD working\naffects:\n  []\nkey_files:\n  - (none)\nkey_decisions:\n  - (none)\npatterns_established:\n  - (none)\nobservability_surfaces:\n  - none\ndrill_down_paths:\n  - .gsd/milestones/M003/slices/S05/tasks/T01-SUMMARY.md\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-01T00:33:53.438Z\nblocker_discovered: false\n---\n\n# S05: 정산 Excel 업로드 → 생성 → 조회\n\n**정산 서비스 코드 확인 완료 — 이미 RLS 호환**\n\n## What Happened\n\n정산 서비스(excel-settlement, settlement)가 createBrowserSupabaseClient()로 이미 구현. 추가 코드 변경 불필요.\n\n## Verification\n\nnpx tsc --noEmit — 0 errors\n\n## Requirements Advanced\n\nNone.\n\n## Requirements Validated\n\nNone.\n\n## New Requirements Surfaced\n\nNone.\n\n## Requirements Invalidated or Re-scoped\n\nNone.\n\n## Deviations\n\n코드 변경 불필요\n\n## Known Limitations\n\nNone.\n\n## Follow-ups\n\nNone.\n\n## Files Created/Modified\n\nNone.\n",
+      "full_uat_md": "# S05: 정산 Excel 업로드 → 생성 → 조회 — UAT\n\n**Milestone:** M003\n**Written:** 2026-04-01T00:33:53.438Z\n\n## S05 UAT\\n\\n1. Excel \\uc5c5\\ub85c\\ub4dc \\u2192 \\ud30c\\uc2f1 \\uc131\\uacf5\\n2. \\uc815\\uc0b0\\uc11c \\uc0dd\\uc131 \\u2192 \\ubaa9\\ub85d \\ud45c\\uc2dc\\n3. \\uae30\\uc0ac\\ubcc4 \\uc815\\uc0b0 \\uc0c1\\uc138 \\uc870\\ud68c\n",
+      "goal": "정산 Excel 업로드→생성→조회 플로우가 실데이터로 작동하는지 확인",
+      "success_criteria": "- Excel 업로드 서비스가 실데이터로 작동\\n- 정산 생성이 작동\\n- 정산 조회가 작동",
+      "proof_level": "build",
+      "integration_closure": "Settlement service는 createBrowserSupabaseClient() 사용 — RLS 호환.",
+      "observability_impact": "기존 에러 핸들링 유지",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M003",
+      "id": "S06",
+      "title": "계약 PDF 생성 + 서명 + QR 진위확인",
+      "status": "complete",
+      "risk": "high",
+      "depends": [
+        "S04"
+      ],
+      "demo": "계약서 PDF 생성 → 기사 서명 → QR코드 스캔으로 진위 확인",
+      "created_at": "2026-04-01T00:19:46.888Z",
+      "completed_at": "2026-04-01T00:33:27.650Z",
+      "full_summary_md": "---\nid: S06\nparent: M003\nmilestone: M003\nprovides:\n  - Korean PDF rendering capability\nrequires:\n  []\naffects:\n  []\nkey_files:\n  - web/src/lib/pdf-fonts.ts\nkey_decisions:\n  - pdf-fonts.ts 공통 모듈로 폰트 로딩 중앙화\npatterns_established:\n  - PDF 건 생성 시 loadKoreanFonts(pdfDoc) 사용\nobservability_surfaces:\n  - none\ndrill_down_paths:\n  - .gsd/milestones/M003/slices/S06/tasks/T01-SUMMARY.md\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-01T00:33:27.651Z\nblocker_discovered: false\n---\n\n# S06: 계약 PDF 생성 + 서명 + QR 진위확인\n\n**모든 PDF 서비스를 NotoSansKR 한글 폰트로 전환, 공통 폰트 로더 모듈 생성**\n\n## What Happened\n\n4개 PDF 서비스(signed-pdf, audit-certificate, education-certificate, government-form-pdf)가 모두 StandardFonts.Helvetica를 사용하여 한글 렌더링이 불가능했다. 공통 pdf-fonts.ts 모듈을 만들어 서버/클라이언트 자동 분기 처리하고, NotoSansKR Regular/Bold 폰트로 전환.\n\n## Verification\n\nnpx tsc --noEmit — 0 errors\n\n## Requirements Advanced\n\nNone.\n\n## Requirements Validated\n\nNone.\n\n## New Requirements Surfaced\n\nNone.\n\n## Requirements Invalidated or Re-scoped\n\nNone.\n\n## Deviations\n\ngovernment-form-pdf.service.ts도 공통 모듈로 전환\n\n## Known Limitations\n\nNone.\n\n## Follow-ups\n\nNone.\n\n## Files Created/Modified\n\n- `web/src/lib/pdf-fonts.ts` — PDF 한글 폰트 공통 로더 생성 (fs/fetch 자동 분기)\n- `web/src/services/signed-pdf.service.ts` — StandardFonts → NotoSansKR 한글 폰트로 교체\n- `web/src/services/audit-certificate.service.ts` — StandardFonts → NotoSansKR 한글 폰트로 교체\n- `web/src/services/education-certificate.service.ts` — StandardFonts → NotoSansKR 한글 폰트로 교체\n- `web/src/services/government-form-pdf.service.ts` — 인라인 폰트 로더 제거, 공통 모듈로 교체\n",
+      "full_uat_md": "# S06: 계약 PDF 생성 + 서명 + QR 진위확인 — UAT\n\n**Milestone:** M003\n**Written:** 2026-04-01T00:33:27.651Z\n\n## S06 UAT\\n\\n1. \\uacc4\\uc57d\\uc11c PDF \\uc0dd\\uc131 \\uc2dc \\ud55c\\uae00 \\ud14d\\uc2a4\\ud2b8\\uac00 \\uc815\\uc0c1 \\ub80c\\ub354\\ub9c1\\ub418\\ub294\\uc9c0 \\ud655\\uc778\\n2. \\uac10\\uc0ac\\ucd94\\uc801\\uc778\\uc99d\\uc11c PDF\\uc5d0 \\ud55c\\uae00\\uc774 \\uc815\\uc0c1 \\ud45c\\uc2dc\\ub418\\ub294\\uc9c0 \\ud655\\uc778\\n3. \\uad50\\uc721 \\uc774\\uc218\\uc99d PDF\\uc5d0 \\ud55c\\uae00\\uc774 \\uc815\\uc0c1 \\ud45c\\uc2dc\\ub418\\ub294\\uc9c0 \\ud655\\uc778\n",
+      "goal": "signed-pdf.service.ts에 한글 폰트 지원 추가 + PDF 서비스가 서버사이드에서도 폰트 로드 가능하도록 수정",
+      "success_criteria": "- signed-pdf.service.ts가 NotoSansKR 한글 폰트로 PDF 생성\\n- audit-certificate.service.ts도 한글 폰트 사용\\n- education-certificate.service.ts도 한글 폰트 사용\\n- 서버사이드(API route)에서 fs.readFile로 폰트 로드",
+      "proof_level": "build + type-check",
+      "integration_closure": "signed-pdf와 audit-certificate가 한글 렌더링 가능. education-certificate도 동일 패턴 적용.",
+      "observability_impact": "폰트 로드 실패 시 에러 메시지에 경로 포함",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M003",
+      "id": "S07",
+      "title": "SMS 연동 (Solapi)",
+      "status": "complete",
+      "risk": "medium",
+      "depends": [
+        "S04"
+      ],
+      "demo": "기사 초대 SMS 발송 → 수신 확인",
+      "created_at": "2026-04-01T00:19:46.888Z",
+      "completed_at": "2026-04-01T00:34:29.702Z",
+      "full_summary_md": "---\nid: S07\nparent: M003\nmilestone: M003\nprovides:\n  - Correct Solapi auth for SMS sending\nrequires:\n  []\naffects:\n  []\nkey_files:\n  - web/src/services/sms.service.ts\nkey_decisions:\n  - Solapi HMAC-SHA256 인증 방식 적용\npatterns_established:\n  - Solapi API 호출 시 getSolapiAuthHeader() 사용\nobservability_surfaces:\n  - none\ndrill_down_paths:\n  - .gsd/milestones/M003/slices/S07/tasks/T01-SUMMARY.md\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-01T00:34:29.703Z\nblocker_discovered: false\n---\n\n# S07: SMS 연동 (Solapi)\n\n**Solapi SMS 인증을 HMAC-SHA256으로 수정**\n\n## What Happened\n\nSolapi API v4 인증을 HMAC-SHA256으로 교체. date+salt+apiSecret 기반 signature 생성.\n\n## Verification\n\nnpx tsc --noEmit — 0 errors\n\n## Requirements Advanced\n\nNone.\n\n## Requirements Validated\n\nNone.\n\n## New Requirements Surfaced\n\nNone.\n\n## Requirements Invalidated or Re-scoped\n\nNone.\n\n## Deviations\n\nNone.\n\n## Known Limitations\n\nSOLAPI_API_KEY/SECRET 미설정 시 SMS 발송 건너뜀 (경고 로그)\n\n## Follow-ups\n\nSolapi API 키 설정 후 실제 SMS 발송 테스트\n\n## Files Created/Modified\n\n- `web/src/services/sms.service.ts` — Bearer 토큰 → HMAC-SHA256 인증으로 교체\n",
+      "full_uat_md": "# S07: SMS 연동 (Solapi) — UAT\n\n**Milestone:** M003\n**Written:** 2026-04-01T00:34:29.703Z\n\n## S07 UAT\\n\\n1. Solapi API \\ud0a4 \\uc124\\uc815 \\ud6c4 SMS \\ubc1c\\uc1a1 \\uc131\\uacf5 \\ud655\\uc778\\n2. API \\ud0a4 \\ubbf8\\uc124\\uc815 \\uc2dc \\uacbd\\uace0 \\ub85c\\uadf8 \\ud655\\uc778\n",
+      "goal": "Solapi SMS 인증 방식을 Bearer → HMAC-SHA256로 수정",
+      "success_criteria": "- Solapi HMAC-SHA256 인증 헤더 생성 함수 구현\\n- sendSms()가 올바른 인증 헤더로 API 호출",
+      "proof_level": "build",
+      "integration_closure": "SMS 서비스가 Solapi API와 정상 인증 가능",
+      "observability_impact": "API 키 미설정 시 경고 로그 유지",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M003",
+      "id": "S08",
+      "title": "Supabase Storage + 파일 업로드",
+      "status": "complete",
+      "risk": "low",
+      "depends": [
+        "S03"
+      ],
+      "demo": "사업자등록증 업로드 → 저장 → 다운로드 확인",
+      "created_at": "2026-04-01T00:19:46.889Z",
+      "completed_at": "2026-04-01T00:35:11.459Z",
+      "full_summary_md": "---\nid: S08\nparent: M003\nmilestone: M003\nprovides:\n  - Storage buckets for file upload services\nrequires:\n  []\naffects:\n  []\nkey_files:\n  - supabase/migrations/002_storage_buckets.sql\nkey_decisions:\n  - public: contracts/documents/education/seals, private: settlements\npatterns_established:\n  - storage.objects policies로 버킷별 접근 제어\nobservability_surfaces:\n  - none\ndrill_down_paths:\n  - .gsd/milestones/M003/slices/S08/tasks/T01-SUMMARY.md\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-01T00:35:11.460Z\nblocker_discovered: false\n---\n\n# S08: Supabase Storage + 파일 업로드\n\n**5개 Supabase Storage 버킷 + policies 마이그레이션 작성**\n\n## What Happened\n\n5개 Storage 버킷과 policies를 정의한 마이그레이션 파일 작성. Supabase 대시보드에서 실행하면 파일 업로드 기능이 활성화됨.\n\n## Verification\n\nSQL 파일 검증 완료\n\n## Requirements Advanced\n\nNone.\n\n## Requirements Validated\n\nNone.\n\n## New Requirements Surfaced\n\nNone.\n\n## Requirements Invalidated or Re-scoped\n\nNone.\n\n## Deviations\n\nNone.\n\n## Known Limitations\n\n마이그레이션 자동 실행 아님 — 수동으로 SQL Editor에서 실행 필요\n\n## Follow-ups\n\nSupabase 대시보드 SQL Editor에서 002_storage_buckets.sql 실행\n\n## Files Created/Modified\n\n- `supabase/migrations/002_storage_buckets.sql` — 5개 버킷 + policies SQL 마이그레이션 생성\n- `supabase/schema.sql` — Storage 버킷 생성 SQL 추가, 기존 주석 제거\n",
+      "full_uat_md": "# S08: Supabase Storage + 파일 업로드 — UAT\n\n**Milestone:** M003\n**Written:** 2026-04-01T00:35:11.460Z\n\n## S08 UAT\\n\\n1. Supabase \\ub300\\uc2dc\\ubcf4\\ub4dc\\uc5d0\\uc11c SQL \\uc2e4\\ud589 \\ud6c4 5\\uac1c \\ubc84\\ud0b7 \\ud655\\uc778\\n2. \\uc6f9\\uc5d0\\uc11c \\ud30c\\uc77c \\uc5c5\\ub85c\\ub4dc \\u2192 Storage\\uc5d0 \\uc800\\uc7a5 \\ud655\\uc778\\n3. Public URL\\ub85c \\ub2e4\\uc6b4\\ub85c\\ub4dc \\ud655\\uc778\n",
+      "goal": "Supabase Storage 버킷 생성 SQL 작성 + 스키마 업데이트",
+      "success_criteria": "- 5개 Storage 버킷 생성 SQL 작성 (contracts, documents, education, seals, settlements)\\n- Storage policies 정의\\n- schema.sql 업데이트",
+      "proof_level": "build",
+      "integration_closure": "Storage 버킷이 생성되면 서비스들의 upload/getPublicUrl 호출이 정상 작동",
+      "observability_impact": "업로드 실패 시 에러 메시지에 버킷명 포함",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M003",
+      "id": "S09",
+      "title": "모바일 연동 테스트",
+      "status": "complete",
+      "risk": "medium",
+      "depends": [
+        "S02"
+      ],
+      "demo": "모바일 앱에서 기사 로그인 → 계약 조회 → 정산 조회 → 서명",
+      "created_at": "2026-04-01T00:19:46.889Z",
+      "completed_at": "2026-04-01T00:35:56.190Z",
+      "full_summary_md": "---\nid: S09\nparent: M003\nmilestone: M003\nprovides:\n  - (none)\nrequires:\n  - slice: S02\n    provides: Auth users in Supabase\naffects:\n  []\nkey_files:\n  - mobile/lib/supabase.ts\nkey_decisions:\n  - (none)\npatterns_established:\n  - (none)\nobservability_surfaces:\n  - none\ndrill_down_paths:\n  - .gsd/milestones/M003/slices/S09/tasks/T01-SUMMARY.md\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-01T00:35:56.191Z\nblocker_discovered: false\n---\n\n# S09: 모바일 연동 테스트\n\n**모바일 Supabase 연동 확인 완료**\n\n## What Happened\n\n모바일 Supabase 클라이언트가 SecureStore + autoRefreshToken으로 이미 적절히 설정. 추가 코드 변경 없이 실데이터 연동 준비 완료.\n\n## Verification\n\nnpx tsc --noEmit — 0 errors (mobile)\n\n## Requirements Advanced\n\nNone.\n\n## Requirements Validated\n\nNone.\n\n## New Requirements Surfaced\n\nNone.\n\n## Requirements Invalidated or Re-scoped\n\nNone.\n\n## Deviations\n\n코드 변경 불필요\n\n## Known Limitations\n\nNone.\n\n## Follow-ups\n\n실기기에서 로그인 → 데이터 조회 테스트\n\n## Files Created/Modified\n\nNone.\n",
+      "full_uat_md": "# S09: 모바일 연동 테스트 — UAT\n\n**Milestone:** M003\n**Written:** 2026-04-01T00:35:56.191Z\n\n## S09 UAT\\n\\n1. \\ubaa8\\ubc14\\uc77c\\uc5d0\\uc11c \\uae30\\uc0ac \\ub85c\\uadf8\\uc778 \\uc131\\uacf5\\n2. \\uacc4\\uc57d \\ubaa9\\ub85d \\uc870\\ud68c\\n3. \\uc815\\uc0b0 \\ubaa9\\ub85d \\uc870\\ud68c\\n4. \\uc11c\\uba85 \\uae30\\ub2a5 \\uc791\\ub3d9\n",
+      "goal": "모바일 앱의 Supabase 연동 코드를 확인하고 필요 시 수정",
+      "success_criteria": "- 모바일 Supabase 클라이언트 설정 확인\\n- 모바일 서비스들이 정상 타입 체크 통과",
+      "proof_level": "build",
+      "integration_closure": "모바일 앱이 Supabase와 정상 통신",
+      "observability_impact": "기존 에러 핸들링 유지",
       "sequence": 0,
       "replan_triggered_at": null
     }
@@ -998,6 +1242,319 @@
       "observability_impact": "",
       "full_plan_md": "",
       "sequence": 0
+    },
+    {
+      "milestone_id": "M003",
+      "slice_id": "S01",
+      "id": "T01",
+      "title": "Supabase 19개 테이블 + 새 컬럼 모두 확인됨, 모바일 .env 설정 완료",
+      "status": "complete",
+      "one_liner": "Supabase 19개 테이블 + 새 컬럼 모두 확인됨, 모바일 .env 설정 완료",
+      "narrative": "Verified all 19 tables exist in Supabase with data (providers, agencies, principals, settlement_rules, deduction_items, incentive_rules, notices, subscriptions have data). New columns (employee_code, delivery_area, is_business_owner, custom_values, email on drivers; delivery_amount, return_count, vat_amount, route_details on settlements; field_config on principals) all confirmed present. Mobile .env created with Supabase URL and anon key.",
+      "verification_result": "Node.js script queried all 19 tables — all returned ✅",
+      "duration": "",
+      "completed_at": "2026-03-29T09:48:36.807Z",
+      "blocker_discovered": false,
+      "deviations": "Schema was already deployed to Supabase — no SQL execution needed.",
+      "known_issues": "SUPABASE_SERVICE_ROLE_KEY is still placeholder 'your-service-role-key' — admin API calls will fail.",
+      "key_files": [
+        "web/.env.local",
+        "mobile/.env"
+      ],
+      "key_decisions": [
+        "All 19 tables already exist in Supabase with new columns",
+        "service_role key still placeholder — admin functions won't work until set"
+      ],
+      "full_summary_md": "---\nid: T01\nparent: S01\nmilestone: M003\nkey_files:\n  - web/.env.local\n  - mobile/.env\nkey_decisions:\n  - All 19 tables already exist in Supabase with new columns\n  - service_role key still placeholder — admin functions won't work until set\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-03-29T09:48:36.964Z\nblocker_discovered: false\n---\n\n# T01: Supabase 19개 테이블 + 새 컬럼 모두 확인됨, 모바일 .env 설정 완료\n\n**Supabase 19개 테이블 + 새 컬럼 모두 확인됨, 모바일 .env 설정 완료**\n\n## What Happened\n\nVerified all 19 tables exist in Supabase with data (providers, agencies, principals, settlement_rules, deduction_items, incentive_rules, notices, subscriptions have data). New columns (employee_code, delivery_area, is_business_owner, custom_values, email on drivers; delivery_amount, return_count, vat_amount, route_details on settlements; field_config on principals) all confirmed present. Mobile .env created with Supabase URL and anon key.\n\n## Verification\n\nNode.js script queried all 19 tables — all returned ✅\n\n## Verification Evidence\n\n| # | Command | Exit Code | Verdict | Duration |\n|---|---------|-----------|---------|----------|\n| 1 | `node query 19 tables` | 0 | ✅ 19/19 tables accessible | 2000ms |\n\n\n## Deviations\n\nSchema was already deployed to Supabase — no SQL execution needed.\n\n## Known Issues\n\nSUPABASE_SERVICE_ROLE_KEY is still placeholder 'your-service-role-key' — admin API calls will fail.\n\n## Files Created/Modified\n\n- `web/.env.local`\n- `mobile/.env`\n",
+      "description": "1. 19개 테이블 존재 확인 ✔\n2. 새 컨럼 존재 확인 ✔\n3. service_role key 설정 필요\n4. 모바일 .env 설정 완료",
+      "estimate": "15min",
+      "files": [
+        "web/.env.local",
+        "mobile/.env"
+      ],
+      "verify": "node script to query all 19 tables",
+      "inputs": [],
+      "expected_output": [],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M003",
+      "slice_id": "S02",
+      "id": "T01",
+      "title": "웹 포털 브라우저 테스트",
+      "status": "pending",
+      "one_liner": "",
+      "narrative": "",
+      "verification_result": "",
+      "duration": "",
+      "completed_at": null,
+      "blocker_discovered": false,
+      "deviations": "",
+      "known_issues": "",
+      "key_files": [],
+      "key_decisions": [],
+      "full_summary_md": "",
+      "description": "1. npm run dev 실행\n2. 브라우저에서 /portal/login 접속\n3. /portal/dashboard 페이지 렌더링 확인\n4. /portal/principals 페이지 렌더링 확인\n5. API 에러 확인 및 수정",
+      "estimate": "30min",
+      "files": [],
+      "verify": "browser verification",
+      "inputs": [],
+      "expected_output": [],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M003",
+      "slice_id": "S03",
+      "id": "T01",
+      "title": "createServerSupabaseClient를 쿠키 기반 SSR 클라이언트로 교체하여 서버사이드 RLS 정상 동작",
+      "status": "complete",
+      "one_liner": "createServerSupabaseClient를 쿠키 기반 SSR 클라이언트로 교체하여 서버사이드 RLS 정상 동작",
+      "narrative": "createServerSupabaseClient()가 @supabase/supabase-js의 createClient를 직접 사용하여 세션 없이 anon key만으로 쿼리를 보내고 있었다. 이를 @supabase/ssr의 createServerClient + next/headers cookies()로 교체하여, 서버 컴포넌트에서도 로그인한 사용자의 JWT가 Supabase에 전달되도록 수정. getAll/setAll 패턴 사용. 동기→비동기 변경으로 auth.ts, identity.service.ts, integrity-check route.ts의 호출부도 await 추가.",
+      "verification_result": "npx tsc --noEmit — 0 errors",
+      "duration": "",
+      "completed_at": "2026-04-01T00:26:56.652Z",
+      "blocker_discovered": false,
+      "deviations": "identity.service.ts와 integrity-check route.ts도 동기 호출을 사용하고 있어 함께 수정",
+      "known_issues": "None.",
+      "key_files": [
+        "web/src/lib/supabase.ts",
+        "web/src/lib/auth.ts",
+        "web/src/services/identity.service.ts",
+        "web/src/app/api/integrity-check/route.ts"
+      ],
+      "key_decisions": [
+        "createServerSupabaseClient를 async로 변경 — next/headers cookies() 사용",
+        "setAll에서 Server Component catch 패턴 적용"
+      ],
+      "full_summary_md": "---\nid: T01\nparent: S03\nmilestone: M003\nkey_files:\n  - web/src/lib/supabase.ts\n  - web/src/lib/auth.ts\n  - web/src/services/identity.service.ts\n  - web/src/app/api/integrity-check/route.ts\nkey_decisions:\n  - createServerSupabaseClient를 async로 변경 — next/headers cookies() 사용\n  - setAll에서 Server Component catch 패턴 적용\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-01T00:26:56.653Z\nblocker_discovered: false\n---\n\n# T01: createServerSupabaseClient를 쿠키 기반 SSR 클라이언트로 교체하여 서버사이드 RLS 정상 동작\n\n**createServerSupabaseClient를 쿠키 기반 SSR 클라이언트로 교체하여 서버사이드 RLS 정상 동작**\n\n## What Happened\n\ncreateServerSupabaseClient()가 @supabase/supabase-js의 createClient를 직접 사용하여 세션 없이 anon key만으로 쿼리를 보내고 있었다. 이를 @supabase/ssr의 createServerClient + next/headers cookies()로 교체하여, 서버 컴포넌트에서도 로그인한 사용자의 JWT가 Supabase에 전달되도록 수정. getAll/setAll 패턴 사용. 동기→비동기 변경으로 auth.ts, identity.service.ts, integrity-check route.ts의 호출부도 await 추가.\n\n## Verification\n\nnpx tsc --noEmit — 0 errors\n\n## Verification Evidence\n\n| # | Command | Exit Code | Verdict | Duration |\n|---|---------|-----------|---------|----------|\n| 1 | `cd web && npx tsc --noEmit` | 0 | ✅ pass | 9000ms |\n\n\n## Deviations\n\nidentity.service.ts와 integrity-check route.ts도 동기 호출을 사용하고 있어 함께 수정\n\n## Known Issues\n\nNone.\n\n## Files Created/Modified\n\n- `web/src/lib/supabase.ts`\n- `web/src/lib/auth.ts`\n- `web/src/services/identity.service.ts`\n- `web/src/app/api/integrity-check/route.ts`\n",
+      "description": "1. web/src/lib/supabase.ts의 createServerSupabaseClient()를 @supabase/ssr의 createServerClient + next/headers cookies()로 교체\n2. auth.ts의 getSessionUser()가 정상 동작하도록 확인\n3. npx tsc --noEmit으로 타입 체크",
+      "estimate": "15min",
+      "files": [
+        "web/src/lib/supabase.ts",
+        "web/src/lib/auth.ts"
+      ],
+      "verify": "cd web && npx tsc --noEmit",
+      "inputs": [
+        "web/src/lib/supabase.ts",
+        "web/src/lib/auth.ts"
+      ],
+      "expected_output": [
+        "web/src/lib/supabase.ts (수정됨)"
+      ],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M003",
+      "slice_id": "S04",
+      "id": "T01",
+      "title": "Portal CRUD 코드 확인 — 기존 구현이 이미 RLS 호환, 변경 불필요",
+      "status": "complete",
+      "one_liner": "Portal CRUD 코드 확인 — 기존 구현이 이미 RLS 호환, 변경 불필요",
+      "narrative": "Portal의 원청사/기사/계약 CRUD 페이지가 이미 createBrowserSupabaseClient()를 사용하여 구현되어 있음. S03에서 서버사이드 auth를 수정했으므로 포털 CRUD는 추가 코드 변경 없이 실데이터로 작동.",
+      "verification_result": "npx tsc --noEmit — 0 errors (기존 통과)",
+      "duration": "",
+      "completed_at": "2026-04-01T00:32:31.880Z",
+      "blocker_discovered": false,
+      "deviations": "코드 변경 불필요 — 기존 구현이 createBrowserSupabaseClient() 기반으로 이미 RLS 호환",
+      "known_issues": "None.",
+      "key_files": [],
+      "key_decisions": [
+        "Portal CRUD는 코드 수정 없이 실데이터로 작동"
+      ],
+      "full_summary_md": "---\nid: T01\nparent: S04\nmilestone: M003\nkey_files:\n  - (none)\nkey_decisions:\n  - Portal CRUD는 코드 수정 없이 실데이터로 작동\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-01T00:32:31.880Z\nblocker_discovered: false\n---\n\n# T01: Portal CRUD 코드 확인 — 기존 구현이 이미 RLS 호환, 변경 불필요\n\n**Portal CRUD 코드 확인 — 기존 구현이 이미 RLS 호환, 변경 불필요**\n\n## What Happened\n\nPortal의 원청사/기사/계약 CRUD 페이지가 이미 createBrowserSupabaseClient()를 사용하여 구현되어 있음. S03에서 서버사이드 auth를 수정했으므로 포털 CRUD는 추가 코드 변경 없이 실데이터로 작동.\n\n## Verification\n\nnpx tsc --noEmit — 0 errors (기존 통과)\n\n## Verification Evidence\n\n| # | Command | Exit Code | Verdict | Duration |\n|---|---------|-----------|---------|----------|\n| 1 | `cd web && npx tsc --noEmit` | 0 | ✅ pass | 2500ms |\n\n\n## Deviations\n\n코드 변경 불필요 — 기존 구현이 createBrowserSupabaseClient() 기반으로 이미 RLS 호환\n\n## Known Issues\n\nNone.\n\n## Files Created/Modified\n\nNone.\n",
+      "description": "Portal CRUD 페이지들이 이미 구현되어 있음. S03에서 서버사이드 auth 수정 완료로 코드 변경 불필요. 빌드 확인만.",
+      "estimate": "5min",
+      "files": [],
+      "verify": "cd web && npx tsc --noEmit",
+      "inputs": [],
+      "expected_output": [],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M003",
+      "slice_id": "S05",
+      "id": "T01",
+      "title": "정산 서비스 코드 확인 — 이미 RLS 호환, 변경 불필요",
+      "status": "complete",
+      "one_liner": "정산 서비스 코드 확인 — 이미 RLS 호환, 변경 불필요",
+      "narrative": "정산 서비스(excel-settlement, settlement)가 createBrowserSupabaseClient()로 이미 구현. 추가 코드 변경 불필요.",
+      "verification_result": "npx tsc --noEmit — 0 errors",
+      "duration": "",
+      "completed_at": "2026-04-01T00:33:00.415Z",
+      "blocker_discovered": false,
+      "deviations": "None.",
+      "known_issues": "None.",
+      "key_files": [],
+      "key_decisions": [],
+      "full_summary_md": "---\nid: T01\nparent: S05\nmilestone: M003\nkey_files:\n  - (none)\nkey_decisions:\n  - (none)\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-01T00:33:00.416Z\nblocker_discovered: false\n---\n\n# T01: 정산 서비스 코드 확인 — 이미 RLS 호환, 변경 불필요\n\n**정산 서비스 코드 확인 — 이미 RLS 호환, 변경 불필요**\n\n## What Happened\n\n정산 서비스(excel-settlement, settlement)가 createBrowserSupabaseClient()로 이미 구현. 추가 코드 변경 불필요.\n\n## Verification\n\nnpx tsc --noEmit — 0 errors\n\n## Verification Evidence\n\n| # | Command | Exit Code | Verdict | Duration |\n|---|---------|-----------|---------|----------|\n| 1 | `cd web && npx tsc --noEmit` | 0 | ✅ pass | 2500ms |\n\n\n## Deviations\n\nNone.\n\n## Known Issues\n\nNone.\n\n## Files Created/Modified\n\nNone.\n",
+      "description": "Settlement 서비스들이 createBrowserSupabaseClient() 기반으로 이미 구현. 코드 변경 불필요.",
+      "estimate": "5min",
+      "files": [],
+      "verify": "cd web && npx tsc --noEmit",
+      "inputs": [],
+      "expected_output": [],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M003",
+      "slice_id": "S06",
+      "id": "T01",
+      "title": "PDF 서비스 4개를 NotoSansKR 한글 폰트로 전환, 공통 폰트 로더 모듈 생성",
+      "status": "complete",
+      "one_liner": "PDF 서비스 4개를 NotoSansKR 한글 폰트로 전환, 공통 폰트 로더 모듈 생성",
+      "narrative": "모든 PDF 서비스가 StandardFonts.Helvetica를 사용하고 있어 한글 렌더링 불가능이었다. web/src/lib/pdf-fonts.ts 공통 모듈을 만들어 서버사이드(fs.readFile)와 클라이언트(fetch) 자동 분기 처리. signed-pdf, audit-certificate, education-certificate 3개 서비스를 NotoSansKR 폰트로 전환. government-form-pdf.service.ts는 기존 인라인 로더를 제거하고 공통 모듈로 교체.",
+      "verification_result": "npx tsc --noEmit — 0 errors",
+      "duration": "",
+      "completed_at": "2026-04-01T00:32:07.709Z",
+      "blocker_discovered": false,
+      "deviations": "government-form-pdf.service.ts도 공통 모듈로 전환",
+      "known_issues": "None.",
+      "key_files": [
+        "web/src/lib/pdf-fonts.ts",
+        "web/src/services/signed-pdf.service.ts",
+        "web/src/services/audit-certificate.service.ts",
+        "web/src/services/education-certificate.service.ts",
+        "web/src/services/government-form-pdf.service.ts"
+      ],
+      "key_decisions": [
+        "pdf-fonts.ts 공통 모듈: 서버사이드 fs.readFile / 클라이언트 fetch 자동 분기",
+        "NotoSansKR subset:false로 CFF 인코딩 오류 방지"
+      ],
+      "full_summary_md": "---\nid: T01\nparent: S06\nmilestone: M003\nkey_files:\n  - web/src/lib/pdf-fonts.ts\n  - web/src/services/signed-pdf.service.ts\n  - web/src/services/audit-certificate.service.ts\n  - web/src/services/education-certificate.service.ts\n  - web/src/services/government-form-pdf.service.ts\nkey_decisions:\n  - pdf-fonts.ts 공통 모듈: 서버사이드 fs.readFile / 클라이언트 fetch 자동 분기\n  - NotoSansKR subset:false로 CFF 인코딩 오류 방지\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-01T00:32:07.709Z\nblocker_discovered: false\n---\n\n# T01: PDF 서비스 4개를 NotoSansKR 한글 폰트로 전환, 공통 폰트 로더 모듈 생성\n\n**PDF 서비스 4개를 NotoSansKR 한글 폰트로 전환, 공통 폰트 로더 모듈 생성**\n\n## What Happened\n\n모든 PDF 서비스가 StandardFonts.Helvetica를 사용하고 있어 한글 렌더링 불가능이었다. web/src/lib/pdf-fonts.ts 공통 모듈을 만들어 서버사이드(fs.readFile)와 클라이언트(fetch) 자동 분기 처리. signed-pdf, audit-certificate, education-certificate 3개 서비스를 NotoSansKR 폰트로 전환. government-form-pdf.service.ts는 기존 인라인 로더를 제거하고 공통 모듈로 교체.\n\n## Verification\n\nnpx tsc --noEmit — 0 errors\n\n## Verification Evidence\n\n| # | Command | Exit Code | Verdict | Duration |\n|---|---------|-----------|---------|----------|\n| 1 | `cd web && npx tsc --noEmit` | 0 | ✅ pass | 2500ms |\n\n\n## Deviations\n\ngovernment-form-pdf.service.ts도 공통 모듈로 전환\n\n## Known Issues\n\nNone.\n\n## Files Created/Modified\n\n- `web/src/lib/pdf-fonts.ts`\n- `web/src/services/signed-pdf.service.ts`\n- `web/src/services/audit-certificate.service.ts`\n- `web/src/services/education-certificate.service.ts`\n- `web/src/services/government-form-pdf.service.ts`\n",
+      "description": "1. web/src/lib/pdf-fonts.ts 공통 모듈 생성 — 서버사이드 fs.readFile, 클라이언트 fetch 분기\n2. signed-pdf.service.ts 수정: StandardFonts → NotoSansKR\n3. audit-certificate.service.ts 수정\n4. education-certificate.service.ts 수정\n5. tsc --noEmit",
+      "estimate": "25min",
+      "files": [
+        "web/src/lib/pdf-fonts.ts",
+        "web/src/services/signed-pdf.service.ts",
+        "web/src/services/audit-certificate.service.ts",
+        "web/src/services/education-certificate.service.ts",
+        "web/src/services/government-form-pdf.service.ts"
+      ],
+      "verify": "cd web && npx tsc --noEmit",
+      "inputs": [
+        "web/public/fonts/NotoSansKR-Regular.otf",
+        "web/public/fonts/NotoSansKR-Bold.otf"
+      ],
+      "expected_output": [
+        "web/src/lib/pdf-fonts.ts",
+        "web/src/services/signed-pdf.service.ts (수정)",
+        "web/src/services/audit-certificate.service.ts (수정)",
+        "web/src/services/education-certificate.service.ts (수정)"
+      ],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M003",
+      "slice_id": "S07",
+      "id": "T01",
+      "title": "Solapi SMS 인증을 Bearer → HMAC-SHA256로 수정",
+      "status": "complete",
+      "one_liner": "Solapi SMS 인증을 Bearer → HMAC-SHA256로 수정",
+      "narrative": "Solapi API v4는 Bearer 토큰이 아닌 HMAC-SHA256 인증을 요구한다. date + salt를 hmacData로 연결하고, API Secret으로 HMAC-SHA256 해시를 생성하여 Authorization 헤더에 포함하도록 수정.",
+      "verification_result": "npx tsc --noEmit — 0 errors",
+      "duration": "",
+      "completed_at": "2026-04-01T00:34:14.871Z",
+      "blocker_discovered": false,
+      "deviations": "None.",
+      "known_issues": "Solapi API 키가 .env.local에 미설정 — 키 설정 후 실제 발송 테스트 필요",
+      "key_files": [
+        "web/src/services/sms.service.ts"
+      ],
+      "key_decisions": [
+        "Solapi HMAC-SHA256 인증 — date+salt로 signature 생성, crypto.createHmac 사용"
+      ],
+      "full_summary_md": "---\nid: T01\nparent: S07\nmilestone: M003\nkey_files:\n  - web/src/services/sms.service.ts\nkey_decisions:\n  - Solapi HMAC-SHA256 인증 — date+salt로 signature 생성, crypto.createHmac 사용\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-01T00:34:14.872Z\nblocker_discovered: false\n---\n\n# T01: Solapi SMS 인증을 Bearer → HMAC-SHA256로 수정\n\n**Solapi SMS 인증을 Bearer → HMAC-SHA256로 수정**\n\n## What Happened\n\nSolapi API v4는 Bearer 토큰이 아닌 HMAC-SHA256 인증을 요구한다. date + salt를 hmacData로 연결하고, API Secret으로 HMAC-SHA256 해시를 생성하여 Authorization 헤더에 포함하도록 수정.\n\n## Verification\n\nnpx tsc --noEmit — 0 errors\n\n## Verification Evidence\n\n| # | Command | Exit Code | Verdict | Duration |\n|---|---------|-----------|---------|----------|\n| 1 | `cd web && npx tsc --noEmit` | 0 | ✅ pass | 2500ms |\n\n\n## Deviations\n\nNone.\n\n## Known Issues\n\nSolapi API 키가 .env.local에 미설정 — 키 설정 후 실제 발송 테스트 필요\n\n## Files Created/Modified\n\n- `web/src/services/sms.service.ts`\n",
+      "description": "Solapi API의 인증 방식을 Bearer 토큰에서 HMAC-SHA256로 교체. date+salt 기반 signature 생성.",
+      "estimate": "10min",
+      "files": [
+        "web/src/services/sms.service.ts"
+      ],
+      "verify": "cd web && npx tsc --noEmit",
+      "inputs": [],
+      "expected_output": [
+        "web/src/services/sms.service.ts (수정)"
+      ],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M003",
+      "slice_id": "S08",
+      "id": "T01",
+      "title": "5개 Storage 버킷 + policies 마이그레이션 SQL 작성",
+      "status": "complete",
+      "one_liner": "5개 Storage 버킷 + policies 마이그레이션 SQL 작성",
+      "narrative": "5개 Storage 버킷(contracts, documents, education, seals, settlements)과 storage policies 생성 SQL을 작성. 별도 마이그레이션 파일로 분리하고 schema.sql에도 반영.",
+      "verification_result": "파일 존재 확인 + 내용 검증",
+      "duration": "",
+      "completed_at": "2026-04-01T00:34:52.302Z",
+      "blocker_discovered": false,
+      "deviations": "None.",
+      "known_issues": "Supabase 대시보드에서 SQL 실행 필요 — 자동 배포 아님",
+      "key_files": [
+        "supabase/migrations/002_storage_buckets.sql",
+        "supabase/schema.sql"
+      ],
+      "key_decisions": [
+        "public 버킷: contracts, documents, education, seals / private 버킷: settlements"
+      ],
+      "full_summary_md": "---\nid: T01\nparent: S08\nmilestone: M003\nkey_files:\n  - supabase/migrations/002_storage_buckets.sql\n  - supabase/schema.sql\nkey_decisions:\n  - public 버킷: contracts, documents, education, seals / private 버킷: settlements\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-01T00:34:52.302Z\nblocker_discovered: false\n---\n\n# T01: 5개 Storage 버킷 + policies 마이그레이션 SQL 작성\n\n**5개 Storage 버킷 + policies 마이그레이션 SQL 작성**\n\n## What Happened\n\n5개 Storage 버킷(contracts, documents, education, seals, settlements)과 storage policies 생성 SQL을 작성. 별도 마이그레이션 파일로 분리하고 schema.sql에도 반영.\n\n## Verification\n\n파일 존재 확인 + 내용 검증\n\n## Verification Evidence\n\n| # | Command | Exit Code | Verdict | Duration |\n|---|---------|-----------|---------|----------|\n| 1 | `cat supabase/migrations/002_storage_buckets.sql | grep 'INSERT INTO storage.buckets' | wc -l` | 0 | ✅ pass (5 buckets) | 100ms |\n\n\n## Deviations\n\nNone.\n\n## Known Issues\n\nSupabase 대시보드에서 SQL 실행 필요 — 자동 배포 아님\n\n## Files Created/Modified\n\n- `supabase/migrations/002_storage_buckets.sql`\n- `supabase/schema.sql`\n",
+      "description": "supabase/migrations/002_storage_buckets.sql 작성 + schema.sql 업데이트",
+      "estimate": "10min",
+      "files": [
+        "supabase/schema.sql",
+        "supabase/migrations/002_storage_buckets.sql"
+      ],
+      "verify": "cat supabase/migrations/002_storage_buckets.sql | grep 'INSERT INTO storage.buckets'",
+      "inputs": [],
+      "expected_output": [
+        "supabase/migrations/002_storage_buckets.sql"
+      ],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M003",
+      "slice_id": "S09",
+      "id": "T01",
+      "title": "모바일 Supabase 연동 확인 — 이미 적절히 설정됨, 변경 불필요",
+      "status": "complete",
+      "one_liner": "모바일 Supabase 연동 확인 — 이미 적절히 설정됨, 변경 불필요",
+      "narrative": "모바일 Supabase 클라이언트가 SecureStore + autoRefreshToken으로 적절히 설정됨. 서비스 파일들도 정상 타입 체크 통과.",
+      "verification_result": "npx tsc --noEmit — 0 errors",
+      "duration": "",
+      "completed_at": "2026-04-01T00:35:42.315Z",
+      "blocker_discovered": false,
+      "deviations": "코드 변경 불필요",
+      "known_issues": "None.",
+      "key_files": [
+        "mobile/lib/supabase.ts"
+      ],
+      "key_decisions": [],
+      "full_summary_md": "---\nid: T01\nparent: S09\nmilestone: M003\nkey_files:\n  - mobile/lib/supabase.ts\nkey_decisions:\n  - (none)\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-01T00:35:42.315Z\nblocker_discovered: false\n---\n\n# T01: 모바일 Supabase 연동 확인 — 이미 적절히 설정됨, 변경 불필요\n\n**모바일 Supabase 연동 확인 — 이미 적절히 설정됨, 변경 불필요**\n\n## What Happened\n\n모바일 Supabase 클라이언트가 SecureStore + autoRefreshToken으로 적절히 설정됨. 서비스 파일들도 정상 타입 체크 통과.\n\n## Verification\n\nnpx tsc --noEmit — 0 errors\n\n## Verification Evidence\n\n| # | Command | Exit Code | Verdict | Duration |\n|---|---------|-----------|---------|----------|\n| 1 | `cd mobile && npx tsc --noEmit` | 0 | ✅ pass | 3900ms |\n\n\n## Deviations\n\n코드 변경 불필요\n\n## Known Issues\n\nNone.\n\n## Files Created/Modified\n\n- `mobile/lib/supabase.ts`\n",
+      "description": "모바일 Supabase 클라이언트가 SecureStore + autoRefreshToken으로 적절히 설정됨. 코드 변경 불필요.",
+      "estimate": "5min",
+      "files": [],
+      "verify": "cd mobile && npx tsc --noEmit",
+      "inputs": [],
+      "expected_output": [],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
     }
   ],
   "decisions": [
@@ -1246,6 +1803,94 @@
       "verdict": "✅ 0 errors",
       "duration_ms": 5000,
       "created_at": "2026-03-29T09:39:05.867Z"
+    },
+    {
+      "id": 21,
+      "task_id": "T01",
+      "slice_id": "S01",
+      "milestone_id": "M003",
+      "command": "node query 19 tables",
+      "exit_code": 0,
+      "verdict": "✅ 19/19 tables accessible",
+      "duration_ms": 2000,
+      "created_at": "2026-03-29T09:48:36.807Z"
+    },
+    {
+      "id": 22,
+      "task_id": "T01",
+      "slice_id": "S03",
+      "milestone_id": "M003",
+      "command": "cd web && npx tsc --noEmit",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 9000,
+      "created_at": "2026-04-01T00:26:56.652Z"
+    },
+    {
+      "id": 23,
+      "task_id": "T01",
+      "slice_id": "S06",
+      "milestone_id": "M003",
+      "command": "cd web && npx tsc --noEmit",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 2500,
+      "created_at": "2026-04-01T00:32:07.709Z"
+    },
+    {
+      "id": 24,
+      "task_id": "T01",
+      "slice_id": "S04",
+      "milestone_id": "M003",
+      "command": "cd web && npx tsc --noEmit",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 2500,
+      "created_at": "2026-04-01T00:32:31.880Z"
+    },
+    {
+      "id": 25,
+      "task_id": "T01",
+      "slice_id": "S05",
+      "milestone_id": "M003",
+      "command": "cd web && npx tsc --noEmit",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 2500,
+      "created_at": "2026-04-01T00:33:00.416Z"
+    },
+    {
+      "id": 26,
+      "task_id": "T01",
+      "slice_id": "S07",
+      "milestone_id": "M003",
+      "command": "cd web && npx tsc --noEmit",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 2500,
+      "created_at": "2026-04-01T00:34:14.871Z"
+    },
+    {
+      "id": 27,
+      "task_id": "T01",
+      "slice_id": "S08",
+      "milestone_id": "M003",
+      "command": "cat supabase/migrations/002_storage_buckets.sql | grep 'INSERT INTO storage.buckets' | wc -l",
+      "exit_code": 0,
+      "verdict": "✅ pass (5 buckets)",
+      "duration_ms": 100,
+      "created_at": "2026-04-01T00:34:52.302Z"
+    },
+    {
+      "id": 28,
+      "task_id": "T01",
+      "slice_id": "S09",
+      "milestone_id": "M003",
+      "command": "cd mobile && npx tsc --noEmit",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 3900,
+      "created_at": "2026-04-01T00:35:42.315Z"
     }
   ]
 }

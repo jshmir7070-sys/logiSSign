@@ -1,0 +1,14 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
+  <g transform="rotate(-3 512 512)">
+    <circle cx="512" cy="512" r="408" stroke="#C91924" stroke-width="34" fill="none"/>
+<circle cx="512" cy="512" r="360" stroke="#C91924" stroke-width="8" fill="none"/>
+    <rect x="302" y="300" width="420" height="420" stroke="#C91924" stroke-width="28" fill="none"/>
+<line x1="512" y1="300" x2="512" y2="720" stroke="#C91924" stroke-width="28"/>
+<line x1="302" y1="510" x2="722" y2="510" stroke="#C91924" stroke-width="28"/>
+    <text x="512" y="846" text-anchor="middle" fill="#C91924" font-family="Gungsuh, Batang, serif" font-size="40" font-weight="700">개인인</text>
+<text x="416" y="430" text-anchor="middle" fill="#C91924" font-family="Gungsuh, Batang, serif" font-size="122" font-weight="700">홍</text>
+<text x="608" y="430" text-anchor="middle" fill="#C91924" font-family="Gungsuh, Batang, serif" font-size="122" font-weight="700">길</text>
+<text x="416" y="638" text-anchor="middle" fill="#C91924" font-family="Gungsuh, Batang, serif" font-size="122" font-weight="700">동</text>
+<text x="608" y="638" text-anchor="middle" fill="#C91924" font-family="Gungsuh, Batang, serif" font-size="122" font-weight="700">인</text>
+  </g>
+</svg>

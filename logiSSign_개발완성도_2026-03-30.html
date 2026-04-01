@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>logiSSign 개발 완성도 분석 리포트 — 2026-03-30</title>
+<style>
+  :root { --bg: #0f1117; --card: #181b23; --border: #2a2e38; --text: #e0e2ea; --dim: #8b8fa3; --accent: #4f8ef7; --green: #22c55e; --yellow: #f59e0b; --red: #ef4444; --orange: #f97316; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Pretendard', -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 24px; line-height: 1.6; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 28px; font-weight: 800; margin-bottom: 6px; }
+  .subtitle { color: var(--dim); font-size: 14px; margin-bottom: 32px; }
+
+  /* 총점 */
+  .overall { display: flex; align-items: center; gap: 32px; background: var(--card); border-radius: 16px; padding: 28px 36px; border: 1px solid var(--border); margin-bottom: 32px; }
+  .score-ring { position: relative; width: 120px; height: 120px; }
+  .score-ring svg { transform: rotate(-90deg); }
+  .score-ring circle { fill: none; stroke-width: 10; }
+  .score-ring .bg-ring { stroke: var(--border); }
+  .score-ring .fg-ring { stroke: var(--accent); stroke-linecap: round; stroke-dasharray: 345.6; stroke-dashoffset: 69; transition: stroke-dashoffset 1s; }
+  .score-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+  .score-label .num { font-size: 32px; font-weight: 800; color: var(--accent); }
+  .score-label .den { font-size: 13px; color: var(--dim); }
+  .overall-info { flex: 1; }
+  .overall-info h2 { font-size: 20px; margin-bottom: 8px; }
+  .overall-info p { color: var(--dim); font-size: 14px; line-height: 1.7; }
+  .grade-badge { display: inline-block; padding: 3px 14px; border-radius: 6px; font-weight: 700; font-size: 14px; }
+  .grade-A { background: #22c55e22; color: var(--green); }
+  .grade-B { background: #4f8ef722; color: var(--accent); }
+  .grade-C { background: #f59e0b22; color: var(--yellow); }
+  .grade-D { background: #ef444422; color: var(--red); }
+
+  /* 카드 그리드 */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .card h3 { font-size: 15px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .card h3 .icon { font-size: 18px; }
+
+  /* 미터 바 */
+  .meter { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin: 6px 0 4px; }
+  .meter-fill { height: 100%; border-radius: 4px; transition: width 0.8s; }
+  .meter-green .meter-fill { background: var(--green); }
+  .meter-yellow .meter-fill { background: var(--yellow); }
+  .meter-red .meter-fill { background: var(--red); }
+  .meter-blue .meter-fill { background: var(--accent); }
+  .meter-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--dim); }
+
+  /* 개선 전후 */
+  .comparison { margin-bottom: 24px; }
+  .comparison h2 { font-size: 18px; font-weight: 700; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--dim); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  td { padding: 8px 10px; border-bottom: 1px solid #1f222c; }
+  .old { color: var(--dim); text-decoration: line-through; }
+  .new { color: var(--green); font-weight: 600; }
+  .arrow { color: var(--dim); }
+
+  /* 기능 체크리스트 */
+  .feature-list { list-style: none; padding: 0; }
+  .feature-list li { padding: 7px 0; font-size: 13px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #1d202a; }
+  .feature-list li:last-child { border: none; }
+  .check { color: var(--green); font-weight: 700; }
+  .partial { color: var(--yellow); font-weight: 700; }
+  .missing { color: var(--red); font-weight: 700; }
+
+  /* 이슈 */
+  .issue { padding: 12px 14px; border-radius: 8px; margin-bottom: 8px; font-size: 13px; }
+  .issue-critical { background: #ef444415; border-left: 3px solid var(--red); }
+  .issue-high { background: #f9731615; border-left: 3px solid var(--orange); }
+  .issue-medium { background: #f59e0b15; border-left: 3px solid var(--yellow); }
+  .issue-resolved { background: #22c55e10; border-left: 3px solid var(--green); }
+  .issue .tag { font-size: 11px; font-weight: 700; text-transform: uppercase; margin-right: 8px; }
+  .tag-critical { color: var(--red); }
+  .tag-high { color: var(--orange); }
+  .tag-medium { color: var(--yellow); }
+  .tag-resolved { color: var(--green); }
+
+  .section-title { font-size: 18px; font-weight: 700; margin: 28px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+
+  /* 스탯 카드 */
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; }
+  .stat .val { font-size: 28px; font-weight: 800; }
+  .stat .label { font-size: 12px; color: var(--dim); margin-top: 4px; }
+
+  @media (max-width: 700px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .stat-grid { grid-template-columns: 1fr 1fr; }
+    .overall { flex-direction: column; text-align: center; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>logiSSign 개발 완성도 분석</h1>
+<p class="subtitle">분석일: 2026-03-30 | 이전 분석 대비 개선 현황 포함</p>
+
+<!-- ══════ 총점 ══════ -->
+<div class="overall">
+  <div class="score-ring">
+    <svg viewBox="0 0 120 120">
+      <circle class="bg-ring" cx="60" cy="60" r="55"/>
+      <circle class="fg-ring" cx="60" cy="60" r="55"/>
+    </svg>
+    <div class="score-label">
+      <div class="num">80</div>
+      <div class="den">/ 100</div>
+    </div>
+  </div>
+  <div class="overall-info">
+    <h2>종합 평가: <span class="grade-badge grade-B">B+</span></h2>
+    <p>
+      전회 분석(B-) 대비 <strong>2단계 상승</strong>. 위변조 방지 시스템(DB 트리거, 워터마크, 무결성 검사),
+      API 인증 미들웨어(api-auth.ts), timing-safe CRON 인증이 추가되어 <strong>보안(D→B)</strong>이 크게 개선됨.
+      계약 서명→검증→감사추적 전 과정이 end-to-end로 연결된 상태이며,
+      잔여 과제는 타입 안전성 강화, 트랜잭션 처리, 일부 테이블 RLS 보완.
+    </p>
+  </div>
+</div>
+
+<!-- ══════ 규모 ══════ -->
+<div class="stat-grid">
+  <div class="stat"><div class="val" style="color:var(--accent)">21</div><div class="label">서비스 파일</div></div>
+  <div class="stat"><div class="val" style="color:var(--green)">7</div><div class="label">API 라우트</div></div>
+  <div class="stat"><div class="val" style="color:var(--yellow)">22</div><div class="label">포탈 페이지</div></div>
+  <div class="stat"><div class="val" style="color:var(--orange)">16</div><div class="label">모바일 화면</div></div>
+</div>
+<div class="stat-grid">
+  <div class="stat"><div class="val" style="color:var(--accent)">22+</div><div class="label">DB 테이블</div></div>
+  <div class="stat"><div class="val" style="color:var(--green)">15</div><div class="label">RLS 적용 테이블</div></div>
+  <div class="stat"><div class="val" style="color:var(--green)">4</div><div class="label">위변조 방지 트리거</div></div>
+  <div class="stat"><div class="val" style="color:var(--accent)">13</div><div class="label">공유 컴포넌트</div></div>
+</div>
+
+<!-- ══════ 이전 대비 개선 ══════ -->
+<div class="comparison">
+  <h2>이전 분석 대비 변경 사항</h2>
+  <table>
+    <thead><tr><th>영역</th><th>이전</th><th></th><th>현재</th><th>변화</th></tr></thead>
+    <tbody>
+      <tr><td>아키텍처</td><td class="old">A-</td><td class="arrow">→</td><td class="new">A</td><td>위변조 방지 레이어, CRON 인프라 추가</td></tr>
+      <tr><td>타입 안전성</td><td class="old">C+</td><td class="arrow">→</td><td class="new">C+</td><td>AnyQuery 패턴 유지 (Supabase 타입 미생성)</td></tr>
+      <tr><td>보안</td><td class="old">D</td><td class="arrow">→</td><td class="new">B</td><td>API 인증 미들웨어, DB 불변 트리거, timing-safe CRON</td></tr>
+      <tr><td>에러 핸들링</td><td class="old">C</td><td class="arrow">→</td><td class="new">C+</td><td>integrity-check에서 실패 사유 상세 기록</td></tr>
+      <tr><td>DB 설계</td><td class="old">B+</td><td class="arrow">→</td><td class="new">A-</td><td>4개 트리거, integrity_check_results 테이블 추가</td></tr>
+      <tr><td>UX</td><td class="old">B-</td><td class="arrow">→</td><td class="new">B-</td><td>변동 없음 (포탈 UI 변경 없음)</td></tr>
+      <tr><td>위변조 방지</td><td class="old">—</td><td class="arrow">→</td><td class="new">A-</td><td>신규: 트리거+워터마크+정기검사 3중 방어</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════ 영역별 상세 ══════ -->
+<h2 class="section-title">영역별 상세 분석</h2>
+
+<div class="grid-2">
+  <!-- 아키텍처 -->
+  <div class="card">
+    <h3><span class="icon">🏗️</span> 아키텍처 <span class="grade-badge grade-A">A</span></h3>
+    <div class="meter meter-green"><div class="meter-fill" style="width:90%"></div></div>
+    <div class="meter-label"><span>완성도</span><span>90%</span></div>
+    <ul class="feature-list">
+      <li><span class="check">✓</span> Next.js 14 App Router + Supabase SSR</li>
+      <li><span class="check">✓</span> 멀티테넌시 (Provider→Agency→Driver) + RLS</li>
+      <li><span class="check">✓</span> 서비스 레이어 패턴 일관 적용 (21개 서비스)</li>
+      <li><span class="check">✓</span> 미들웨어 기반 경로 보호 + 역할별 리다이렉트</li>
+      <li><span class="check">✓</span> 모바일: Expo Router + React Query + Zustand</li>
+      <li><span class="partial">△</span> API 라우트 수 부족 (7개 — 많은 로직이 클라이언트 직접 DB)</li>
+    </ul>
+  </div>
+
+  <!-- 보안 -->
+  <div class="card">
+    <h3><span class="icon">🔒</span> 보안 <span class="grade-badge grade-B">B</span></h3>
+    <div class="meter meter-blue"><div class="meter-fill" style="width:75%"></div></div>
+    <div class="meter-label"><span>완성도</span><span>75%</span></div>
+    <ul class="feature-list">
+      <li><span class="check">✓</span> API 인증 미들웨어 (api-auth.ts)</li>
+      <li><span class="check">✓</span> timing-safe CRON 시크릿 비교</li>
+      <li><span class="check">✓</span> DB 불변 트리거 (signed 계약 보호)</li>
+      <li><span class="check">✓</span> contract_signatures/verification_logs DELETE 차단</li>
+      <li><span class="check">✓</span> 미들웨어 경로 보호 + 역할 검증</li>
+      <li><span class="partial">△</span> providers/agencies/notices RLS 미적용</li>
+      <li><span class="partial">△</span> 입력 값 검증 (Zod 등) 미적용</li>
+      <li><span class="missing">✗</span> Rate limiting 없음</li>
+    </ul>
+  </div>
+
+  <!-- 계약 시스템 -->
+  <div class="card">
+    <h3><span class="icon">📝</span> 전자계약 시스템 <span class="grade-badge grade-A">A-</span></h3>
+    <div class="meter meter-green"><div class="meter-fill" style="width:88%"></div></div>
+    <div class="meter-label"><span>완성도</span><span>88%</span></div>
+    <ul class="feature-list">
+      <li><span class="check">✓</span> 템플릿 기반 계약서 생성 + 변수 바인딩</li>
+      <li><span class="check">✓</span> 전자서명 (캔버스 서명 캡처)</li>
+      <li><span class="check">✓</span> 서명 PDF 생성 + Storage 업로드</li>
+      <li><span class="check">✓</span> 문서 넘버링 (LSS-YYYY-NNNNNN)</li>
+      <li><span class="check">✓</span> SHA-256 트리플 해싱 (내용+PDF+타임스탬프)</li>
+      <li><span class="check">✓</span> QR 코드 진위확인 + 공개 검증 페이지</li>
+      <li><span class="check">✓</span> 감사추적인증서 PDF 자동 생성</li>
+      <li><span class="check">✓</span> 해시 체인 감사추적 (audit trail)</li>
+      <li><span class="check">✓</span> 계약 변경 요청 (amendment) 워크플로우</li>
+      <li><span class="check">✓</span> PDF 워터마크 ("ORIGINAL" + 문서번호)</li>
+      <li><span class="partial">△</span> 본인인증 (PASS/카카오) — 서비스 구현, UI 미연결</li>
+    </ul>
+  </div>
+
+  <!-- 위변조 방지 -->
+  <div class="card">
+    <h3><span class="icon">🛡️</span> 위변조 방지 <span class="grade-badge grade-A">A-</span></h3>
+    <div class="meter meter-green"><div class="meter-fill" style="width:85%"></div></div>
+    <div class="meter-label"><span>완성도</span><span>85%</span></div>
+    <ul class="feature-list">
+      <li><span class="check">✓</span> DB 불변 트리거 — signed 상태 content/hash 변경 차단</li>
+      <li><span class="check">✓</span> contract_signatures UPDATE/DELETE 완전 차단</li>
+      <li><span class="check">✓</span> verification_logs append-only 강제</li>
+      <li><span class="check">✓</span> PDF 워터마크 (대각선 ORIGINAL + 하단 문서번호)</li>
+      <li><span class="check">✓</span> 정기 무결성 검사 (CRON + 수동 API)</li>
+      <li><span class="check">✓</span> 검사 이력 DB 보관 (integrity_check_results)</li>
+      <li><span class="check">✓</span> 단건/전체 검사 지원</li>
+      <li><span class="partial">△</span> 위변조 감지 시 알림(이메일/슬랙) 미구현</li>
+      <li><span class="partial">△</span> PKI 기반 PDF 디지털 서명 미적용</li>
+    </ul>
+  </div>
+
+  <!-- 정산 시스템 -->
+  <div class="card">
+    <h3><span class="icon">💰</span> 정산 시스템 <span class="grade-badge grade-B">B+</span></h3>
+    <div class="meter meter-blue"><div class="meter-fill" style="width:80%"></div></div>
+    <div class="meter-label"><span>완성도</span><span>80%</span></div>
+    <ul class="feature-list">
+      <li><span class="check">✓</span> 엑셀 업로드 → 파싱 (쿠팡 정산서)</li>
+      <li><span class="check">✓</span> 노선별/단가별 요율 설정</li>
+      <li><span class="check">✓</span> 공제 항목 (세금, 보험, 기타)</li>
+      <li><span class="check">✓</span> 인센티브 룰 (물량별/실적별)</li>
+      <li><span class="check">✓</span> 세금계산서 생성 + 프린트</li>
+      <li><span class="check">✓</span> 대시보드 KPI (매출, 기사수, 미서명 건)</li>
+      <li><span class="partial">△</span> 정산 확정 워크플로우 미완</li>
+      <li><span class="partial">△</span> 다중 화주 동시 정산 미지원</li>
+    </ul>
+  </div>
+
+  <!-- 타입 안전성 -->
+  <div class="card">
+    <h3><span class="icon">🔤</span> 타입 안전성 <span class="grade-badge grade-C">C+</span></h3>
+    <div class="meter meter-yellow"><div class="meter-fill" style="width:55%"></div></div>
+    <div class="meter-label"><span>완성도</span><span>55%</span></div>
+    <ul class="feature-list">
+      <li><span class="check">✓</span> TypeScript strict 모드 활성화</li>
+      <li><span class="check">✓</span> 0 컴파일 에러 (tsc --noEmit 통과)</li>
+      <li><span class="check">✓</span> 서비스 인터페이스 정의 (DocumentVerification 등)</li>
+      <li><span class="partial">△</span> <code>AnyQuery = any</code> 패턴 다수 사용</li>
+      <li><span class="partial">△</span> Supabase 타입 자동 생성 미적용</li>
+      <li><span class="partial">△</span> <code>as unknown as T</code> 캐스팅 빈번</li>
+      <li><span class="missing">✗</span> API 요청/응답 스키마 검증 없음 (Zod 등)</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════ 이슈 현황 ══════ -->
+<h2 class="section-title">이슈 현황 (이전 분석 대비)</h2>
+
+<div class="issue issue-resolved">
+  <span class="tag tag-resolved">해결</span> <strong>API 인증 없음</strong> — api-auth.ts 추가, contracts/send 등 모든 API에 인증 미들웨어 적용
+</div>
+<div class="issue issue-resolved">
+  <span class="tag tag-resolved">해결</span> <strong>CRON 시크릿 평문 비교</strong> — timing-safe 비트 XOR 비교로 교체
+</div>
+<div class="issue issue-resolved">
+  <span class="tag tag-resolved">해결</span> <strong>서명 완료 데이터 변조 가능</strong> — DB 트리거로 signed 상태 핵심 필드 불변 보장
+</div>
+<div class="issue issue-resolved">
+  <span class="tag tag-resolved">해결</span> <strong>감사 로그 삭제 가능</strong> — contract_signatures, verification_logs DELETE 차단 트리거
+</div>
+<div class="issue issue-resolved">
+  <span class="tag tag-resolved">해결</span> <strong>PDF 원본 증명 불가</strong> — 워터마크 + QR + 해시 3중 증명 체계
+</div>
+
+<div style="margin-top: 16px;"></div>
+
+<div class="issue issue-high">
+  <span class="tag tag-high">높음</span> <strong>DB 트랜잭션 미사용</strong> — 계약 생성, 서명 완료 등 다중 테이블 작업 시 원자성 미보장. Supabase Edge Function 또는 DB Function 활용 권장.
+</div>
+<div class="issue issue-high">
+  <span class="tag tag-high">높음</span> <strong>providers/agencies/contract_templates RLS 미적용</strong> — 서비스 키 접근 시 타 대리점 데이터 노출 위험. 최소 agencies에 RLS 필수.
+</div>
+<div class="issue issue-high">
+  <span class="tag tag-high">높음</span> <strong>AnyQuery 남용</strong> — Supabase 타입 자동 생성(<code>supabase gen types</code>)으로 DB 스키마 기반 타입 적용 필요.
+</div>
+<div class="issue issue-medium">
+  <span class="tag tag-medium">중간</span> <strong>입력 검증 부재</strong> — API 엔드포인트에 Zod 스키마 검증 추가 권장 (XSS, SQL Injection 방어).
+</div>
+<div class="issue issue-medium">
+  <span class="tag tag-medium">중간</span> <strong>위변조 감지 알림 없음</strong> — 무결성 검사 실패 시 console.error만 출력. 이메일/Slack Webhook 연동 필요.
+</div>
+<div class="issue issue-medium">
+  <span class="tag tag-medium">중간</span> <strong>Rate limiting 없음</strong> — /api/verify, /api/integrity-check 등 공개/관리 API에 요청 제한 미적용.
+</div>
+
+<!-- ══════ 기능 완성도 매트릭스 ══════ -->
+<h2 class="section-title">기능 완성도 매트릭스</h2>
+
+<table>
+  <thead>
+    <tr><th>기능 모듈</th><th>서비스</th><th>API</th><th>포탈 UI</th><th>모바일</th><th>완성도</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>기사 관리</td><td style="color:var(--green)">●</td><td style="color:var(--yellow)">◐</td><td style="color:var(--green)">●</td><td style="color:var(--green)">●</td><td>90%</td></tr>
+    <tr><td>계약 관리</td><td style="color:var(--green)">●</td><td style="color:var(--green)">●</td><td style="color:var(--green)">●</td><td style="color:var(--green)">●</td><td>92%</td></tr>
+    <tr><td>전자서명 + PDF</td><td style="color:var(--green)">●</td><td style="color:var(--green)">●</td><td style="color:var(--green)">●</td><td style="color:var(--green)">●</td><td>90%</td></tr>
+    <tr><td>진위확인 (QR/코드)</td><td style="color:var(--green)">●</td><td style="color:var(--green)">●</td><td style="color:var(--green)">●</td><td style="color:var(--dim)">○</td><td>85%</td></tr>
+    <tr><td>위변조 방지</td><td style="color:var(--green)">●</td><td style="color:var(--green)">●</td><td style="color:var(--dim)">○</td><td style="color:var(--dim)">—</td><td>85%</td></tr>
+    <tr><td>정산 처리</td><td style="color:var(--green)">●</td><td style="color:var(--yellow)">◐</td><td style="color:var(--green)">●</td><td style="color:var(--green)">●</td><td>80%</td></tr>
+    <tr><td>세금계산서</td><td style="color:var(--green)">●</td><td style="color:var(--yellow)">◐</td><td style="color:var(--green)">●</td><td style="color:var(--dim)">○</td><td>75%</td></tr>
+    <tr><td>푸시/SMS 알림</td><td style="color:var(--green)">●</td><td style="color:var(--yellow)">◐</td><td style="color:var(--yellow)">◐</td><td style="color:var(--green)">●</td><td>70%</td></tr>
+    <tr><td>교육/수료증</td><td style="color:var(--green)">●</td><td style="color:var(--dim)">○</td><td style="color:var(--green)">●</td><td style="color:var(--green)">●</td><td>75%</td></tr>
+    <tr><td>변경 요청 (Amendment)</td><td style="color:var(--green)">●</td><td style="color:var(--green)">●</td><td style="color:var(--green)">●</td><td style="color:var(--green)">●</td><td>85%</td></tr>
+    <tr><td>대시보드/리포트</td><td style="color:var(--green)">●</td><td style="color:var(--dim)">○</td><td style="color:var(--green)">●</td><td style="color:var(--yellow)">◐</td><td>70%</td></tr>
+    <tr><td>주소 검색 (Daum)</td><td style="color:var(--dim)">—</td><td style="color:var(--dim)">—</td><td style="color:var(--green)">●</td><td style="color:var(--dim)">○</td><td>80%</td></tr>
+  </tbody>
+</table>
+<p style="font-size:12px; color:var(--dim); margin-top:8px;">
+  ● 완료&nbsp;&nbsp; ◐ 부분 구현&nbsp;&nbsp; ○ 미구현&nbsp;&nbsp; — 해당 없음
+</p>
+
+<!-- ══════ 추천 우선순위 ══════ -->
+<h2 class="section-title">다음 단계 추천 (우선순위)</h2>
+
+<div class="card" style="margin-bottom:16px;">
+  <h3><span class="icon">1️⃣</span> Supabase 타입 생성 + AnyQuery 제거</h3>
+  <p style="font-size:13px; color:var(--dim);">
+    <code>npx supabase gen types typescript</code> 실행 후 Database 타입을 적용하면,
+    현재 21개 서비스의 <code>as AnyQuery</code> 캐스팅을 모두 제거하고 컴파일 타임 타입 안전성을 확보할 수 있습니다.
+    가장 적은 비용으로 코드 품질을 크게 올리는 작업입니다.
+  </p>
+</div>
+<div class="card" style="margin-bottom:16px;">
+  <h3><span class="icon">2️⃣</span> 나머지 테이블 RLS 보완</h3>
+  <p style="font-size:13px; color:var(--dim);">
+    providers, agencies, contract_templates, notices, subscriptions에 RLS 정책을 추가하여
+    서비스 키 없이도 데이터 격리가 보장되도록 합니다. 특히 agencies는 타 대리점 데이터 접근 차단이 필수입니다.
+  </p>
+</div>
+<div class="card" style="margin-bottom:16px;">
+  <h3><span class="icon">3️⃣</span> API 입력 검증 (Zod)</h3>
+  <p style="font-size:13px; color:var(--dim);">
+    모든 POST 엔드포인트에 Zod 스키마를 적용하여 유효하지 않은 입력을 사전 차단합니다.
+    특히 /api/contracts/send, /api/verify, /api/integrity-check 가 우선입니다.
+  </p>
+</div>
+<div class="card" style="margin-bottom:16px;">
+  <h3><span class="icon">4️⃣</span> DB 트랜잭션 적용</h3>
+  <p style="font-size:13px; color:var(--dim);">
+    계약 생성(contracts + contract_signatures), 서명 완료(update contracts + generate PDF + audit)
+    같은 다중 테이블 작업을 PostgreSQL Function 또는 Supabase Edge Function에서 트랜잭션으로 감싸야 합니다.
+  </p>
+</div>
+<div class="card">
+  <h3><span class="icon">5️⃣</span> 위변조 감지 알림 연동</h3>
+  <p style="font-size:13px; color:var(--dim);">
+    integrity-check CRON에서 실패 건 발견 시 Slack Webhook 또는 관리자 이메일로 즉시 알림을 보내도록 합니다.
+    현재는 console.error만 출력되어 실시간 대응이 불가능합니다.
+  </p>
+</div>
+
+<div style="margin-top: 40px; padding: 16px 0; border-top: 1px solid var(--border); font-size: 12px; color: var(--dim); text-align: center;">
+  logiSSign 개발 완성도 분석 리포트 — 생성일: 2026-03-30
+</div>
+
+</div>
+</body>
+</html>

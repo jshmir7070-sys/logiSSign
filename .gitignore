@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build
+web/.next/
+mobile/.expo/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+web/.env.local
+mobile/.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# GSD runtime (tracked artifacts are fine)
+.gsd/runtime/
+.gsd/activity/
+.gsd/worktrees/
+.gsd/browser-state/
+.gsd/browser-baselines/
+.gsd/gsd.db
+.gsd/gsd.db-shm
+.gsd/gsd.db-wal
+.gsd/event-log.jsonl
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc
+*.pem
+
+# Test PDFs
+test-form*.pdf
+test-form*.png
+
+# Background shell
+.bg-shell/
+.artifacts/
+.expo/
+.claude/

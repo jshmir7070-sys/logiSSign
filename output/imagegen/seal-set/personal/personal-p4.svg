@@ -1,0 +1,13 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
+  <g transform="rotate(-4 512 512)">
+    <rect x="142" y="142" width="740" height="740" rx="88" ry="88" stroke="#C91924" stroke-width="34" fill="none"/>
+
+    <rect x="264" y="264" width="496" height="496" stroke="#C91924" stroke-width="20" fill="none"/>
+<line x1="512" y1="264" x2="512" y2="760" stroke="#C91924" stroke-width="20"/>
+<line x1="264" y1="512" x2="760" y2="512" stroke="#C91924" stroke-width="20"/>
+    <text x="398" y="426" text-anchor="middle" fill="#C91924" font-family="Malgun Gothic, Batang, sans-serif" font-size="122" font-weight="700">홍</text>
+<text x="626" y="426" text-anchor="middle" fill="#C91924" font-family="Malgun Gothic, Batang, sans-serif" font-size="122" font-weight="700">길</text>
+<text x="398" y="654" text-anchor="middle" fill="#C91924" font-family="Malgun Gothic, Batang, sans-serif" font-size="122" font-weight="700">동</text>
+<text x="626" y="654" text-anchor="middle" fill="#C91924" font-family="Malgun Gothic, Batang, sans-serif" font-size="122" font-weight="700">인</text>
+  </g>
+</svg>

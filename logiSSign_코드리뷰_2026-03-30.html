@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>logiSSign 코드 리뷰 리포트 — 2026.03.30</title>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --surface2: #242736;
+    --border: #2e3142; --text: #e4e6f0; --muted: #8b8fa3;
+    --red: #ff6b6b; --orange: #ffa94d; --yellow: #ffd43b;
+    --green: #69db7c; --blue: #74c0fc; --purple: #b197fc;
+    --red-bg: #2d1b1b; --orange-bg: #2d261b; --green-bg: #1b2d1e; --blue-bg: #1b222d;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Pretendard', -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; }
+  .container { max-width: 960px; margin: 0 auto; }
+  h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.25rem; }
+  h1 span { color: var(--blue); }
+  .subtitle { color: var(--muted); margin-bottom: 2rem; font-size: 0.9rem; }
+  h2 { font-size: 1.3rem; font-weight: 600; margin: 2.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.05rem; font-weight: 600; margin: 1.5rem 0 0.75rem; color: var(--blue); }
+  p, li { font-size: 0.92rem; color: var(--text); }
+  ul { padding-left: 1.2rem; margin-bottom: 1rem; }
+  li { margin-bottom: 0.4rem; }
+
+  /* Score cards */
+  .scores { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin: 1.5rem 0 2rem; }
+  .score-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem; text-align: center; }
+  .score-card .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+  .score-card .value { font-size: 2rem; font-weight: 700; }
+  .score-card .sub { font-size: 0.7rem; color: var(--muted); margin-top: 0.25rem; }
+  .s-red { color: var(--red); }
+  .s-orange { color: var(--orange); }
+  .s-yellow { color: var(--yellow); }
+  .s-green { color: var(--green); }
+  .s-blue { color: var(--blue); }
+
+  /* Summary stats */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; margin: 1rem 0 2rem; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; }
+  .stat .n { font-size: 1.5rem; font-weight: 700; color: var(--blue); }
+  .stat .l { font-size: 0.78rem; color: var(--muted); }
+
+  /* Issue table */
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.85rem; }
+  th { background: var(--surface2); padding: 0.7rem 0.8rem; text-align: left; font-weight: 600; border-bottom: 1px solid var(--border); }
+  td { padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:hover td { background: var(--surface); }
+
+  /* Severity badges */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; }
+  .badge-critical { background: var(--red-bg); color: var(--red); border: 1px solid #4a2020; }
+  .badge-high { background: var(--orange-bg); color: var(--orange); border: 1px solid #4a3a20; }
+  .badge-medium { background: #2d2d1b; color: var(--yellow); border: 1px solid #4a4a20; }
+  .badge-low { background: var(--blue-bg); color: var(--blue); border: 1px solid #204a4a; }
+  .badge-ok { background: var(--green-bg); color: var(--green); border: 1px solid #1b4a20; }
+
+  /* Code blocks */
+  code { background: var(--surface2); padding: 2px 6px; border-radius: 4px; font-size: 0.82rem; font-family: 'JetBrains Mono', monospace; }
+  pre { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; overflow-x: auto; font-size: 0.8rem; margin: 0.75rem 0; }
+
+  /* Section cards */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin: 1rem 0; }
+  .card-title { font-weight: 600; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
+
+  /* File tree */
+  .tree { font-family: monospace; font-size: 0.82rem; color: var(--muted); line-height: 1.8; }
+  .tree b { color: var(--text); font-weight: 500; }
+
+  .rls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+  .rls-item { font-size: 0.82rem; padding: 0.4rem 0.6rem; background: var(--surface2); border-radius: 6px; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1><span>logiSSign</span> 코드 리뷰 리포트</h1>
+<p class="subtitle">2026년 3월 30일 · 전체 구현 검토 (Web + Mobile + DB)</p>
+
+<!-- ═══════════════════════ OVERVIEW ═══════════════════════ -->
+<h2>📊 전체 평가 요약</h2>
+
+<div class="scores">
+  <div class="score-card">
+    <div class="label">아키텍처</div>
+    <div class="value s-green">A-</div>
+    <div class="sub">구조 잘 잡힘</div>
+  </div>
+  <div class="score-card">
+    <div class="label">타입 안전성</div>
+    <div class="value s-orange">C+</div>
+    <div class="sub">any 캐스팅 다수</div>
+  </div>
+  <div class="score-card">
+    <div class="label">보안/인증</div>
+    <div class="value s-red">D</div>
+    <div class="sub">API 인증 누락</div>
+  </div>
+  <div class="score-card">
+    <div class="label">에러 처리</div>
+    <div class="value s-orange">C</div>
+    <div class="sub">사일런트 실패 다수</div>
+  </div>
+  <div class="score-card">
+    <div class="label">DB 설계</div>
+    <div class="value s-green">B+</div>
+    <div class="sub">FK/인덱스 양호</div>
+  </div>
+  <div class="score-card">
+    <div class="label">UX/접근성</div>
+    <div class="value s-yellow">B-</div>
+    <div class="sub">기본 기능 OK</div>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="n">29</div><div class="l">DB 테이블</div></div>
+  <div class="stat"><div class="n">76+</div><div class="l">소스 파일 (web+mobile)</div></div>
+  <div class="stat"><div class="n">14</div><div class="l">서비스 파일</div></div>
+  <div class="stat"><div class="n">4</div><div class="l">API 라우트</div></div>
+  <div class="stat"><div class="n">14</div><div class="l">RLS 정책</div></div>
+  <div class="stat"><div class="n">53</div><div class="l">FK 제약 조건</div></div>
+</div>
+
+<!-- ═══════════════════════ CRITICAL ═══════════════════════ -->
+<h2>🔴 Critical — 즉시 수정 필요</h2>
+
+<h3>1. API 라우트 인증 완전 누락</h3>
+<div class="card">
+  <p>모든 API 라우트 (<code>/api/amendments</code>, <code>/api/contracts/send</code>, <code>/api/contracts/list</code>)에 <strong>인증(auth) 검증이 전혀 없습니다.</strong> 요청 body의 <code>agencyId</code>를 그대로 신뢰하므로, 누구든 타 대리점의 계약서를 발송하거나 변경할 수 있습니다.</p>
+  <pre>// 현재 — 인증 없음
+export async function POST(req: NextRequest) {
+  const { agencyId, driverIds, ... } = await req.json();
+  // agencyId를 그대로 사용 → 위험
+
+// 수정 방안
+const supabase = createServerSupabaseClient();
+const { data: { user } } = await supabase.auth.getUser();
+const agencyId = user?.user_metadata?.agency_id;
+if (!agencyId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });</pre>
+  <p><span class="badge badge-critical">영향 범위</span> <code>amendments/route.ts</code> GET/POST/PATCH · <code>contracts/send/route.ts</code> POST · <code>contracts/list/route.ts</code> GET</p>
+</div>
+
+<h3>2. 계약 변경 승인 시 트랜잭션 미사용 (레이스 컨디션)</h3>
+<div class="card">
+  <p>Amendment 승인(PATCH) 시 "기존 기간 만료 → 신규 기간 생성"이 <strong>2개의 별도 쿼리</strong>로 실행됩니다. 2번째 쿼리 실패 시 기사에게 활성 계약 기간이 사라집니다.</p>
+  <pre>// 현재: 별개 쿼리 2개 (원자성 없음)
+await supabase.from('driver_contract_periods').update({ status: 'expired' })...  // 1
+await supabase.from('driver_contract_periods').insert({ ... })...                // 2 ← 실패 시?
+
+// 수정: Supabase RPC 또는 PostgreSQL Function으로 트랜잭션 래핑
+await supabase.rpc('approve_amendment_with_period', { ... });</pre>
+  <p><span class="badge badge-critical">영향 범위</span> <code>amendments/route.ts</code> PATCH · <code>contractPeriod.service.ts</code> createRenewalPeriod</p>
+</div>
+
+<h3>3. RLS 미적용 핵심 테이블 6개</h3>
+<div class="card">
+  <p>다음 테이블에 RLS가 꺼져 있어, 인증된 사용자라면 누구든 전체 데이터에 접근 가능합니다.</p>
+  <div class="rls-grid">
+    <div class="rls-item"><b>agencies</b> <span class="badge badge-critical">대리점 전체 정보</span></div>
+    <div class="rls-item"><b>principals</b> <span class="badge badge-critical">카테고리/단가 설정</span></div>
+    <div class="rls-item"><b>contract_templates</b> <span class="badge badge-high">계약서 템플릿</span></div>
+    <div class="rls-item"><b>settlement_rules</b> <span class="badge badge-high">정산 규칙</span></div>
+    <div class="rls-item"><b>deduction_items</b> <span class="badge badge-medium">공제 항목</span></div>
+    <div class="rls-item"><b>incentive_rules</b> <span class="badge badge-medium">인센티브 규칙</span></div>
+  </div>
+  <p style="margin-top: 0.75rem; color: var(--muted);">특히 <code>agencies</code>와 <code>principals</code>는 사업자번호, 계좌정보, 단가 설정 등 민감 정보를 포함하므로 반드시 RLS 적용이 필요합니다.</p>
+</div>
+
+<!-- ═══════════════════════ HIGH ═══════════════════════ -->
+<h2>🟠 High — 조기 수정 권장</h2>
+
+<table>
+<thead><tr><th style="width:40%">문제</th><th style="width:30%">위치</th><th>설명</th></tr></thead>
+<tbody>
+<tr>
+  <td><span class="badge badge-high">HIGH</span> CRON 토큰 검증 취약</td>
+  <td><code>cron/renewal-check</code></td>
+  <td>단순 문자열 비교 — timing attack에 취약. <code>crypto.timingSafeEqual</code> 사용 필요</td>
+</tr>
+<tr>
+  <td><span class="badge badge-high">HIGH</span> 타입 캐스팅 남용</td>
+  <td>서비스 전체</td>
+  <td><code>as unknown as unknown as T</code> 3중 캐스팅, <code>as never</code> 패턴 다수. Supabase 타입 재생성(<code>generate_typescript_types</code>) 후 제거 필요</td>
+</tr>
+<tr>
+  <td><span class="badge badge-high">HIGH</span> Push 알림 실패 무시</td>
+  <td><code>push.service.ts</code></td>
+  <td>모든 notification wrapper가 <code>Promise&lt;void&gt;</code>로 에러 무시. 실패 시 기사가 계약 변경 사항을 못 받을 수 있음</td>
+</tr>
+<tr>
+  <td><span class="badge badge-high">HIGH</span> 계약 기간 365일 하드코딩</td>
+  <td><code>amendments/route.ts:150</code></td>
+  <td>재계약 기간이 항상 365일로 고정. DB 또는 카테고리 설정에서 읽도록 변경 필요</td>
+</tr>
+<tr>
+  <td><span class="badge badge-high">HIGH</span> 기사 등록 다단계 저장 실패 시 롤백 없음</td>
+  <td><code>drivers/new/page.tsx</code></td>
+  <td>7단계 저장 중 5단계에서 실패하면 1~4단계 데이터가 DB에 남음 (불완전한 기사 레코드)</td>
+</tr>
+<tr>
+  <td><span class="badge badge-high">HIGH</span> 입력 값 검증 부재</td>
+  <td>API 라우트 전체</td>
+  <td><code>amendmentType</code> enum 검증, 날짜 형식 검증, 문자열 길이 제한 등 입력 검증이 전혀 없음. zod/valibot 도입 권장</td>
+</tr>
+</tbody>
+</table>
+
+<!-- ═══════════════════════ MEDIUM ═══════════════════════ -->
+<h2>🟡 Medium — 안정성 개선</h2>
+
+<table>
+<thead><tr><th style="width:40%">문제</th><th style="width:30%">위치</th><th>설명</th></tr></thead>
+<tbody>
+<tr>
+  <td><span class="badge badge-medium">MED</span> alert() 기반 에러 표시</td>
+  <td>amendments, drivers/new</td>
+  <td>브라우저 alert()는 UX를 차단. Toast/Snackbar 컴포넌트로 교체 필요</td>
+</tr>
+<tr>
+  <td><span class="badge badge-medium">MED</span> API 응답 형식 불일치</td>
+  <td>API 라우트 전체</td>
+  <td>GET: <code>{ data, error }</code>, POST: <code>{ created, data }</code>, PATCH: <code>{ success }</code> — 통일 필요</td>
+</tr>
+<tr>
+  <td><span class="badge badge-medium">MED</span> 계약 변수 바인딩 — 특수문자 미이스케이프</td>
+  <td><code>contract.service.ts</code></td>
+  <td>변수 키에 특수문자가 있으면 RegExp가 깨짐. <code>key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')</code> 추가 필요</td>
+</tr>
+<tr>
+  <td><span class="badge badge-medium">MED</span> 날짜 처리 타임존 불일치</td>
+  <td>서비스 전체</td>
+  <td><code>new Date().toISOString().slice(0,10)</code>은 UTC 기준. 한국시간(KST)과 하루 차이 발생 가능</td>
+</tr>
+<tr>
+  <td><span class="badge badge-medium">MED</span> contracts RLS 정책 불일치</td>
+  <td>DB <code>contracts</code> 테이블</td>
+  <td>agency 정책은 <code>auth.jwt() ->> 'agency_id'</code>, 다른 테이블은 <code>auth.jwt() -> 'user_metadata' ->> 'agency_id'</code>. JWT 구조에 따라 한쪽은 작동하지 않을 수 있음</td>
+</tr>
+<tr>
+  <td><span class="badge badge-medium">MED</span> 기사 등록 폼 상태 32개</td>
+  <td><code>drivers/new/page.tsx</code></td>
+  <td>useState 32개 — react-hook-form 또는 useReducer로 통합 권장</td>
+</tr>
+<tr>
+  <td><span class="badge badge-medium">MED</span> 주소 검색 컴포넌트 — 스크립트 로딩 실패 후 무한 대기</td>
+  <td><code>AddressSearch.tsx</code></td>
+  <td>Daum API 로딩 실패 시 retry/timeout 없음. 5초 타임아웃 + 재시도 로직 추가 필요</td>
+</tr>
+</tbody>
+</table>
+
+<!-- ═══════════════════════ DB ═══════════════════════ -->
+<h2>🗄️ DB 스키마 평가</h2>
+
+<h3>잘 된 부분</h3>
+<div class="card" style="border-color: #1b4a20;">
+  <ul>
+    <li><strong>FK 관계 53개</strong> — 모든 참조 관계가 올바르게 설정됨 (drivers→agencies, contracts→templates 등)</li>
+    <li><strong>인덱스 설계</strong> — 주요 쿼리 패턴에 맞는 인덱스 (agency_id, driver_id, year_month, status 복합 인덱스 포함)</li>
+    <li><strong>contract_amendments</strong> — driver+status 복합 인덱스로 "pending 변경사항 조회" 최적화됨</li>
+    <li><strong>driver_contract_periods</strong> — period_end 인덱스로 CRON 만료 체크 최적화됨</li>
+    <li><strong>settlements 유니크 제약</strong> — (driver_id, year_month, principal_id)로 중복 정산 방지</li>
+    <li><strong>RLS 정책 14개</strong> — 적용된 테이블들의 정책은 잘 설계됨 (agency 소속 / driver 본인 분리)</li>
+  </ul>
+</div>
+
+<h3>개선 필요</h3>
+<table>
+<thead><tr><th>항목</th><th>현재 상태</th><th>권장</th></tr></thead>
+<tbody>
+<tr><td>agencies RLS</td><td><span class="badge badge-critical">OFF</span></td><td>owner_id = auth.uid() 또는 agency_id 매칭 정책 필요</td></tr>
+<tr><td>principals RLS</td><td><span class="badge badge-critical">OFF</span></td><td>소속 agency만 접근 가능하도록</td></tr>
+<tr><td>contract_templates RLS</td><td><span class="badge badge-high">OFF</span></td><td>agency_id 기반 정책 필요</td></tr>
+<tr><td>contracts RLS JWT 경로</td><td><span class="badge badge-medium">불일치</span></td><td><code>jwt()->'user_metadata'->>'agency_id'</code>로 통일</td></tr>
+<tr><td>driver_contract_periods 유니크 제약</td><td><span class="badge badge-medium">없음</span></td><td>(driver_id, status='active') partial unique로 동시 active 방지</td></tr>
+<tr><td>contract_amendments 만료 처리</td><td><span class="badge badge-low">없음</span></td><td>pending 상태 30일 경과 시 auto-expire 로직 필요</td></tr>
+</tbody>
+</table>
+
+<!-- ═══════════════════════ ARCHITECTURE ═══════════════════════ -->
+<h2>🏗️ 아키텍처 평가</h2>
+
+<div class="card" style="border-color: #1b4a20;">
+  <div class="card-title" style="color: var(--green);">✅ 잘 설계된 부분</div>
+  <ul>
+    <li><strong>서비스 레이어 분리</strong> — 14개 서비스 파일로 비즈니스 로직 캡슐화, UI와 데이터 로직이 깔끔하게 분리</li>
+    <li><strong>통일된 반환 패턴</strong> — <code>{ data: T | null, error: string | null }</code> 패턴 (서비스 레이어)</li>
+    <li><strong>멀티 테넌시 구조</strong> — Provider → Agency → Driver 3계층으로 확장성 있는 설계</li>
+    <li><strong>FieldConfig JSONB</strong> — 카테고리별 정산 양식을 코드 변경 없이 설정 가능. 보험/공제/맞춤 항목까지 지원</li>
+    <li><strong>계약 변수 바인딩</strong> — <code>{{변수명}}</code> 템플릿 시스템으로 계약서 자동 생성</li>
+    <li><strong>계약 기간 관리</strong> — active/upcoming/expired 상태 머신으로 재계약 이력 추적</li>
+    <li><strong>Amendment 워크플로우</strong> — pending → approved/rejected/cancelled 5단계 상태로 기사 동의 기반 변경 관리</li>
+    <li><strong>모바일 앱 연동</strong> — 푸시 알림 + 계약 서명 + 변경 승인이 기사앱에서 가능</li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════ FILE STRUCTURE ═══════════════════════ -->
+<h2>📁 프로젝트 구조</h2>
+
+<div class="card">
+<pre class="tree" style="border: none; background: transparent; padding: 0;">
+<b>web/src/</b>
+├── <b>app/</b>
+│   ├── api/
+│   │   ├── amendments/route.ts      — 계약 변경 API (GET/POST/PATCH)
+│   │   ├── contracts/send/route.ts  — 계약 발송 API
+│   │   ├── contracts/list/route.ts  — 계약 목록 API
+│   │   └── cron/renewal-check/      — 일일 갱신 체크 CRON
+│   ├── portal/(dashboard)/
+│   │   ├── amendments/              — 계약 변경 관리 UI
+│   │   ├── contracts/new/           — 계약 발송 UI
+│   │   ├── drivers/new/             — 기사 등록 (32+ 필드)
+│   │   ├── drivers/[id]/            — 기사 상세/계약기간 이력
+│   │   ├── settlements/             — 정산 관련 (업로드/생성/규칙)
+│   │   └── settings/                — 대리점 설정
+│   └── admin/(dashboard)/           — 시스템 관리자 패널
+├── <b>services/</b> (14 files)
+│   ├── amendment.service.ts         — 계약 변경 CRUD + 상태 관리
+│   ├── contract.service.ts          — 템플릿/변수 바인딩/발송
+│   ├── contractPeriod.service.ts    — 계약 기간 생성/갱신/만료
+│   ├── push.service.ts              — Expo 푸시 알림 (9 functions)
+│   ├── principal.service.ts         — 카테고리/FieldConfig (27 functions)
+│   ├── settlement.service.ts        — 정산 생성/계산
+│   └── ... (driver, rate, deduction, excel, tax, sms, identity)
+├── <b>components/shared/</b>
+│   ├── AddressSearch.tsx             — Daum 주소 자동완성
+│   ├── Badge.tsx                     — 상태 배지
+│   └── UserMenu.tsx                  — 사용자 메뉴
+
+<b>mobile/</b>
+├── app/(tabs)/                      — 홈/정산/계약/교육/프로필 탭
+├── app/amendment/[id].tsx           — 계약 변경 승인/거부
+├── app/contract/sign/[id].tsx       — 전자 서명
+├── services/amendment.service.ts    — 모바일 변경사항 서비스
+└── components/common/               — Button, Card, Badge 등
+</pre>
+</div>
+
+<!-- ═══════════════════════ ACTION PLAN ═══════════════════════ -->
+<h2>🎯 개선 우선순위 로드맵</h2>
+
+<table>
+<thead><tr><th>순위</th><th>작업</th><th>난이도</th><th>영향도</th></tr></thead>
+<tbody>
+<tr>
+  <td><span class="badge badge-critical">P0</span></td>
+  <td><strong>API 인증 미들웨어 추가</strong> — 모든 API 라우트에 Supabase auth 검증</td>
+  <td>⬛⬛⬜⬜⬜</td>
+  <td>보안 전체</td>
+</tr>
+<tr>
+  <td><span class="badge badge-critical">P0</span></td>
+  <td><strong>핵심 테이블 RLS 적용</strong> — agencies, principals, contract_templates</td>
+  <td>⬛⬛⬜⬜⬜</td>
+  <td>데이터 격리</td>
+</tr>
+<tr>
+  <td><span class="badge badge-high">P1</span></td>
+  <td><strong>Amendment 승인 트랜잭션화</strong> — Supabase RPC function으로 원자적 처리</td>
+  <td>⬛⬛⬛⬜⬜</td>
+  <td>데이터 무결성</td>
+</tr>
+<tr>
+  <td><span class="badge badge-high">P1</span></td>
+  <td><strong>Supabase 타입 재생성</strong> — contract_amendments, driver_contract_periods 타입 포함시켜 any 캐스팅 제거</td>
+  <td>⬛⬜⬜⬜⬜</td>
+  <td>타입 안전성</td>
+</tr>
+<tr>
+  <td><span class="badge badge-high">P1</span></td>
+  <td><strong>입력 검증 라이브러리 도입</strong> — zod로 API 요청 body, 폼 데이터 검증</td>
+  <td>⬛⬛⬛⬜⬜</td>
+  <td>안정성 전체</td>
+</tr>
+<tr>
+  <td><span class="badge badge-medium">P2</span></td>
+  <td><strong>에러 처리 통합</strong> — Toast 컴포넌트 + Push 실패 로깅 + 재시도</td>
+  <td>⬛⬛⬜⬜⬜</td>
+  <td>UX + 안정성</td>
+</tr>
+<tr>
+  <td><span class="badge badge-medium">P2</span></td>
+  <td><strong>날짜 처리 KST 통일</strong> — dayjs(tz) 또는 date-fns-tz 도입</td>
+  <td>⬛⬛⬜⬜⬜</td>
+  <td>데이터 정확성</td>
+</tr>
+<tr>
+  <td><span class="badge badge-low">P3</span></td>
+  <td><strong>폼 상태 관리 리팩토링</strong> — react-hook-form 도입 (drivers/new 32개 useState 통합)</td>
+  <td>⬛⬛⬛⬜⬜</td>
+  <td>유지보수성</td>
+</tr>
+<tr>
+  <td><span class="badge badge-low">P3</span></td>
+  <td><strong>하드코딩 값 설정화</strong> — 365일 계약기간, 60일 갱신알림, 30일 토큰만료 → env/DB</td>
+  <td>⬛⬜⬜⬜⬜</td>
+  <td>유연성</td>
+</tr>
+</tbody>
+</table>
+
+<!-- ═══════════════════════ SUMMARY ═══════════════════════ -->
+<h2>💬 총평</h2>
+<div class="card">
+  <p>전체적으로 <strong>아키텍처와 비즈니스 로직 설계가 잘 되어 있습니다.</strong> 서비스 레이어 분리, FieldConfig 기반 동적 설정, 계약 변경 워크플로우, CRON 기반 갱신 관리 등 택배 대리점 정산 플랫폼에 필요한 핵심 기능이 빠짐없이 구현되어 있습니다.</p>
+  <p style="margin-top: 0.75rem;">가장 시급한 문제는 <strong>API 인증과 RLS</strong>입니다. 현재 상태로 배포 시 타 대리점 데이터 접근이 가능하므로, 운영 전에 반드시 해결해야 합니다. 두 번째는 트랜잭션 없는 다단계 DB 업데이트로, 데이터 무결성 문제가 발생할 수 있습니다.</p>
+  <p style="margin-top: 0.75rem;">이 두 가지를 해결하면 베타 출시에 충분한 수준이며, 나머지 Medium/Low 이슈는 점진적으로 개선해 나가면 됩니다.</p>
+</div>
+
+<p style="text-align: center; margin-top: 3rem; color: var(--muted); font-size: 0.8rem;">
+  Generated by Claude · logiSSign Code Review · 2026-03-30
+</p>
+
+</div>
+</body>
+</html>
