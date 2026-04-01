@@ -415,11 +415,12 @@ function SealTab({ agencyId }: { agencyId: string }) {
     // Upload to storage
     const { url, error: uploadErr } = await uploadSealImage('agency', agencyId, dataUri);
     if (uploadErr) {
+      alert('도장 이미지 저장 실패: ' + uploadErr + '\n\nSupabase Storage에 "seals" 버킷이 생성되어 있는지 확인하세요.');
       setSaving(false);
       return;
     }
     // Save record
-    await saveSealRecord({
+    const { error: saveErr } = await saveSealRecord({
       owner_type: 'agency',
       owner_id: agencyId,
       category: meta.category,
@@ -429,6 +430,9 @@ function SealTab({ agencyId }: { agencyId: string }) {
       name_text: meta.nameText,
       is_default: seals.length === 0, // 첫 도장은 자동 기본
     });
+    if (saveErr) {
+      alert('도장 정보 저장 실패: ' + saveErr);
+    }
     setSaving(false);
     setShowGenerator(false);
     loadSeals();
