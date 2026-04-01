@@ -86,7 +86,14 @@ export async function POST(request: NextRequest) {
     if (action === 'verify-identity') {
       const { identityVerificationId } = body
       const result = await getIdentityVerification(identityVerificationId)
-      return NextResponse.json(result)
+      // ✅ 보안: CI/DI는 브라우저에 내려주지 않음 (최소권한)
+      return NextResponse.json({
+        verified: result.verified,
+        name: result.name,
+        phone: result.phone,
+        birthDate: result.birthDate,
+        error: result.error,
+      })
     }
 
     // 결제 조회

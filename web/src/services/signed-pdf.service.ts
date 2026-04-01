@@ -372,12 +372,12 @@ export async function generateSignedPdf(contractId: string): Promise<{
 
     if (uploadErr) throw new Error('PDF 업로드 실패: ' + uploadErr.message)
 
-    // Public URL
-    const { data: urlData } = supabase.storage
+    // Signed URL (1년 유효)
+    const { data: urlData } = await supabase.storage
       .from('contracts')
-      .getPublicUrl(fileName)
+      .createSignedUrl(fileName, 60 * 60 * 24 * 365)
 
-    const pdfUrl = urlData?.publicUrl ?? null
+    const pdfUrl = urlData?.signedUrl ?? null
 
     // 5. contracts 테이블에 PDF URL 저장
     if (pdfUrl) {
@@ -575,8 +575,8 @@ async function generateGovernmentFormSignedPdf(
 
     if (uploadErr) throw new Error('PDF 업로드 실패: ' + uploadErr.message)
 
-    const { data: urlData } = supabase.storage.from('contracts').getPublicUrl(fileName)
-    const pdfUrl = urlData?.publicUrl ?? null
+    const { data: urlData } = await supabase.storage.from('contracts').createSignedUrl(fileName, 60 * 60 * 24 * 365)
+    const pdfUrl = urlData?.signedUrl ?? null
 
     if (pdfUrl) {
       const pdfHashBuffer = await crypto.subtle.digest('SHA-256', (pdfBytes as Uint8Array).buffer as ArrayBuffer)

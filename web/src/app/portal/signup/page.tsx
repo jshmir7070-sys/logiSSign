@@ -755,12 +755,7 @@ function SignupContent() {
                       onClick={async () => {
                         const storeId = process.env.NEXT_PUBLIC_PORTONE_STORE_ID;
                         if (!storeId) {
-                          // 개발 모드: 인증 스킵
-                          updateForm({
-                            identityVerified: true,
-                            identityName: form.ownerName || '테스트',
-                            identityPhone: form.phone || '01000000000',
-                          });
+                          alert('본인인증 서비스가 설정되지 않았습니다. 관리자에게 문의하세요.');
                           return;
                         }
                         try {

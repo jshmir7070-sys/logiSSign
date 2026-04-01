@@ -1059,11 +1059,11 @@ CREATE POLICY "sign_resp_update" ON document_sign_responses FOR UPDATE USING (tr
 -- ═══════════════════════════════════════════
 -- Supabase Storage Buckets
 -- ═══════════════════════════════════════════
-INSERT INTO storage.buckets (id, name, public) VALUES ('contracts', 'contracts', true)
+INSERT INTO storage.buckets (id, name, public) VALUES ('contracts', 'contracts', false)
   ON CONFLICT (id) DO NOTHING;
-INSERT INTO storage.buckets (id, name, public) VALUES ('documents', 'documents', true)
+INSERT INTO storage.buckets (id, name, public) VALUES ('documents', 'documents', false)
   ON CONFLICT (id) DO NOTHING;
-INSERT INTO storage.buckets (id, name, public) VALUES ('education', 'education', true)
+INSERT INTO storage.buckets (id, name, public) VALUES ('education', 'education', false)
   ON CONFLICT (id) DO NOTHING;
 INSERT INTO storage.buckets (id, name, public) VALUES ('seals', 'seals', true)
   ON CONFLICT (id) DO NOTHING;

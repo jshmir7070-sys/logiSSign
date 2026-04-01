@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/lib/api-auth'
 import { generateSignedPdf } from '@/services/signed-pdf.service'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+)
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -15,19 +22,24 @@ export async function POST(request: NextRequest) {
     const contractId = body?.contractId as string | undefined
 
     if (!contractId || typeof contractId !== 'string') {
-      return NextResponse.json(
-        { error: '계약서 ID가 필요합니다' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '계약서 ID가 필요합니다' }, { status: 400 })
+    }
+
+    // ✅ 보안: 계약서가 요청자의 agency 소속인지 확인
+    const { data: contract } = await supabaseAdmin
+      .from('contracts')
+      .select('agency_id')
+      .eq('id', contractId)
+      .single()
+
+    if (!contract || contract.agency_id !== auth!.agencyId) {
+      return NextResponse.json({ error: '권한이 없습니다' }, { status: 403 })
     }
 
     const result = await generateSignedPdf(contractId)
 
     if (result.error) {
-      return NextResponse.json(
-        { url: null, error: result.error },
-        { status: 500 }
-      )
+      return NextResponse.json({ url: null, error: result.error }, { status: 500 })
     }
 
     return NextResponse.json({ url: result.url, error: null })
