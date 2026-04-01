@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { csrfCheck } from "@/lib/csrf";
 
 // 공개 경로: 인증 불필요
 const PUBLIC_ROUTES = [
@@ -27,6 +28,10 @@ function isPublicRoute(pathname: string): boolean {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // CSRF 검사 (POST/PATCH/DELETE API 요청)
+  const csrfBlocked = csrfCheck(request);
+  if (csrfBlocked) return csrfBlocked;
 
   // 공개 경로는 통과
   if (isPublicRoute(pathname)) {

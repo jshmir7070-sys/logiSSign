@@ -852,7 +852,22 @@ CREATE OR REPLACE FUNCTION approve_amendment_with_period(
   p_rate_config JSONB,
   p_memo TEXT DEFAULT ''
 ) RETURNS VOID AS $$
+DECLARE
+  v_caller_role TEXT;
+  v_caller_agency_id UUID;
 BEGIN
+  -- ✅ 권한 검증: 호출자가 해당 agency의 admin인지 확인
+  v_caller_role := (auth.jwt()->'app_metadata'->>'role');
+  v_caller_agency_id := (auth.jwt()->'app_metadata'->>'agency_id')::uuid;
+
+  IF v_caller_role NOT IN ('agency_admin', 'provider_admin') THEN
+    RAISE EXCEPTION '권한이 없습니다 (role: %)', v_caller_role;
+  END IF;
+
+  IF v_caller_role = 'agency_admin' AND v_caller_agency_id != p_agency_id THEN
+    RAISE EXCEPTION '다른 운영사의 데이터에 접근할 수 없습니다';
+  END IF;
+
   -- 1. 기존 active 기간 만료 처리
   UPDATE driver_contract_periods
   SET status = 'expired',

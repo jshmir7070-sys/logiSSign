@@ -66,8 +66,8 @@ export async function POST(request: NextRequest) {
           }, { onConflict: 'agency_id' })
 
         return NextResponse.json({ success: true, cardName: verifiedCardName })
-      } catch {
-        console.error('[Payment] 빌링키 검증 실패:', err); return NextResponse.json({ error: '카드 등록에 실패했습니다. 다시 시도해주세요.' }, { status: 400 })
+      } catch (e) {
+        console.error('[Payment] 빌링키 검증 실패:', e); return NextResponse.json({ error: '카드 등록에 실패했습니다. 다시 시도해주세요.' }, { status: 400 })
       }
     }
 
