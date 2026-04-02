@@ -4,6 +4,7 @@ import { csrfCheck } from "@/lib/csrf";
 
 // 공개 경로: 인증 불필요
 const PUBLIC_ROUTES = [
+  "/",              // 메인 → coming-soon 리디렉트
   "/coming-soon",   // 커밍순 페이지
   "/about",         // 서비스 소개 페이지
   "/terms",         // 이용약관
@@ -92,7 +93,7 @@ export async function middleware(request: NextRequest) {
     if (isPortalRoute) {
       return NextResponse.redirect(new URL("/portal/login", request.url));
     }
-    return NextResponse.redirect(new URL("/portal/login", request.url));
+    return NextResponse.redirect(new URL("/coming-soon", request.url));
   }
 
   // ⚠️ 보안: app_metadata만 사용 (user_metadata는 클라이언트 조작 가능)
