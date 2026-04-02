@@ -509,8 +509,103 @@ export default function SettlementBuilderPage() {
               <p className="font-bold text-on-surface">실수령: {formatKRW(SAMPLE_DRIVER.netAmount)}</p>
             </div>
           </div>
+
+          {/* Bulk Generate (Client-side) */}
+          <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-4 space-y-3">
+            <h4 className="text-xs font-bold text-on-surface-variant font-korean">일괄 생성 테스트</h4>
+            <p className="text-[11px] text-on-surface-variant/60 font-korean">
+              샘플 데이터로 여러 정산서를 ZIP으로 생성합니다.
+              실제 엑셀 데이터 기반 일괄 생성은 &apos;엑셀 업로드 정산&apos; 메뉴를 이용하세요.
+            </p>
+            <BulkGenerateButton template={template} agencyName={agencyName} />
+          </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ── Bulk Generate Button ── */
+function BulkGenerateButton({ template, agencyName }: { template: SettlementTemplate; agencyName: string }) {
+  const [count, setCount] = useState(5);
+  const [generating, setGenerating] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  const handleBulkGenerate = async () => {
+    setGenerating(true);
+    setProgress(0);
+    try {
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+      const now = new Date();
+      const meta: SettlementMeta = {
+        agencyName: agencyName || '테스트 대리점',
+        year: now.getFullYear(),
+        month: now.getMonth() + 1,
+        generatedAt: now.toLocaleDateString('ko-KR'),
+      };
+
+      // 템플릿에 항목이 비어있으면 샘플 기반 자동 생성
+      const tpl = { ...template };
+      if (tpl.incomeSection.items.length === 0) {
+        tpl.incomeSection.items = Object.keys(SAMPLE_DRIVER.incomeItems).map(label => ({
+          id: Math.random().toString(36).slice(2, 8), label, field: label, enabled: true, numberFormat: 'currency' as const,
+        }));
+      }
+      if (tpl.deductionSection.items.length === 0) {
+        tpl.deductionSection.items = Object.keys(SAMPLE_DRIVER.deductionItems).map(label => ({
+          id: Math.random().toString(36).slice(2, 8), label, field: label, enabled: true, numberFormat: 'currency' as const,
+        }));
+      }
+
+      const names = ['홍길동', '김철수', '이영희', '박민수', '정수진', '최동혁', '한소영', '윤재호', '장미란', '송민지'];
+      for (let i = 0; i < count; i++) {
+        const driver: SettlementDriverData = {
+          ...SAMPLE_DRIVER,
+          name: names[i % names.length],
+          id: `DRV${String(i + 1).padStart(3, '0')}`,
+          incomeTotal: SAMPLE_DRIVER.incomeTotal + Math.floor(Math.random() * 50000),
+          deductionTotal: SAMPLE_DRIVER.deductionTotal + Math.floor(Math.random() * 10000),
+          netAmount: 0,
+        };
+        driver.netAmount = driver.incomeTotal - driver.deductionTotal;
+
+        const pdfBytes = await generateSettlementPdf(tpl, driver, meta);
+        zip.file(`정산서_${driver.name}_${meta.month}월.pdf`, pdfBytes);
+        setProgress(Math.round(((i + 1) / count) * 100));
+      }
+
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `정산서_${count}명_${meta.year}년${meta.month}월.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('일괄 생성 실패: ' + (err instanceof Error ? err.message : ''));
+    }
+    setGenerating(false);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <input type="number" value={count} min={1} max={100} onChange={e => setCount(Number(e.target.value))}
+          className="w-16 h-8 px-2 rounded-lg bg-surface-container-low text-sm text-center font-data focus:outline-none focus:ring-1 focus:ring-primary/30" />
+        <span className="text-xs text-on-surface-variant font-korean">명</span>
+        <button onClick={handleBulkGenerate} disabled={generating || count < 1}
+          className="flex-1 h-8 rounded-lg bg-primary text-white text-xs font-semibold font-korean hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+          {generating ? (
+            <><svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.3"/><path d="M12 2a10 10 0 0110 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/></svg> {progress}%</>
+          ) : 'ZIP 생성'}
+        </button>
+      </div>
+      {generating && (
+        <div className="w-full h-1.5 rounded-full bg-surface-container-high overflow-hidden">
+          <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
+        </div>
+      )}
     </div>
   );
 }
