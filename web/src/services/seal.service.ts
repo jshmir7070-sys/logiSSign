@@ -1185,6 +1185,7 @@ export interface DocumentFile {
   file_size: number | null
   status: string
   created_at: string | null
+  recipients?: { id: string }[]
 }
 
 /** 대리점의 문서파일 목록 조회 */

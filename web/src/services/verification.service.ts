@@ -70,8 +70,7 @@ export async function generateDocumentNumber(): Promise<string> {
   const year = new Date().getFullYear()
 
   // 시퀀스에서 다음 번호 가져오기
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.rpc as any)('nextval_text', { seq_name: 'contract_doc_number_seq' })
+  const { data, error } = await supabase.rpc('nextval_text', { seq_name: 'contract_doc_number_seq' })
 
   if (error || !data) {
     // fallback: 타임스탬프 기반

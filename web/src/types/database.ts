@@ -667,7 +667,23 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      nextval_text: {
+        Args: { seq_name: string }
+        Returns: string
+      }
+      approve_amendment_with_period: {
+        Args: {
+          p_driver_id: string
+          p_agency_id: string
+          p_amendment_id: string
+          p_period_start: string
+          p_period_end: string
+          p_rate_config: Record<string, unknown>
+        }
+        Returns: void
+      }
+    };
     Enums: {
       ContractStatus: ContractStatus;
       AmendmentType: AmendmentType;

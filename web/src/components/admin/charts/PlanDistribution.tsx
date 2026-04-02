@@ -38,8 +38,7 @@ export default function PlanDistribution() {
             ))}
           </Pie>
           <Tooltip
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            formatter={((value: number, name: string) => [`${value}개`, name]) as any}
+            formatter={(value, name) => [`${value}개`, name]}
             contentStyle={{
               backgroundColor: '#fff',
               border: 'none',

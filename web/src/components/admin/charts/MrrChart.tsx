@@ -48,8 +48,7 @@ export default function MrrChart() {
             tickFormatter={(v: number) => `${(v / 1000000).toFixed(1)}M`}
           />
           <Tooltip
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            formatter={((value: number) => [formatKRW(value), 'MRR']) as any}
+            formatter={(value) => [formatKRW(Number(value)), 'MRR']}
             contentStyle={{
               backgroundColor: '#fff',
               border: 'none',

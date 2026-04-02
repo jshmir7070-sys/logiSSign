@@ -41,8 +41,7 @@ export default function RevenueChart() {
             tickFormatter={(v: number) => `${(v / 1000000).toFixed(0)}M`}
           />
           <Tooltip
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            formatter={((value: number, name: string) => [formatKRW(value), name]) as any}
+            formatter={(value, name) => [formatKRW(Number(value)), name]}
             contentStyle={{
               backgroundColor: '#fff',
               border: 'none',

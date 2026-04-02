@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import {
@@ -8,6 +7,7 @@ import {
   Cell,
   Tooltip,
 } from 'recharts';
+import type { PieLabelRenderProps } from 'recharts';
 
 const data = [
   { name: '보험료', value: 35 },
@@ -28,7 +28,8 @@ interface LabelProps {
   name: string;
 }
 
-function renderCustomLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent, name: _name }: LabelProps) {
+function renderCustomLabel(props: PieLabelRenderProps) {
+  const { cx, cy, midAngle, innerRadius, outerRadius, percent } = props as unknown as LabelProps;
   const RADIAN = Math.PI / 180;
   const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
@@ -61,7 +62,7 @@ export default function ExpenseDonut() {
             outerRadius={90}
             paddingAngle={3}
             dataKey="value"
-            label={renderCustomLabel as any}
+            label={renderCustomLabel}
             labelLine={false}
           >
             {data.map((_, index) => (
@@ -69,7 +70,7 @@ export default function ExpenseDonut() {
             ))}
           </Pie>
           <Tooltip
-            formatter={((value: number, name: string) => [`${value}%`, name]) as any}
+            formatter={(value, name) => [`${value}%`, name]}
             contentStyle={{
               backgroundColor: '#fff',
               border: 'none',

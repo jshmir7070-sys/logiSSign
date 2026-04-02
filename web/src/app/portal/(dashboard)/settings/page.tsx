@@ -574,9 +574,10 @@ function SealTab({ agencyId }: { agencyId: string }) {
 }
 
 /* ════════════════════════════════════════════
-   문서 관리 탭
+   문서 관리 탭 (탭 UI에 아직 미연결 — 향후 활성화 예정)
    ════════════════════════════════════════════ */
-function _DocumentsTab({ agencyId }: { agencyId: string }) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function DocumentsTab({ agencyId }: { agencyId: string }) {
   const [docs, setDocs] = useState<DocumentFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -750,7 +751,7 @@ function _DocumentsTab({ agencyId }: { agencyId: string }) {
                     <p className="text-sm font-semibold text-on-surface font-korean truncate">{doc.title}</p>
                     <p className="text-[11px] text-on-surface-variant/60 font-data mt-0.5">
                       {formatFileSize(doc.file_size ?? 0)} · {new Date(doc.created_at ?? '').toLocaleDateString('ko-KR')}
-                      {(doc as any).recipients && (doc as any).recipients.length > 0 && ` · ${(doc as any).recipients.length}명 전송`}
+                      {doc.recipients && doc.recipients.length > 0 && ` · ${doc.recipients.length}명 전송`}
                     </p>
                   </div>
                   <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold font-korean ${st.color}`}>

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exported_at": "2026-04-01T23:29:00.204Z",
+  "exported_at": "2026-04-02T11:46:22.703Z",
   "milestones": [
     {
       "id": "M001",
@@ -209,6 +209,53 @@
       ],
       "requirement_coverage": "P1: RPC 권한, SignaturePad / P2: CSRF, ESLint, 테스트 / P3: 컴포넌트 분해",
       "boundary_map_markdown": "```\\nM004 프로덕션 안정화\\n├── S01: ESLint 정리 + 코드 품질\\n├── S02: SignaturePad 실제 이미지\\n├── S03: CSRF + RPC 권한\\n└── S04: E2E 테스트 기초\\n```"
+    },
+    {
+      "id": "M005",
+      "title": "",
+      "status": "queued",
+      "depends_on": [],
+      "created_at": "2026-04-02T11:45:47.809Z",
+      "completed_at": null,
+      "vision": "빌드 에러를 수정하고, as any 7건을 안전한 타입으로 교체하여 프로덕션 빌드 통과 + 타입 경고 0건을 달성한다.",
+      "success_criteria": [
+        "npx next build 성공 (exit 0)",
+        "rg 'as any' src/ 결과 0건 또는 eslint-disable 주석 없이 안전 캐스트로 대체",
+        "기존 Vitest 21건 전부 통과"
+      ],
+      "key_risks": [
+        {
+          "risk": "Recharts formatter 타입이 내부적으로 불안정하여 안전 캐스트로도 해결 불가능할 수 있음",
+          "whyItMatters": "4건이 Recharts 의존이라 대안이 제한적"
+        },
+        {
+          "risk": "_DocumentsTab 리네이밍 시 참조 누락",
+          "whyItMatters": "빌드가 깨진 상태에서 시작하므로 추가 에러 유입 위험"
+        }
+      ],
+      "proof_strategy": [
+        {
+          "riskOrUnknown": "빌드 실패",
+          "retireIn": "S01",
+          "whatWillBeProven": "npx next build exit 0"
+        },
+        {
+          "riskOrUnknown": "as any 잔존",
+          "retireIn": "S01",
+          "whatWillBeProven": "rg 'as any' src/ 결과 0건 또는 의도적 suppress만 남음"
+        }
+      ],
+      "verification_contract": "npx next build && npm test 모두 통과",
+      "verification_integration": "빌드 산출물 정상, ESLint 에러 0건",
+      "verification_operational": "N/A — 코드 품질 개선 마일스톤",
+      "verification_uat": "빌드 통과 + 테스트 통과 확인",
+      "definition_of_done": [
+        "npx next build exit 0",
+        "npm test 전 테스트 통과",
+        "as any 불필요 사용 0건"
+      ],
+      "requirement_coverage": "P3 이슈 #1(as any 7건) + 빌드 에러 수정",
+      "boundary_map_markdown": "```\\nIN: settings/page.tsx _DocumentsTab, Recharts chart 컴포넌트 4개, verification.service.ts\\nOUT: 컴포넌트 분해, 테스트 추가 (별도 마일스톤)\\n```"
     }
   ],
   "slices": [
@@ -639,6 +686,26 @@
       "proof_level": "test",
       "integration_closure": "테스트는 기존 코드에 영향 없음",
       "observability_impact": "CI에서 테스트 결과 확인",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M005",
+      "id": "S01",
+      "title": "빌드 에러 수정 + as any 7건 제거",
+      "status": "pending",
+      "risk": "medium",
+      "depends": [],
+      "demo": "npx next build 성공 + rg 'as any' 0건",
+      "created_at": "2026-04-02T11:46:10.141Z",
+      "completed_at": null,
+      "full_summary_md": "",
+      "full_uat_md": "",
+      "goal": "빌드 통과시키고 모든 as any를 안전한 타입으로 교체",
+      "success_criteria": "npx next build exit 0, rg 'as any' 0건, npm test 통과",
+      "proof_level": "build + test",
+      "integration_closure": "npx next build + npm test 모두 통과",
+      "observability_impact": "N/A",
       "sequence": 0,
       "replan_triggered_at": null
     }
@@ -1719,6 +1786,77 @@
       "inputs": [],
       "expected_output": [
         "ESLint 경고 0건"
+      ],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M005",
+      "slice_id": "S01",
+      "id": "T01",
+      "title": "_DocumentsTab → DocumentsTab 리네이밍 (빌드 수정)",
+      "status": "pending",
+      "one_liner": "",
+      "narrative": "",
+      "verification_result": "",
+      "duration": "",
+      "completed_at": null,
+      "blocker_discovered": false,
+      "deviations": "",
+      "known_issues": "",
+      "key_files": [],
+      "key_decisions": [],
+      "full_summary_md": "",
+      "description": "settings/page.tsx의 _DocumentsTab을 DocumentsTab으로 변경. React hooks 규칙 위반 해소.",
+      "estimate": "10min",
+      "files": [
+        "web/src/app/portal/(dashboard)/settings/page.tsx"
+      ],
+      "verify": "cd web && npx next build 2>&1 | grep -c 'Error' | grep 0",
+      "inputs": [
+        "web/src/app/portal/(dashboard)/settings/page.tsx"
+      ],
+      "expected_output": [
+        "빌드 에러 0건"
+      ],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M005",
+      "slice_id": "S01",
+      "id": "T02",
+      "title": "as any 7건 안전 타입 교체",
+      "status": "pending",
+      "one_liner": "",
+      "narrative": "",
+      "verification_result": "",
+      "duration": "",
+      "completed_at": null,
+      "blocker_discovered": false,
+      "deviations": "",
+      "known_issues": "",
+      "key_files": [],
+      "key_decisions": [],
+      "full_summary_md": "",
+      "description": "1) Recharts formatter 4건: ContentType 또는 실제 타입 사용\\n2) verification.service.ts rpc 1건: Supabase 타입 확장\\n3) settings 3건: (doc as any).recipients → 타입 확장",
+      "estimate": "1h",
+      "files": [
+        "web/src/components/admin/charts/PlanDistribution.tsx",
+        "web/src/components/admin/charts/MrrChart.tsx",
+        "web/src/components/portal/charts/RevenueChart.tsx",
+        "web/src/components/portal/charts/ExpenseDonut.tsx",
+        "web/src/services/verification.service.ts",
+        "web/src/app/portal/(dashboard)/settings/page.tsx"
+      ],
+      "verify": "cd web && rg 'as any' src/ --count-matches && npx next build && npm test",
+      "inputs": [],
+      "expected_output": [
+        "as any 0건",
+        "빌드 성공",
+        "테스트 통과"
       ],
       "observability_impact": "",
       "full_plan_md": "",

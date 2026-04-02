@@ -1,15 +1,17 @@
 import { describe, it, expect } from 'vitest'
 import { csrfCheck } from '@/lib/csrf'
 
-// NextRequest 모킹
-function mockRequest(method: string, pathname: string, headers: Record<string, string> = {}): any {
+import type { NextRequest } from 'next/server'
+
+// NextRequest 모킹 — 최소한의 필수 속성만 구현
+function mockRequest(method: string, pathname: string, headers: Record<string, string> = {}): NextRequest {
   return {
     method,
     nextUrl: { pathname },
     headers: {
       get: (name: string) => headers[name.toLowerCase()] ?? null,
     },
-  }
+  } as unknown as NextRequest
 }
 
 describe('CSRF 검증', () => {
