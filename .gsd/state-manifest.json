@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exported_at": "2026-04-02T11:46:22.703Z",
+  "exported_at": "2026-04-02T11:55:53.449Z",
   "milestones": [
     {
       "id": "M001",
@@ -217,45 +217,51 @@
       "depends_on": [],
       "created_at": "2026-04-02T11:45:47.809Z",
       "completed_at": null,
-      "vision": "빌드 에러를 수정하고, as any 7건을 안전한 타입으로 교체하여 프로덕션 빌드 통과 + 타입 경고 0건을 달성한다.",
+      "vision": "1,200줄 이상 대형 컴포넌트 3개를 분해하여 유지보수성을 확보한다.",
       "success_criteria": [
-        "npx next build 성공 (exit 0)",
-        "rg 'as any' src/ 결과 0건 또는 eslint-disable 주석 없이 안전 캐스트로 대체",
-        "기존 Vitest 21건 전부 통과"
+        "대상 3개 파일 각각 400줄 이하",
+        "npx next build 성공",
+        "npm test 21건 통과",
+        "기능 동작 변경 없음 (순수 리팩토링)"
       ],
       "key_risks": [
         {
-          "risk": "Recharts formatter 타입이 내부적으로 불안정하여 안전 캐스트로도 해결 불가능할 수 있음",
-          "whyItMatters": "4건이 Recharts 의존이라 대안이 제한적"
+          "risk": "리팩토링 중 상태 관리 로직 누락",
+          "whyItMatters": "props drilling이나 상태 분리 시 런타임 버그 유입 가능"
         },
         {
-          "risk": "_DocumentsTab 리네이밍 시 참조 누락",
-          "whyItMatters": "빌드가 깨진 상태에서 시작하므로 추가 에러 유입 위험"
+          "risk": "컴포넌트 분리 시 import 순환 참조",
+          "whyItMatters": "공유 타입이 페이지와 컴포넌트 사이에 엉켜있음"
         }
       ],
       "proof_strategy": [
         {
-          "riskOrUnknown": "빌드 실패",
-          "retireIn": "S01",
-          "whatWillBeProven": "npx next build exit 0"
+          "riskOrUnknown": "settings 분해 후 빌드 실패",
+          "retireIn": "S02",
+          "whatWillBeProven": "npx next build 성공"
         },
         {
-          "riskOrUnknown": "as any 잔존",
-          "retireIn": "S01",
-          "whatWillBeProven": "rg 'as any' src/ 결과 0건 또는 의도적 suppress만 남음"
+          "riskOrUnknown": "drivers/new 분해 후 빌드 실패",
+          "retireIn": "S03",
+          "whatWillBeProven": "npx next build 성공"
+        },
+        {
+          "riskOrUnknown": "principals 분해 후 빌드 실패",
+          "retireIn": "S04",
+          "whatWillBeProven": "npx next build 성공"
         }
       ],
-      "verification_contract": "npx next build && npm test 모두 통과",
-      "verification_integration": "빌드 산출물 정상, ESLint 에러 0건",
-      "verification_operational": "N/A — 코드 품질 개선 마일스톤",
-      "verification_uat": "빌드 통과 + 테스트 통과 확인",
+      "verification_contract": "npx next build && npm test",
+      "verification_integration": "빌드 성공, ESLint 에러 0건",
+      "verification_operational": "N/A",
+      "verification_uat": "빌드 통과 + 테스트 통과",
       "definition_of_done": [
         "npx next build exit 0",
-        "npm test 전 테스트 통과",
-        "as any 불필요 사용 0건"
+        "npm test 통과",
+        "분해 대상 3개 파일 각각 300줄 이하로 감소"
       ],
-      "requirement_coverage": "P3 이슈 #1(as any 7건) + 빌드 에러 수정",
-      "boundary_map_markdown": "```\\nIN: settings/page.tsx _DocumentsTab, Recharts chart 컴포넌트 4개, verification.service.ts\\nOUT: 컴포넌트 분해, 테스트 추가 (별도 마일스톤)\\n```"
+      "requirement_coverage": "P3 이슈 #2 — 대형 컴포넌트 분해 (상위 3개)",
+      "boundary_map_markdown": "```\\nIN: settings/page.tsx(1,268줄), drivers/new/page.tsx(1,414줄), principals/page.tsx(1,351줄)\\nOUT: principals/[id], settlements/upload, signup — 별도 후속 작업\\n```"
     }
   ],
   "slices": [
@@ -693,18 +699,84 @@
       "milestone_id": "M005",
       "id": "S01",
       "title": "빌드 에러 수정 + as any 7건 제거",
-      "status": "pending",
+      "status": "complete",
       "risk": "medium",
       "depends": [],
       "demo": "npx next build 성공 + rg 'as any' 0건",
       "created_at": "2026-04-02T11:46:10.141Z",
-      "completed_at": null,
-      "full_summary_md": "",
-      "full_uat_md": "",
+      "completed_at": "2026-04-02T11:52:49.576Z",
+      "full_summary_md": "---\nid: S01\nparent: M005\nmilestone: M005\nprovides:\n  - as any 0건 코드베이스\n  - 프로덕션 빌드 통과\nrequires:\n  []\naffects:\n  []\nkey_files:\n  - web/src/types/database.ts\n  - web/src/components/portal/charts/ExpenseDonut.tsx\n  - web/src/services/verification.service.ts\nkey_decisions:\n  - Recharts formatter는 타입 어노테이션 제거하고 추론에 의존\n  - Supabase RPC는 database.ts Functions 타입에 등록하여 정적 타입 검사 확보\npatterns_established:\n  - Recharts formatter는 타입 어노테이션 없이 추론에 의존\n  - Supabase 커스텀 RPC는 database.ts Functions에 등록하여 타입 안전성 확보\nobservability_surfaces:\n  - none\ndrill_down_paths:\n  - .gsd/milestones/M005/slices/S01/tasks/T01-SUMMARY.md\n  - .gsd/milestones/M005/slices/S01/tasks/T02-SUMMARY.md\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-02T11:52:49.578Z\nblocker_discovered: false\n---\n\n# S01: 빌드 에러 수정 + as any 7건 제거\n\n**빌드 에러 수정 + as any 9건 전량 제거 — 프로덕션 빌드 통과 + 타입 안전성 확보**\n\n## What Happened\n\n빌드를 깨트리던 _DocumentsTab React hooks 규칙 위반을 리네이밍으로 해소하고, 코드베이스 전체의 as any 9건을 안전한 타입으로 교체했다. Recharts는 타입 추론 활용, Supabase RPC는 database.ts Functions 타입에 등록, DocumentFile은 인터페이스 확장, csrf 테스트는 안전 캐스트 적용.\n\n## Verification\n\nnpx next build 성공, rg 'as any' src/ 0건, npm test 21건 통과\n\n## Requirements Advanced\n\nNone.\n\n## Requirements Validated\n\nNone.\n\n## New Requirements Surfaced\n\nNone.\n\n## Requirements Invalidated or Re-scoped\n\nNone.\n\n## Deviations\n\n초기 보고 as any 7건이 실제 9건(csrf.test.ts 포함)이었으나 전량 해결\n\n## Known Limitations\n\nRecharts SSG 시 chart width/height 경고 발생 (기능 영향 없음)\n\n## Follow-ups\n\nDocumentsTab을 설정 탭 UI에 연결 (현재 dead code)\n\n## Files Created/Modified\n\n- `web/src/app/portal/(dashboard)/settings/page.tsx` — _DocumentsTab → DocumentsTab 리네이밍 + recipients as any 제거\n- `web/src/components/admin/charts/PlanDistribution.tsx` — formatter as any 제거\n- `web/src/components/admin/charts/MrrChart.tsx` — formatter as any 제거\n- `web/src/components/portal/charts/RevenueChart.tsx` — formatter as any 제거\n- `web/src/components/portal/charts/ExpenseDonut.tsx` — label + formatter as any 제거, PieLabelRenderProps 적용\n- `web/src/services/verification.service.ts` — supabase.rpc as any 제거\n- `web/src/services/seal.service.ts` — DocumentFile에 recipients 옵션 필드 추가\n- `web/src/types/database.ts` — Functions에 nextval_text + approve_amendment_with_period RPC 타입 등록\n- `web/src/__tests__/csrf.test.ts` — mockRequest 반환타입 any → NextRequest 캐스트\n",
+      "full_uat_md": "# S01: 빌드 에러 수정 + as any 7건 제거 — UAT\n\n**Milestone:** M005\n**Written:** 2026-04-02T11:52:49.578Z\n\n## UAT: 빌드 수정 + 타입 안전성\\n\\n### 검증 항목\\n- [x] `npx next build` 성공 (exit 0)\\n- [x] ESLint 에러 0건 (warning만 잔존)\\n- [x] `rg 'as any' src/` → 0건\\n- [x] `npm test` → 21건 전부 통과\\n- [x] 55개 정적 페이지 생성 성공\n",
       "goal": "빌드 통과시키고 모든 as any를 안전한 타입으로 교체",
       "success_criteria": "npx next build exit 0, rg 'as any' 0건, npm test 통과",
       "proof_level": "build + test",
       "integration_closure": "npx next build + npm test 모두 통과",
+      "observability_impact": "N/A",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M005",
+      "id": "S02",
+      "title": "settings/page.tsx 분해 (1,268줄 → ~200줄)",
+      "status": "pending",
+      "risk": "medium",
+      "depends": [
+        "S01"
+      ],
+      "demo": "settings/page.tsx 300줄 이하",
+      "created_at": "2026-04-02T11:55:41.649Z",
+      "completed_at": null,
+      "full_summary_md": "",
+      "full_uat_md": "",
+      "goal": "settings/page.tsx의 7개 탭 컴포넌트를 개별 파일로 분리",
+      "success_criteria": "settings/page.tsx 300줄 이하, 빌드 성공",
+      "proof_level": "build",
+      "integration_closure": "npx next build 성공",
+      "observability_impact": "N/A",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M005",
+      "id": "S03",
+      "title": "drivers/new/page.tsx 분해 (1,414줄 → ~300줄)",
+      "status": "pending",
+      "risk": "medium",
+      "depends": [
+        "S01"
+      ],
+      "demo": "drivers/new/page.tsx 300줄 이하",
+      "created_at": "2026-04-02T11:55:41.649Z",
+      "completed_at": null,
+      "full_summary_md": "",
+      "full_uat_md": "",
+      "goal": "기사 등록 페이지 5개 섹션을 개별 컴포넌트로 분리",
+      "success_criteria": "drivers/new/page.tsx 300줄 이하, 빌드 성공",
+      "proof_level": "build",
+      "integration_closure": "npx next build 성공",
+      "observability_impact": "N/A",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M005",
+      "id": "S04",
+      "title": "principals/page.tsx 분해 (1,351줄 → ~300줄)",
+      "status": "pending",
+      "risk": "medium",
+      "depends": [
+        "S01"
+      ],
+      "demo": "principals/page.tsx 400줄 이하",
+      "created_at": "2026-04-02T11:55:41.649Z",
+      "completed_at": null,
+      "full_summary_md": "",
+      "full_uat_md": "",
+      "goal": "원청사 페이지의 헬퍼 컴포넌트와 모달을 분리",
+      "success_criteria": "principals/page.tsx 400줄 이하, 빌드 성공",
+      "proof_level": "build + test",
+      "integration_closure": "npx next build + npm test 성공",
       "observability_impact": "N/A",
       "sequence": 0,
       "replan_triggered_at": null
@@ -1795,19 +1867,23 @@
       "milestone_id": "M005",
       "slice_id": "S01",
       "id": "T01",
-      "title": "_DocumentsTab → DocumentsTab 리네이밍 (빌드 수정)",
-      "status": "pending",
-      "one_liner": "",
-      "narrative": "",
-      "verification_result": "",
+      "title": "_DocumentsTab → DocumentsTab 리네이밍으로 React hooks 규칙 위반 빌드 에러 해소",
+      "status": "complete",
+      "one_liner": "_DocumentsTab → DocumentsTab 리네이밍으로 React hooks 규칙 위반 빌드 에러 해소",
+      "narrative": "settings/page.tsx의 _DocumentsTab 함수가 언더스코어 prefix로 시작하여 React의 hooks-rules-of-hooks 규칙에 걸려 빌드 실패. DocumentsTab으로 리네이밍하고, 현재 탭 UI에 미연결된 dead code이므로 eslint-disable-next-line no-unused-vars 주석 추가.",
+      "verification_result": "npx next build — ESLint 에러 0건, 빌드 성공",
       "duration": "",
-      "completed_at": null,
+      "completed_at": "2026-04-02T11:51:55.353Z",
       "blocker_discovered": false,
-      "deviations": "",
-      "known_issues": "",
-      "key_files": [],
-      "key_decisions": [],
-      "full_summary_md": "",
+      "deviations": "Dead code에 eslint-disable 주석 추가 (계획 외)",
+      "known_issues": "DocumentsTab이 탭 UI에 미연결 — 향후 활성화 시 연결 필요",
+      "key_files": [
+        "web/src/app/portal/(dashboard)/settings/page.tsx"
+      ],
+      "key_decisions": [
+        "_DocumentsTab은 dead code지만 삭제 대신 리네이밍 — 향후 탭 활성화 시 사용될 구현체"
+      ],
+      "full_summary_md": "---\nid: T01\nparent: S01\nmilestone: M005\nkey_files:\n  - web/src/app/portal/(dashboard)/settings/page.tsx\nkey_decisions:\n  - _DocumentsTab은 dead code지만 삭제 대신 리네이밍 — 향후 탭 활성화 시 사용될 구현체\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-02T11:51:55.353Z\nblocker_discovered: false\n---\n\n# T01: _DocumentsTab → DocumentsTab 리네이밍으로 React hooks 규칙 위반 빌드 에러 해소\n\n**_DocumentsTab → DocumentsTab 리네이밍으로 React hooks 규칙 위반 빌드 에러 해소**\n\n## What Happened\n\nsettings/page.tsx의 _DocumentsTab 함수가 언더스코어 prefix로 시작하여 React의 hooks-rules-of-hooks 규칙에 걸려 빌드 실패. DocumentsTab으로 리네이밍하고, 현재 탭 UI에 미연결된 dead code이므로 eslint-disable-next-line no-unused-vars 주석 추가.\n\n## Verification\n\nnpx next build — ESLint 에러 0건, 빌드 성공\n\n## Verification Evidence\n\n| # | Command | Exit Code | Verdict | Duration |\n|---|---------|-----------|---------|----------|\n| 1 | `npx next build` | 0 | ✅ pass | 21400ms |\n\n\n## Deviations\n\nDead code에 eslint-disable 주석 추가 (계획 외)\n\n## Known Issues\n\nDocumentsTab이 탭 UI에 미연결 — 향후 활성화 시 연결 필요\n\n## Files Created/Modified\n\n- `web/src/app/portal/(dashboard)/settings/page.tsx`\n",
       "description": "settings/page.tsx의 _DocumentsTab을 DocumentsTab으로 변경. React hooks 규칙 위반 해소.",
       "estimate": "10min",
       "files": [
@@ -1828,19 +1904,34 @@
       "milestone_id": "M005",
       "slice_id": "S01",
       "id": "T02",
-      "title": "as any 7건 안전 타입 교체",
-      "status": "pending",
-      "one_liner": "",
-      "narrative": "",
-      "verification_result": "",
+      "title": "as any 9건(Recharts 5, Supabase RPC 1, 타입 미비 3) + csrf.test any 1건 → 전량 안전 타입으로 교체",
+      "status": "complete",
+      "one_liner": "as any 9건(Recharts 5, Supabase RPC 1, 타입 미비 3) + csrf.test any 1건 → 전량 안전 타입으로 교체",
+      "narrative": "as any 9건을 카테고리별로 처리:\\n\\n1. Recharts formatter 4건 (PlanDistribution, MrrChart, RevenueChart, ExpenseDonut) — 타입 어노테이션 제거하고 Recharts 자체 타입 추론에 의존. Number() 변환으로 ValueType→number 안전하게 처리.\\n\\n2. ExpenseDonut label 1건 — PieLabelRenderProps를 recharts에서 import하여 renderCustomLabel 함수 시그니처에 적용.\\n\\n3. verification.service.ts rpc 1건 — database.ts의 Functions 타입에 nextval_text와 approve_amendment_with_period RPC 함수 등록. 이제 supabase.rpc() 호출이 타입 안전.\\n\\n4. settings/page.tsx recipients 3건 — DocumentFile 인터페이스에 recipients?: {id:string}[] 옵셔널 필드 추가.\\n\\n5. csrf.test.ts any 1건 — mockRequest 반환 타입을 as unknown as NextRequest로 교체.",
+      "verification_result": "rg 'as any' src/ → 0건, npx next build → 성공, npm test → 21건 통과",
       "duration": "",
-      "completed_at": null,
+      "completed_at": "2026-04-02T11:52:17.383Z",
       "blocker_discovered": false,
-      "deviations": "",
-      "known_issues": "",
-      "key_files": [],
-      "key_decisions": [],
-      "full_summary_md": "",
+      "deviations": "초기 보고 7건이 아닌 9건이었음 — csrf.test.ts의 : any 1건 + 실제 as any 2건 추가 발견. 전부 해결.",
+      "known_issues": "None.",
+      "key_files": [
+        "web/src/components/admin/charts/PlanDistribution.tsx",
+        "web/src/components/admin/charts/MrrChart.tsx",
+        "web/src/components/portal/charts/RevenueChart.tsx",
+        "web/src/components/portal/charts/ExpenseDonut.tsx",
+        "web/src/services/verification.service.ts",
+        "web/src/services/seal.service.ts",
+        "web/src/types/database.ts",
+        "web/src/app/portal/(dashboard)/settings/page.tsx",
+        "web/src/__tests__/csrf.test.ts"
+      ],
+      "key_decisions": [
+        "Recharts formatter: 타입 어노테이션 제거하고 타입 추론에 의존",
+        "Supabase RPC: database.ts Functions 타입에 nextval_text + approve_amendment_with_period 등록",
+        "ExpenseDonut: PieLabelRenderProps import하여 라벨 함수 타입 정합",
+        "csrf.test.ts: as unknown as NextRequest 안전 캐스트로 mock 교체"
+      ],
+      "full_summary_md": "---\nid: T02\nparent: S01\nmilestone: M005\nkey_files:\n  - web/src/components/admin/charts/PlanDistribution.tsx\n  - web/src/components/admin/charts/MrrChart.tsx\n  - web/src/components/portal/charts/RevenueChart.tsx\n  - web/src/components/portal/charts/ExpenseDonut.tsx\n  - web/src/services/verification.service.ts\n  - web/src/services/seal.service.ts\n  - web/src/types/database.ts\n  - web/src/app/portal/(dashboard)/settings/page.tsx\n  - web/src/__tests__/csrf.test.ts\nkey_decisions:\n  - Recharts formatter: 타입 어노테이션 제거하고 타입 추론에 의존\n  - Supabase RPC: database.ts Functions 타입에 nextval_text + approve_amendment_with_period 등록\n  - ExpenseDonut: PieLabelRenderProps import하여 라벨 함수 타입 정합\n  - csrf.test.ts: as unknown as NextRequest 안전 캐스트로 mock 교체\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-02T11:52:17.384Z\nblocker_discovered: false\n---\n\n# T02: as any 9건(Recharts 5, Supabase RPC 1, 타입 미비 3) + csrf.test any 1건 → 전량 안전 타입으로 교체\n\n**as any 9건(Recharts 5, Supabase RPC 1, 타입 미비 3) + csrf.test any 1건 → 전량 안전 타입으로 교체**\n\n## What Happened\n\nas any 9건을 카테고리별로 처리:\\n\\n1. Recharts formatter 4건 (PlanDistribution, MrrChart, RevenueChart, ExpenseDonut) — 타입 어노테이션 제거하고 Recharts 자체 타입 추론에 의존. Number() 변환으로 ValueType→number 안전하게 처리.\\n\\n2. ExpenseDonut label 1건 — PieLabelRenderProps를 recharts에서 import하여 renderCustomLabel 함수 시그니처에 적용.\\n\\n3. verification.service.ts rpc 1건 — database.ts의 Functions 타입에 nextval_text와 approve_amendment_with_period RPC 함수 등록. 이제 supabase.rpc() 호출이 타입 안전.\\n\\n4. settings/page.tsx recipients 3건 — DocumentFile 인터페이스에 recipients?: {id:string}[] 옵셔널 필드 추가.\\n\\n5. csrf.test.ts any 1건 — mockRequest 반환 타입을 as unknown as NextRequest로 교체.\n\n## Verification\n\nrg 'as any' src/ → 0건, npx next build → 성공, npm test → 21건 통과\n\n## Verification Evidence\n\n| # | Command | Exit Code | Verdict | Duration |\n|---|---------|-----------|---------|----------|\n| 1 | `rg 'as any' src/` | 1 | ✅ pass (0건) | 100ms |\n| 2 | `npx next build` | 0 | ✅ pass | 21400ms |\n| 3 | `npm test` | 0 | ✅ pass (21건) | 2600ms |\n\n\n## Deviations\n\n초기 보고 7건이 아닌 9건이었음 — csrf.test.ts의 : any 1건 + 실제 as any 2건 추가 발견. 전부 해결.\n\n## Known Issues\n\nNone.\n\n## Files Created/Modified\n\n- `web/src/components/admin/charts/PlanDistribution.tsx`\n- `web/src/components/admin/charts/MrrChart.tsx`\n- `web/src/components/portal/charts/RevenueChart.tsx`\n- `web/src/components/portal/charts/ExpenseDonut.tsx`\n- `web/src/services/verification.service.ts`\n- `web/src/services/seal.service.ts`\n- `web/src/types/database.ts`\n- `web/src/app/portal/(dashboard)/settings/page.tsx`\n- `web/src/__tests__/csrf.test.ts`\n",
       "description": "1) Recharts formatter 4건: ContentType 또는 실제 타입 사용\\n2) verification.service.ts rpc 1건: Supabase 타입 확장\\n3) settings 3건: (doc as any).recipients → 타입 확장",
       "estimate": "1h",
       "files": [
@@ -1857,6 +1948,47 @@
         "as any 0건",
         "빌드 성공",
         "테스트 통과"
+      ],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M005",
+      "slice_id": "S02",
+      "id": "T01",
+      "title": "settings 탭 컴포넌트 분리",
+      "status": "pending",
+      "one_liner": "",
+      "narrative": "",
+      "verification_result": "",
+      "duration": "",
+      "completed_at": null,
+      "blocker_discovered": false,
+      "deviations": "",
+      "known_issues": "",
+      "key_files": [],
+      "key_decisions": [],
+      "full_summary_md": "",
+      "description": "ProfileTab, CategoryTab, SealTab, DocumentsTab, BillingTab, NotificationTab, AdminsTab을 components/portal/settings/ 폴더로 추출",
+      "estimate": "30min",
+      "files": [
+        "web/src/app/portal/(dashboard)/settings/page.tsx",
+        "web/src/components/portal/settings/ProfileTab.tsx",
+        "web/src/components/portal/settings/CategoryTab.tsx",
+        "web/src/components/portal/settings/SealTab.tsx",
+        "web/src/components/portal/settings/DocumentsTab.tsx",
+        "web/src/components/portal/settings/BillingTab.tsx",
+        "web/src/components/portal/settings/NotificationTab.tsx",
+        "web/src/components/portal/settings/AdminsTab.tsx"
+      ],
+      "verify": "cd web && npx next build && wc -l src/app/portal/(dashboard)/settings/page.tsx",
+      "inputs": [
+        "web/src/app/portal/(dashboard)/settings/page.tsx"
+      ],
+      "expected_output": [
+        "settings/page.tsx 300줄 이하",
+        "7개 탭 컴포넌트 파일"
       ],
       "observability_impact": "",
       "full_plan_md": "",
@@ -2197,6 +2329,50 @@
       "verdict": "✅ pass",
       "duration_ms": 3900,
       "created_at": "2026-04-01T00:35:42.315Z"
+    },
+    {
+      "id": 29,
+      "task_id": "T01",
+      "slice_id": "S01",
+      "milestone_id": "M005",
+      "command": "npx next build",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 21400,
+      "created_at": "2026-04-02T11:51:55.353Z"
+    },
+    {
+      "id": 30,
+      "task_id": "T02",
+      "slice_id": "S01",
+      "milestone_id": "M005",
+      "command": "rg 'as any' src/",
+      "exit_code": 1,
+      "verdict": "✅ pass (0건)",
+      "duration_ms": 100,
+      "created_at": "2026-04-02T11:52:17.384Z"
+    },
+    {
+      "id": 31,
+      "task_id": "T02",
+      "slice_id": "S01",
+      "milestone_id": "M005",
+      "command": "npx next build",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 21400,
+      "created_at": "2026-04-02T11:52:17.384Z"
+    },
+    {
+      "id": 32,
+      "task_id": "T02",
+      "slice_id": "S01",
+      "milestone_id": "M005",
+      "command": "npm test",
+      "exit_code": 0,
+      "verdict": "✅ pass (21건)",
+      "duration_ms": 2600,
+      "created_at": "2026-04-02T11:52:17.384Z"
     }
   ]
 }
