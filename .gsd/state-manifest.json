@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exported_at": "2026-04-02T19:13:16.554Z",
+  "exported_at": "2026-04-02T19:33:01.815Z",
   "milestones": [
     {
       "id": "M001",
@@ -899,10 +899,10 @@
       "completed_at": null,
       "full_summary_md": "",
       "full_uat_md": "",
-      "goal": "pdf-lib로 테이블+색상+로고 레이아웃의 정산서 PDF 생성",
-      "success_criteria": "타이틀/수익/차감/합계 포함 PDF 생성",
-      "proof_level": "manual",
-      "integration_closure": "S03 템플릿과 연결",
+      "goal": "pdf-lib로 정산서 PDF 렌더러를 구현한다 — 타이틀, 기사정보, 수익 테이블, 차감 테이블, 합계, 푸터 섹션",
+      "success_criteria": "settlement-pdf.service.ts가 SettlementTemplate + 기사 데이터를 받아 PDF 바이트를 반환, 빌드 성공",
+      "proof_level": "build + test",
+      "integration_closure": "빌드 성공 + 테스트 통과",
       "observability_impact": "N/A",
       "sequence": 0,
       "replan_triggered_at": null
@@ -2324,6 +2324,42 @@
       "expected_output": [
         "supabase/migrations/005_settlement_builder.sql",
         "web/src/types/database.ts 확장"
+      ],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M006",
+      "slice_id": "S02",
+      "id": "T01",
+      "title": "정산서 PDF 렌더러 구현",
+      "status": "pending",
+      "one_liner": "",
+      "narrative": "",
+      "verification_result": "",
+      "duration": "",
+      "completed_at": null,
+      "blocker_discovered": false,
+      "deviations": "",
+      "known_issues": "",
+      "key_files": [],
+      "key_decisions": [],
+      "full_summary_md": "",
+      "description": "1. SettlementTemplate 타입 정의\\n2. PDF 레이아웃 엔진 (drawTable, drawSection)\\n3. 타이틀 + 로고 + 기사정보 + 수익테이블 + 차감테이블 + 합계 + 푸터\\n4. generateSettlementPdf() 함수 export",
+      "estimate": "2h",
+      "files": [
+        "web/src/services/settlement-pdf.service.ts",
+        "web/src/types/settlement-template.ts"
+      ],
+      "verify": "cd web && npx next build && npm test",
+      "inputs": [
+        "web/src/lib/pdf-fonts.ts",
+        "web/src/services/signed-pdf.service.ts"
+      ],
+      "expected_output": [
+        "web/src/services/settlement-pdf.service.ts",
+        "web/src/types/settlement-template.ts"
       ],
       "observability_impact": "",
       "full_plan_md": "",
