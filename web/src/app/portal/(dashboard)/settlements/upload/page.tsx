@@ -21,6 +21,7 @@ import {
   type UnmatchedRow,
   type SheetInfo,
 } from '@/services/excel-settlement.service';
+import { classifyColumns, type ColumnClassification } from '@/services/column-classifier.service';
 
 type Step = 'upload' | 'sheet-select' | 'mapping' | 'preview' | 'done';
 type ImportMode = 'calculate' | 'coupang_direct';
@@ -92,6 +93,7 @@ export default function SettlementUploadPage() {
   const [unmatchedRoutes, setUnmatchedRoutes] = useState<{ employee_code: string; route_code: string }[]>([]);
   const [skippedEntries, setSkippedEntries] = useState<string[]>([]);
   const [expandedDriver, setExpandedDriver] = useState<string | null>(null);
+  const [columnClassifications, setColumnClassifications] = useState<ColumnClassification[]>([]);
 
   useEffect(() => {
     async function init() {
@@ -149,6 +151,19 @@ export default function SettlementUploadPage() {
   }, [principalId, principals]);
 
   const autoDetectMapping = useCallback(function autoDetectMapping(cols: string[]) {
+    // 자동 분류 엔진 실행
+    const formulas = new Map<number, never>(); // 업로드 시 수식은 별도 파싱 필요
+    const colValues = new Map<number, number[]>();
+    // rawRows에서 샘플링하여 값 기반 분류 보강
+    if (rawRows.length > 0) {
+      cols.forEach((col, idx) => {
+        const vals = rawRows.slice(0, 20).map(r => Number(r[col])).filter(v => !isNaN(v) && v !== 0);
+        if (vals.length > 0) colValues.set(idx, vals);
+      });
+    }
+    const classifications = classifyColumns(cols, formulas, colValues);
+    setColumnClassifications(classifications);
+
     if (!mapping.employee_code_col) {
       const codeCol = cols.find((c) => /사번|기사코드|코드|ID/i.test(c));
       const deliveryCol = cols.find((c) => /배송|배달|건수/i.test(c));
@@ -163,7 +178,7 @@ export default function SettlementUploadPage() {
         collect_count_col: collectCol ?? prev.collect_count_col ?? '',
       }));
     }
-  }, [mapping.employee_code_col]);
+  }, [mapping.employee_code_col, rawRows]);
 
   /* ── File handling ── */
   const handleFile = useCallback(async (file: File) => {
@@ -643,6 +658,27 @@ export default function SettlementUploadPage() {
               <Badge label={`${headers.length}개 열 감지`} variant="info" />
             </div>
 
+            {/* 자동 분류 결과 요약 */}
+            {columnClassifications.length > 0 && (
+              <div className="p-3 rounded-xl bg-primary/5 border border-primary/10">
+                <p className="text-xs font-semibold text-primary font-korean mb-2">🤖 자동 분류 결과</p>
+                <div className="flex flex-wrap gap-2 text-[11px] font-korean">
+                  <span className="px-2 py-1 rounded bg-blue-50 text-blue-700">
+                    수익 {columnClassifications.filter(c => c.category === 'income').length}개
+                  </span>
+                  <span className="px-2 py-1 rounded bg-red-50 text-red-700">
+                    차감 {columnClassifications.filter(c => c.category === 'deduction').length}개
+                  </span>
+                  <span className="px-2 py-1 rounded bg-gray-100 text-gray-600">
+                    정보 {columnClassifications.filter(c => c.category === 'info').length}개
+                  </span>
+                  <span className="px-2 py-1 rounded bg-surface-container-high text-on-surface-variant">
+                    미분류 {columnClassifications.filter(c => c.category === 'unmapped').length}개
+                  </span>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
                 { key: 'employee_code_col' as const, label: '사번 열 *', required: true },
@@ -676,13 +712,21 @@ export default function SettlementUploadPage() {
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="bg-surface-container-low">
-                      {headers.map((h) => (
+                      {headers.map((h, hIdx) => {
+                        const cls = columnClassifications[hIdx];
+                        const catLabel = cls?.category === 'income' ? '수익' : cls?.category === 'deduction' ? '차감' : cls?.category === 'info' ? '정보' : null;
+                        const catColor = cls?.category === 'income' ? 'text-blue-600 bg-blue-50' : cls?.category === 'deduction' ? 'text-red-600 bg-red-50' : cls?.category === 'info' ? 'text-gray-600 bg-gray-100' : '';
+                        return (
                         <th key={h} className="px-3 py-2 font-label font-semibold text-on-surface-variant whitespace-nowrap">
-                          {h}
+                          <span>{h}</span>
                           {h === mapping.employee_code_col && <span className="text-primary ml-1">(사번)</span>}
                           {h === mapping.delivery_count_col && <span className="text-primary ml-1">(배송)</span>}
+                          {catLabel && cls && cls.confidence >= 0.5 && (
+                            <span className={`ml-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold ${catColor}`}>{catLabel}</span>
+                          )}
                         </th>
-                      ))}
+                        );
+                      })}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant/20">

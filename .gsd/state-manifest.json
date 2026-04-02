@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exported_at": "2026-04-02T19:42:41.691Z",
+  "exported_at": "2026-04-02T19:57:44.368Z",
   "milestones": [
     {
       "id": "M001",
@@ -943,10 +943,10 @@
       "completed_at": null,
       "full_summary_md": "",
       "full_uat_md": "",
-      "goal": "드래그앤드롭 매핑 + 프리셋 CRUD",
-      "success_criteria": "자동+수동 매핑 + 프리셋 CRUD",
-      "proof_level": "build + manual",
-      "integration_closure": "기존 upload 플로우 통합",
+      "goal": "S01 수식 파싱/자동 분류를 기존 업로드 플로우에 통합 + 매핑 프리셋 관리 강화",
+      "success_criteria": "자동 분류 결과가 매핑 UI에 표시, 수식 감지 뱃지 표시, 빌드 성공",
+      "proof_level": "build + test",
+      "integration_closure": "빌드 성공 + 기존 플로우 regression 없음",
       "observability_impact": "N/A",
       "sequence": 0,
       "replan_triggered_at": null
@@ -2429,6 +2429,40 @@
       ],
       "expected_output": [
         "web/src/app/portal/(dashboard)/settlements/builder/page.tsx"
+      ],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M006",
+      "slice_id": "S04",
+      "id": "T01",
+      "title": "자동 분류 통합 + 매핑 UI 강화",
+      "status": "pending",
+      "one_liner": "",
+      "narrative": "",
+      "verification_result": "",
+      "duration": "",
+      "completed_at": null,
+      "blocker_discovered": false,
+      "deviations": "",
+      "known_issues": "",
+      "key_files": [],
+      "key_decisions": [],
+      "full_summary_md": "",
+      "description": "1. upload/page.tsx 매핑 단계에 자동 분류 결과 표시 (confidence badge)\\n2. 수식 감지 표시 (FormulaType badge)\\n3. 수익/차감 자동 분류 결과를 템플릿 빌더로 전달하는 링크 버튼\\n4. 매핑 프리셋을 settlement_templates.column_mapping에 저장",
+      "estimate": "1.5h",
+      "files": [
+        "web/src/app/portal/(dashboard)/settlements/upload/page.tsx"
+      ],
+      "verify": "cd web && npx next build && npm test",
+      "inputs": [
+        "web/src/services/formula-parser.service.ts",
+        "web/src/services/column-classifier.service.ts"
+      ],
+      "expected_output": [
+        "수정된 upload/page.tsx"
       ],
       "observability_impact": "",
       "full_plan_md": "",
