@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exported_at": "2026-04-02T20:02:24.317Z",
+  "exported_at": "2026-04-02T20:06:22.535Z",
   "milestones": [
     {
       "id": "M001",
@@ -988,11 +988,11 @@
       "completed_at": null,
       "full_summary_md": "",
       "full_uat_md": "",
-      "goal": "교차 검증 + 이상치 감지 + 이력 페이지",
-      "success_criteria": "합계 검증 + 이상치 ±50% + 이력 CRUD",
-      "proof_level": "test + manual",
-      "integration_closure": "E2E 완성",
-      "observability_impact": "검증 DB",
+      "goal": "정산 교차검증 시스템 + 이상치 감지 + 생성 이력 관리 페이지",
+      "success_criteria": "검증 서비스 + 이력 페이지 빌드 성공, 검증 테스트 통과",
+      "proof_level": "build + test",
+      "integration_closure": "빌드 + 테스트 통과, E2E 플로우 완성",
+      "observability_impact": "검증 결과 DB 저장",
       "sequence": 0,
       "replan_triggered_at": null
     }
@@ -2527,6 +2527,71 @@
       "inputs": [],
       "expected_output": [
         "수정된 builder/page.tsx"
+      ],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M006",
+      "slice_id": "S06",
+      "id": "T01",
+      "title": "정산 검증 서비스 + 테스트",
+      "status": "pending",
+      "one_liner": "",
+      "narrative": "",
+      "verification_result": "",
+      "duration": "",
+      "completed_at": null,
+      "blocker_discovered": false,
+      "deviations": "",
+      "known_issues": "",
+      "key_files": [],
+      "key_decisions": [],
+      "full_summary_md": "",
+      "description": "1. verifySettlement() 함수\\n2. 합계 교차검증 (income - deduction = net)\\n3. 이상치 감지 (평균 ±50%)\\n4. 음수 정산액 경고\\n5. 테스트 작성",
+      "estimate": "1h",
+      "files": [
+        "web/src/services/settlement-verification.service.ts",
+        "web/src/__tests__/settlement-verification.test.ts"
+      ],
+      "verify": "cd web && npm test",
+      "inputs": [],
+      "expected_output": [
+        "web/src/services/settlement-verification.service.ts",
+        "web/src/__tests__/settlement-verification.test.ts"
+      ],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M006",
+      "slice_id": "S06",
+      "id": "T02",
+      "title": "생성 이력 페이지",
+      "status": "pending",
+      "one_liner": "",
+      "narrative": "",
+      "verification_result": "",
+      "duration": "",
+      "completed_at": null,
+      "blocker_discovered": false,
+      "deviations": "",
+      "known_issues": "",
+      "key_files": [],
+      "key_decisions": [],
+      "full_summary_md": "",
+      "description": "작업 목록 + 상세 + 다운로드 링크 + 검증 결과 표시",
+      "estimate": "1h",
+      "files": [
+        "web/src/app/portal/(dashboard)/settlements/history/page.tsx",
+        "web/src/components/portal/Sidebar.tsx"
+      ],
+      "verify": "cd web && npx next build",
+      "inputs": [],
+      "expected_output": [
+        "web/src/app/portal/(dashboard)/settlements/history/page.tsx"
       ],
       "observability_impact": "",
       "full_plan_md": "",
