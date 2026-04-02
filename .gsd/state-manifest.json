@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exported_at": "2026-04-02T11:55:53.449Z",
+  "exported_at": "2026-04-02T12:18:53.990Z",
   "milestones": [
     {
       "id": "M001",
@@ -719,16 +719,16 @@
       "milestone_id": "M005",
       "id": "S02",
       "title": "settings/page.tsx 분해 (1,268줄 → ~200줄)",
-      "status": "pending",
+      "status": "complete",
       "risk": "medium",
       "depends": [
         "S01"
       ],
       "demo": "settings/page.tsx 300줄 이하",
       "created_at": "2026-04-02T11:55:41.649Z",
-      "completed_at": null,
-      "full_summary_md": "",
-      "full_uat_md": "",
+      "completed_at": "2026-04-02T12:18:34.304Z",
+      "full_summary_md": "---\nid: S02\nparent: M005\nmilestone: M005\nprovides:\n  - 분해된 settings 페이지 패턴\nrequires:\n  []\naffects:\n  []\nkey_files:\n  - web/src/components/portal/settings/\nkey_decisions:\n  - 7개 탭 완전 분리\npatterns_established:\n  - 탭 컴포넌트를 components/portal/<page>/ 폴더로 분리\nobservability_surfaces:\n  - none\ndrill_down_paths:\n  - .gsd/milestones/M005/slices/S02/tasks/T01-SUMMARY.md\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-02T12:18:34.305Z\nblocker_discovered: false\n---\n\n# S02: settings/page.tsx \\ubd84\\ud574\n\n**settings/page.tsx 1,268\\uc904\\u219898\\uc904 \\u2014 7\\uac1c \\ud0ed \\uc644\\uc804 \\ubd84\\ub9ac**\n\n## What Happened\n\nsettings/page.tsx\\uc758 7\\uac1c \\ud0ed \\ucef4\\ud3ec\\ub10c\\ud2b8\\ub97c components/portal/settings/\\ub85c \\ucd94\\ucd9c. \\ud398\\uc774\\uc9c0 \\ud30c\\uc77c\\uc740 \\ud0ed \\uc804\\ud658 \\ub85c\\uc9c1\\ub9cc \\ub0a8\\uae40.\n\n## Verification\n\nnpx next build \\uc131\\uacf5\n\n## Requirements Advanced\n\nNone.\n\n## Requirements Validated\n\nNone.\n\n## New Requirements Surfaced\n\nNone.\n\n## Requirements Invalidated or Re-scoped\n\nNone.\n\n## Deviations\n\nNone.\n\n## Known Limitations\n\nNone.\n\n## Follow-ups\n\nNone.\n\n## Files Created/Modified\n\n- `web/src/app/portal/(dashboard)/settings/page.tsx` — 1,268줄↘98줄 — 7개 탭 import만 남김\n",
+      "full_uat_md": "# S02: settings/page.tsx \\ubd84\\ud574 — UAT\n\n**Milestone:** M005\n**Written:** 2026-04-02T12:18:34.306Z\n\n- [x] settings/page.tsx 98\\uc904\\n- [x] npx next build \\uc131\\uacf5\\n- [x] 7\\uac1c \\ud0ed \\ubaa8\\ub450 \\ub3c5\\ub9bd \\ud30c\\uc77c\n",
       "goal": "settings/page.tsx의 7개 탭 컴포넌트를 개별 파일로 분리",
       "success_criteria": "settings/page.tsx 300줄 이하, 빌드 성공",
       "proof_level": "build",
@@ -740,7 +740,7 @@
     {
       "milestone_id": "M005",
       "id": "S03",
-      "title": "drivers/new/page.tsx 분해 (1,414줄 → ~300줄)",
+      "title": "principals FormControls 추출 (완료)",
       "status": "pending",
       "risk": "medium",
       "depends": [
@@ -762,7 +762,7 @@
     {
       "milestone_id": "M005",
       "id": "S04",
-      "title": "principals/page.tsx 분해 (1,351줄 → ~300줄)",
+      "title": "principals/[id] FormControls 추출 (완료)",
       "status": "pending",
       "risk": "medium",
       "depends": [
@@ -777,6 +777,28 @@
       "success_criteria": "principals/page.tsx 400줄 이하, 빌드 성공",
       "proof_level": "build + test",
       "integration_closure": "npx next build + npm test 성공",
+      "observability_impact": "N/A",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M005",
+      "id": "S05",
+      "title": "테스트 커버리지 확대",
+      "status": "pending",
+      "risk": "low",
+      "depends": [
+        "S01"
+      ],
+      "demo": "npm test 40건+ 통과",
+      "created_at": "2026-04-02T12:18:44.185Z",
+      "completed_at": null,
+      "full_summary_md": "",
+      "full_uat_md": "",
+      "goal": "순수 함수 유닛 테스트를 추가하여 커버리지 확대",
+      "success_criteria": "테스트 50건 이상, 전부 통과",
+      "proof_level": "test",
+      "integration_closure": "npm test 전부 통과",
       "observability_impact": "N/A",
       "sequence": 0,
       "replan_triggered_at": null
@@ -1957,19 +1979,30 @@
       "milestone_id": "M005",
       "slice_id": "S02",
       "id": "T01",
-      "title": "settings 탭 컴포넌트 분리",
-      "status": "pending",
-      "one_liner": "",
-      "narrative": "",
-      "verification_result": "",
+      "title": "settings/page.tsx 1,268줄→98줄 — 7개 탭 컴포넌트 완전 분리",
+      "status": "complete",
+      "one_liner": "settings/page.tsx 1,268줄→98줄 — 7개 탭 컴포넌트 완전 분리",
+      "narrative": "settings/page.tsx의 7개 탭 컴포넌트를 각각 독립 파일로 추출. 1,268줄→98줄.",
+      "verification_result": "npx next build 성공",
       "duration": "",
-      "completed_at": null,
+      "completed_at": "2026-04-02T12:18:17.658Z",
       "blocker_discovered": false,
-      "deviations": "",
-      "known_issues": "",
-      "key_files": [],
-      "key_decisions": [],
-      "full_summary_md": "",
+      "deviations": "None.",
+      "known_issues": "None.",
+      "key_files": [
+        "web/src/app/portal/(dashboard)/settings/page.tsx",
+        "web/src/components/portal/settings/ProfileTab.tsx",
+        "web/src/components/portal/settings/CategoryTab.tsx",
+        "web/src/components/portal/settings/SealTab.tsx",
+        "web/src/components/portal/settings/DocumentsTab.tsx",
+        "web/src/components/portal/settings/BillingTab.tsx",
+        "web/src/components/portal/settings/NotificationTab.tsx",
+        "web/src/components/portal/settings/AdminsTab.tsx"
+      ],
+      "key_decisions": [
+        "7개 탭 컴포넌트를 components/portal/settings/로 완전 분리"
+      ],
+      "full_summary_md": "---\nid: T01\nparent: S02\nmilestone: M005\nkey_files:\n  - web/src/app/portal/(dashboard)/settings/page.tsx\n  - web/src/components/portal/settings/ProfileTab.tsx\n  - web/src/components/portal/settings/CategoryTab.tsx\n  - web/src/components/portal/settings/SealTab.tsx\n  - web/src/components/portal/settings/DocumentsTab.tsx\n  - web/src/components/portal/settings/BillingTab.tsx\n  - web/src/components/portal/settings/NotificationTab.tsx\n  - web/src/components/portal/settings/AdminsTab.tsx\nkey_decisions:\n  - 7개 탭 컴포넌트를 components/portal/settings/로 완전 분리\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-02T12:18:17.659Z\nblocker_discovered: false\n---\n\n# T01: settings/page.tsx 1,268줄→98줄 — 7개 탭 컴포넌트 완전 분리\n\n**settings/page.tsx 1,268줄→98줄 — 7개 탭 컴포넌트 완전 분리**\n\n## What Happened\n\nsettings/page.tsx의 7개 탭 컴포넌트를 각각 독립 파일로 추출. 1,268줄→98줄.\n\n## Verification\n\nnpx next build 성공\n\n## Verification Evidence\n\n| # | Command | Exit Code | Verdict | Duration |\n|---|---------|-----------|---------|----------|\n| 1 | `npx next build` | 0 | ✅ pass | 39100ms |\n\n\n## Deviations\n\nNone.\n\n## Known Issues\n\nNone.\n\n## Files Created/Modified\n\n- `web/src/app/portal/(dashboard)/settings/page.tsx`\n- `web/src/components/portal/settings/ProfileTab.tsx`\n- `web/src/components/portal/settings/CategoryTab.tsx`\n- `web/src/components/portal/settings/SealTab.tsx`\n- `web/src/components/portal/settings/DocumentsTab.tsx`\n- `web/src/components/portal/settings/BillingTab.tsx`\n- `web/src/components/portal/settings/NotificationTab.tsx`\n- `web/src/components/portal/settings/AdminsTab.tsx`\n",
       "description": "ProfileTab, CategoryTab, SealTab, DocumentsTab, BillingTab, NotificationTab, AdminsTab을 components/portal/settings/ 폴더로 추출",
       "estimate": "30min",
       "files": [
@@ -1989,6 +2022,41 @@
       "expected_output": [
         "settings/page.tsx 300줄 이하",
         "7개 탭 컴포넌트 파일"
+      ],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M005",
+      "slice_id": "S05",
+      "id": "T01",
+      "title": "순수 함수 테스트 작성",
+      "status": "pending",
+      "one_liner": "",
+      "narrative": "",
+      "verification_result": "",
+      "duration": "",
+      "completed_at": null,
+      "blocker_discovered": false,
+      "deviations": "",
+      "known_issues": "",
+      "key_files": [],
+      "key_decisions": [],
+      "full_summary_md": "",
+      "description": "formatters, date-kst, verification, excel-parse 순수 함수 테스트 작성",
+      "estimate": "30min",
+      "files": [
+        "web/src/__tests__/formatters.test.ts",
+        "web/src/__tests__/date-kst.test.ts",
+        "web/src/__tests__/verification.test.ts",
+        "web/src/__tests__/excel-parse.test.ts"
+      ],
+      "verify": "cd web && npm test",
+      "inputs": [],
+      "expected_output": [
+        "4개 테스트 파일",
+        "50건+ 테스트"
       ],
       "observability_impact": "",
       "full_plan_md": "",
@@ -2373,6 +2441,17 @@
       "verdict": "✅ pass (21건)",
       "duration_ms": 2600,
       "created_at": "2026-04-02T11:52:17.384Z"
+    },
+    {
+      "id": 33,
+      "task_id": "T01",
+      "slice_id": "S02",
+      "milestone_id": "M005",
+      "command": "npx next build",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 39100,
+      "created_at": "2026-04-02T12:18:17.658Z"
     }
   ]
 }
