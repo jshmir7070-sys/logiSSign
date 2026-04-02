@@ -56,6 +56,7 @@ const navItems: NavItem[] = [
       { label: '카테고리 관리', href: '/portal/principals' },
       { label: '엑셀 업로드 정산', href: '/portal/settlements/upload' },
       { label: '정산서 생성', href: '/portal/settlements/generate' },
+      { label: '정산서 빌더', href: '/portal/settlements/builder' },
       { label: '세금계산서', href: '/portal/tax-invoices' },
     ],
   },

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exported_at": "2026-04-02T19:33:01.815Z",
+  "exported_at": "2026-04-02T19:42:41.691Z",
   "milestones": [
     {
       "id": "M001",
@@ -921,10 +921,10 @@
       "completed_at": null,
       "full_summary_md": "",
       "full_uat_md": "",
-      "goal": "SettlementTemplate CRUD + 에디터 UI + 5종 기본 템플릿",
-      "success_criteria": "템플릿 CRUD + 에디터 + 미리보기 + 5종 기본",
+      "goal": "정산서 템플릿 에디터 페이지 + CRUD API + 실시간 미리보기",
+      "success_criteria": "템플릿 CRUD API 동작, 에디터 UI 빌드 성공, 5종 프리셋 선택 가능",
       "proof_level": "build + manual",
-      "integration_closure": "S02 PDF 렌더러와 연결",
+      "integration_closure": "빌드 성공 + S02 PDF 렌더러 연동",
       "observability_impact": "N/A",
       "sequence": 0,
       "replan_triggered_at": null
@@ -2360,6 +2360,75 @@
       "expected_output": [
         "web/src/services/settlement-pdf.service.ts",
         "web/src/types/settlement-template.ts"
+      ],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M006",
+      "slice_id": "S03",
+      "id": "T01",
+      "title": "템플릿 CRUD 서비스",
+      "status": "pending",
+      "one_liner": "",
+      "narrative": "",
+      "verification_result": "",
+      "duration": "",
+      "completed_at": null,
+      "blocker_discovered": false,
+      "deviations": "",
+      "known_issues": "",
+      "key_files": [],
+      "key_decisions": [],
+      "full_summary_md": "",
+      "description": "settlement_templates CRUD + settlement_jobs/records 서비스 함수",
+      "estimate": "30min",
+      "files": [
+        "web/src/services/settlement-template.service.ts"
+      ],
+      "verify": "cd web && npx next build",
+      "inputs": [
+        "web/src/types/settlement-template.ts"
+      ],
+      "expected_output": [
+        "web/src/services/settlement-template.service.ts"
+      ],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M006",
+      "slice_id": "S03",
+      "id": "T02",
+      "title": "템플릿 빌더 페이지 UI",
+      "status": "pending",
+      "one_liner": "",
+      "narrative": "",
+      "verification_result": "",
+      "duration": "",
+      "completed_at": null,
+      "blocker_discovered": false,
+      "deviations": "",
+      "known_issues": "",
+      "key_files": [],
+      "key_decisions": [],
+      "full_summary_md": "",
+      "description": "테플릿 목록/선택 + 항목 체크박스 + 색상/폰트 설정 + 실시간 미리보기 + PDF 다운로드",
+      "estimate": "2h",
+      "files": [
+        "web/src/app/portal/(dashboard)/settlements/builder/page.tsx",
+        "web/src/components/portal/Sidebar.tsx"
+      ],
+      "verify": "cd web && npx next build",
+      "inputs": [
+        "web/src/services/settlement-template.service.ts",
+        "web/src/services/settlement-pdf.service.ts",
+        "web/src/types/settlement-template.ts"
+      ],
+      "expected_output": [
+        "web/src/app/portal/(dashboard)/settlements/builder/page.tsx"
       ],
       "observability_impact": "",
       "full_plan_md": "",
