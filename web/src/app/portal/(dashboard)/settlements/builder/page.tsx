@@ -342,8 +342,8 @@ export default function SettlementBuilderPage() {
                     </select>
                   </div>
                 </div>
-                <ColorPicker label="타이틀 색상" value={template.title.fontColor}
-                  onChange={c => setTemplate(p => ({ ...p, title: { ...p.title, fontColor: c } }))} />
+                <ColorPicker label="헤더 텍스트 색상" value={template.header.textColor}
+                  onChange={c => setTemplate(p => ({ ...p, header: { ...p.header, textColor: c } }))} />
               </div>
             )}
 
