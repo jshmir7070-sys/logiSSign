@@ -665,6 +665,121 @@ export interface Database {
           paid_at?: string | null;
         };
       };
+      settlement_templates: {
+        Row: {
+          id: string;
+          agency_id: string;
+          name: string;
+          description: string | null;
+          template_config: Record<string, unknown>;
+          column_mapping: Record<string, unknown> | null;
+          is_default: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          agency_id: string;
+          name: string;
+          description?: string | null;
+          template_config: Record<string, unknown>;
+          column_mapping?: Record<string, unknown> | null;
+          is_default?: boolean;
+        };
+        Update: {
+          name?: string;
+          description?: string | null;
+          template_config?: Record<string, unknown>;
+          column_mapping?: Record<string, unknown> | null;
+          is_default?: boolean;
+          updated_at?: string;
+        };
+      };
+      settlement_jobs: {
+        Row: {
+          id: string;
+          agency_id: string;
+          template_id: string | null;
+          uploaded_file_url: string;
+          original_filename: string | null;
+          status: 'queued' | 'processing' | 'completed' | 'failed' | 'cancelled';
+          total_drivers: number;
+          completed_drivers: number;
+          failed_drivers: number;
+          output_url: string | null;
+          output_expires_at: string | null;
+          error_log: Record<string, unknown> | null;
+          processing_time_ms: number | null;
+          year_month: string | null;
+          created_at: string;
+          completed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          agency_id: string;
+          template_id?: string | null;
+          uploaded_file_url: string;
+          original_filename?: string | null;
+          status?: string;
+          total_drivers: number;
+          year_month?: string | null;
+        };
+        Update: {
+          status?: string;
+          completed_drivers?: number;
+          failed_drivers?: number;
+          output_url?: string | null;
+          output_expires_at?: string | null;
+          error_log?: Record<string, unknown> | null;
+          processing_time_ms?: number | null;
+          completed_at?: string | null;
+        };
+      };
+      settlement_records: {
+        Row: {
+          id: string;
+          job_id: string;
+          agency_id: string | null;
+          driver_name: string | null;
+          driver_id_code: string | null;
+          income_total: number;
+          deduction_total: number;
+          net_amount: number;
+          income_details: Record<string, unknown>;
+          deduction_details: Record<string, unknown>;
+          formula_log: Record<string, unknown> | null;
+          verification_status: 'match' | 'mismatch' | 'warning' | null;
+          verification_details: Record<string, unknown> | null;
+          pdf_url: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          job_id: string;
+          agency_id?: string | null;
+          driver_name?: string | null;
+          driver_id_code?: string | null;
+          income_total?: number;
+          deduction_total?: number;
+          net_amount?: number;
+          income_details?: Record<string, unknown>;
+          deduction_details?: Record<string, unknown>;
+          formula_log?: Record<string, unknown> | null;
+          verification_status?: string | null;
+          verification_details?: Record<string, unknown> | null;
+          pdf_url?: string | null;
+        };
+        Update: {
+          income_total?: number;
+          deduction_total?: number;
+          net_amount?: number;
+          income_details?: Record<string, unknown>;
+          deduction_details?: Record<string, unknown>;
+          verification_status?: string | null;
+          verification_details?: Record<string, unknown> | null;
+          pdf_url?: string | null;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: {

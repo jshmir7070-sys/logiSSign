@@ -11,6 +11,7 @@
 - 🔄 **M003:** M003
 - ⬜ **M004:** M004
 - ⬜ **M005:** M005
+- ⬜ **M006:** M006
 
 ## Recent Decisions
 - None recorded

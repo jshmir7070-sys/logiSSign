@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exported_at": "2026-04-02T12:18:53.990Z",
+  "exported_at": "2026-04-02T19:13:16.554Z",
   "milestones": [
     {
       "id": "M001",
@@ -262,6 +262,68 @@
       ],
       "requirement_coverage": "P3 이슈 #2 — 대형 컴포넌트 분해 (상위 3개)",
       "boundary_map_markdown": "```\\nIN: settings/page.tsx(1,268줄), drivers/new/page.tsx(1,414줄), principals/page.tsx(1,351줄)\\nOUT: principals/[id], settlements/upload, signup — 별도 후속 작업\\n```"
+    },
+    {
+      "id": "M006",
+      "title": "",
+      "status": "queued",
+      "depends_on": [],
+      "created_at": "2026-04-02T19:11:10.362Z",
+      "completed_at": null,
+      "vision": "대리점이 엑셀 업로드 → 수식 파싱 → 수익/차감 자동 분류 → 커스텀 템플릿으로 최대 1,000명 정산서를 일괄 생성하는 시스템 구축",
+      "success_criteria": [
+        "수식 파싱 + 자동 분류",
+        "템플릿 빌더 + 5종 기본",
+        "300명 클라이언트 + 1000명 서버 PDF",
+        "검증 + ZIP + 이력",
+        "빌드 + 테스트 통과"
+      ],
+      "key_risks": [
+        {
+          "risk": "pdf-lib로 복잡한 테이블 레이아웃 구현 한계",
+          "whyItMatters": "Puppeteer 불가 — 테이블+색상+로고 pdf-lib 구현 필요"
+        },
+        {
+          "risk": "1,000명 일괄 처리 시 서버리스 타임아웃",
+          "whyItMatters": "Vercel 60초 제한"
+        },
+        {
+          "risk": "수식 파싱 정확도",
+          "whyItMatters": "SheetJS는 수식 문자열만 제공"
+        }
+      ],
+      "proof_strategy": [
+        {
+          "riskOrUnknown": "pdf-lib 레이아웃",
+          "retireIn": "S02",
+          "whatWillBeProven": "샘플 PDF 정상 생성"
+        },
+        {
+          "riskOrUnknown": "1,000명 성능",
+          "retireIn": "S05",
+          "whatWillBeProven": "일괄 생성 완료"
+        },
+        {
+          "riskOrUnknown": "수식 파싱",
+          "retireIn": "S01",
+          "whatWillBeProven": "SUM/비율/차감 감지"
+        }
+      ],
+      "verification_contract": "npx next build && npm test",
+      "verification_integration": "엑셀→매핑→템플릿→PDF E2E 플로우",
+      "verification_operational": "1,000명 일괄 생성 시간 측정",
+      "verification_uat": "샘플 엑셀로 정산서 PDF → 검증 통과",
+      "definition_of_done": [
+        "npx next build 성공",
+        "npm test 전 테스트 통과",
+        "5종 기본 템플릿 동작",
+        "300명 클라이언트 PDF 생성",
+        "서버 일괄 생성 (1,000명)",
+        "정산 검증 동작",
+        "기존 regression 없음"
+      ],
+      "requirement_coverage": "커스텀 정산서 빌더 §1~§13",
+      "boundary_map_markdown": "```\\nIN: 기존 excel-settlement.service, settlements DB, principal.service\\nOUT: AI 수식 해석(Phase 2), 자동 스케줄링(Phase 3)\\n```"
     }
   ],
   "slices": [
@@ -800,6 +862,137 @@
       "proof_level": "test",
       "integration_closure": "npm test 전부 통과",
       "observability_impact": "N/A",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M006",
+      "id": "S01",
+      "title": "수식 파싱 엔진 + 수익/차감 자동 분류",
+      "status": "pending",
+      "risk": "high",
+      "depends": [],
+      "demo": "엑셀 업로드 시 수식 감지 + 수익/차감 자동 분류",
+      "created_at": "2026-04-02T19:12:54.906Z",
+      "completed_at": null,
+      "full_summary_md": "",
+      "full_uat_md": "",
+      "goal": "SheetJS 수식 파싱 + FormulaType 감지 + 키워드 기반 수익/차감 자동 분류",
+      "success_criteria": "SUM/PERCENTAGE/SUBTRACTION 수식 감지, 수익/차감 자동 분류 동작, 테스트 통과",
+      "proof_level": "test + manual",
+      "integration_closure": "기존 parseExcelData와 통합, 테스트 통과",
+      "observability_impact": "N/A",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M006",
+      "id": "S02",
+      "title": "정산서 PDF 렌더러 (pdf-lib)",
+      "status": "pending",
+      "risk": "high",
+      "depends": [
+        "S01"
+      ],
+      "demo": "샘플 1명 정산서 PDF 생성 + 다운로드",
+      "created_at": "2026-04-02T19:12:54.906Z",
+      "completed_at": null,
+      "full_summary_md": "",
+      "full_uat_md": "",
+      "goal": "pdf-lib로 테이블+색상+로고 레이아웃의 정산서 PDF 생성",
+      "success_criteria": "타이틀/수익/차감/합계 포함 PDF 생성",
+      "proof_level": "manual",
+      "integration_closure": "S03 템플릿과 연결",
+      "observability_impact": "N/A",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M006",
+      "id": "S03",
+      "title": "템플릿 빌더 UI + DB",
+      "status": "pending",
+      "risk": "medium",
+      "depends": [
+        "S02"
+      ],
+      "demo": "템플릿 빌더에서 항목 체크/색상/로고 설정 → 실시간 미리보기",
+      "created_at": "2026-04-02T19:12:54.906Z",
+      "completed_at": null,
+      "full_summary_md": "",
+      "full_uat_md": "",
+      "goal": "SettlementTemplate CRUD + 에디터 UI + 5종 기본 템플릿",
+      "success_criteria": "템플릿 CRUD + 에디터 + 미리보기 + 5종 기본",
+      "proof_level": "build + manual",
+      "integration_closure": "S02 PDF 렌더러와 연결",
+      "observability_impact": "N/A",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M006",
+      "id": "S04",
+      "title": "컬럼 매핑 UI 강화",
+      "status": "pending",
+      "risk": "medium",
+      "depends": [
+        "S01"
+      ],
+      "demo": "자동 매핑 → 드래그 수정 → 프리셋 저장",
+      "created_at": "2026-04-02T19:12:54.906Z",
+      "completed_at": null,
+      "full_summary_md": "",
+      "full_uat_md": "",
+      "goal": "드래그앤드롭 매핑 + 프리셋 CRUD",
+      "success_criteria": "자동+수동 매핑 + 프리셋 CRUD",
+      "proof_level": "build + manual",
+      "integration_closure": "기존 upload 플로우 통합",
+      "observability_impact": "N/A",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M006",
+      "id": "S05",
+      "title": "대량 처리 (1,000명) + ZIP 다운로드",
+      "status": "pending",
+      "risk": "high",
+      "depends": [
+        "S02",
+        "S03"
+      ],
+      "demo": "1,000행 엑셀 → 일괄 PDF → ZIP",
+      "created_at": "2026-04-02T19:12:54.906Z",
+      "completed_at": null,
+      "full_summary_md": "",
+      "full_uat_md": "",
+      "goal": "클라이언트/서버 분기 + 진행률 + ZIP",
+      "success_criteria": "1,000명 일괄 + ZIP + 진행률",
+      "proof_level": "manual + perf",
+      "integration_closure": "S02+S03 통합",
+      "observability_impact": "처리 시간 로깅",
+      "sequence": 0,
+      "replan_triggered_at": null
+    },
+    {
+      "milestone_id": "M006",
+      "id": "S06",
+      "title": "정산 검증 + 이력 관리",
+      "status": "pending",
+      "risk": "medium",
+      "depends": [
+        "S05"
+      ],
+      "demo": "검증 결과 + 생성 이력 조회",
+      "created_at": "2026-04-02T19:12:54.906Z",
+      "completed_at": null,
+      "full_summary_md": "",
+      "full_uat_md": "",
+      "goal": "교차 검증 + 이상치 감지 + 이력 페이지",
+      "success_criteria": "합계 검증 + 이상치 ±50% + 이력 CRUD",
+      "proof_level": "test + manual",
+      "integration_closure": "E2E 완성",
+      "observability_impact": "검증 DB",
       "sequence": 0,
       "replan_triggered_at": null
     }
@@ -2057,6 +2250,80 @@
       "expected_output": [
         "4개 테스트 파일",
         "50건+ 테스트"
+      ],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M006",
+      "slice_id": "S01",
+      "id": "T01",
+      "title": "수식 파싱 + 자동 분류 서비스 구현",
+      "status": "pending",
+      "one_liner": "",
+      "narrative": "",
+      "verification_result": "",
+      "duration": "",
+      "completed_at": null,
+      "blocker_discovered": false,
+      "deviations": "",
+      "known_issues": "",
+      "key_files": [],
+      "key_decisions": [],
+      "full_summary_md": "",
+      "description": "1. ParsedCell, DetectedFormula, FormulaType 타입 정의\\n2. SheetJS cellFormula:true 파싱 → 수식 추출\\n3. 수식 패턴 분석 (SUM, *0.0X, 차감)\\n4. 키워드 기반 수익/차감/info 자동 분류\\n5. ColumnMapping + confidence 반환\\n6. 테스트 작성",
+      "estimate": "2h",
+      "files": [
+        "web/src/services/formula-parser.service.ts",
+        "web/src/services/column-classifier.service.ts",
+        "web/src/__tests__/formula-parser.test.ts",
+        "web/src/__tests__/column-classifier.test.ts"
+      ],
+      "verify": "cd web && npm test",
+      "inputs": [
+        "web/src/services/excel-settlement.service.ts"
+      ],
+      "expected_output": [
+        "web/src/services/formula-parser.service.ts",
+        "web/src/services/column-classifier.service.ts",
+        "web/src/__tests__/formula-parser.test.ts",
+        "web/src/__tests__/column-classifier.test.ts"
+      ],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M006",
+      "slice_id": "S01",
+      "id": "T02",
+      "title": "DB 스키마 추가 (settlement_templates, settlement_jobs, settlement_records)",
+      "status": "pending",
+      "one_liner": "",
+      "narrative": "",
+      "verification_result": "",
+      "duration": "",
+      "completed_at": null,
+      "blocker_discovered": false,
+      "deviations": "",
+      "known_issues": "",
+      "key_files": [],
+      "key_decisions": [],
+      "full_summary_md": "",
+      "description": "settlement_templates, settlement_jobs, settlement_records 테이블 생성 + RLS + 인덱스",
+      "estimate": "30min",
+      "files": [
+        "supabase/migrations/005_settlement_builder.sql",
+        "web/src/types/database.ts"
+      ],
+      "verify": "cd web && npx next build",
+      "inputs": [
+        "supabase/schema.sql"
+      ],
+      "expected_output": [
+        "supabase/migrations/005_settlement_builder.sql",
+        "web/src/types/database.ts 확장"
       ],
       "observability_impact": "",
       "full_plan_md": "",

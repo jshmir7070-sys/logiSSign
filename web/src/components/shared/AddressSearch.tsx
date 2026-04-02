@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
+import type { Address } from 'react-daum-postcode'
 
 const DaumPostcodeEmbed = dynamic(() => import('react-daum-postcode'), { ssr: false })
 
@@ -91,8 +92,7 @@ export default function AddressSearch({
   )
 
   /** 주소 선택 완료 콜백 */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleComplete = useCallback((data: any) => {
+  const handleComplete = useCallback((data: Address) => {
     const addr = data.addressType === 'R' ? data.roadAddress : data.jibunAddress
     let extra = ''
     if (data.buildingName) {

@@ -148,6 +148,23 @@ export default function SettlementUploadPage() {
     })();
   }, [principalId, principals]);
 
+  const autoDetectMapping = useCallback(function autoDetectMapping(cols: string[]) {
+    if (!mapping.employee_code_col) {
+      const codeCol = cols.find((c) => /사번|기사코드|코드|ID/i.test(c));
+      const deliveryCol = cols.find((c) => /배송|배달|건수/i.test(c));
+      const returnCol = cols.find((c) => /반품/i.test(c));
+      const collectCol = cols.find((c) => /집하/i.test(c));
+
+      setMapping((prev) => ({
+        ...prev,
+        employee_code_col: codeCol ?? prev.employee_code_col ?? cols[0],
+        delivery_count_col: deliveryCol ?? prev.delivery_count_col ?? '',
+        return_count_col: returnCol ?? prev.return_count_col ?? '',
+        collect_count_col: collectCol ?? prev.collect_count_col ?? '',
+      }));
+    }
+  }, [mapping.employee_code_col]);
+
   /* ── File handling ── */
   const handleFile = useCallback(async (file: File) => {
     setError('');
@@ -196,24 +213,7 @@ export default function SettlementUploadPage() {
       setError(err instanceof Error ? err.message : '엑셀 파일 파싱 실패');
     }
     setProcessing(false);
-  }, []);
-
-  function autoDetectMapping(cols: string[]) {
-    if (!mapping.employee_code_col) {
-      const codeCol = cols.find((c) => /사번|기사코드|코드|ID/i.test(c));
-      const deliveryCol = cols.find((c) => /배송|배달|건수/i.test(c));
-      const returnCol = cols.find((c) => /반품/i.test(c));
-      const collectCol = cols.find((c) => /집하/i.test(c));
-
-      setMapping((prev) => ({
-        ...prev,
-        employee_code_col: codeCol ?? prev.employee_code_col ?? cols[0],
-        delivery_count_col: deliveryCol ?? prev.delivery_count_col ?? '',
-        return_count_col: returnCol ?? prev.return_count_col ?? '',
-        collect_count_col: collectCol ?? prev.collect_count_col ?? '',
-      }));
-    }
-  }
+  }, [autoDetectMapping]);
 
   /* ── Load selected sheet for generic mode ── */
   function loadSheetForMapping(sheetName: string) {

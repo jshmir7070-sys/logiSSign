@@ -348,6 +348,7 @@ export default function SealGenerator({ defaultName = '', onComplete, onCancel }
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
                       </div>
                     )}
+                    {/* eslint-disable-next-line @next/next/no-img-element -- data URI from canvas, next/image not applicable */}
                     <img src={v.dataUri} alt={v.fontLabel} className="w-full h-auto object-contain flex-1" />
                     <span className="text-[10px] text-on-surface-variant/60 font-korean mt-1 truncate w-full text-center">{v.fontLabel}</span>
                   </button>
@@ -423,6 +424,7 @@ export default function SealGenerator({ defaultName = '', onComplete, onCancel }
               <div className="flex justify-center">
                 <div className="w-40 h-40 rounded-2xl border border-outline-variant/20 flex items-center justify-center p-4"
                      style={{ backgroundImage: 'linear-gradient(45deg, #f0f0f0 25%, transparent 25%, transparent 75%, #f0f0f0 75%), linear-gradient(45deg, #f0f0f0 25%, transparent 25%, transparent 75%, #f0f0f0 75%)', backgroundSize: '16px 16px', backgroundPosition: '0 0, 8px 8px' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- data URI from canvas, next/image not applicable */}
                   <img src={uploadPreview} alt="업로드 도장" className="max-w-full max-h-full object-contain" />
                 </div>
               </div>

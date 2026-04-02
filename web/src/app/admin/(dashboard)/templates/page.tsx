@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Badge from '@/components/shared/Badge';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
 
@@ -27,9 +27,9 @@ export default function AdminTemplatesPage() {
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiExtracting, setAiExtracting] = useState(false);
 
-  const supabase = createBrowserSupabaseClient();
+  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
 
-  const loadTemplates = async () => {
+  const loadTemplates = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase
       .from('contract_templates')
@@ -38,9 +38,9 @@ export default function AdminTemplatesPage() {
       .order('created_at', { ascending: true });
     setTemplates((data ?? []) as SystemTemplate[]);
     setLoading(false);
-  };
+  }, [supabase]);
 
-  useEffect(() => { loadTemplates(); }, []);
+  useEffect(() => { loadTemplates(); }, [loadTemplates]);
 
   const resetForm = () => {
     setFormTitle('');
