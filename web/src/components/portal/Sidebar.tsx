@@ -109,8 +109,8 @@ export default function Sidebar({ plan, ownerName }: { plan?: string; ownerName?
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-[240px] bg-sidebar flex flex-col z-40">
       {/* Brand */}
-      <div className="px-5 pt-7 pb-5">
-        <img src="/logo.png" alt="logiSSign" className="h-12 object-contain" />
+      <div className="px-4 pt-6 pb-4">
+        <img src="/logo.png" alt="logiSSign" className="w-full object-contain" />
       </div>
 
       {/* Navigation */}
