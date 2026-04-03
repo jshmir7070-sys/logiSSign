@@ -42,14 +42,14 @@ describe('플랜 제한', () => {
 
   it('basic 플랜', () => {
     const limits = getPlanLimits('basic')
-    expect(limits.maxDrivers).toBe(50)
+    expect(limits.maxDrivers).toBe(30)
     expect(limits.maxDefaultTemplates).toBe(3)
     expect(limits.maxUploadTemplates).toBe(3)
   })
 
   it('standard 플랜', () => {
     const limits = getPlanLimits('standard')
-    expect(limits.maxDrivers).toBe(100)
+    expect(limits.maxDrivers).toBe(80)
     expect(limits.maxDefaultTemplates).toBe(6)
   })
 

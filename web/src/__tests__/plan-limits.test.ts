@@ -24,7 +24,7 @@ describe('plan-limits', () => {
     it('유효한 플랜 → 해당 제한 반환', () => {
       const limits = getPlanLimits('standard')
       expect(limits.maxDrivers).toBe(80)
-      expect(limits.maxAdminAccounts).toBe(3)
+      expect(limits.maxAdminAccounts).toBe(5)
       expect(limits.maxDefaultTemplates).toBe(6)
     })
 
