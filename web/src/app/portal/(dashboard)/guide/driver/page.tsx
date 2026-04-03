@@ -80,8 +80,8 @@ const guides = [
 
 export default function DriverGuidePage() {
   return (
-    <div className="min-h-screen bg-surface">
-      <div className="bg-gradient-to-br from-emerald-600 to-emerald-800 text-white">
+    <div>
+      <div className="mb-6">
         <div className="max-w-4xl mx-auto px-6 py-12">
           <Link href="/portal/guide" className="text-white/50 text-sm hover:text-white/80 mb-4 inline-block">← 가이드</Link>
           <h1 className="text-2xl font-bold mb-2">📱 기사 앱 가이드</h1>
