@@ -470,7 +470,7 @@ function SignupContent() {
               })}
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
               {PLANS.map((plan) => {
                 const isSelected = form.plan === plan.id;
                 const mEq = getMonthlyEquivalent(plan, form.billingCycle);
@@ -483,46 +483,57 @@ function SignupContent() {
                 return (
                   <button key={plan.id} type="button"
                     onClick={() => !plan.contactOnly && updateForm({ plan: plan.id })}
-                    className={`relative bg-surface-container-lowest rounded-2xl p-5 text-left transition-all ${
+                    className={`relative bg-surface-container-lowest rounded-2xl p-4 text-left transition-all flex flex-col ${
                       isSelected ? "shadow-float ring-2 ring-primary" : "shadow-card hover:shadow-ambient"
                     } ${plan.contactOnly ? "cursor-default" : ""}`}>
                     {plan.popular && (
                       <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-power-gradient text-white text-[10px] font-bold">추천</span>
                     )}
-                    <h3 className="font-headline text-base font-bold text-on-surface">{plan.name}</h3>
+                    {/* 플랜명 — 고정 높이 */}
+                    <h3 className="font-headline text-sm font-bold text-on-surface h-6 flex items-center">{plan.name}</h3>
 
-                    {isEnt ? (
-                      <p className="font-data text-xl font-bold mt-2 text-on-surface-variant">상담문의</p>
-                    ) : isFree ? (
-                      <>
-                        <p className="font-data text-xl font-bold mt-2 text-primary">₩0</p>
-                        <p className="text-[11px] text-on-surface-variant">/ 월 · 영구 무료</p>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex items-baseline gap-1 mt-2">
-                          <span className="font-data text-xl font-bold text-primary">₩{formatPrice(mEq)}</span>
-                          <span className="text-[11px] text-on-surface-variant">/ 월</span>
-                        </div>
-                        {discount > 0 && (
-                          <p className="text-[11px] text-on-surface-variant mt-0.5">
-                            <span className="line-through mr-1">₩{formatPrice(plan.pricing!.monthly)}</span>
-                            <span className="text-tertiary font-bold">-{discount}%</span>
-                          </p>
-                        )}
-                        {form.billingCycle !== "monthly" && (
-                          <div className="mt-1.5 p-2 rounded-lg bg-primary/[0.04] border border-primary/10">
-                            <p className="text-[11px] text-on-surface font-medium font-data">총 ₩{formatPrice(total)} 일시불</p>
-                            {sv > 0 && <p className="text-[10px] text-tertiary font-bold mt-0.5">₩{formatPrice(sv)} 절약</p>}
+                    {/* 가격 — 고정 높이 */}
+                    <div className="h-14 flex flex-col justify-center">
+                      {isEnt ? (
+                        <p className="font-data text-lg font-bold text-on-surface-variant">별도 문의</p>
+                      ) : isFree ? (
+                        <>
+                          <p className="font-data text-lg font-bold text-primary">₩0</p>
+                          <p className="text-[10px] text-on-surface-variant">영구 무료</p>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-baseline gap-1">
+                            <span className="font-data text-lg font-bold text-primary">₩{formatPrice(mEq)}</span>
+                            <span className="text-[10px] text-on-surface-variant">/월</span>
                           </div>
-                        )}
-                      </>
-                    )}
+                          {discount > 0 && (
+                            <p className="text-[10px] text-on-surface-variant">
+                              <span className="line-through mr-1">₩{formatPrice(plan.pricing!.monthly)}</span>
+                              <span className="text-tertiary font-bold">-{discount}%</span>
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
 
-                    {plan.maxDrivers && <p className="text-[11px] text-on-surface-variant mt-1.5 font-data">최대 {plan.maxDrivers}명</p>}
-                    {!plan.maxDrivers && !plan.contactOnly && <p className="text-[11px] text-on-surface-variant mt-1.5">무제한</p>}
+                    {/* 일시불 정보 — 고정 높이 */}
+                    <div className="h-10 flex items-center">
+                      {!isFree && !isEnt && form.billingCycle !== "monthly" ? (
+                        <div className="w-full p-1.5 rounded-lg bg-primary/[0.04] border border-primary/10">
+                          <p className="text-[10px] text-on-surface font-medium font-data">총 ₩{formatPrice(total)}</p>
+                          {sv > 0 && <p className="text-[9px] text-tertiary font-bold">₩{formatPrice(sv)} 절약</p>}
+                        </div>
+                      ) : null}
+                    </div>
 
-                    <ul className="mt-3 space-y-1.5">
+                    {/* 기사 수 — 고정 높이 */}
+                    <p className="text-[11px] text-on-surface-variant font-data h-5 flex items-center">
+                      {plan.maxDrivers ? `최대 ${plan.maxDrivers}명` : isEnt ? '150명 이상' : ''}
+                    </p>
+
+                    {/* 기능 목록 — 나머지 공간 */}
+                    <ul className="mt-2 space-y-1 flex-1">
                       {plan.features.map((f) => (
                         <li key={f} className="text-xs text-on-surface-variant flex items-start gap-1.5">
                           <span className="text-tertiary mt-0.5 shrink-0">✓</span>
