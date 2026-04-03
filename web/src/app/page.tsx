@@ -214,25 +214,30 @@ export default function HomePage() {
           <h3 className="pricing-title">정식 출시 요금제</h3>
           <div className="price-cards">
             <div className="price-card">
-              <span className="price-name">Free</span>
+              <span className="price-name">무료</span>
               <span className="price-val">₩0</span>
-              <span className="price-desc">10명 이하 · 정산만</span>
+              <span className="price-desc">10명 이하</span>
+            </div>
+            <div className="price-card">
+              <span className="price-name">Basic</span>
+              <span className="price-val">₩49,900</span>
+              <span className="price-desc">30명</span>
             </div>
             <div className="price-card price-popular">
               <span className="price-badge-tag">추천</span>
-              <span className="price-name">Basic</span>
-              <span className="price-val">₩49,900</span>
-              <span className="price-desc">50명 · 전체 기능</span>
-            </div>
-            <div className="price-card">
               <span className="price-name">Standard</span>
               <span className="price-val">₩99,000</span>
-              <span className="price-desc">100명 · 리포트 포함</span>
+              <span className="price-desc">80명</span>
+            </div>
+            <div className="price-card">
+              <span className="price-name">Pro</span>
+              <span className="price-val">₩199,000</span>
+              <span className="price-desc">150명</span>
             </div>
             <div className="price-card">
               <span className="price-name">Enterprise</span>
-              <span className="price-val">₩199,000</span>
-              <span className="price-desc">무제한 · 맞춤 지원</span>
+              <span className="price-val">별도 문의</span>
+              <span className="price-desc">150명 이상</span>
             </div>
           </div>
         </div>
@@ -317,7 +322,7 @@ export default function HomePage() {
 
         .pricing-preview { width:100%; text-align:center; }
         .pricing-title { font-size:13px; font-weight:600; color:#64748b; text-transform:uppercase; letter-spacing:2px; margin-bottom:20px; }
-        .price-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+        .price-cards { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
         .price-card { position:relative; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:20px 12px; display:flex; flex-direction:column; gap:4px; align-items:center; }
         .price-popular { border-color:rgba(0,74,198,0.4); background:rgba(0,74,198,0.06); }
         .price-badge-tag { position:absolute; top:-10px; padding:2px 12px; border-radius:999px; background:linear-gradient(135deg,#004ac6,#2563eb); color:white; font-size:10px; font-weight:700; }

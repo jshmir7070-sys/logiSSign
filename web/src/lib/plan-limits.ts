@@ -3,47 +3,53 @@
  * 모든 플랜 제한 로직은 이 파일을 참조합니다.
  */
 
-export type PlanType = 'free' | 'basic' | 'standard' | 'enterprise';
+export type PlanType = 'free' | 'basic' | 'standard' | 'pro' | 'enterprise';
 
 export interface PlanLimits {
-  maxDrivers: number | null;        // 기사 수 제한 (null = 무제한)
-  maxAdminAccounts: number;          // 추가 관리자 계정 수 (대표가입자 제외)
-  maxDefaultTemplates: number;       // 기본 템플릿 선택 가능 수
-  maxUploadTemplates: number;        // 업로드 템플릿 수
+  maxDrivers: number | null;
+  maxAdminAccounts: number;
+  maxDefaultTemplates: number;
+  maxUploadTemplates: number;
 }
 
 export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
   free: {
     maxDrivers: 10,
-    maxAdminAccounts: 0,             // 추가 관리자 불가
-    maxDefaultTemplates: 0,          // 기본 템플릿 사용 불가
-    maxUploadTemplates: 0,           // 업로드 불가
+    maxAdminAccounts: 0,
+    maxDefaultTemplates: 0,
+    maxUploadTemplates: 0,
   },
   basic: {
-    maxDrivers: 50,
-    maxAdminAccounts: 3,             // 관리자 3명 추가 가능
-    maxDefaultTemplates: 3,          // 기본 템플릿 3개 선택
-    maxUploadTemplates: 3,           // 업로드 3개
+    maxDrivers: 30,
+    maxAdminAccounts: 2,
+    maxDefaultTemplates: 3,
+    maxUploadTemplates: 3,
   },
   standard: {
-    maxDrivers: 100,
-    maxAdminAccounts: 3,
+    maxDrivers: 80,
+    maxAdminAccounts: 5,
     maxDefaultTemplates: 6,
     maxUploadTemplates: 6,
   },
-  enterprise: {
-    maxDrivers: null,
-    maxAdminAccounts: 3,
+  pro: {
+    maxDrivers: 150,
+    maxAdminAccounts: 10,
     maxDefaultTemplates: 10,
     maxUploadTemplates: 10,
   },
+  enterprise: {
+    maxDrivers: null,
+    maxAdminAccounts: 99,
+    maxDefaultTemplates: 99,
+    maxUploadTemplates: 99,
+  },
 };
 
-/** 플랜 라벨 */
 export const PLAN_LABELS: Record<PlanType, string> = {
   free: 'Free',
   basic: 'Basic',
   standard: 'Standard',
+  pro: 'Pro',
   enterprise: 'Enterprise',
 };
 

@@ -51,7 +51,7 @@ const signupSchema = z.object({
     .regex(/^[\d-]{8,20}$/, '계좌번호 형식이 올바르지 않습니다')
     .optional(),
   bankHolder: z.string().max(30).optional(),
-  plan: z.enum(['free', 'basic', 'standard', 'enterprise']).default('free'),
+  plan: z.enum(['free', 'basic', 'standard', 'pro', 'enterprise']).default('free'),
   billing: z.enum(['monthly', '1year', '2year', '3year']).optional().default('monthly'),
 })
 
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. 구독(subscriptions) 레코드 생성
-    const planPrices: Record<string, number> = { free: 0, basic: 49900, standard: 99000, enterprise: 0 };
+    const planPrices: Record<string, number> = { free: 0, basic: 49900, standard: 99000, pro: 199000, enterprise: 0 };
     const monthlyAmount = planPrices[validated.plan] ?? 0;
     const _billingCycle = validated.billing ?? 'monthly';
 

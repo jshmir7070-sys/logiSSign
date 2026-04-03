@@ -9,7 +9,7 @@ import { formatBusinessNumber, formatPhoneNumber, formatBirthDate } from "@/lib/
 
 /* ───────────────────────── 타입 & 상수 ───────────────────────── */
 
-type PlanType = "free" | "basic" | "standard" | "enterprise";
+type PlanType = "free" | "basic" | "standard" | "pro" | "enterprise";
 type BillingCycle = "monthly" | "1year" | "2year" | "3year";
 
 interface PlanPricing {
@@ -215,7 +215,7 @@ function SignupContent() {
     const planParam = searchParams.get("plan");
     const billingParam = searchParams.get("billing");
     const updates: Partial<SignupForm> = {};
-    if (planParam && ["free", "basic", "standard", "enterprise"].includes(planParam)) {
+    if (planParam && ["free", "basic", "standard", "pro", "enterprise"].includes(planParam)) {
       updates.plan = planParam as PlanType;
     }
     if (billingParam && ["monthly", "1year", "2year", "3year"].includes(billingParam)) {

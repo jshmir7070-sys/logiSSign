@@ -37,7 +37,8 @@ const PLAN_FEES: Record<string, number> = {
   free: 0,
   basic: 49900,
   standard: 99000,
-  enterprise: 199000,
+  pro: 199000,
+  enterprise: 0,
 };
 
 export default function DashboardPage() {
@@ -67,7 +68,7 @@ export default function DashboardPage() {
       const active = agencies.filter(a => a.status === 'active');
 
       // Plan distribution
-      const planCounts: Record<string, number> = { free: 0, basic: 0, standard: 0, enterprise: 0 };
+      const planCounts: Record<string, number> = { free: 0, basic: 0, standard: 0, pro: 0, enterprise: 0 };
       for (const a of active) {
         const plan = (a.plan as string) || 'free';
         planCounts[plan] = (planCounts[plan] ?? 0) + 1;
@@ -169,7 +170,7 @@ export default function DashboardPage() {
         <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 min-h-[320px]">
           <h3 className="font-headline text-on-surface text-[16px] font-bold mb-1">플랜별 구독 분포</h3>
           <p className="font-body text-on-surface-variant text-[13px] mb-6">
-            Free {stats?.planCounts.free ?? 0} · Basic {stats?.planCounts.basic ?? 0} · Standard {stats?.planCounts.standard ?? 0} · Enterprise {stats?.planCounts.enterprise ?? 0}
+            Free {stats?.planCounts.free ?? 0} · Basic {stats?.planCounts.basic ?? 0} · Standard {stats?.planCounts.standard ?? 0} · Pro {stats?.planCounts.pro ?? 0} · Enterprise {stats?.planCounts.enterprise ?? 0}
           </p>
           <PlanDistribution />
         </div>

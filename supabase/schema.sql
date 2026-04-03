@@ -29,7 +29,7 @@ CREATE TABLE agencies (
   bank_account TEXT,          -- 계좌번호
   bank_holder TEXT,           -- 예금주
   business_reg_file_url TEXT, -- 사업자등록증 파일
-  plan TEXT CHECK (plan IN ('free','basic','standard','enterprise')) DEFAULT 'free',
+  plan TEXT CHECK (plan IN ('free','basic','standard','pro','enterprise')) DEFAULT 'free',
   max_drivers INTEGER DEFAULT 10,
   monthly_fee INTEGER DEFAULT 0,
   status TEXT CHECK (status IN ('active','suspended','cancelled')) DEFAULT 'active',

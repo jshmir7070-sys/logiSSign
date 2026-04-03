@@ -5,7 +5,7 @@
 // =============================================================
 
 // Enum types matching SQL CHECK constraints
-export type AgencyPlan = 'free' | 'basic' | 'standard' | 'enterprise';
+export type AgencyPlan = 'free' | 'basic' | 'standard' | 'pro' | 'enterprise';
 export type AgencyStatus = 'active' | 'suspended' | 'cancelled';
 export type DriverStatus = 'active' | 'inactive';
 export type DriverTaxType = 'individual' | 'business' | 'vat_invoice' | 'withholding_3_3' | 'manual_reverse' | 'none';

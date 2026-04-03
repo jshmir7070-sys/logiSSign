@@ -24,7 +24,7 @@ interface SubscriptionInfo {
 }
 
 const PLAN_NAMES: Record<string, string> = {
-  free: 'Free', basic: 'Basic', standard: 'Standard', enterprise: 'Enterprise',
+  free: 'Free', basic: 'Basic', standard: 'Standard', pro: 'Pro', enterprise: 'Enterprise',
 };
 const CYCLE_NAMES: Record<string, string> = {
   monthly: '월결제', '1year': '1년', '2year': '2년', '3year': '3년',

@@ -84,8 +84,8 @@ export default function BillingTab() {
     setProcessing(false);
   };
 
-  const planLabels: Record<string, string> = { free: 'Free', basic: 'Basic', standard: 'Standard', enterprise: 'Enterprise' };
-  const planPrices: Record<string, string> = { free: '₩0', basic: '₩49,900', standard: '₩99,000', enterprise: '별도 상담' };
+  const planLabels: Record<string, string> = { free: 'Free', basic: 'Basic', standard: 'Standard', pro: 'Pro', enterprise: 'Enterprise' };
+  const planPrices: Record<string, string> = { free: '₩0', basic: '₩49,900', standard: '₩99,000', pro: '₩199,000', enterprise: '별도 문의' };
 
   if (loading) return <p className="text-center text-on-surface-variant py-12 font-korean">불러오는 중...</p>;
 
