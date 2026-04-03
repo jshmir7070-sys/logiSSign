@@ -272,7 +272,7 @@ export default function HomePage() {
         .nav-link:hover { color:white; }
 
         .hero { text-align:center; padding-top:20px; }
-        .hero-logo { width:500px; max-width:85%; object-fit:contain; margin:0 auto 28px; display:block; }
+        .hero-logo { width:1500px; max-width:90%; object-fit:contain; margin:0 auto 28px; display:block; }
         .badge { display:inline-flex; align-items:center; gap:8px; padding:6px 16px; border-radius:999px; background:rgba(37,99,235,0.12); border:1px solid rgba(37,99,235,0.25); font-size:13px; font-weight:600; color:#93c5fd; margin-bottom:24px; }
         .badge-dot { width:8px; height:8px; border-radius:50%; background:#22c55e; animation:pulse 2s ease-in-out infinite; }
         @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
@@ -338,7 +338,7 @@ export default function HomePage() {
           .price-cards { grid-template-columns:repeat(2,1fr); }
           .nav-links { gap:12px; }
           .nav-link { font-size:12px; }
-          .hero-logo { width:360px; max-width:85%; }
+          .hero-logo { width:90%; max-width:1000px; }
         }
       `}</style>
     </div>
