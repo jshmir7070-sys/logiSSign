@@ -23,7 +23,7 @@ describe('plan-limits', () => {
   describe('getPlanLimits', () => {
     it('유효한 플랜 → 해당 제한 반환', () => {
       const limits = getPlanLimits('standard')
-      expect(limits.maxDrivers).toBe(100)
+      expect(limits.maxDrivers).toBe(80)
       expect(limits.maxAdminAccounts).toBe(3)
       expect(limits.maxDefaultTemplates).toBe(6)
     })
@@ -46,8 +46,8 @@ describe('plan-limits', () => {
   })
 
   describe('PLAN_LIMITS 구조', () => {
-    it('4개 플랜 존재', () => {
-      const plans: PlanType[] = ['free', 'basic', 'standard', 'enterprise']
+    it('5개 플랜 존재', () => {
+      const plans: PlanType[] = ['free', 'basic', 'standard', 'pro', 'enterprise']
       for (const plan of plans) {
         expect(PLAN_LIMITS[plan]).toBeDefined()
         expect(PLAN_LIMITS[plan].maxAdminAccounts).toBeTypeOf('number')
@@ -67,10 +67,11 @@ describe('plan-limits', () => {
   })
 
   describe('PLAN_LABELS', () => {
-    it('4개 라벨 존재', () => {
+    it('5개 라벨 존재', () => {
       expect(PLAN_LABELS.free).toBe('Free')
       expect(PLAN_LABELS.basic).toBe('Basic')
       expect(PLAN_LABELS.standard).toBe('Standard')
+      expect(PLAN_LABELS.pro).toBe('Pro')
       expect(PLAN_LABELS.enterprise).toBe('Enterprise')
     })
   })

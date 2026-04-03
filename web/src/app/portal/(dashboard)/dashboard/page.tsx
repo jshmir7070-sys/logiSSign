@@ -27,7 +27,7 @@ const PLAN_NAMES: Record<string, string> = {
   free: 'Free', basic: 'Basic', standard: 'Standard', pro: 'Pro', enterprise: 'Enterprise',
 };
 const CYCLE_NAMES: Record<string, string> = {
-  monthly: '월결제', '1year': '1년', '2year': '2년', '3year': '3년',
+  monthly: '월결제', '1year': '1년 일시불', '2year': '2년 일시불',
 };
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   active: { label: '이용 중', color: 'text-tertiary' },

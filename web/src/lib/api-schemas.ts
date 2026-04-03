@@ -104,7 +104,7 @@ export const paymentChargeSchema = z.object({
   action: z.literal('charge'),
   billingKey: z.string().optional(),
   plan: z.enum(['free', 'basic', 'standard', 'pro', 'enterprise']),
-  billing: z.enum(['monthly', 'yearly']),
+  billing: z.enum(['monthly', '1year', '2year']),
 })
 
 export const paymentVerifyIdentitySchema = z.object({

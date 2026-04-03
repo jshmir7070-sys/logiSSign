@@ -10,13 +10,12 @@ import { formatBusinessNumber, formatPhoneNumber, formatBirthDate } from "@/lib/
 /* ───────────────────────── 타입 & 상수 ───────────────────────── */
 
 type PlanType = "free" | "basic" | "standard" | "pro" | "enterprise";
-type BillingCycle = "monthly" | "1year" | "2year" | "3year";
+type BillingCycle = "monthly" | "1year" | "2year";
 
 interface PlanPricing {
   monthly: number;
   discountYear1: number;
   discountYear2: number;
-  discountYear3: number;
 }
 
 interface Plan {
@@ -33,8 +32,8 @@ interface Plan {
 const PLANS: Plan[] = [
   {
     id: "free",
-    name: "Free",
-    pricing: { monthly: 0, discountYear1: 0, discountYear2: 0, discountYear3: 0 },
+    name: "무료",
+    pricing: { monthly: 0, discountYear1: 0, discountYear2: 0 },
     maxDrivers: 10,
     features: ["기사 10명까지", "기본 정산 관리", "엑셀 업로드 정산"],
     disabled: ["관리자 추가 ✕", "기본 템플릿 ✕", "템플릿 업로드 ✕", "기사 모바일 앱 ✕", "전자계약서 ✕", "세금계산서 ✕", "리포트 ✕"],
@@ -42,18 +41,26 @@ const PLANS: Plan[] = [
   {
     id: "basic",
     name: "Basic",
-    pricing: { monthly: 49900, discountYear1: 20, discountYear2: 30, discountYear3: 40 },
-    maxDrivers: 50,
-    features: ["기사 50명까지", "관리자 3명 추가", "기본 템플릿 3개", "업로드 템플릿 3개", "기사 모바일 앱", "정산서 발송", "전자계약서 발송/서명", "세금계산서 발행", "이메일 지원"],
+    pricing: { monthly: 49900, discountYear1: 20, discountYear2: 30 },
+    maxDrivers: 30,
+    features: ["기사 30명까지", "관리자 2명 추가", "기본 템플릿 3개", "업로드 템플릿 3개", "기사 모바일 앱", "정산서 발송", "전자계약서 발송/서명", "세금계산서 발행", "이메일 지원"],
     disabled: [],
-    popular: true,
   },
   {
     id: "standard",
     name: "Standard",
-    pricing: { monthly: 99000, discountYear1: 20, discountYear2: 30, discountYear3: 40 },
-    maxDrivers: 100,
-    features: ["기사 100명까지", "관리자 3명 추가", "기본 템플릿 6개", "업로드 템플릿 6개", "Basic 전체 기능 포함", "매출 리포트", "푸시 알림", "전화 지원", "API 연동"],
+    pricing: { monthly: 99000, discountYear1: 20, discountYear2: 30 },
+    maxDrivers: 80,
+    features: ["기사 80명까지", "관리자 5명 추가", "기본 템플릿 6개", "업로드 템플릿 6개", "Basic 전체 기능 포함", "매출 리포트", "푸시 알림", "전화 지원"],
+    disabled: [],
+    popular: true,
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    pricing: { monthly: 199000, discountYear1: 20, discountYear2: 30 },
+    maxDrivers: 150,
+    features: ["기사 150명까지", "관리자 10명 추가", "기본 템플릿 10개", "업로드 템플릿 10개", "Standard 전체 기능 포함", "전담 지원", "API 연동", "맞춤형 정산 규칙"],
     disabled: [],
   },
   {
@@ -61,7 +68,7 @@ const PLANS: Plan[] = [
     name: "Enterprise",
     pricing: null,
     maxDrivers: null,
-    features: ["기사 무제한", "관리자 3명 추가", "기본 템플릿 10개", "업로드 템플릿 10개", "Standard 전체 기능 포함", "맞춤형 정산 규칙", "전담 매니저 배정", "SLA 99.9%", "커스텀 계약서"],
+    features: ["기사 150명 이상", "관리자 무제한", "Pro 전체 기능 포함", "전담 매니저 배정", "SLA 99.9%", "커스텀 계약서", "온보딩 지원"],
     disabled: [],
     contactOnly: true,
   },
@@ -69,16 +76,14 @@ const PLANS: Plan[] = [
 
 const CYCLE_OPTIONS: { value: BillingCycle; label: string; badge: string }[] = [
   { value: "monthly", label: "월결제", badge: "" },
-  { value: "1year", label: "1년", badge: "20% 할인" },
-  { value: "2year", label: "2년", badge: "30% 할인" },
-  { value: "3year", label: "3년", badge: "40% 할인" },
+  { value: "1year", label: "1년 일시불", badge: "20% 할인" },
+  { value: "2year", label: "2년 일시불", badge: "30% 할인" },
 ];
 
 const CYCLE_LABEL: Record<BillingCycle, string> = {
-  monthly: "월결제",
-  "1year": "1년 일시불",
-  "2year": "2년 일시불",
-  "3year": "3년 일시불",
+  monthly: "월결제 (카드)",
+  "1year": "1년 일시불 (카드할부 가능)",
+  "2year": "2년 일시불 (카드할부 가능)",
 };
 
 /* ───────────────────────── 유틸 ───────────────────────── */
@@ -94,7 +99,6 @@ function getDiscountRate(plan: Plan, cycle: BillingCycle): number {
     case "monthly": return 0;
     case "1year": return plan.pricing.discountYear1;
     case "2year": return plan.pricing.discountYear2;
-    case "3year": return plan.pricing.discountYear3;
   }
 }
 
@@ -103,7 +107,6 @@ function getMonths(cycle: BillingCycle): number {
     case "monthly": return 1;
     case "1year": return 12;
     case "2year": return 24;
-    case "3year": return 36;
   }
 }
 
@@ -218,7 +221,7 @@ function SignupContent() {
     if (planParam && ["free", "basic", "standard", "pro", "enterprise"].includes(planParam)) {
       updates.plan = planParam as PlanType;
     }
-    if (billingParam && ["monthly", "1year", "2year", "3year"].includes(billingParam)) {
+    if (billingParam && ["monthly", "1year", "2year"].includes(billingParam)) {
       updates.billingCycle = billingParam as BillingCycle;
     }
     if (Object.keys(updates).length > 0) {

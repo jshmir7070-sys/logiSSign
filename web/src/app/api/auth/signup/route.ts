@@ -52,7 +52,7 @@ const signupSchema = z.object({
     .optional(),
   bankHolder: z.string().max(30).optional(),
   plan: z.enum(['free', 'basic', 'standard', 'pro', 'enterprise']).default('free'),
-  billing: z.enum(['monthly', '1year', '2year', '3year']).optional().default('monthly'),
+  billing: z.enum(['monthly', '1year', '2year']).optional().default('monthly'),
 })
 
 /**
