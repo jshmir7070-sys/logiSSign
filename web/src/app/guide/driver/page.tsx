@@ -159,9 +159,9 @@ export default function DriverGuidePage() {
                         </div>
                       )}
 
-                      {g.mockup.type === 'phone-list' && g.mockup.items && (
+                      {g.mockup.type === 'phone-list' && 'items' in g.mockup && (
                         <div className="space-y-2">
-                          {g.mockup.items.map(item => (
+                          {(g.mockup.items as { title: string; status: string; pct: number }[]).map(item => (
                             <div key={item.title} className="bg-surface-container-low rounded-xl p-3 flex justify-between items-center">
                               <div>
                                 <p className="text-[11px] font-medium text-on-surface">{item.title}</p>
@@ -177,9 +177,9 @@ export default function DriverGuidePage() {
                         </div>
                       )}
 
-                      {g.mockup.type === 'phone-menu' && g.mockup.items && (
+                      {g.mockup.type === 'phone-menu' && 'items' in g.mockup && (
                         <div className="space-y-1">
-                          {g.mockup.items.map(item => (
+                          {(g.mockup.items as string[]).map(item => (
                             <div key={item} className="flex items-center gap-2 py-2 px-2 rounded-lg hover:bg-surface-container-low text-[11px] text-on-surface">{item}</div>
                           ))}
                         </div>
