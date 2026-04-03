@@ -87,27 +87,25 @@ const COMPARE = [
 ];
 
 /* 결제 모델별 가격 */
-type BillingCycle = 'monthly' | '1year' | '2year' | '3year';
+type BillingCycle = 'monthly' | '1year' | '2year';
 
 interface PlanPricing {
   monthly: number;        // 월결제 가격
   yearly1: number;        // 1년 일시불 총액
-  yearly2: number;        // 2년 일시불 총액
-  yearly3: number;        // 3년 일시불 총액
-  discountYear1: number;  // 1년 할인율 %
-  discountYear2: number;  // 2년 할인율 %
-  discountYear3: number;  // 3년 할인율 %
+  yearly2: number;
+  discountYear1: number;
+  discountYear2: number;
 }
 
 interface Plan {
   id: string;
   name: string;
-  pricing: PlanPricing | null;  // null = Enterprise (상담)
+  pricing: PlanPricing | null;
   desc: string;
   maxDrivers: number | null;
   features: string[];
   disabled: string[];
-  techFeatures: string[];  // 기술적 기능
+  techFeatures: string[];
   cta: string;
   popular: boolean;
 }
@@ -115,10 +113,10 @@ interface Plan {
 const PLANS: Plan[] = [
   {
     id: 'free',
-    name: 'Free',
+    name: '무료',
     pricing: {
-      monthly: 0, yearly1: 0, yearly2: 0, yearly3: 0,
-      discountYear1: 0, discountYear2: 0, discountYear3: 0,
+      monthly: 0, yearly1: 0, yearly2: 0,
+      discountYear1: 0, discountYear2: 0,
     },
     desc: '소규모 대리점 시작',
     maxDrivers: 10,
@@ -133,44 +131,59 @@ const PLANS: Plan[] = [
     name: 'Basic',
     pricing: {
       monthly: 49900,
-      yearly1: 49900 * 12 * 0.8,   // 20% 할인
-      yearly2: 49900 * 24 * 0.7,   // 30% 할인
-      yearly3: 49900 * 36 * 0.6,   // 40% 할인
-      discountYear1: 20, discountYear2: 30, discountYear3: 40,
+      yearly1: 49900 * 12 * 0.8,
+      yearly2: 49900 * 24 * 0.7,
+      discountYear1: 20, discountYear2: 30,
     },
     desc: '성장하는 대리점에 추천',
-    maxDrivers: 50,
-    features: ['기사 50명까지', '기사 모바일 앱', '정산서 발송', '전자계약서 발송/서명', '세금계산서 발행', '이메일 지원'],
+    maxDrivers: 30,
+    features: ['기사 30명까지', '기사 모바일 앱', '정산서 발송', '전자계약서 발송/서명', '세금계산서 발행', '이메일 지원'],
     disabled: [],
     techFeatures: ['SHA-256 해시 기반 문서 진위확인', 'QR 코드 검증 시스템', '감사추적인증서 자동 발급', 'PDF 워터마크 원본 증명'],
-    cta: '14일 무료 체험',
-    popular: true,
+    cta: '시작하기',
+    popular: false,
   },
   {
     id: 'standard',
     name: 'Standard',
     pricing: {
       monthly: 99000,
-      yearly1: 99000 * 12 * 0.8,   // 20% 할인
-      yearly2: 99000 * 24 * 0.7,   // 30% 할인
-      yearly3: 99000 * 36 * 0.6,   // 40% 할인
-      discountYear1: 20, discountYear2: 30, discountYear3: 40,
+      yearly1: 99000 * 12 * 0.8,
+      yearly2: 99000 * 24 * 0.7,
+      discountYear1: 20, discountYear2: 30,
     },
-    desc: '대규모 대리점 운영',
-    maxDrivers: 100,
-    features: ['기사 100명까지', 'Basic 전체 기능', '매출 리포트', '푸시 알림', '전화 지원', 'API 연동'],
+    desc: '중규모 대리점 운영',
+    maxDrivers: 80,
+    features: ['기사 80명까지', 'Basic 전체 기능', '매출 리포트', '푸시 알림', '전화 지원'],
     disabled: [],
     techFeatures: ['SHA-256 트리플 해싱 위변조 방지', 'DB 불변 트리거 (서명 데이터 보호)', '정기 무결성 검사 (CRON)', '해시 체인 감사추적'],
-    cta: '14일 무료 체험',
+    cta: '시작하기',
+    popular: true,
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    pricing: {
+      monthly: 199000,
+      yearly1: 199000 * 12 * 0.8,
+      yearly2: 199000 * 24 * 0.7,
+      discountYear1: 20, discountYear2: 30,
+    },
+    desc: '대규모 대리점 전담 지원',
+    maxDrivers: 150,
+    features: ['기사 150명까지', 'Standard 전체 기능', '전담 지원', 'API 연동', '맞춤형 정산 규칙'],
+    disabled: [],
+    techFeatures: ['전담 기술 지원', '커스텀 API 연동', '맞춤형 정산 로직'],
+    cta: '시작하기',
     popular: false,
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
     pricing: null,
-    desc: '맞춤형 대규모 운영',
+    desc: '150명 이상 맞춤 구축',
     maxDrivers: null,
-    features: ['기사 무제한', 'Standard 전체 기능', '맞춤형 정산 규칙', '전담 매니저', 'SLA 99.9%', '커스텀 계약서'],
+    features: ['기사 150명 이상', 'Pro 전체 기능', '전담 매니저', 'SLA 99.9%', '커스텀 계약서', '온보딩 지원'],
     disabled: [],
     techFeatures: ['전담 보안 감사 리포트', '커스텀 API 연동', '전용 서버 옵션', '위변조 감지 알림 (Slack/이메일)'],
     cta: '상담 신청',
@@ -180,10 +193,10 @@ const PLANS: Plan[] = [
 
 /* 맞춤 플랜 찾기 질문 */
 const PLAN_QUIZ = [
-  { q: '현재 소속 기사 수가 몇 명인가요?', options: ['10명 이하', '11~50명', '51~100명', '100명 이상'] },
+  { q: '현재 소속 기사 수가 몇 명인가요?', options: ['10명 이하', '11~30명', '31~80명', '81~150명', '150명 이상'] },
   { q: '전자계약서(위수탁 표준계약서) 기능이 필요한가요?', options: ['필요 없음', '필요함'] },
   { q: '계약서 진위확인·위변조 방지가 중요한가요?', options: ['중요하지 않음', '있으면 좋겠음', '필수'] },
-  { q: '결제 방식은 어떤 것을 선호하시나요?', options: ['월결제', '1년 일시불 (20% 할인)', '2년 일시불 (30% 할인)', '3년 일시불 (40% 할인)'] },
+  { q: '결제 방식은 어떤 것을 선호하시나요?', options: ['월결제', '1년 일시불 (20% 할인)', '2년 일시불 (30% 할인)'] },
 ];
 
 /* 가격 포맷 */
@@ -198,7 +211,6 @@ function getMonthlyEquivalent(plan: Plan, cycle: BillingCycle): number {
     case 'monthly': return plan.pricing.monthly;
     case '1year': return plan.pricing.yearly1 / 12;
     case '2year': return plan.pricing.yearly2 / 24;
-    case '3year': return plan.pricing.yearly3 / 36;
   }
 }
 
@@ -208,7 +220,6 @@ function getTotalPrice(plan: Plan, cycle: BillingCycle): number {
     case 'monthly': return plan.pricing.monthly;
     case '1year': return plan.pricing.yearly1;
     case '2year': return plan.pricing.yearly2;
-    case '3year': return plan.pricing.yearly3;
   }
 }
 
@@ -218,7 +229,6 @@ function getDiscount(plan: Plan, cycle: BillingCycle): number {
     case 'monthly': return 0;
     case '1year': return plan.pricing.discountYear1;
     case '2year': return plan.pricing.discountYear2;
-    case '3year': return plan.pricing.discountYear3;
   }
 }
 
@@ -226,7 +236,7 @@ const CYCLE_LABELS: Record<BillingCycle, string> = {
   monthly: '월결제',
   '1year': '1년 일시불',
   '2year': '2년 일시불',
-  '3year': '3년 일시불',
+  
 };
 
 const FAQS = [
@@ -256,7 +266,7 @@ const FAQS = [
   },
   {
     q: '일시불 결제 시 할인은 어떻게 되나요?',
-    a: '1년 일시불 20%, 2년 30%, 3년 40% 할인이 적용됩니다. 예를 들어 Basic 플랜을 3년 일시불로 결제하면 월 ₩49,900 대신 월 ₩29,940(환산)에 사용하실 수 있습니다. 모든 일시불 결제는 14일 내 전액 환불 가능합니다.',
+    a: '1년 일시불 20%, 2년 일시불 30% 할인이 적용됩니다. 예를 들어 Basic 플랜을 1년 일시불로 결제하면 월 ₩49,900 대신 월 ₩39,920(환산)에 사용하실 수 있습니다.',
   },
 ];
 
@@ -357,19 +367,19 @@ function PlanFinder() {
     const driverSize = answers[0] ?? 0;   // 0=10이하, 1=11~50, 2=51~100, 3=100+
     const needContract = answers[1] ?? 0;  // 0=불필요, 1=필요
     const needSecurity = answers[2] ?? 0;  // 0=안중요, 1=있으면, 2=필수
-    const billingPref = answers[3] ?? 0;   // 0=월, 1=1년, 2=2년, 3=3년
+    const billingPref = answers[3] ?? 0;   // 0=월, 1=1년, 2=2년
 
-    const cycles: BillingCycle[] = ['monthly', '1year', '2year', '3year'];
+    const cycles: BillingCycle[] = ['monthly', '1year', '2year'];
     const cycle = cycles[billingPref] ?? 'monthly';
 
     if (driverSize >= 3 || needSecurity >= 2) {
-      return { plan: PLANS[3], cycle, reason: '기사 100명 이상 + 최고 수준 보안이 필요하시므로 Enterprise를 추천합니다.' };
+      return { plan: PLANS[4], cycle, reason: '기사 150명 이상이므로 Enterprise를 추천합니다.' };
     }
     if (driverSize >= 2 || needSecurity >= 1) {
-      return { plan: PLANS[2], cycle, reason: '기사 51명 이상이거나 위변조 방지가 필요하시므로 Standard를 추천합니다.' };
+      return { plan: PLANS[2], cycle, reason: '기사 31명 이상이므로 Standard를 추천합니다.' };
     }
     if (driverSize >= 1 || needContract >= 1) {
-      return { plan: PLANS[1], cycle, reason: '전자계약서가 필요하고 기사 50명까지 지원되는 Basic을 추천합니다.' };
+      return { plan: PLANS[1], cycle, reason: '전자계약서가 필요하고 기사 30명까지 지원되는 Basic을 추천합니다.' };
     }
     return { plan: PLANS[0], cycle: 'monthly', reason: '기사 10명 이하에 기본 기능이면 충분하므로 Free로 시작하세요.' };
   };
@@ -420,7 +430,7 @@ function PlanFinder() {
   // 결과
   const { plan, cycle, reason } = getRecommendation();
   const monthlyEq = getMonthlyEquivalent(plan, cycle);
-  const allCycles: BillingCycle[] = ['monthly', '1year', '2year', '3year'];
+  const allCycles: BillingCycle[] = ['monthly', '1year', '2year'];
 
   return (
     <div className="mt-8 bg-gradient-to-br from-primary/[0.06] to-[#2563eb]/[0.04] rounded-2xl border border-primary/15 p-6">
@@ -701,9 +711,9 @@ export default function LandingPage() {
 
           {/* ── 결제주기 토글 ── */}
           <div className="flex items-center justify-center gap-2 mb-12 flex-wrap">
-            {(['monthly', '1year', '2year', '3year'] as BillingCycle[]).map((cycle) => {
+            {(['monthly', '1year', '2year'] as BillingCycle[]).map((cycle) => {
               const isActive = billingCycle === cycle;
-              const discounts: Record<BillingCycle, string> = { monthly: '', '1year': '20% 할인', '2year': '30% 할인', '3year': '40% 할인' };
+              const discounts: Record<BillingCycle, string> = { monthly: '', '1year': '20% 할인', '2year': '30% 할인' };
               return (
                 <button
                   key={cycle}

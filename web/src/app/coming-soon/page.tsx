@@ -96,20 +96,30 @@ export default function ComingSoonPage() {
         {/* Pricing Preview */}
         <div className="pricing-preview fade-in" style={{ animationDelay: '1.6s' }}>
           <div className="price-card">
-            <span className="price-name">Free</span>
+            <span className="price-name">무료</span>
             <span className="price-val">₩0</span>
-            <span className="price-desc">10명 이하 · 정산만</span>
+            <span className="price-desc">10명 이하</span>
+          </div>
+          <div className="price-card">
+            <span className="price-name">Basic</span>
+            <span className="price-val">₩49,900</span>
+            <span className="price-desc">30명</span>
           </div>
           <div className="price-card price-popular">
             <span className="price-badge">추천</span>
-            <span className="price-name">Basic</span>
-            <span className="price-val">₩49,900</span>
-            <span className="price-desc">50명 · 전체 기능</span>
-          </div>
-          <div className="price-card">
             <span className="price-name">Standard</span>
             <span className="price-val">₩99,000</span>
-            <span className="price-desc">100명 · 리포트 포함</span>
+            <span className="price-desc">80명</span>
+          </div>
+          <div className="price-card">
+            <span className="price-name">Pro</span>
+            <span className="price-val">₩199,000</span>
+            <span className="price-desc">150명</span>
+          </div>
+          <div className="price-card">
+            <span className="price-name">Enterprise</span>
+            <span className="price-val">별도 문의</span>
+            <span className="price-desc">150명 이상</span>
           </div>
         </div>
 
