@@ -19,6 +19,7 @@ const navItems: NavItem[] = [
   { label: '서버 상태', icon: 'dns', href: '/admin/server' },
   { label: '감사 로그', icon: 'security', href: '/admin/audit-log' },
   { label: '설정', icon: 'settings', href: '/admin/settings' },
+  { label: '사용 가이드', icon: 'help', href: '/admin/guide' },
 ];
 
 export default function Sidebar() {

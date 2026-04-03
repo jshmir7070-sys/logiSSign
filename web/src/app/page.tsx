@@ -61,7 +61,6 @@ export default function HomePage() {
             <img src="/logo.png" alt="logiSSign" className="nav-logo" />
           </div>
           <div className="nav-links">
-            <Link href="/guide" className="nav-link">사용 가이드</Link>
             <Link href="/about" className="nav-link">서비스 소개</Link>
             <Link href="/portal/login" className="nav-link">로그인</Link>
           </div>

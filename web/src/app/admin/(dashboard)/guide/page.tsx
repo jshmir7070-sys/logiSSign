@@ -63,10 +63,10 @@ const guides = [
 
 export default function AdminGuidePage() {
   return (
-    <div className="min-h-screen bg-surface">
-      <div className="bg-gradient-to-br from-purple-600 to-purple-800 text-white">
+    
+      <div>
         <div className="max-w-4xl mx-auto px-6 py-12">
-          <Link href="/guide" className="text-white/50 text-sm hover:text-white/80 mb-4 inline-block">← 가이드 홈</Link>
+          <Link href="/admin/guide" className="text-white/50 text-sm hover:text-white/80 mb-4 inline-block">← 가이드</Link>
           <h1 className="text-2xl font-bold mb-2">🛡️ 관리자 가이드</h1>
           <p className="text-white/70 text-sm">구독사 관리, 매출 분석, 서버 모니터링, 감사 로그 등 슈퍼 관리자 기능</p>
         </div>
@@ -153,7 +153,7 @@ export default function AdminGuidePage() {
         </div>
 
         <div className="mt-16 text-center pb-12">
-          <Link href="/guide" className="text-sm text-primary hover:underline">← 가이드 홈으로</Link>
+          <Link href="/admin/guide" className="text-sm text-primary hover:underline">← 가이드으로</Link>
         </div>
       </div>
     </div>

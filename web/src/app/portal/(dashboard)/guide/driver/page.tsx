@@ -83,7 +83,7 @@ export default function DriverGuidePage() {
     <div className="min-h-screen bg-surface">
       <div className="bg-gradient-to-br from-emerald-600 to-emerald-800 text-white">
         <div className="max-w-4xl mx-auto px-6 py-12">
-          <Link href="/guide" className="text-white/50 text-sm hover:text-white/80 mb-4 inline-block">← 가이드 홈</Link>
+          <Link href="/portal/guide" className="text-white/50 text-sm hover:text-white/80 mb-4 inline-block">← 가이드</Link>
           <h1 className="text-2xl font-bold mb-2">📱 기사 앱 가이드</h1>
           <p className="text-white/70 text-sm">정산서 확인, 계약서 서명, 교육 이수, 서류 관리 사용법</p>
         </div>
@@ -222,7 +222,7 @@ export default function DriverGuidePage() {
         </div>
 
         <div className="mt-16 text-center pb-12">
-          <Link href="/guide" className="text-sm text-primary hover:underline">← 가이드 홈으로</Link>
+          <Link href="/portal/guide" className="text-sm text-primary hover:underline">← 가이드으로</Link>
         </div>
       </div>
     </div>
