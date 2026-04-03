@@ -81,9 +81,9 @@ const CYCLE_OPTIONS: { value: BillingCycle; label: string; badge: string }[] = [
 ];
 
 const CYCLE_LABEL: Record<BillingCycle, string> = {
-  monthly: "월결제 (카드)",
-  "1year": "1년 일시불 (카드할부 가능)",
-  "2year": "2년 일시불 (카드할부 가능)",
+  monthly: "월결제 (자동결제)",
+  "1year": "1년 일시불 (20% 할인)",
+  "2year": "2년 일시불 (30% 할인)",
 };
 
 /* ───────────────────────── 유틸 ───────────────────────── */
