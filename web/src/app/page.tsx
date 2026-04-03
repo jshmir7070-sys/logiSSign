@@ -62,7 +62,7 @@ export default function HomePage() {
           </div>
           <div className="nav-links">
             <Link href="/about" className="nav-link">서비스 소개</Link>
-            <Link href="/portal/login" className="nav-link">대리점 로그인</Link>
+            <Link href="/portal/login" className="nav-link">로그인</Link>
           </div>
         </nav>
 

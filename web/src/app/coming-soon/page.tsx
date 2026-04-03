@@ -117,7 +117,7 @@ export default function ComingSoonPage() {
         <footer className="footer fade-in" style={{ animationDelay: '1.8s' }}>
           <p>© 2026 logiSSign(로지싸인). All rights reserved.</p>
           <p className="footer-links">
-            <a href="/portal/login">대리점 포털</a>
+            <a href="/portal/login">로그인</a>
             <span>·</span>
             <a href="/admin/login">관리자</a>
           </p>

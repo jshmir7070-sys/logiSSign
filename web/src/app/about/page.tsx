@@ -244,7 +244,7 @@ const FAQS = [
   },
   {
     q: '기사가 스마트폰이 없으면 어떻게 하나요?',
-    a: 'Free 플랜에서는 웹 기반 정산만으로도 운영 가능합니다. 기사 앱이 없어도 대리점 포털에서 정산서 생성·확인이 가능하며, 필요 시 PDF로 출력할 수 있습니다.',
+    a: 'Free 플랜에서는 웹 기반 정산만으로도 운영 가능합니다. 기사 앱이 없어도 로그인에서 정산서 생성·확인이 가능하며, 필요 시 PDF로 출력할 수 있습니다.',
   },
   {
     q: '데이터 보안은 어떻게 관리되나요?',
@@ -985,7 +985,7 @@ export default function LandingPage() {
               <div>
                 <h4 className="text-gray-400 font-semibold mb-3">바로가기</h4>
                 <ul className="space-y-2 text-gray-500">
-                  <li><Link href="/portal/login" className="hover:text-gray-300 transition-colors">대리점 로그인</Link></li>
+                  <li><Link href="/portal/login" className="hover:text-gray-300 transition-colors">로그인</Link></li>
                   <li><Link href="/portal/signup" className="hover:text-gray-300 transition-colors">회원가입</Link></li>
                   <li><Link href="/admin/login" className="hover:text-gray-300 transition-colors">관리자</Link></li>
                   <li><a href="#verify" className="hover:text-gray-300 transition-colors">계약서 진위확인</a></li>
