@@ -23,7 +23,7 @@ export default function ComingSoonPage() {
         {/* Logo */}
         <div className="logo-section fade-in" style={{ animationDelay: '0.4s' }}>
           <div className="logo-icon">
-            <img src="/logo.png" alt="logiSSign" style={{ width: 320, maxWidth: "90%" }} />
+            <img src="/logo.png" alt="logiSSign" style={{ width: "80%", maxWidth: 600 }} />
           </div>
         </div>
 
