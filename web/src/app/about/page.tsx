@@ -516,11 +516,7 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-50 bg-[#0a0f1e]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#004ac6] to-[#2563eb] flex items-center justify-center">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="white" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
+            <img src="/logo.png" alt="logiSSign" className="w-9 h-9 object-contain" />
             <span className="text-white font-bold text-lg tracking-tight">
               logi<span className="text-[#60a5fa]">SSign</span>
             </span>
@@ -971,11 +967,7 @@ export default function LandingPage() {
             {/* Brand */}
             <div>
               <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#004ac6] to-[#2563eb] flex items-center justify-center">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="white" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
+                <img src="/logo.png" alt="logiSSign" className="w-8 h-8 object-contain" />
                 <span className="text-white font-bold">
                   logi<span className="text-[#60a5fa]">SSign</span>
                 </span>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendSms } from '@/services/sms.service'
 import { authenticateAdmin } from '@/lib/api-auth'
+import { smsSendSchema, validateInput } from '@/lib/api-schemas'
 
 /**
  * POST /api/sms/send
@@ -13,14 +14,16 @@ export async function POST(request: NextRequest) {
   if (authError || !auth) return authError!
 
   try {
-    const { to, text, from } = await request.json()
-
-    if (!to || !text) {
+    const rawBody = await request.json()
+    const { data: body, error: validationError } = validateInput(smsSendSchema, rawBody)
+    if (validationError || !body) {
       return NextResponse.json(
-        { error: '수신번호(to)와 메시지(text)는 필수입니다' },
+        { error: validationError ?? '잘못된 요청입니다' },
         { status: 400 }
       )
     }
+
+    const { to, text, from } = body
 
     const result = await sendSms({ to, text, from })
 

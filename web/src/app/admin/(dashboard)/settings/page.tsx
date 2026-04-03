@@ -43,7 +43,7 @@ export default function AdminSettingsPage() {
               <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5">플랫폼명</label>
               <input
                 type="text"
-                defaultValue="Precision Velocity"
+                defaultValue="logiSSign"
                 className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
             </div>
@@ -113,7 +113,7 @@ export default function AdminSettingsPage() {
       {activeTab === 'email' && (
         <div className="space-y-5">
           {[
-            { name: '회원가입 환영', subject: '환영합니다! Precision Velocity 가입이 완료되었습니다', status: '활성' },
+            { name: '회원가입 환영', subject: '환영합니다! logiSSign 가입이 완료되었습니다', status: '활성' },
             { name: '정산서 발송', subject: '[{month}월] 정산서가 발행되었습니다', status: '활성' },
             { name: '계약서 서명 요청', subject: '전자계약서 서명을 요청드립니다', status: '활성' },
             { name: '결제 실패', subject: '구독료 결제에 실패했습니다. 확인해주세요', status: '비활성' },

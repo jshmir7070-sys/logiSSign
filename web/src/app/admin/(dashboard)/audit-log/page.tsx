@@ -20,6 +20,7 @@ const EVENT_LABELS: Record<string, { label: string; variant: 'success' | 'error'
   auth_failure: { label: '로그인 실패', variant: 'error' },
   permission_denied: { label: '권한 거부', variant: 'error' },
   data_modification: { label: '데이터 변경', variant: 'warning' },
+  pii_access: { label: 'PII 접근', variant: 'info' },
   rate_limit_hit: { label: 'Rate Limit', variant: 'warning' },
   integrity_failure: { label: '무결성 실패', variant: 'error' },
   suspicious_activity: { label: '의심 활동', variant: 'error' },
@@ -66,6 +67,7 @@ export default function AdminAuditLogPage() {
           { key: 'auth_failure', label: '로그인 실패' },
           { key: 'permission_denied', label: '권한 거부' },
           { key: 'data_modification', label: '데이터 변경' },
+          { key: 'pii_access', label: 'PII 접근' },
           { key: 'rate_limit_hit', label: 'Rate Limit' },
           { key: 'integrity_failure', label: '무결성' },
         ].map(f => (

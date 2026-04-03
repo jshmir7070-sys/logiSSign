@@ -12,10 +12,6 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   cancelled: { label: '취소', color: 'bg-gray-100 text-gray-600' },
 };
 
-function formatKRW(n: number): string {
-  return `₩${n.toLocaleString('ko-KR')}`;
-}
-
 export default function SettlementHistoryPage() {
   const [jobs, setJobs] = useState<SettlementJobRow[]>([]);
   const [loading, setLoading] = useState(true);

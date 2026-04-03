@@ -41,6 +41,7 @@ const navItems: NavItem[] = [
     children: [
       { label: '계약서 목록', href: '/portal/contracts' },
       { label: '계약서 양식', href: '/portal/contracts/templates' },
+      { label: '변경이력', href: '/portal/amendments' },
       { label: '외부문서 관리', href: '/portal/documents' },
     ],
   },
@@ -53,10 +54,10 @@ const navItems: NavItem[] = [
     ),
     href: '/portal/settlements/generate',
     children: [
-      { label: '카테고리 관리', href: '/portal/principals' },
+      { label: '원청사 관리', href: '/portal/principals' },
       { label: '엑셀 업로드 정산', href: '/portal/settlements/upload' },
-      { label: '정산서 생성', href: '/portal/settlements/generate' },
-      { label: '정산서 빌더', href: '/portal/settlements/builder' },
+      { label: '정산서 일괄생성', href: '/portal/settlements/generate' },
+      { label: '정산서 양식 편집', href: '/portal/settlements/builder' },
       { label: '생성 이력', href: '/portal/settlements/history' },
       { label: '세금계산서', href: '/portal/tax-invoices' },
     ],
@@ -108,11 +109,14 @@ export default function Sidebar({ plan, ownerName }: { plan?: string; ownerName?
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-[240px] bg-sidebar flex flex-col z-40">
       {/* Brand */}
-      <div className="px-6 pt-8 pb-6">
-        <h1 className="text-white font-headline text-lg font-bold tracking-tight">
-          로지사인
-        </h1>
-        <p className="text-white/50 text-xs font-label mt-0.5">LogiSSign Portal</p>
+      <div className="px-6 pt-7 pb-5 flex items-center gap-3">
+        <img src="/logo.png" alt="logiSSign" className="w-9 h-9 object-contain" />
+        <div>
+          <h1 className="text-white font-headline text-[15px] font-bold leading-tight tracking-tight">
+            로지사인
+          </h1>
+          <p className="text-white/50 text-[11px] font-label mt-0.5">Portal</p>
+        </div>
       </div>
 
       {/* Navigation */}

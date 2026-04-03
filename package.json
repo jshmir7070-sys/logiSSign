@@ -1,8 +1,8 @@
 {
-  "name": "delisign",
+  "name": "logissign",
   "version": "1.0.0",
   "private": true,
-  "description": "DeliSign - 라스트마일 배송 정산/계약 SaaS 플랫폼",
+  "description": "logiSSign - 택배 대리점 정산·전자계약 자동화 플랫폼",
   "scripts": {
     "dev:web": "cd web && npm run dev",
     "dev:mobile": "cd mobile && npx expo start",

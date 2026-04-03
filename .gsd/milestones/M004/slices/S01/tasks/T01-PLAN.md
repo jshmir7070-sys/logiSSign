@@ -1,14 +1,12 @@
 ---
-estimated_steps: 3
+estimated_steps: 1
 estimated_files: 1
 skills_used: []
 ---
 
-# T01: 미사용 import 45건 + console 정리
+# T01: ESLint + console 검증
 
-1. npx next build로 미사용 import 목록 추출
-2. 각 파일에서 미사용 변수/import 제거
-3. 재빌드로 0건 확인
+ESLint + console.log 확인
 
 ## Inputs
 
@@ -16,8 +14,8 @@ skills_used: []
 
 ## Expected Output
 
-- `ESLint 경고 0건`
+- Update the implementation and proof artifacts needed for this task.
 
 ## Verification
 
-cd web && npx next build 2>&1 | grep -c 'defined but never used'
+npx next lint 경고 0건 + console.log 0건

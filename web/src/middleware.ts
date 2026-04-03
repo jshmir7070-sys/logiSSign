@@ -4,19 +4,25 @@ import { csrfCheck } from "@/lib/csrf";
 
 // 공개 경로: 인증 불필요
 const PUBLIC_ROUTES = [
-  "/",              // 메인 → coming-soon 리디렉트
-  "/coming-soon",   // 커밍순 페이지
+  "/",              // 메인 랜딩 페이지
+  "/coming-soon",   // 레거시 (리디렉트 호환)
   "/about",         // 서비스 소개 페이지
   "/terms",         // 이용약관
   "/privacy",       // 개인정보처리방침
   "/admin/login",   // 슈퍼관리자 로그인
   "/portal/login",  // 대리점 로그인
   "/portal/signup", // 대리점 회원가입
+  "/portal/find-id", // 아이디(이메일) 찾기
+  "/portal/reset-password", // 비밀번호 초기화
   "/verify",        // 공개 진위확인 페이지
   "/api/verify",    // 공개 진위확인 API
   "/api/auth/signup", // 운영사 회원가입 API
   "/api/auth/driver-signup", // 기사 가입 API (초대코드+계정+driver 연결 원자적)
+  "/api/auth/find-id",      // 아이디 찾기 API (공개)
+  "/api/auth/reset-password", // 비밀번호 초기화 API (공개)
   "/api/cron",      // CRON (자체 시크릿 인증)
+  "/api/health",    // 헬스체크 (인증 불필요)
+  "/api/beta-apply", // 베타 테스트 신청 (공개)
   "/_next",
   "/favicon.ico",
 ];
@@ -93,7 +99,7 @@ export async function middleware(request: NextRequest) {
     if (isPortalRoute) {
       return NextResponse.redirect(new URL("/portal/login", request.url));
     }
-    return NextResponse.redirect(new URL("/coming-soon", request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   // ⚠️ 보안: app_metadata만 사용 (user_metadata는 클라이언트 조작 가능)

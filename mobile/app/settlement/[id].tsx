@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Linking, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import Header from '../../components/common/Header';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
+import Button from '../../components/common/Button';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import {
   getSettlementDetail,
@@ -169,6 +170,22 @@ export default function SettlementDetailScreen() {
             </View>
           </Card>
         )}
+
+        {/* PDF 다운로드/보기 */}
+        {settlement.pdf_url ? (
+          <Button
+            title="정산서 PDF 보기"
+            variant="outline"
+            fullWidth
+            onPress={() => {
+              if (settlement.pdf_url) Linking.openURL(settlement.pdf_url);
+            }}
+          />
+        ) : (
+          <View style={styles.noPdfWrap}>
+            <Text style={styles.noPdfText}>PDF 정산서가 아직 생성되지 않았습니다</Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -226,4 +243,6 @@ const styles = StyleSheet.create({
   finalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   finalLabel: { ...typography.titleSmall, color: colors.onSurface },
   finalValue: { ...typography.titleLarge, color: colors.primary },
+  noPdfWrap: { alignItems: 'center', paddingVertical: spacing.lg },
+  noPdfText: { ...typography.bodySmall, color: colors.onSurfaceVariant },
 });

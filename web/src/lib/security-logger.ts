@@ -11,6 +11,7 @@ export type SecurityEventType =
   | 'permission_denied'   // 권한 거부
   | 'cron_access'         // CRON 접근 (성공/실패)
   | 'data_modification'   // 민감 데이터 변경
+  | 'pii_access'          // PII 조회 (은행계좌, 주민번호, 연락처 등)
   | 'rate_limit_hit'      // Rate limit 초과
   | 'integrity_failure'   // 무결성 검사 실패
   | 'suspicious_activity' // 의심스러운 활동
@@ -87,5 +88,50 @@ export function logIntegrityFailure(contractId: string, reasons: string[]) {
     resource_id: contractId,
     details: { reasons },
     severity: 'critical',
+  })
+}
+
+/**
+ * PII 접근 기록 (은행계좌, 주민번호, 연락처 등)
+ * 조회/수정 시 호출하여 접근 추적
+ */
+export function logPiiAccess(opts: {
+  actorId: string
+  actorIp?: string
+  resource: string        // 테이블명 (drivers, agencies 등)
+  resourceId: string      // 대상 row ID
+  fields: string[]        // 접근한 PII 필드명 (bank_account, phone 등)
+  action: 'read' | 'update'
+}) {
+  return logSecurityEvent({
+    event_type: 'pii_access',
+    actor_id: opts.actorId,
+    actor_ip: opts.actorIp,
+    resource: opts.resource,
+    resource_id: opts.resourceId,
+    details: { fields: opts.fields, action: opts.action },
+    severity: 'info',
+  })
+}
+
+/**
+ * 민감 데이터 변경 기록
+ * 은행계좌, 단가, 계약 조건 등 변경 시 호출
+ */
+export function logDataModification(opts: {
+  actorId: string
+  actorIp?: string
+  resource: string
+  resourceId: string
+  changes: Record<string, { before: unknown; after: unknown }>
+}) {
+  return logSecurityEvent({
+    event_type: 'data_modification',
+    actor_id: opts.actorId,
+    actor_ip: opts.actorIp,
+    resource: opts.resource,
+    resource_id: opts.resourceId,
+    details: { changes: opts.changes },
+    severity: 'warning',
   })
 }

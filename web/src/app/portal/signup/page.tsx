@@ -423,11 +423,7 @@ function SignupContent() {
       <div className="w-full max-w-[720px]">
         {/* Brand */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-power-gradient flex items-center justify-center mb-4 shadow-ambient">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="white" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
+          <img src="/logo.png" alt="logiSSign" className="w-12 h-12 object-contain mb-4" />
           <h1 className="font-headline text-xl font-bold text-on-surface">회원가입</h1>
           <p className="font-korean text-sm text-on-surface-variant mt-1">대리점 관리 서비스를 시작하세요</p>
         </div>

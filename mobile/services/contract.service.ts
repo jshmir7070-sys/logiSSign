@@ -77,7 +77,7 @@ export async function signContract(
   try {
     // 실제 IP 가져오기 (전달받은 값이 placeholder면 조회)
     const actualIp = signerIp === '0.0.0.0' ? await getClientIp() : signerIp;
-    const actualUserAgent = signerUserAgent || `DeliSign-Mobile/${Platform.OS}/${Platform.Version}`;
+    const actualUserAgent = signerUserAgent || `logiSSign-Mobile/${Platform.OS}/${Platform.Version}`;
 
     // 1. Insert signature record
     const { error: sigError } = await supabase

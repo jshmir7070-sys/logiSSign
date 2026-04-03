@@ -27,8 +27,11 @@ export function csrfCheck(request: NextRequest): NextResponse | null {
   const CSRF_EXEMPT = [
     '/api/auth/signup',
     '/api/auth/driver-signup',
+    '/api/auth/find-id',
+    '/api/auth/reset-password',
     '/api/verify',
     '/api/cron/',
+    '/api/beta-apply',
   ]
   if (CSRF_EXEMPT.some(p => pathname.startsWith(p))) return null
 

@@ -46,49 +46,59 @@ export interface GenerateVariantsOptions {
   useHanja?: boolean           // true면 한자 변환 후 렌더링
   hanjaOverride?: string       // 사용자가 직접 선택한 한자 (우선 사용)
   showDot?: boolean            // 개인도장 글자 사이 점(·) 표시 (기본: true)
+  fontSizeScale?: number       // 글씨 크기 배율 (0.5~1.5, 기본 1.0)
+  letterSpacingScale?: number  // 글자 간격 배율 (0.5~1.5, 기본 1.0)
+  selectedFontIdx?: number     // 선택한 폰트 인덱스 (단일 폰트 모드)
 }
 
 /* ══════════════════════ Font Loading ══════════════════════ */
 
+/* ── 폰트 URL: Google Fonts (도장 적합 3종) ── */
 const GOOGLE_FONTS_URL =
   'https://fonts.googleapis.com/css2?' +
-  'family=Noto+Serif+KR:wght@700;900' +         // 해서체 느낌 (명조 세리프)
-  '&family=Nanum+Myeongjo:wght@700;800' +       // 고인체 (나눔명조 굵게)
-  '&family=Gowun+Batang:wght@700' +             // 예서체 느낌 (고운바탕)
-  '&family=Nanum+Brush+Script' +                 // 궁서/붓글씨 느낌
-  '&family=Nanum+Gothic:wght@700;800;900' +     // 둥근체 (고딕)
-  '&family=Noto+Sans+KR:wght@700;900' +         // 인전체풍 (산세리프 굵게)
-  '&family=Do+Hyeon' +                           // 전통 현판 느낌
-  '&family=Gothic+A1:wght@700;900' +             // 현대 고인체풍
-  '&family=Gowun+Dodum' +                        // 고운돋움 (깔끔한 돋움)
-  '&family=Hahmlet:wght@700;900' +               // 함렛 (세리프 현대 클래식)
-  '&family=Gaegu:wght@700' +                     // 개구 (손글씨 느낌)
-  '&family=Sunflower:wght@700' +                 // 해바라기 (둥근 현대)
-  '&family=Jua' +                                // 주아 (둥글둥글 귀여운)
-  '&family=Song+Myung' +                         // 송명 (전통 송명체)
-  '&family=Stylish' +                            // 스타일리시 (캘리 느낌)
-  '&family=Gamja+Flower' +                       // 감자꽃 (손글씨)
-  '&family=East+Sea+Dokdo' +                     // 동해독도 (붓글씨 강렬)
-  '&family=Poor+Story' +                         // 푸어스토리 (자유분방)
-  '&family=Gugi' +                               // 구기 (기하학적 현대)
-  '&family=Dongle:wght@700' +                    // 동글 (둥근 손글씨)
-  '&family=IBM+Plex+Sans+KR:wght@600;700' +     // IBM플렉스 (현대 세련)
-  '&family=Black+Han+Sans' +                     // 블랙한산스 (두꺼운 고딕)
-  '&family=Dokdo' +                              // 독도 (강렬한 붓)
-  '&family=Hi+Melody' +                          // 하이멜로디 (손글씨)
-  '&family=Yeon+Sung' +                          // 연성 (연필 손글씨)
+  'family=Noto+Serif+KR:wght@700;900' +
+  '&family=Nanum+Myeongjo:wght@700;800' +
+  '&family=Hahmlet:wght@700;900' +
+  '&family=Nanum+Brush+Script' +
+  '&family=Gothic+A1:wght@700;900' +
   '&display=swap'
+
+/* ── 눈누 CDN: 도장 전용 지자체 무료 폰트 6종 ── */
+const NOONNU_FONT_URLS = [
+  'https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_one@1.0/YiSunShinBoldB.woff',      // 이순신체 Bold
+  'https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2105@1.0/WandohopeB.woff',          // 완도희망체 Bold
+  'https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2105@1.0/JeongseonArGothicB.woff',  // 정선아리랑 고담 Bold
+  'https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2312-1@1.0/SuseongBatang.woff2',    // 수성바탕체
+  'https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2312-1@1.0/SuseongHyejeong.woff2',  // 수성혜정체
+  'https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.0/GangwonEdu_OTFBoldA.woff', // 강원교육체 Bold
+]
+
+const NOONNU_FONT_FACES = `
+@font-face { font-family: 'YiSunShinBold'; src: url('${NOONNU_FONT_URLS[0]}') format('woff'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'WandohopeB'; src: url('${NOONNU_FONT_URLS[1]}') format('woff'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'JeongseonArGothicB'; src: url('${NOONNU_FONT_URLS[2]}') format('woff'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'SuseongBatang'; src: url('${NOONNU_FONT_URLS[3]}') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'SuseongHyejeong'; src: url('${NOONNU_FONT_URLS[4]}') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'GangwonEduBold'; src: url('${NOONNU_FONT_URLS[5]}') format('woff'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'HJJeonseoA'; src: url('/fonts/HJ한전서A.ttf') format('truetype'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'HJJeonseoB'; src: url('/fonts/HJ한전서B.ttf') format('truetype'); font-weight: 400; font-display: swap; }
+`
 
 let _fontsLoaded = false
 
-/** Google Fonts 링크를 head에 삽입 (한 번만) */
+/** Google Fonts + 눈누 CDN 폰트를 head에 삽입 (한 번만) */
 export function ensureSealFontsLoaded(): void {
   if (_fontsLoaded || typeof document === 'undefined') return
   _fontsLoaded = true
+  // Google Fonts
   const link = document.createElement('link')
   link.rel = 'stylesheet'
   link.href = GOOGLE_FONTS_URL
   document.head.appendChild(link)
+  // 눈누 CDN @font-face
+  const style = document.createElement('style')
+  style.textContent = NOONNU_FONT_FACES
+  document.head.appendChild(style)
 }
 
 /* ══════════════════════ Constants ══════════════════════ */
@@ -164,6 +174,75 @@ const HANGUL_TO_HANJA: Record<string, string[]> = {
   '호': ['浩', '湖', '虎', '好', '豪'], '화': ['花', '和', '華', '化', '火'], '환': ['歡', '煥', '桓', '環'], '회': ['會', '回'],
   '효': ['孝', '曉', '效'], '훈': ['勳', '薰', '訓'], '휘': ['輝', '揮', '暉'], '흥': ['興'],
   '희': ['熙', '喜', '禧', '羲', '希'],
+  // ── 천자문 + 인명용 확충 (195자 추가) ──
+  '각': ['角', '覺', '閣', '刻'], '간': ['間', '干', '看', '簡', '諫'], '갈': ['葛', '渴', '褐'],
+  '감': ['感', '甘', '鑑', '減', '監', '敢', '紺'], '갑': ['甲', '岬'], '개': ['開', '改', '介', '蓋', '凱', '慨'],
+  '객': ['客'], '거': ['居', '去', '擧', '巨', '拒', '據'], '걸': ['傑', '乞'],
+  '검': ['劍', '儉', '檢'], '겸': ['兼', '謙', '謙'], '계': ['界', '計', '季', '桂', '溪', '係', '繫', '啓', '戒'],
+  '곡': ['曲', '穀', '谷', '哭'], '곤': ['坤', '困', '昆'], '골': ['骨'],
+  '공': ['工', '功', '公', '共', '空', '恭', '貢', '攻'], '과': ['果', '科', '課', '過', '瓜'],
+  '관': ['觀', '官', '管', '關', '冠', '慣', '貫', '館'], '괘': ['卦'],
+  '군': ['君', '軍', '郡', '群'], '굴': ['窟', '屈', '掘'], '궁': ['宮', '弓', '窮', '躬'],
+  '궐': ['闕', '蕨'], '귀': ['貴', '鬼', '龜', '歸'], '규': ['規', '奎', '圭', '揆', '葵'],
+  '균': ['均', '菌', '鈞'], '극': ['極', '克', '劇', '隙'],
+  '급': ['急', '及', '給', '級'], '긍': ['肯', '矜'], '긴': ['緊'], '길': ['吉'],
+  '낙': ['落', '洛', '樂', '諾'], '난': ['難', '蘭', '亂', '暖'], '납': ['納', '蠟'],
+  '낭': ['郎', '浪', '娘', '廊'], '내': ['內', '乃', '耐', '奈'],
+  '녀': ['女'], '년': ['年'], '념': ['念', '捻'], '녕': ['寧'],
+  '논': ['論'], '농': ['農', '濃', '弄'], '뇌': ['腦', '雷'], '능': ['能', '陵', '綾'],
+  '니': ['尼', '泥'], '담': ['淡', '痰', '膽', '談', '擔'], '답': ['答', '踏'],
+  '당': ['堂', '唐', '黨', '糖', '當'], '독': ['獨', '毒', '讀', '督'], '돈': ['敦', '頓', '豚'],
+  '돌': ['突', '乭'], '둔': ['鈍', '屯', '遁'], '득': ['得', '德'], '등': ['等', '登', '燈', '藤', '騰'],
+  '락': ['落', '洛', '樂'], '란': ['蘭', '亂', '卵', '欄'], '랄': ['辣'],
+  '람': ['覽', '藍', '嵐'], '랑': ['郎', '浪', '朗', '廊'],
+  '략': ['略', '掠'], '려': ['麗', '慮', '勵', '旅'], '력': ['力', '歷', '曆', '瀝'],
+  '렬': ['烈', '列'], '렴': ['廉', '簾', '斂'], '렵': ['獵'], '례': ['禮', '例', '隷'],
+  '롱': ['弄', '籠', '聾'], '뢰': ['雷', '賴', '瀨', '磊'], '료': ['料', '了', '療', '僚', '寮'],
+  '룡': ['龍'], '륙': ['六', '陸'], '률': ['律', '率', '栗'], '륭': ['隆'],
+  '름': ['凜'], '릉': ['陵', '凌', '綾'],
+  '림': ['林', '臨', '霖'], '립': ['立', '笠'],
+  '막': ['幕', '膜', '漠', '莫'], '말': ['末', '抹'], '망': ['望', '忘', '亡', '妄', '茫', '網'],
+  '맥': ['麥', '脈'], '멸': ['滅'], '몰': ['沒', '歿'], '묘': ['妙', '廟', '墓', '描', '苗'],
+  '묵': ['墨', '默', '黙'], '물': ['物', '勿'], '밀': ['密', '蜜'],
+  '발': ['發', '拔', '髮'], '번': ['番', '繁', '煩', '樊'], '벌': ['伐', '罰', '蜂'],
+  '법': ['法', '凡'], '벽': ['壁', '碧', '璧', '闢'], '별': ['別', '星'],
+  '북': ['北'], '분': ['分', '奮', '粉', '盆', '噴', '憤'], '불': ['佛', '不', '弗'],
+  '비': ['飛', '悲', '秘', '碑', '批', '比', '妃', '費', '非'], '빙': ['氷', '冰', '憑'],
+  '삭': ['朔', '削'], '살': ['殺'], '삼': ['三', '參', '森', '杉'],
+  '섬': ['島', '纖', '閃', '蟾'], '술': ['術', '述'], '숭': ['崇', '嵩'],
+  '습': ['習', '濕', '拾', '襲'], '실': ['室', '實', '失'], '십': ['十', '拾'],
+  '쌍': ['雙'],
+  '알': ['謁', '斡'], '암': ['岩', '暗', '癌', '庵'], '압': ['壓', '鴨'],
+  '앙': ['央', '昂', '仰', '殃'], '액': ['額', '液', '厄'], '약': ['約', '若', '弱', '藥', '躍'],
+  '어': ['語', '魚', '御', '漁', '於'], '억': ['億', '憶', '抑'], '언': ['言', '彦', '堰'],
+  '업': ['業'], '역': ['役', '域', '驛', '易', '逆', '譯'], '온': ['溫', '穩'],
+  '옹': ['翁', '擁', '甕'], '와': ['瓦', '臥', '渦'], '외': ['外', '畏'],
+  '욕': ['欲', '浴', '辱'], '울': ['鬱', '蔚'], '육': ['六', '育', '肉'],
+  '읍': ['邑', '泣'], '익': ['益', '翼', '溢'], '입': ['入', '笠'],
+  '작': ['作', '爵', '昨', '雀'], '잔': ['殘', '盞'], '잠': ['潛', '暫', '蠶'],
+  '절': ['節', '絶', '折', '切'], '점': ['點', '占', '店', '漸'],
+  '족': ['族', '足', '卒'], '존': ['存', '尊'], '죽': ['竹', '粥'],
+  '즉': ['卽', '則'], '직': ['直', '職', '織'], '질': ['質', '秩'],
+  '집': ['集', '執', '輯'], '징': ['徵', '懲'],
+  '착': ['着', '錯'], '참': ['參', '慘', '慚', '斬'], '책': ['策', '冊', '責'],
+  '처': ['處', '妻', '凄'], '첨': ['添', '尖', '沾', '瞻'], '체': ['體', '替', '滯'],
+  '촉': ['促', '燭', '囑', '觸'], '총': ['總', '聰', '銃', '寵'],
+  '축': ['祝', '築', '畜', '蓄', '縮'], '춘': ['春', '椿'], '출': ['出', '黜'],
+  '취': ['取', '就', '醉', '吹', '趣'], '측': ['側', '測', '則'], '층': ['層'],
+  '칙': ['則', '勅'], '친': ['親'], '칠': ['七', '漆'], '침': ['枕', '沈', '侵', '針', '寢'],
+  '탄': ['炭', '彈', '嘆', '坦', '誕'], '탈': ['脫', '奪'], '탐': ['探', '貪', '耽'],
+  '탕': ['湯', '蕩'], '토': ['土', '吐', '兎', '討'], '통': ['通', '統', '桶', '痛'],
+  '퇴': ['退', '頹'], '투': ['投', '鬪', '透'],
+  '파': ['波', '派', '破', '坡', '播'], '팔': ['八'], '패': ['敗', '牌', '貝'],
+  '폐': ['廢', '肺', '弊', '閉', '幣'], '포': ['布', '浦', '包', '砲', '泡', '抱', '匍'],
+  '폭': ['暴', '幅', '爆'], '피': ['皮', '彼', '被', '避', '疲'],
+  '할': ['割'], '합': ['合', '閤', '陜'], '항': ['恒', '港', '航', '項', '抗', '降'],
+  '핵': ['核'], '행': ['行', '幸', '杏', '衡'], '험': ['險', '驗', '儉'],
+  '혈': ['血', '穴'], '혹': ['或', '惑', '酷'], '혼': ['婚', '混', '魂', '昏'],
+  '홀': ['忽', '笏'], '확': ['確', '擴'], '활': ['活', '闊', '滑'],
+  '획': ['劃', '畫', '獲'], '횡': ['橫', '宏'], '후': ['后', '厚', '侯', '候', '後'],
+  '훼': ['毁', '燬'], '흉': ['凶', '胸', '兇'], '흑': ['黑'],
+  '흠': ['欽', '欠'], '흡': ['吸', '恰'],
 }
 
 /**
@@ -199,40 +278,26 @@ export function getHanjaCandidates(char: string): string[] {
  *  예서체  — 고운바탕 700. 수평 획 강조, 고급스러운 인상
  *  인전체  — Gothic A1 900. 획이 균일, 장식적 느낌
  */
-/** ── 전통 인감 스타일 (명조/세리프 계열) ── */
-const CLASSIC_SEAL_FONTS: { family: string; label: string; weight: string }[] = [
-  { family: '"Noto Serif KR", "Batang", serif', label: '해서체', weight: '900' },
-  { family: '"Nanum Myeongjo", "Batang", serif', label: '고인체', weight: '800' },
-  { family: '"Gowun Batang", "Batang", serif', label: '예서체', weight: '700' },
-  { family: '"Hahmlet", "Batang", serif', label: '함렛체', weight: '900' },
-  { family: '"Song Myung", "Batang", serif', label: '송명체', weight: '400' },
+/**
+ * 도장 전용 폰트 — stamp.seedtype.com 스타일
+ * 지자체 무료 폰트 6종 + Google Fonts 3종 = 총 9종
+ */
+export const ALL_SEAL_FONTS: { family: string; label: string; weight: string }[] = [
+  // ── 한전서체 (전서체 — 전통 인감 전용) ──
+  { family: '"HJJeonseoA", "Batang", serif',          label: '한전서체A',      weight: '400' },
+  { family: '"HJJeonseoB", "Batang", serif',          label: '한전서체B',      weight: '400' },
+  // ── 지자체 도장 전용 폰트 (눈누 CDN, 상업용 무료) ──
+  { family: '"YiSunShinBold", "Batang", serif',       label: '이순신체',       weight: '700' },
+  { family: '"WandohopeB", "Batang", serif',          label: '완도희망체',     weight: '700' },
+  { family: '"JeongseonArGothicB", sans-serif',       label: '정선아리랑',     weight: '700' },
+  { family: '"SuseongBatang", "Batang", serif',       label: '수성바탕체',     weight: '400' },
+  { family: '"SuseongHyejeong", "Batang", serif',     label: '수성혜정체',     weight: '400' },
+  { family: '"GangwonEduBold", sans-serif',            label: '강원도체',       weight: '700' },
+  // ── Google Fonts (도장 적합) ──
+  { family: '"Noto Serif KR", "Batang", serif',       label: '해서체',         weight: '900' },
+  { family: '"Nanum Myeongjo", "Batang", serif',      label: '고인체',         weight: '800' },
+  { family: '"Hahmlet", "Batang", serif',             label: '함렛체',         weight: '900' },
 ]
-
-/** ── 붓글씨/캘리그라피 스타일 ── */
-const BRUSH_SEAL_FONTS: { family: string; label: string; weight: string }[] = [
-  { family: '"Nanum Brush Script", cursive', label: '궁서체', weight: '400' },
-  { family: '"East Sea Dokdo", cursive', label: '동해독도', weight: '400' },
-  { family: '"Dokdo", cursive', label: '독도체', weight: '400' },
-  { family: '"Stylish", cursive', label: '캘리체', weight: '400' },
-  { family: '"Gaegu", cursive', label: '개구체', weight: '700' },
-]
-
-/** ── 현대/고딕 스타일 ── */
-const MODERN_SEAL_FONTS: { family: string; label: string; weight: string }[] = [
-  { family: '"Gothic A1", "Malgun Gothic", sans-serif', label: '인전체', weight: '900' },
-  { family: '"Nanum Gothic", "Malgun Gothic", sans-serif', label: '둥근체', weight: '900' },
-  { family: '"Black Han Sans", "Malgun Gothic", sans-serif', label: '블랙한산', weight: '400' },
-  { family: '"Do Hyeon", sans-serif', label: '도현체', weight: '400' },
-  { family: '"Gugi", sans-serif', label: '구기체', weight: '400' },
-  { family: '"Noto Sans KR", "Malgun Gothic", sans-serif', label: '노토산스', weight: '900' },
-]
-
-// 한글/한자 구분 없이 전체 폰트 풀 (전통 + 붓글씨 + 현대)
-const _HANGUL_FONTS = [...CLASSIC_SEAL_FONTS, ...BRUSH_SEAL_FONTS.slice(0, 2), ...MODERN_SEAL_FONTS.slice(0, 2)]
-const _HANJA_FONTS = [...CLASSIC_SEAL_FONTS, ...BRUSH_SEAL_FONTS.slice(0, 2), ...MODERN_SEAL_FONTS.slice(0, 2)]
-
-/** 전체 폰트 목록 (중복 제거) — UI에서 폰트 이름 표시용 */
-export const ALL_SEAL_FONTS = [...CLASSIC_SEAL_FONTS, ...BRUSH_SEAL_FONTS, ...MODERN_SEAL_FONTS]
 
 // 도장 모양 (인감도장은 원형이 기본, 사각도 포함)
 const _SHAPES: { shape: SealShape; label: string }[] = [
@@ -322,7 +387,7 @@ function corporateTitleToHanja(title: string): string {
  */
 export function generateSealVariants(options: GenerateVariantsOptions): SealVariant[] {
   ensureSealFontsLoaded()
-  const { name, category, size = 200, representativeName, useHanja = false, hanjaOverride, showDot = true } = options
+  const { name, category, size = 200, representativeName, useHanja = false, hanjaOverride, showDot = true, fontSizeScale = 1.0, letterSpacingScale = 1.0, selectedFontIdx } = options
   const variants: SealVariant[] = []
 
   // 한자 변환: 사용자 직접 지정 > 자동 변환 > 한글 원문
@@ -339,17 +404,18 @@ export function generateSealVariants(options: GenerateVariantsOptions): SealVari
     ? (rawTitle ? corporateTitleToHanja(rawTitle) : undefined)
     : rawTitle
 
-  // 전통5 + 붓글씨5 + 현대6 = 16종 중 중복 제거하여 전체 사용
-  const allFonts = ALL_SEAL_FONTS
-  const combos: { shape: SealShape; font: typeof allFonts[0]; titleIdx?: number; titleOverride?: string; intaglio?: boolean; strokeLabel?: string; extraStroke?: number }[] = []
+  // 단일 폰트 모드 (selectedFontIdx) 또는 전체 폰트 모드
+  const fontsToUse = selectedFontIdx != null && selectedFontIdx >= 0 && selectedFontIdx < ALL_SEAL_FONTS.length
+    ? [ALL_SEAL_FONTS[selectedFontIdx]]
+    : ALL_SEAL_FONTS
+  const combos: { shape: SealShape; font: typeof fontsToUse[0]; titleIdx?: number; titleOverride?: string; intaglio?: boolean; strokeLabel?: string; extraStroke?: number }[] = []
 
   if (category === 'corporate') {
-    for (const f of allFonts) {
+    for (const f of fontsToUse) {
       combos.push({ shape: 'circle', font: f, titleOverride: repTitle, titleIdx: 0 })
     }
   } else {
-    // 개인도장: 전체 폰트 각 1개
-    for (const f of allFonts) {
+    for (const f of fontsToUse) {
       combos.push({ shape: 'circle', font: f })
     }
   }
@@ -372,6 +438,9 @@ export function generateSealVariants(options: GenerateVariantsOptions): SealVari
       intaglio: false,
       extraStroke,
       showDot: showDot,
+      fontSizeScale,
+      letterSpacingScale,
+      useHanja,
     })
     variants.push({
       id: `${shape}_${font.label}_${i}`,
@@ -385,7 +454,7 @@ export function generateSealVariants(options: GenerateVariantsOptions): SealVari
   return variants
 }
 
-interface RenderSealOptions {
+export interface RenderSealOptions {
   name: string
   category: SealCategory
   shape: SealShape
@@ -396,11 +465,14 @@ interface RenderSealOptions {
   intaglio?: boolean
   extraStroke?: number
   showDot?: boolean          // 개인도장 글자 사이 점(·) 표시
+  fontSizeScale?: number     // 글씨 크기 배율 (0.5~1.5, 기본 1.0)
+  letterSpacingScale?: number // 글자 간격 배율 (0.5~1.5, 기본 1.0)
+  useHanja?: boolean         // 한자 모드 여부 (印/인 선택에 사용)
 }
 
-/** 단일 도장 Canvas 렌더링 → data URI */
-function renderSealCanvas(opts: RenderSealOptions): string {
-  const { name, category, shape, fontFamily, fontWeight, size, corporateTitle, intaglio = false, extraStroke: _extraStroke = 0, showDot = false } = opts
+/** 단일 도장 Canvas 렌더링 → data URI (실시간 미리보기에서도 사용) */
+export function renderSealCanvas(opts: RenderSealOptions): string {
+  const { name, category, shape, fontFamily, fontWeight, size, corporateTitle, intaglio = false, extraStroke: _extraStroke = 0, showDot = false, fontSizeScale = 1.0, letterSpacingScale = 1.0, useHanja = false } = opts
   const canvas = document.createElement('canvas')
 
   // 타원형은 가로가 더 길도록
@@ -427,17 +499,19 @@ function renderSealCanvas(opts: RenderSealOptions): string {
     renderIntaglioSeal(ctx, chars, category, shape, fontFamily, fontWeight, w, h, pad, outerLineW, innerLineW, corporateTitle)
   } else if (category === 'corporate') {
     if (shape === 'circle') {
-      drawCorporateCircleSeal(ctx, chars, fontFamily, fontWeight, cx, cy, size, pad, outerLineW, innerLineW, corporateTitle, showDot)
+      drawCorporateCircleSeal(ctx, chars, fontFamily, fontWeight, cx, cy, size, pad, outerLineW, innerLineW, corporateTitle, showDot, fontSizeScale, letterSpacingScale)
     } else {
-      drawCorporateSquareSeal(ctx, chars, fontFamily, fontWeight, w, h, pad, outerLineW, innerLineW, corporateTitle, shape, showDot)
+      drawCorporateSquareSeal(ctx, chars, fontFamily, fontWeight, w, h, pad, outerLineW, innerLineW, corporateTitle, shape, showDot, fontSizeScale)
     }
   } else {
-    if (shape === 'circle') {
-      drawPersonalCircleSeal(ctx, chars, fontFamily, fontWeight, cx, cy, size, pad, outerLineW, showDot)
+    // 개인도장: 원형/사각형은 이름+"인"(한글) 또는 이름+"印"(한자), 타원형은 이름만
+      const sealSuffix = useHanja ? '印' : '인'
+      if (shape === 'circle') {
+      drawPersonalCircleSeal(ctx, chars, fontFamily, fontWeight, cx, cy, size, pad, outerLineW, showDot, fontSizeScale, letterSpacingScale, sealSuffix)
     } else if (shape === 'oval') {
-      drawPersonalOvalSeal(ctx, chars, fontFamily, fontWeight, cx, cy, w, h, pad, outerLineW)
+      drawPersonalOvalSeal(ctx, chars, fontFamily, fontWeight, cx, cy, w, h, pad, outerLineW, fontSizeScale)
     } else {
-      drawPersonalSquareSeal(ctx, chars, fontFamily, fontWeight, w, h, pad, outerLineW, shape)
+      drawPersonalSquareSeal(ctx, chars, fontFamily, fontWeight, w, h, pad, outerLineW, shape, fontSizeScale, sealSuffix)
     }
   }
 
@@ -486,7 +560,9 @@ function drawCorporateCircleSeal(
   size: number, pad: number,
   outerLineW: number, innerLineW: number,
   corporateTitle?: string,
-  showDot = false,
+  _showDot = false,
+  fontSizeScale = 1.0,
+  _letterSpacingScale = 1.0,
 ) {
   const outerR = (size / 2) - pad                     // 외곽 원 반지름
   const innerR = outerR * 0.55                          // 내곽 원 반지름 (약간 줄여서 링 영역 넓힘)
@@ -504,29 +580,36 @@ function drawCorporateCircleSeal(
   ctx.arc(cx, cy, innerR, 0, Math.PI * 2)
   ctx.stroke()
 
-  // ── 3. 외곽~내곽 사이에 회사명 원호 배치 (360도 균등, 구분자 없음) ──
-  const ringR = (outerR + innerR) / 2                   // 텍스트가 따라갈 원호 반지름
+  // ── 3. 외곽~내곽 사이에 회사명 원호 배치 ──
+  // 규칙: 총 등분 = 글자수 + 1(12시 점). 최소 7등분 (글자 적어도 예쁘게).
+  // 예: "홍" → 7등분(·홍·····), "주식회사홍" → 7등분(·주식회사홍·), "주식회사로지싸인" → 9등분
+  const ringR = (outerR + innerR) / 2
   const nameChars = companyName.split('')
-  const charAngleStep = (Math.PI * 2) / nameChars.length // 360도 / 글자수
+  const ringTextSize = (outerR - innerR) * 0.72 * fontSizeScale
+  const dotR = ringTextSize * 0.15
 
-  // 텍스트 크기 (외곽~내곽 간격의 72%)
-  const ringTextSize = (outerR - innerR) * 0.72
+  const MIN_SLOTS = 7
+  const totalSlots = Math.max(nameChars.length + 1, MIN_SLOTS) // +1은 12시 점
+  const slotAngle = (Math.PI * 2) / totalSlots
+  const startAngle = -Math.PI / 2 // 12시 방향
 
-  // 12시 방향(−π/2)부터 시계방향으로 글자만 균등 배치
-  const startAngle = -Math.PI / 2
+  // 슬롯 배치: [0]=12시 점, [1..N]=글자, [N+1..]=빈 슬롯은 점
+  // 글자는 12시 점 다음부터 시계방향으로 배치
+  for (let i = 0; i < totalSlots; i++) {
+    const angle = startAngle + slotAngle * i
 
-  for (let i = 0; i < nameChars.length; i++) {
-    const angle = startAngle + charAngleStep * i
-    drawCharOnArc(ctx, nameChars[i], cx, cy, ringR, angle, ringTextSize, fontFamily, fontWeight)
-  }
-
-  // ── 3.5 글자 사이 점(·) — 각 글자 사이 중간 지점에 작은 원 ──
-  if (showDot && nameChars.length >= 2) {
-    const dotR = ringTextSize * 0.12
-    for (let i = 0; i < nameChars.length; i++) {
-      const midAngle = startAngle + charAngleStep * (i + 0.5) // 글자 i와 i+1 사이
-      const dx = cx + ringR * Math.cos(midAngle)
-      const dy = cy + ringR * Math.sin(midAngle)
+    if (i === 0) {
+      // 12시 방향: 항상 점(·)
+      const dx = cx + ringR * Math.cos(angle)
+      const dy = cy + ringR * Math.sin(angle)
+      drawDot(ctx, dx, dy, dotR)
+    } else if (i <= nameChars.length) {
+      // 글자 슬롯
+      drawCharOnArc(ctx, nameChars[i - 1], cx, cy, ringR, angle, ringTextSize, fontFamily, fontWeight)
+    } else {
+      // 빈 슬롯: 점으로 채움 (글자수 부족 시)
+      const dx = cx + ringR * Math.cos(angle)
+      const dy = cy + ringR * Math.sin(angle)
       drawDot(ctx, dx, dy, dotR)
     }
   }
@@ -615,6 +698,7 @@ function drawCorporateSquareSeal(
   corporateTitle?: string,
   shape?: SealShape,
   showDot = false,
+  fontSizeScale = 1.0,
 ) {
   const cx = w / 2
   const cy = h / 2
@@ -640,7 +724,7 @@ function drawCorporateSquareSeal(
   // 위: 회사명 (두꺼운 전각풍)
   const topArea = cy - pad - outerLineW
   const displayName = showDot && companyName.length >= 2 ? companyName.split('').join('·') : companyName
-  const topFs = Math.min(topArea * 0.58, (w - innerPad * 2) / Math.max(displayName.length, 2) * 1.05)
+  const topFs = Math.min(topArea * 0.58, (w - innerPad * 2) / Math.max(displayName.length, 2) * 1.05) * fontSizeScale
   drawThickText(ctx, displayName, cx, cy - topArea * 0.38, topFs, fontFamily, fontWeight, 0.08)
 
   // 아래: 직함 (두꺼운 전각풍)
@@ -676,6 +760,9 @@ function drawPersonalCircleSeal(
   size: number, pad: number,
   outerLineW: number,
   showDot = false,
+  fontSizeScale = 1.0,
+  letterSpacingScale = 1.0,
+  sealSuffix = '인',
 ) {
   const outerR = (size / 2) - pad
 
@@ -688,58 +775,52 @@ function drawPersonalCircleSeal(
 
   const usableR = outerR - outerLineW
 
-  // 개인 인감: 이름 + "印" 형태 (예: "주상하" → "주상하印")
-  const sealChars = (chars + '印').split('')
+  // 개인 인감: 이름 + "인"(한글) 또는 "印"(한자) (예: "홍길동" → "홍길동인" 또는 "洪吉東印")
+  const sealChars = (chars + sealSuffix).split('')
   const len = sealChars.length
   const dotR = size * 0.018  // 점 반지름
+  const fsScale = fontSizeScale
+  const lsScale = letterSpacingScale
 
   if (len <= 2) {
-    // 2글자: 세로 배치
-    const fs = usableR * 1.0
-    const gap = fs * 0.50
+    const fs = usableR * 1.0 * fsScale
+    const gap = fs * 0.50 * lsScale
     sealChars.forEach((ch, i) =>
       drawThickText(ctx, ch, cx, cy - gap + i * gap * 2, fs, fontFamily, fontWeight))
-    // 점: 두 글자 사이 중앙
     if (showDot && len === 2) {
       drawDot(ctx, cx, cy, dotR)
     }
   } else if (len === 3) {
-    // 3글자 (2글자이름+印): 세로 배치
-    const fs = usableR * 0.72
-    const spacing = fs * 1.05
+    const fs = usableR * 0.72 * fsScale
+    const spacing = fs * 1.05 * lsScale
     const totalH = len * spacing
     const sy = cy - totalH / 2 + spacing / 2
     sealChars.forEach((ch, i) =>
       drawThickText(ctx, ch, cx, sy + i * spacing, fs, fontFamily, fontWeight))
-    // 점: 각 글자 사이
     if (showDot) {
       drawDot(ctx, cx, sy + spacing * 0.5, dotR)
       drawDot(ctx, cx, sy + spacing * 1.5, dotR)
     }
   } else if (len === 4) {
-    // 4글자 (3글자이름+印): 2×2 그리드, 세로읽기 우→좌
-    // "주상하印" → 우열: 주/상, 좌열: 하/印
-    const fs = usableR * 0.68
-    const gx = usableR * 0.34
-    const gy = usableR * 0.34
+    const fs = usableR * 0.68 * fsScale
+    const gx = usableR * 0.34 * lsScale
+    const gy = usableR * 0.34 * lsScale
     drawThickText(ctx, sealChars[0], cx + gx, cy - gy, fs, fontFamily, fontWeight)
     drawThickText(ctx, sealChars[1], cx + gx, cy + gy, fs, fontFamily, fontWeight)
     drawThickText(ctx, sealChars[2], cx - gx, cy - gy, fs, fontFamily, fontWeight)
     drawThickText(ctx, sealChars[3], cx - gx, cy + gy, fs, fontFamily, fontWeight)
-    // 점: 중앙 (4글자 사이 교차점)
     if (showDot) {
       drawDot(ctx, cx, cy, dotR * 1.2)
     }
   } else {
-    // 5글자+ (4글자이름+印): 세로 2열 우→좌
     const rightCount = Math.ceil(len / 2)
     const leftCount = len - rightCount
     const rightChars = sealChars.slice(0, rightCount)
     const leftChars = sealChars.slice(rightCount)
     const maxPerCol = Math.max(rightCount, leftCount)
-    const fs = usableR * (maxPerCol <= 2 ? 0.62 : maxPerCol === 3 ? 0.52 : 0.44)
-    const gx = usableR * 0.32
-    const spacing = fs * 1.05
+    const fs = usableR * (maxPerCol <= 2 ? 0.62 : maxPerCol === 3 ? 0.52 : 0.44) * fsScale
+    const gx = usableR * 0.32 * lsScale
+    const spacing = fs * 1.05 * lsScale
 
     const rTotalH = rightCount * spacing
     const rStartY = cy - rTotalH / 2 + spacing / 2
@@ -751,7 +832,6 @@ function drawPersonalCircleSeal(
     leftChars.forEach((ch, i) =>
       drawThickText(ctx, ch, cx - gx, lStartY + i * spacing, fs, fontFamily, fontWeight))
 
-    // 점: 열 사이 중앙
     if (showDot) {
       drawDot(ctx, cx, cy, dotR * 1.2)
     }
@@ -769,6 +849,7 @@ function drawPersonalOvalSeal(
   w: number, h: number,
   pad: number,
   outerLineW: number,
+  fontSizeScale = 1.0,
 ) {
   // 외곽 타원 (두꺼운 테두리)
   ctx.lineWidth = outerLineW * 1.2
@@ -779,7 +860,7 @@ function drawPersonalOvalSeal(
 
   // 중앙에 가로 배치 (타원은 가로가 길므로)
   const maxW = (w - pad * 2) * 0.80
-  const fs = Math.min(h * 0.55, maxW / Math.max(chars.length, 1) * 1.35)
+  const fs = Math.min(h * 0.55, maxW / Math.max(chars.length, 1) * 1.35) * fontSizeScale
   drawThickText(ctx, chars, cx, cy, fs, fontFamily, fontWeight, 0.20)
 }
 
@@ -794,6 +875,8 @@ function drawPersonalSquareSeal(
   pad: number,
   outerLineW: number,
   shape: SealShape,
+  fontSizeScale = 1.0,
+  sealSuffix = '인',
 ) {
   const cx = w / 2
   const cy = h / 2
@@ -808,32 +891,34 @@ function drawPersonalSquareSeal(
     ctx.strokeRect(pad, pad, w - pad * 2, h - pad * 2)
   }
 
+  // 사각형에도 이름 + "인"/"印" 추가
+  const sealChars = chars + sealSuffix
   const usableW = w - pad * 2 - outerLineW * 2
   const usableH = h - pad * 2 - outerLineW * 2
 
-  if (chars.length <= 2) {
-    const fs = usableH * 0.68
-    if (chars.length === 1) {
-      drawThickText(ctx, chars, cx, cy, fs, fontFamily, fontWeight, 0.22)
+  if (sealChars.length <= 2) {
+    const fs = usableH * 0.68 * fontSizeScale
+    if (sealChars.length === 1) {
+      drawThickText(ctx, sealChars, cx, cy, fs, fontFamily, fontWeight, 0.22)
     } else {
-      drawThickText(ctx, chars[0], cx, cy - fs * 0.48, fs, fontFamily, fontWeight, 0.20)
-      drawThickText(ctx, chars[1], cx, cy + fs * 0.48, fs, fontFamily, fontWeight, 0.20)
+      drawThickText(ctx, sealChars[0], cx, cy - fs * 0.48, fs, fontFamily, fontWeight, 0.20)
+      drawThickText(ctx, sealChars[1], cx, cy + fs * 0.48, fs, fontFamily, fontWeight, 0.20)
     }
-  } else if (chars.length <= 4) {
+  } else if (sealChars.length <= 4) {
     // 2×2 그리드 — 공간 꽉 채움
     const fs = Math.min(usableW * 0.48, usableH * 0.48)
     const gx = usableW * 0.24
     const gy = usableH * 0.24
-    const grid = chars.length === 3 ? [chars[0], chars[1], chars[2], ''] : [chars[0], chars[1], chars[2], chars[3]]
+    const grid = sealChars.length === 3 ? [sealChars[0], sealChars[1], sealChars[2], ''] : [sealChars[0], sealChars[1], sealChars[2], sealChars[3]]
     drawThickText(ctx, grid[0], cx + gx, cy - gy, fs, fontFamily, fontWeight, 0.20)
     drawThickText(ctx, grid[1], cx + gx, cy + gy, fs, fontFamily, fontWeight, 0.20)
     drawThickText(ctx, grid[2], cx - gx, cy - gy, fs, fontFamily, fontWeight, 0.20)
     if (grid[3]) drawThickText(ctx, grid[3], cx - gx, cy + gy, fs, fontFamily, fontWeight, 0.20)
   } else {
     // 5+ 줄바꿈
-    const perLine = Math.ceil(chars.length / 2)
+    const perLine = Math.ceil(sealChars.length / 2)
     const lines: string[] = []
-    for (let i = 0; i < chars.length; i += perLine) lines.push(chars.slice(i, i + perLine))
+    for (let i = 0; i < sealChars.length; i += perLine) lines.push(sealChars.slice(i, i + perLine))
     const fs = Math.min(usableH / lines.length * 0.85, usableW / perLine * 1.0)
     const totalH = lines.length * fs * 1.15
     const startY = cy - totalH / 2 + fs * 0.5

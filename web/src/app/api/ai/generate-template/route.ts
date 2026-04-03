@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateAdmin } from '@/lib/api-auth'
+import { aiGenerateTemplateSchema, validateInput } from '@/lib/api-schemas'
 
 /**
  * POST /api/ai/generate-template
@@ -18,8 +19,13 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { title, category, description } = await request.json()
-    if (!title) return NextResponse.json({ error: '템플릿 제목이 필요합니다' }, { status: 400 })
+    const rawBody = await request.json()
+    const { data: body, error: validationError } = validateInput(aiGenerateTemplateSchema, rawBody)
+    if (validationError || !body) {
+      return NextResponse.json({ error: validationError ?? '잘못된 요청입니다' }, { status: 400 })
+    }
+
+    const { title, category, description } = body
 
     const categoryLabels: Record<string, string> = {
       standard: '표준계약서 (위수탁 표준계약서, 운송계약서 등)',
@@ -47,7 +53,7 @@ export async function POST(request: NextRequest) {
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `"${title}" 제목의 ${categoryLabels[category] ?? '계약서'}를 작성해주세요.${description ? `\n추가 요구사항: ${description}` : ''}` },
+          { role: 'user', content: `"${title}" 제목의 ${categoryLabels[category ?? 'standard'] ?? '계약서'}를 작성해주세요.${description ? `\n추가 요구사항: ${description}` : ''}` },
         ],
         temperature: 0.3,
         max_tokens: 4000,

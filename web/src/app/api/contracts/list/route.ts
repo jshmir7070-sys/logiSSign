@@ -4,10 +4,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { authenticateRequest } from '@/lib/api-auth'
 import { apiError } from '@/lib/api-error'
+import { contractListQuerySchema, validateInput } from '@/lib/api-schemas'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,  // service_role: agency_id 필터로 데이터 격리. authenticateRequest()에서 agency_id 검증 후 사용.
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
@@ -27,19 +28,25 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url)
-    const status = searchParams.get('status')
+    const { data: query, error: validationError } = validateInput(
+      contractListQuerySchema,
+      { status: searchParams.get('status') || undefined }
+    )
+    if (validationError) {
+      return NextResponse.json({ data: null, error: validationError }, { status: 400 })
+    }
 
-    let query = supabaseAdmin
+    let queryBuilder = supabaseAdmin
       .from('contracts')
       .select('id, template_id, driver_id, title, status, sent_at, signed_at, signed_pdf_url, created_at, drivers(name)')
       .eq('agency_id', agencyId)
       .order('created_at', { ascending: false })
 
-    if (status) {
-      query = query.eq('status', status)
+    if (query?.status) {
+      queryBuilder = queryBuilder.eq('status', query.status)
     }
 
-    const { data, error } = await query
+    const { data, error } = await queryBuilder
 
     if (error) {
       console.error('[ContractList] Query error:', error)

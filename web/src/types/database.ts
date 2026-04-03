@@ -1,5 +1,5 @@
 // =============================================================
-// Precision Velocity — Database Types
+// logiSSign — Database Types
 // Auto-derived from supabase/schema.sql
 // Shared between web/ and mobile/
 // =============================================================

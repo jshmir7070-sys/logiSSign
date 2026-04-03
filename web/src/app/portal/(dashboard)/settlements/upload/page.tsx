@@ -69,10 +69,8 @@ export default function SettlementUploadPage() {
   const [selectedSheet, setSelectedSheet] = useState('');
   const [importMode, setImportMode] = useState<ImportMode>('calculate');
   // Store full workbook reference for sheet switching
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const workbookRef = useRef<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const xlsxRef = useRef<any>(null);
+  const workbookRef = useRef<import('xlsx').WorkBook | null>(null);
+  const xlsxRef = useRef<typeof import('xlsx') | null>(null);
 
   /* ── Coupang raw rows (array of arrays) ── */
   const [_coupangRawRows, setCoupangRawRows] = useState<unknown[][]>([]);

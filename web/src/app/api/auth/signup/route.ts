@@ -32,16 +32,25 @@ const signupSchema = z.object({
     .regex(/[^a-zA-Z0-9]/, '특수문자 포함 필요'),
   companyName: z.string().min(1, '회사명은 필수'),
   ownerName: z.string().min(1, '대표자명은 필수'),
-  businessNumber: z.string().optional(),
-  ownerBirthDate: z.string().optional(),
-  phone: z.string().optional(),
-  address: z.string().optional(),
-  addressDetail: z.string().optional(),
-  businessType: z.string().optional(),
-  businessCategory: z.string().optional(),
-  bankName: z.string().optional(),
-  bankAccount: z.string().optional(),
-  bankHolder: z.string().optional(),
+  businessNumber: z.string()
+    .max(12, '사업자등록번호는 12자 이내')
+    .regex(/^\d{3}-?\d{2}-?\d{5}$/, '사업자등록번호 형식이 올바르지 않습니다')
+    .optional(),
+  ownerBirthDate: z.string().max(10).optional(),
+  phone: z.string()
+    .max(13, '전화번호는 13자 이내')
+    .regex(/^01[0-9]-?\d{3,4}-?\d{4}$/, '유효한 전화번호 형식이 아닙니다')
+    .optional(),
+  address: z.string().max(200).optional(),
+  addressDetail: z.string().max(100).optional(),
+  businessType: z.string().max(50).optional(),
+  businessCategory: z.string().max(50).optional(),
+  bankName: z.string().max(20).optional(),
+  bankAccount: z.string()
+    .max(20, '계좌번호는 20자 이내')
+    .regex(/^[\d-]{8,20}$/, '계좌번호 형식이 올바르지 않습니다')
+    .optional(),
+  bankHolder: z.string().max(30).optional(),
   plan: z.enum(['free', 'basic', 'standard', 'enterprise']).default('free'),
   billing: z.enum(['monthly', '1year', '2year', '3year']).optional().default('monthly'),
 })

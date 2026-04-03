@@ -43,7 +43,8 @@ export default function AdminLoginPage() {
         return;
       }
 
-      const role = data.user?.user_metadata?.role as string | undefined;
+      // ⚠️ 보안: app_metadata 우선 사용 (user_metadata는 클라이언트에서 조작 가능)
+      const role = (data.user?.app_metadata?.role ?? data.user?.user_metadata?.role) as string | undefined;
 
       if (role !== "provider_admin") {
         setForm((prev) => ({
@@ -73,13 +74,9 @@ export default function AdminLoginPage() {
         <div className="absolute bottom-1/4 right-1/4 w-[320px] h-[320px] rounded-full bg-primary-container/15 blur-[100px] pointer-events-none" />
 
         <div className="relative z-10 flex flex-col items-center text-center px-12">
-          <div className="w-16 h-16 rounded-2xl bg-power-gradient flex items-center justify-center mb-8 shadow-ambient">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="white" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
+          <img src="/logo.png" alt="logiSSign" className="w-20 h-20 object-contain mb-8" />
           <h1 className="font-headline text-4xl font-bold text-white tracking-tight mb-2">
-            PRECISION VELOCITY
+            logiSSign
           </h1>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 mb-6">
             <span className="w-2 h-2 rounded-full bg-emerald-400" />
@@ -97,13 +94,9 @@ export default function AdminLoginPage() {
         <div className="w-full max-w-[400px]">
           {/* Mobile brand */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-sidebar flex items-center justify-center">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="white" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
+            <img src="/logo.png" alt="logiSSign" className="w-10 h-10 object-contain" />
             <div>
-              <span className="font-headline text-lg font-bold text-on-surface">Precision Velocity</span>
+              <span className="font-headline text-lg font-bold text-on-surface">logiSSign</span>
               <span className="block text-xs text-on-surface-variant">슈퍼 관리자</span>
             </div>
           </div>

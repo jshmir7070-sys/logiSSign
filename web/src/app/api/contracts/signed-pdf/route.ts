@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/lib/api-auth'
 import { generateSignedPdf } from '@/services/signed-pdf.service'
 import { createClient } from '@supabase/supabase-js'
+import { signedPdfSchema, validateInput } from '@/lib/api-schemas'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,12 +19,13 @@ export async function POST(request: NextRequest) {
   if (error) return error
 
   try {
-    const body = await request.json().catch(() => ({}))
-    const contractId = body?.contractId as string | undefined
-
-    if (!contractId || typeof contractId !== 'string') {
-      return NextResponse.json({ error: '계약서 ID가 필요합니다' }, { status: 400 })
+    const rawBody = await request.json().catch(() => ({}))
+    const { data: body, error: validationError } = validateInput(signedPdfSchema, rawBody)
+    if (validationError || !body) {
+      return NextResponse.json({ error: validationError ?? '계약서 ID가 필요합니다' }, { status: 400 })
     }
+
+    const { contractId } = body
 
     // ✅ 보안: 계약서가 요청자의 agency 소속인지 확인
     const { data: contract } = await supabaseAdmin

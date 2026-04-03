@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest'
 import {
   verifySettlement,
   verifyBulkSettlements,
-  type VerificationResult,
 } from '@/services/settlement-verification.service'
 import type { SettlementDriverData } from '@/types/settlement-template'
 

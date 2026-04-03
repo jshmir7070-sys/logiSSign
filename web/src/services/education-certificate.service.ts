@@ -112,7 +112,7 @@ export async function generateCertificatePdf(
     )
 
     y -= 60
-    page.drawText('DeliSign 교육관리시스템', {
+    page.drawText('logiSSign 교육관리시스템', {
       x: centerX - 60, y, size: 10, font, color: rgb(0.5, 0.5, 0.5),
     })
 

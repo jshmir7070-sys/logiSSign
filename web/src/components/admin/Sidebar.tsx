@@ -28,17 +28,13 @@ export default function Sidebar() {
     <aside className="fixed left-0 top-0 bottom-0 w-[240px] bg-sidebar flex flex-col z-50">
       {/* Logo */}
       <div className="px-6 py-7 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-power-gradient flex items-center justify-center">
-          <span className="material-symbols-outlined text-white text-[20px]">
-            bolt
-          </span>
-        </div>
+        <img src="/logo.png" alt="logiSSign" className="w-9 h-9 object-contain" />
         <div>
           <p className="text-white font-headline text-[15px] font-bold leading-tight tracking-tight">
-            Precision
+            logiSSign
           </p>
           <p className="text-white/60 font-headline text-[11px] font-medium tracking-widest uppercase">
-            Velocity
+            Admin
           </p>
         </div>
       </div>

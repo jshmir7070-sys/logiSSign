@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
         })))
       )
     } else {
-      console.log(
+      console.info(
         `[INTEGRITY-CHECK] ✅ 전체 ${result.totalContracts}건 정상 (${result.durationMs}ms)`
       )
     }

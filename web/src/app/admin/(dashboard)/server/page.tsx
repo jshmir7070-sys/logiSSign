@@ -1,166 +1,185 @@
-const services = [
-  { name: '정산 엔진', icon: 'calculate', status: '정상', statusColor: '#16a34a', uptime: 99.98, lastCheck: '2분 전' },
-  { name: 'PDF 생성', icon: 'picture_as_pdf', status: '정상', statusColor: '#16a34a', uptime: 99.95, lastCheck: '1분 전' },
-  { name: 'SMS 발송', icon: 'sms', status: '지연', statusColor: '#ca8a04', uptime: 98.72, lastCheck: '3분 전' },
-  { name: '스토리지', icon: 'cloud_upload', status: '정상', statusColor: '#16a34a', uptime: 99.99, lastCheck: '1분 전' },
-];
+'use client';
 
-const incidents = [
-  { title: 'SMS 발송 지연 (평균 응답시간 3.2초)', severity: '주의', time: '2026-03-27 09:42', status: '조사중' },
-  { title: 'PDF 생성 서버 메모리 경고 (85% 사용)', severity: '경고', time: '2026-03-26 22:15', status: '해결됨' },
-  { title: '정산 엔진 배치 처리 지연 (5분 초과)', severity: '경고', time: '2026-03-25 03:10', status: '해결됨' },
-];
+import { useEffect, useState } from 'react';
+import Badge from '@/components/shared/Badge';
+import { createBrowserSupabaseClient } from '@/lib/supabase';
 
-const severityColor: Record<string, string> = {
-  '주의': 'text-amber-600 bg-amber-50',
-  '경고': 'text-error bg-error-container',
+interface ServiceHealth {
+  name: string;
+  icon: string;
+  status: 'normal' | 'warning' | 'error';
+  detail: string;
+}
+
+interface RecentIncident {
+  id: string;
+  event_type: string;
+  severity: string;
+  resource: string | null;
+  created_at: string;
+}
+
+const STATUS_COLOR: Record<string, string> = {
+  normal: 'text-tertiary',
+  warning: 'text-amber-600',
+  error: 'text-error',
 };
 
-const incidentStatusColor: Record<string, string> = {
-  '조사중': 'text-amber-600',
-  '해결됨': 'text-tertiary',
+const STATUS_LABEL: Record<string, string> = {
+  normal: '정상',
+  warning: '지연',
+  error: '장애',
 };
 
 export default function ServerPage() {
+  const [services, setServices] = useState<ServiceHealth[]>([]);
+  const [incidents, setIncidents] = useState<RecentIncident[]>([]);
+  const [dbStats, setDbStats] = useState<{ tables: number; totalRows: number } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      const supabase = createBrowserSupabaseClient();
+      const startTime = Date.now();
+
+      // 1. DB connectivity check — measure latency
+      const { count: agencyCount, error: dbError } = await supabase
+        .from('agencies')
+        .select('id', { count: 'exact', head: true });
+      const dbLatency = Date.now() - startTime;
+
+      // 2. Storage check
+      const storageStart = Date.now();
+      const { data: buckets, error: storageError } = await supabase.storage.listBuckets();
+      const storageLatency = Date.now() - storageStart;
+
+      // 3. Auth check
+      const authStart = Date.now();
+      const { data: session } = await supabase.auth.getSession();
+      const authLatency = Date.now() - authStart;
+
+      // 4. Recent critical/warning security events
+      const { data: recentEvents } = await supabase
+        .from('security_logs')
+        .select('id, event_type, severity, resource, created_at')
+        .in('severity', ['warning', 'critical'])
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      // 5. Table counts for stats
+      const counts = await Promise.all([
+        supabase.from('drivers').select('id', { count: 'exact', head: true }),
+        supabase.from('contracts').select('id', { count: 'exact', head: true }),
+        supabase.from('settlements').select('id', { count: 'exact', head: true }),
+      ]);
+      const totalRows = (agencyCount ?? 0) + counts.reduce((s, c) => s + (c.count ?? 0), 0);
+
+      // Build service health from actual checks
+      const svcList: ServiceHealth[] = [
+        {
+          name: 'Database',
+          icon: 'storage',
+          status: dbError ? 'error' : dbLatency > 2000 ? 'warning' : 'normal',
+          detail: dbError ? `연결 실패: ${dbError.message}` : `응답: ${dbLatency}ms · 구독사 ${agencyCount ?? 0}개`,
+        },
+        {
+          name: 'Storage',
+          icon: 'cloud_upload',
+          status: storageError ? 'error' : storageLatency > 3000 ? 'warning' : 'normal',
+          detail: storageError ? `연결 실패` : `응답: ${storageLatency}ms · 버킷 ${buckets?.length ?? 0}개`,
+        },
+        {
+          name: 'Auth',
+          icon: 'lock',
+          status: authLatency > 3000 ? 'warning' : 'normal',
+          detail: `응답: ${authLatency}ms · 세션: ${session?.session ? '활성' : '없음'}`,
+        },
+        {
+          name: 'Supabase 전체',
+          icon: 'dns',
+          status: dbError || storageError ? 'error' : (dbLatency > 2000 || storageLatency > 3000) ? 'warning' : 'normal',
+          detail: dbError || storageError ? '일부 서비스 장애' : '전체 정상',
+        },
+      ];
+
+      setServices(svcList);
+      setIncidents((recentEvents ?? []) as unknown as RecentIncident[]);
+      setDbStats({ tables: 4, totalRows }); // 4 main tables checked
+      setLoading(false);
+    }
+    load();
+  }, []);
+
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div>
-        <h2 className="font-headline text-on-surface text-[26px] font-bold tracking-tight">
-          서버 상태
-        </h2>
-        <p className="font-body text-on-surface-variant text-[14px] mt-1">
-          핵심 서비스 가동 현황 및 장애 이력
-        </p>
+        <h2 className="font-headline text-on-surface text-[26px] font-bold tracking-tight">서버 상태</h2>
+        <p className="font-body text-on-surface-variant text-[14px] mt-1">핵심 서비스 가동 현황 및 장애 이력</p>
       </div>
 
       {/* Service Status Cards */}
       <div className="grid grid-cols-4 gap-5">
-        {services.map((svc) => (
-          <div
-            key={svc.name}
-            className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 flex flex-col gap-4"
-          >
-            <div className="flex items-center justify-between">
-              <div className="w-10 h-10 rounded-xl bg-primary/[0.08] flex items-center justify-center">
-                <span
-                  className="material-symbols-outlined text-[22px] text-primary"
-                  style={{ fontVariationSettings: "'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20" }}
-                >
-                  {svc.icon}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: svc.statusColor }}
-                />
-                <span
-                  className="font-label text-[12px] font-semibold"
-                  style={{ color: svc.statusColor }}
-                >
-                  {svc.status}
-                </span>
-              </div>
+        {loading ? (
+          [1, 2, 3, 4].map(i => (
+            <div key={i} className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 h-[120px] animate-pulse" />
+          ))
+        ) : services.map((svc) => (
+          <div key={svc.name} className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="material-symbols-outlined text-[28px] text-on-surface-variant">{svc.icon}</span>
+              <span className="font-headline text-on-surface text-[15px] font-bold">{svc.name}</span>
             </div>
-            <div>
-              <p className="font-body text-on-surface text-[15px] font-semibold">
-                {svc.name}
-              </p>
-              <div className="flex items-center justify-between mt-2">
-                <span className="font-label text-on-surface-variant text-[12px]">
-                  Uptime
-                </span>
-                <span className="font-data text-on-surface text-[14px] font-bold">
-                  {svc.uptime}%
-                </span>
-              </div>
-              <div className="w-full h-1.5 rounded-full bg-surface-container-low mt-2 overflow-hidden">
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${svc.uptime}%`,
-                    backgroundColor: svc.statusColor,
-                  }}
-                />
-              </div>
-              <p className="font-label text-on-surface-variant/60 text-[11px] mt-2">
-                마지막 확인: {svc.lastCheck}
-              </p>
+            <div className="flex items-center gap-2 mb-1">
+              <span className={`w-2.5 h-2.5 rounded-full ${svc.status === 'normal' ? 'bg-tertiary' : svc.status === 'warning' ? 'bg-amber-500' : 'bg-error'}`} />
+              <span className={`text-[14px] font-semibold ${STATUS_COLOR[svc.status]}`}>
+                {STATUS_LABEL[svc.status]}
+              </span>
             </div>
+            <p className="text-[12px] text-on-surface-variant mt-1">{svc.detail}</p>
           </div>
         ))}
       </div>
 
-      {/* API Response Time Chart */}
-      <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 min-h-[320px]">
-        <h3 className="font-headline text-on-surface text-[16px] font-bold mb-1">
-          API 응답 시간
-        </h3>
-        <p className="font-body text-on-surface-variant text-[13px] mb-6">
-          최근 24시간 평균 응답 시간 (ms)
-        </p>
-        <div className="flex items-center justify-center h-[200px] rounded-xl bg-surface-container-low">
-          <div className="text-center">
-            <span
-              className="material-symbols-outlined text-[32px] text-on-surface-variant/30"
-              style={{ fontVariationSettings: "'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20" }}
-            >
-              show_chart
-            </span>
-            <p className="font-body text-on-surface-variant/50 text-[13px] mt-2">
-              응답 시간 차트 영역
-            </p>
-          </div>
+      {/* DB Stats */}
+      {dbStats && (
+        <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6">
+          <h3 className="font-headline text-on-surface text-[16px] font-bold mb-2">데이터베이스 현황</h3>
+          <p className="text-sm text-on-surface-variant">주요 테이블 총 레코드: <span className="font-semibold text-on-surface">{dbStats.totalRows.toLocaleString()}건</span></p>
         </div>
-      </div>
+      )}
 
-      {/* Recent Incidents */}
+      {/* Incident History */}
       <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
-            <span
-              className="material-symbols-outlined text-[22px] text-amber-600"
-              style={{ fontVariationSettings: "'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20" }}
-            >
-              report
-            </span>
-          </div>
-          <div>
-            <h3 className="font-headline text-on-surface text-[16px] font-bold">
-              최근 장애/이슈
-            </h3>
-            <p className="font-body text-on-surface-variant text-[13px]">
-              최근 7일 이내 발생한 이슈
-            </p>
-          </div>
-        </div>
-        <div className="space-y-3">
-          {incidents.map((incident, idx) => (
-            <div
-              key={idx}
-              className="flex items-center justify-between p-4 rounded-xl bg-surface-container-low"
-            >
-              <div className="flex items-center gap-3">
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-label font-medium ${severityColor[incident.severity]}`}
-                >
-                  {incident.severity}
-                </span>
-                <div>
-                  <p className="font-body text-on-surface text-[14px] font-medium">
-                    {incident.title}
-                  </p>
-                  <p className="font-label text-on-surface-variant text-[12px] mt-0.5">
-                    {incident.time}
-                  </p>
-                </div>
-              </div>
-              <span className={`font-label text-[13px] font-semibold ${incidentStatusColor[incident.status]}`}>
-                {incident.status}
-              </span>
-            </div>
-          ))}
+        <h3 className="font-headline text-on-surface text-[16px] font-bold mb-4">최근 보안 이벤트</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-surface-container-low">
+                <th className="px-4 py-3 text-xs font-label font-semibold text-on-surface-variant">시각</th>
+                <th className="px-4 py-3 text-xs font-label font-semibold text-on-surface-variant">이벤트</th>
+                <th className="px-4 py-3 text-xs font-label font-semibold text-on-surface-variant">심각도</th>
+                <th className="px-4 py-3 text-xs font-label font-semibold text-on-surface-variant">대상</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-outline-variant/20">
+              {loading ? (
+                <tr><td colSpan={4} className="px-4 py-8 text-center text-sm text-on-surface-variant">불러오는 중...</td></tr>
+              ) : incidents.length === 0 ? (
+                <tr><td colSpan={4} className="px-4 py-8 text-center text-sm text-on-surface-variant">최근 보안 이벤트가 없습니다</td></tr>
+              ) : incidents.map(inc => (
+                <tr key={inc.id} className="hover:bg-surface-container-low/50">
+                  <td className="px-4 py-3 text-xs font-data text-on-surface-variant whitespace-nowrap">
+                    {new Date(inc.created_at).toLocaleString('ko-KR')}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-on-surface">{inc.event_type}</td>
+                  <td className="px-4 py-3">
+                    <Badge label={inc.severity} variant={inc.severity === 'critical' ? 'error' : 'warning'} />
+                  </td>
+                  <td className="px-4 py-3 text-xs text-on-surface-variant">{inc.resource ?? '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

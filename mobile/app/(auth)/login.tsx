@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Image,
 } from 'react-native';
 import GradientView, { GradientButton } from '../../components/common/GradientView';
 import { useRouter } from 'expo-router';
@@ -51,6 +52,11 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <GradientView style={styles.heroSection}>
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.heroLogo}
+            resizeMode="contain"
+          />
           <Text style={styles.heroTitle}>logiSSign</Text>
           <Text style={styles.heroSubtitle}>기사님 전용 앱</Text>
         </GradientView>
@@ -125,6 +131,11 @@ const styles = StyleSheet.create({
     paddingBottom: 60,
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
+  },
+  heroLogo: {
+    width: 72,
+    height: 72,
+    marginBottom: spacing.md,
   },
   heroTitle: {
     ...typography.displayLarge,

@@ -1,3 +1,5 @@
+import { withSentryConfig } from '@sentry/nextjs'
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async headers() {
@@ -30,11 +32,11 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://t1.daumcdn.net https://postcode.map.daum.net https://ssl.daumcdn.net https://va.vercel-scripts.com",
+              "script-src 'self' 'unsafe-inline' https://t1.daumcdn.net https://postcode.map.daum.net https://ssl.daumcdn.net https://va.vercel-scripts.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://t1.daumcdn.net",
               "font-src 'self' https://fonts.gstatic.com data:",
               "img-src 'self' data: blob: https://*.supabase.co https://t1.daumcdn.net",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://postcode.map.daum.net https://va.vercel-scripts.com",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://postcode.map.daum.net https://va.vercel-scripts.com https://*.sentry.io https://*.ingest.sentry.io",
               "frame-src https://t1.daumcdn.net https://postcode.map.daum.net",
               "object-src 'none'",
               "base-uri 'self'",
@@ -52,4 +54,13 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+export default withSentryConfig(nextConfig, {
+  // Sentry 소스맵 업로드 (SENTRY_AUTH_TOKEN 필요, 없으면 건너뜀)
+  silent: true,
+  // 클라이언트 번들에서 Sentry 디버그 정보 제거
+  disableLogger: true,
+  // 빌드 시 소스맵 자동 업로드 비활성화 (CI에서만 활성화 권장)
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+})

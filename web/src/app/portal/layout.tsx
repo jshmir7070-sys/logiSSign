@@ -1,6 +1,6 @@
 export const metadata = {
-  title: 'Portal | Precision Velocity',
-  description: 'Precision Velocity Agency Portal',
+  title: 'Portal | logiSSign',
+  description: 'logiSSign 운영사 포털',
 };
 
 export default function PortalRootLayout({

@@ -1,7 +1,7 @@
 -- ============================================================
--- Precision Velocity — 라스트마일 전산 SaaS Database Schema
+-- logiSSign — 택배 대리점 정산·전자계약 자동화 플랫폼 Database Schema
 -- Supabase PostgreSQL
--- Updated: 2026-03-29 (M001/S02)
+-- Updated: 2026-04-03
 -- ============================================================
 
 -- 제공사 (SaaS 운영 주체)
@@ -903,8 +903,8 @@ CREATE TABLE IF NOT EXISTS security_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   event_type TEXT NOT NULL CHECK (event_type IN (
     'auth_failure', 'auth_success', 'permission_denied',
-    'cron_access', 'data_modification', 'rate_limit_hit',
-    'integrity_failure', 'suspicious_activity'
+    'cron_access', 'data_modification', 'pii_access',
+    'rate_limit_hit', 'integrity_failure', 'suspicious_activity'
   )),
   actor_id UUID REFERENCES auth.users(id),
   actor_ip TEXT,

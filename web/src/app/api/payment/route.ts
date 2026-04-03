@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/lib/api-auth'
 import { getPayment, payWithBillingKey, getIdentityVerification } from '@/services/payment.service'
 import { createClient } from '@supabase/supabase-js'
+import { paymentSchema, validateInput } from '@/lib/api-schemas'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,15 +19,17 @@ export async function POST(request: NextRequest) {
   if (authError || !auth) return authError!
 
   try {
-    const { action, ...body } = await request.json()
+    const rawBody = await request.json()
+    const { data: body, error: validationError } = validateInput(paymentSchema, rawBody)
+    if (validationError || !body) {
+      return NextResponse.json({ error: validationError ?? '잘못된 요청입니다' }, { status: 400 })
+    }
+
+    const { action } = body
 
     // 빌링키 등록 완료 → DB 저장
     if (action === 'save-billing-key') {
       const { billingKey, cardName, cardNumber } = body
-
-      if (!billingKey || typeof billingKey !== 'string') {
-        return NextResponse.json({ error: '빌링키가 필요합니다' }, { status: 400 })
-      }
 
       // ✅ PG사에서 빌링키 유효성 검증
       try {
@@ -73,7 +76,8 @@ export async function POST(request: NextRequest) {
 
     // 정기결제 실행
     if (action === 'charge') {
-      const { billingKey, plan, billing } = body
+      const { plan, billing } = body
+      const billingKey = 'billingKey' in body ? body.billingKey : undefined
 
       // 구독 정보 조회
       const { data: sub } = await supabaseAdmin

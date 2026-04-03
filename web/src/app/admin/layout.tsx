@@ -1,6 +1,6 @@
 export const metadata = {
-  title: 'Admin | Precision Velocity',
-  description: 'Precision Velocity Super Admin',
+  title: 'Admin | logiSSign',
+  description: 'logiSSign 슈퍼 관리자',
 };
 
 export default function AdminRootLayout({

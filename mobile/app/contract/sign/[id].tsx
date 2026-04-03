@@ -135,7 +135,7 @@ export default function ContractSignScreen() {
               driver.id,
               signatureData,
               '0.0.0.0',
-              'DeliSign-Mobile-App',
+              'logiSSign-Mobile-App',
               {
                 consent_contract: consents['contract'] ?? false,
                 consent_privacy_collect: consents['privacy_collect'] ?? false,

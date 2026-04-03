@@ -1,5 +1,5 @@
 // =============================================================
-// Precision Velocity Design System — React Native Tokens
+// logiSSign Design System — React Native Tokens
 // Source of truth: stitch/stitch_core/DESIGN.md
 // =============================================================
 

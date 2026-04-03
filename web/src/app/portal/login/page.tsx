@@ -43,7 +43,8 @@ export default function PortalLoginPage() {
         return;
       }
 
-      const role = data.user?.user_metadata?.role as string | undefined;
+      // ⚠️ 보안: app_metadata 우선 사용 (user_metadata는 클라이언트에서 조작 가능)
+      const role = (data.user?.app_metadata?.role ?? data.user?.user_metadata?.role) as string | undefined;
       if (role !== "agency_admin") {
         setForm((prev) => ({
           ...prev,
@@ -55,11 +56,11 @@ export default function PortalLoginPage() {
       }
 
       window.location.replace("/portal/dashboard");
-    } catch {
+    } catch (err) {
       setForm((prev) => ({
         ...prev,
         isLoading: false,
-        error: "로그인 중 오류가 발생했습니다.",
+        error: err instanceof Error ? `오류: ${err.message}` : "로그인 중 알 수 없는 오류가 발생했습니다.",
       }));
     }
   };
@@ -69,16 +70,12 @@ export default function PortalLoginPage() {
       <div className="w-full max-w-[420px]">
         {/* Brand */}
         <div className="flex flex-col items-center mb-10">
-          <div className="w-14 h-14 rounded-2xl bg-power-gradient flex items-center justify-center mb-5 shadow-ambient">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="white" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
+          <img src="/logo.png" alt="logiSSign" className="w-16 h-16 object-contain mb-5" />
           <h1 className="font-headline text-2xl font-bold text-on-surface tracking-tight">
-            Precision Velocity
+            logiSSign
           </h1>
           <p className="font-korean text-sm text-on-surface-variant mt-1">
-            배송 대리점 전산 관리 시스템
+            택배 대리점 정산·전자계약 플랫폼
           </p>
         </div>
 
@@ -203,19 +200,24 @@ export default function PortalLoginPage() {
           </div>
 
           {/* Links */}
-          <div className="flex items-center justify-between mt-5">
-            <button type="button" className="text-xs text-on-surface-variant hover:text-primary transition-colors">
+          <div className="flex items-center justify-center gap-3 mt-5">
+            <Link href="/portal/find-id" className="text-xs text-on-surface-variant hover:text-primary transition-colors font-korean">
+              아이디 찾기
+            </Link>
+            <span className="text-on-surface-variant/30">|</span>
+            <Link href="/portal/reset-password" className="text-xs text-on-surface-variant hover:text-primary transition-colors font-korean">
               비밀번호 찾기
-            </button>
-            <Link href="/portal/signup" className="text-xs text-primary font-medium hover:underline">
-              회원가입 →
+            </Link>
+            <span className="text-on-surface-variant/30">|</span>
+            <Link href="/portal/signup" className="text-xs text-primary font-medium hover:underline font-korean">
+              회원가입
             </Link>
           </div>
         </div>
 
         {/* Footer */}
         <p className="text-center text-[11px] text-on-surface-variant/40 mt-8 font-data">
-          © 2026 Precision Velocity. All rights reserved.
+          © 2026 logiSSign. All rights reserved.
         </p>
       </div>
     </div>

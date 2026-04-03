@@ -22,8 +22,31 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "logiSSign — 택배 대리점 정산·전자계약 자동화 플랫폼",
-  description: "엑셀 업로드 자동 정산, 기사 앱 전자서명, 법정교육 이수까지. 배송 대리점을 위한 올인원 SaaS 플랫폼.",
+  title: {
+    default: 'logiSSign — 택배 대리점 정산·전자계약 자동화 플랫폼',
+    template: '%s | logiSSign',
+  },
+  description: '엑셀 업로드 자동 정산, 기사 앱 전자서명, 법정교육 이수까지. 배송 대리점을 위한 올인원 SaaS 플랫폼.',
+  metadataBase: new URL('https://logissign.com'),
+  openGraph: {
+    type: 'website',
+    locale: 'ko_KR',
+    url: 'https://logissign.com',
+    siteName: 'logiSSign',
+    title: 'logiSSign — 택배 대리점 정산·전자계약 자동화 플랫폼',
+    description: '엑셀 업로드 자동 정산, 기사 앱 전자서명, 법정교육 이수까지.',
+    images: [{ url: '/logo.png', width: 512, height: 512, alt: 'logiSSign' }],
+  },
+  twitter: {
+    card: 'summary',
+    title: 'logiSSign',
+    description: '택배 대리점 정산·전자계약 자동화 플랫폼',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  icons: { icon: '/favicon.ico' },
 };
 
 export default function RootLayout({

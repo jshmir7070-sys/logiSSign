@@ -23,16 +23,7 @@ export default function ComingSoonPage() {
         {/* Logo */}
         <div className="logo-section fade-in" style={{ animationDelay: '0.4s' }}>
           <div className="logo-icon">
-            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-              <rect width="48" height="48" rx="14" fill="url(#logo-grad)" />
-              <path d="M26 10L12 28h12l-2 10 14-18H24l2-10z" fill="white" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              <defs>
-                <linearGradient id="logo-grad" x1="0" y1="0" x2="48" y2="48">
-                  <stop stopColor="#004ac6" />
-                  <stop offset="1" stopColor="#2563eb" />
-                </linearGradient>
-              </defs>
-            </svg>
+            <img src="/logo.png" alt="logiSSign" style={{ width: 48, height: 48 }} />
           </div>
           <h1 className="logo-text">
             logi<span className="logo-highlight">SSign</span>

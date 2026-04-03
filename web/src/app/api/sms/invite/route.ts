@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sendInviteCodeSms } from '@/services/sms.service'
 import { createClient } from '@supabase/supabase-js'
 import { authenticateAdmin } from '@/lib/api-auth'
+import { smsInviteSchema, validateInput } from '@/lib/api-schemas'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,  // ⚠️ service_role 필수: 초대코드 조회 시 RLS 우회 필요 (agency_id 기반 정책, 관리자는 auth.jwt에 agency_id 있음)
 )
 
 /**
@@ -23,17 +24,19 @@ export async function POST(request: NextRequest) {
   if (authError || !auth) return authError!
 
   try {
-    const body = await request.json()
-    const { driverPhone, driverName } = body
-    let { inviteCode, agencyName } = body
-    const { agencyId } = body
-
-    if (!driverPhone || !driverName) {
+    const rawBody = await request.json()
+    const { data: body, error: validationError } = validateInput(smsInviteSchema, rawBody)
+    if (validationError || !body) {
       return NextResponse.json(
-        { error: '필수 파라미터 누락 (driverPhone, driverName)' },
+        { error: validationError ?? '잘못된 요청입니다' },
         { status: 400 }
       )
     }
+
+    const { driverPhone, driverName } = body
+    let inviteCode = body.inviteCode
+    let agencyName = body.agencyName
+    const { agencyId } = body
 
     // agencyId로 초대코드/대리점명 자동 조회
     if (agencyId && (!inviteCode || !agencyName)) {
