@@ -36,6 +36,7 @@ CREATE TABLE agencies (
   invite_code TEXT UNIQUE,
   excel_config JSONB,        -- 엑셀 업로드 컬럼 매핑 설정
   field_config JSONB,        -- 커스텀 필드 설정
+  logo_url TEXT,             -- 운영사 로고 이미지 URL
   templates_locked BOOLEAN DEFAULT false,  -- 템플릿 선택 확정 여부 (true면 변경 불가)
   privacy_officer_name TEXT,     -- 개인정보보호 담당자 이름
   privacy_officer_phone TEXT,    -- 개인정보보호 담당자 연락처

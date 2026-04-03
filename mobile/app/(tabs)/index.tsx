@@ -152,6 +152,15 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <GradientView style={styles.heroCard}>
+          {/* 운영사 로고 + 상호 */}
+          {driver?.agency_name && (
+            <View style={styles.agencyRow}>
+              {driver?.agency_logo_url ? (
+                <Image source={{ uri: driver.agency_logo_url }} style={styles.agencyLogo} resizeMode="contain" />
+              ) : null}
+              <Text style={styles.agencyName}>{driver.agency_name}</Text>
+            </View>
+          )}
           <Text style={styles.heroGreeting}>
             {driver?.name ?? '기사'}님, 안녕하세요
           </Text>
@@ -319,6 +328,23 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xl,
     padding: spacing['2xl'],
     marginTop: spacing.lg,
+  },
+  agencyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  agencyLogo: {
+    width: 28,
+    height: 28,
+    borderRadius: borderRadius.sm,
+  },
+  agencyName: {
+    ...typography.labelMedium,
+    color: colors.surfaceContainerLowest,
+    opacity: 0.9,
+    fontWeight: '700',
   },
   heroGreeting: {
     ...typography.bodyMedium,

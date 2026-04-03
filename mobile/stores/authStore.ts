@@ -7,7 +7,7 @@ type Driver = Row<'drivers'>;
 
 interface AuthState {
   session: Session | null;
-  driver: (Driver & { agency_name: string | null }) | null;
+  driver: (Driver & { agency_name: string | null; agency_logo_url: string | null }) | null;
   isLoading: boolean;
   setSession: (session: Session | null) => void;
   setDriver: (driver: AuthState['driver']) => void;
@@ -90,19 +90,22 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
 
       let agencyName: string | null = null;
+      let agencyLogoUrl: string | null = null;
       if (driverData.agency_id) {
         const { data: agencyData } = await supabase
           .from('agencies')
-          .select('name')
+          .select('name, logo_url')
           .eq('id', driverData.agency_id)
           .single();
         agencyName = agencyData?.name ?? null;
+        agencyLogoUrl = (agencyData as Record<string, unknown>)?.logo_url as string | null ?? null;
       }
 
       set({
         driver: {
           ...driverData,
           agency_name: agencyName,
+          agency_logo_url: agencyLogoUrl,
         },
         isLoading: false,
       });

@@ -166,7 +166,7 @@ const EXTENDED_DRIVER_FIELDS = [
 /** 1. Modern — 그라디언트 헤더 + 요약 카드 + 카드형 테이블 */
 const MODERN_TEMPLATE: SettlementTemplate = {
   id: 'modern',
-  name: 'Modern',
+  name: '모던',
   layout: { paperSize: 'A4', orientation: 'portrait', margins: { top: 0, right: 40, bottom: 40, left: 40 } },
   header: {
     style: 'gradient',
@@ -215,7 +215,7 @@ const MODERN_TEMPLATE: SettlementTemplate = {
 /** 2. Classic — 전통적 정산서 + 격식 있는 서명란 */
 const CLASSIC_TEMPLATE: SettlementTemplate = {
   id: 'classic',
-  name: 'Classic',
+  name: '클래식',
   layout: { paperSize: 'A4', orientation: 'portrait', margins: { top: 50, right: 50, bottom: 50, left: 50 } },
   header: {
     style: 'minimal',
@@ -257,7 +257,7 @@ const CLASSIC_TEMPLATE: SettlementTemplate = {
 /** 3. Clean — 미니멀 화이트 + 좌측 컬러바 */
 const CLEAN_TEMPLATE: SettlementTemplate = {
   id: 'clean',
-  name: 'Clean',
+  name: '심플',
   layout: { paperSize: 'A4', orientation: 'portrait', margins: { top: 50, right: 50, bottom: 50, left: 50 } },
   header: {
     style: 'minimal',
@@ -298,7 +298,7 @@ const CLEAN_TEMPLATE: SettlementTemplate = {
 /** 4. Premium — 딥네이비 + 골드 악센트 + 중앙 로고 */
 const PREMIUM_TEMPLATE: SettlementTemplate = {
   id: 'premium',
-  name: 'Premium',
+  name: '프리미엄',
   layout: { paperSize: 'A4', orientation: 'portrait', margins: { top: 50, right: 50, bottom: 50, left: 50 } },
   header: {
     style: 'minimal',
@@ -338,9 +338,9 @@ const PREMIUM_TEMPLATE: SettlementTemplate = {
 }
 
 /** 5. Coupang — 물류 블루 + 통계 그리드 + 실용적 레이아웃 */
-const COUPANG_TEMPLATE: SettlementTemplate = {
+const SMART_TEMPLATE: SettlementTemplate = {
   id: 'coupang',
-  name: 'Coupang',
+  name: '스마트',
   layout: { paperSize: 'A4', orientation: 'portrait', margins: { top: 40, right: 40, bottom: 40, left: 40 } },
   header: {
     style: 'solid',
@@ -387,9 +387,9 @@ const COUPANG_TEMPLATE: SettlementTemplate = {
 export const DEFAULT_TEMPLATE = MODERN_TEMPLATE
 
 export const PRESET_TEMPLATES: Array<{ id: string; name: string; description: string; icon: string; template: SettlementTemplate }> = [
-  { id: 'modern', name: 'Modern', description: '그라디언트 헤더 + 카드형 요약', icon: 'view_quilt', template: MODERN_TEMPLATE },
-  { id: 'classic', name: 'Classic', description: '전통적 정산서 + 격식 서명란', icon: 'auto_awesome_motion', template: CLASSIC_TEMPLATE },
-  { id: 'clean', name: 'Clean', description: '미니멀 화이트 + 컬러바 악센트', icon: 'grid_view', template: CLEAN_TEMPLATE },
-  { id: 'premium', name: 'Premium', description: '딥네이비 + 골드 프리미엄', icon: 'diamond', template: PREMIUM_TEMPLATE },
-  { id: 'coupang', name: 'Coupang', description: '물류 블루 + 통계 중심 실용형', icon: 'local_shipping', template: COUPANG_TEMPLATE },
+  { id: 'modern', name: '모던', description: '그라디언트 헤더 · 카드형 요약', icon: 'view_quilt', template: MODERN_TEMPLATE },
+  { id: 'classic', name: '클래식', description: '전통 정산서 · 격식 서명란', icon: 'auto_awesome_motion', template: CLASSIC_TEMPLATE },
+  { id: 'clean', name: '심플', description: '미니멀 화이트 · 컬러바 악센트', icon: 'grid_view', template: CLEAN_TEMPLATE },
+  { id: 'premium', name: '프리미엄', description: '딥네이비 · 골드 프리미엄', icon: 'diamond', template: PREMIUM_TEMPLATE },
+  { id: 'smart', name: '스마트', description: '블루 통계형 · 데이터 중심 실용 레이아웃', icon: 'local_shipping', template: SMART_TEMPLATE },
 ]
