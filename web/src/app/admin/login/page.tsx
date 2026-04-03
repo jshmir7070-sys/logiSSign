@@ -74,7 +74,7 @@ export default function AdminLoginPage() {
         <div className="absolute bottom-1/4 right-1/4 w-[320px] h-[320px] rounded-full bg-primary-container/15 blur-[100px] pointer-events-none" />
 
         <div className="relative z-10 flex flex-col items-center text-center px-12">
-          <img src="/logo.png" alt="logiSSign" className="w-72 object-contain mb-8" />
+          <img src="/logo.png" alt="logiSSign" className="w-[320px] object-contain mb-8" />
           <h1 className="font-headline text-4xl font-bold text-white tracking-tight mb-2">
             &nbsp;
           </h1>
@@ -94,7 +94,7 @@ export default function AdminLoginPage() {
         <div className="w-full max-w-[400px]">
           {/* Mobile brand */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <img src="/logo.png" alt="logiSSign" className="h-10 object-contain" />
+            <img src="/logo.png" alt="logiSSign" className="w-[160px] object-contain" />
           </div>
 
           <h2 className="font-headline text-xl font-bold text-on-surface mb-1">관리자 로그인</h2>

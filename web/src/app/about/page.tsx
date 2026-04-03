@@ -516,7 +516,7 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-50 bg-[#0a0f1e]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center">
-            <img src="/logo.png" alt="logiSSign" className="h-8 object-contain" />
+            <img src="/logo.png" alt="logiSSign" className="w-[120px] object-contain" />
           </Link>
           <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
             <a href="#features" className="hover:text-white transition-colors">기능</a>
