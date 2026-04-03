@@ -23,6 +23,7 @@ const PUBLIC_ROUTES = [
   "/api/cron",      // CRON (자체 시크릿 인증)
   "/api/health",    // 헬스체크 (인증 불필요)
   "/api/beta-apply", // 베타 테스트 신청 (공개)
+  "/guide",         // 사용설명서 (공개)
   "/_next",
   "/favicon.ico",
 ];
