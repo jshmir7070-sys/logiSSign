@@ -112,18 +112,22 @@ function drawHeader(c: Ctx, meta: SettlementMeta, driver: SettlementDriverData):
     const tc = hex(header.textColor)
     const f = font(c, true)
 
-    // 운영사 로고 (좌상단)
+    // 운영사 로고 (위치 설정 반영)
     let logoOffsetX = 0
     if (meta.logoUrl && c.logoImage) {
-      const logoH = 36
+      const logoH = header.logoSize ?? 36
       const logoDims = c.logoImage.scale(logoH / c.logoImage.height)
+      const logoPos = header.logoPosition ?? 'left'
+      const logoX = logoPos === 'center' ? (c.w - logoDims.width) / 2
+        : logoPos === 'right' ? c.w - c.m.right - logoDims.width
+        : c.m.left
       c.page.drawImage(c.logoImage, {
-        x: c.m.left,
+        x: logoX,
         y: c.h - 22 - logoH,
         width: logoDims.width,
         height: logoDims.height,
       })
-      logoOffsetX = logoDims.width + 8
+      if (logoPos === 'left') logoOffsetX = logoDims.width + 8
     }
 
     // 부제

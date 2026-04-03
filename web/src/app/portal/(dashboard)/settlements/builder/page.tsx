@@ -77,7 +77,7 @@ export default function SettlementBuilderPage() {
   const [saving, setSaving] = useState(false);
   const [previewPdf, setPreviewPdf] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
-  const [activeTab, setActiveTab] = useState<'presets' | 'title' | 'items' | 'style' | 'footer'>('presets');
+  const [activeTab, setActiveTab] = useState<'presets' | 'title' | 'items' | 'style' | 'branding' | 'footer'>('presets');
 
   useEffect(() => {
     async function init() {
@@ -221,6 +221,7 @@ export default function SettlementBuilderPage() {
     { id: 'title' as const, label: '타이틀' },
     { id: 'items' as const, label: '항목 설정' },
     { id: 'style' as const, label: '스타일' },
+    { id: 'branding' as const, label: '로고/도장' },
     { id: 'footer' as const, label: '푸터' },
   ];
 
@@ -443,6 +444,111 @@ export default function SettlementBuilderPage() {
                 </div>
                 <ColorPicker label="합계 배경색" value={template.totalSection.backgroundColor || '#f0f9ff'}
                   onChange={c => setTemplate(p => ({ ...p, totalSection: { ...p.totalSection, backgroundColor: c } }))} />
+              </div>
+            )}
+
+            {activeTab === 'branding' && (
+              <div className="space-y-6">
+                {/* 로고 설정 */}
+                <div>
+                  <h3 className="text-sm font-bold text-on-surface mb-3 font-korean">🏢 회사 로고</h3>
+                  <p className="text-xs text-on-surface-variant mb-3 font-korean">정산서 헤더에 운영사 로고를 표시합니다. 설정 → 프로필에서 로고를 업로드하세요.</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-on-surface-variant mb-1 font-korean">로고 위치</label>
+                      <select
+                        value={template.header.logoPosition ?? 'left'}
+                        onChange={e => setTemplate(t => ({ ...t, header: { ...t.header, logoPosition: e.target.value as 'left' | 'center' | 'right' } }))}
+                        className="w-full h-10 px-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean"
+                      >
+                        <option value="left">좌측</option>
+                        <option value="center">중앙</option>
+                        <option value="right">우측</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-on-surface-variant mb-1 font-korean">로고 크기 (높이 px)</label>
+                      <input
+                        type="range" min={20} max={80} step={2}
+                        value={template.header.logoSize ?? 36}
+                        onChange={e => setTemplate(t => ({ ...t, header: { ...t.header, logoSize: Number(e.target.value) } }))}
+                        className="w-full"
+                      />
+                      <span className="text-xs text-on-surface-variant">{template.header.logoSize ?? 36}px</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 타이틀 위치 조정 */}
+                <div>
+                  <h3 className="text-sm font-bold text-on-surface mb-3 font-korean">📝 타이틀 위치</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-on-surface-variant mb-1 font-korean">정렬</label>
+                      <select
+                        value={template.title.alignment}
+                        onChange={e => setTemplate(t => ({ ...t, title: { ...t.title, alignment: e.target.value as 'left' | 'center' | 'right' } }))}
+                        className="w-full h-10 px-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean"
+                      >
+                        <option value="left">좌측</option>
+                        <option value="center">중앙</option>
+                        <option value="right">우측</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-on-surface-variant mb-1 font-korean">글자 크기</label>
+                      <input
+                        type="range" min={12} max={28} step={1}
+                        value={template.title.fontSize}
+                        onChange={e => setTemplate(t => ({ ...t, title: { ...t.title, fontSize: Number(e.target.value) } }))}
+                        className="w-full"
+                      />
+                      <span className="text-xs text-on-surface-variant">{template.title.fontSize}pt</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 도장 설정 */}
+                <div>
+                  <h3 className="text-sm font-bold text-on-surface mb-3 font-korean">🔏 도장/직인</h3>
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-2">
+                      <input type="checkbox" checked={template.footer.showStamp}
+                        onChange={e => setTemplate(t => ({ ...t, footer: { ...t.footer, showStamp: e.target.checked } }))}
+                        className="w-4 h-4 rounded accent-primary" />
+                      <span className="text-sm text-on-surface font-korean">도장 표시</span>
+                    </label>
+                    {template.footer.showStamp && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-on-surface-variant mb-1 font-korean">도장 위치</label>
+                          <select
+                            value={template.footer.stampPosition ?? 'right'}
+                            onChange={e => setTemplate(t => ({ ...t, footer: { ...t.footer, stampPosition: e.target.value as 'left' | 'center' | 'right' } }))}
+                            className="w-full h-10 px-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean"
+                          >
+                            <option value="left">좌측</option>
+                            <option value="center">중앙</option>
+                            <option value="right">우측</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-on-surface-variant mb-1 font-korean">도장 크기 (px)</label>
+                          <input
+                            type="range" min={30} max={100} step={5}
+                            value={template.footer.stampSize ?? 60}
+                            onChange={e => setTemplate(t => ({ ...t, footer: { ...t.footer, stampSize: Number(e.target.value) } }))}
+                            className="w-full"
+                          />
+                          <span className="text-xs text-on-surface-variant">{template.footer.stampSize ?? 60}px</span>
+                        </div>
+                      </div>
+                    )}
+                    <p className="text-xs text-on-surface-variant font-korean">
+                      도장 이미지는 설정 → 도장/서명 탭에서 등록할 수 있습니다
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 

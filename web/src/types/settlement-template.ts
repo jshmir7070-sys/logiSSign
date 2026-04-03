@@ -24,6 +24,8 @@ export interface SettlementTemplate {
     showDocumentNumber: boolean
     showSubtitle: boolean        // "Official Statement" 같은 부제
     subtitleText?: string
+    logoPosition?: 'left' | 'center' | 'right'   // 로고 위치
+    logoSize?: number            // 로고 높이 px (기본 36)
   }
 
   title: {
@@ -31,6 +33,7 @@ export interface SettlementTemplate {
     fontSize: number
     fontWeight: 'normal' | 'bold'
     alignment: 'left' | 'center' | 'right'
+    offsetY?: number            // 타이틀 Y 위치 미세 조정 (px)
   }
 
   driverInfo: {
@@ -90,6 +93,8 @@ export interface SettlementTemplate {
     showDate: boolean
     showStamp: boolean
     stampImageUrl?: string
+    stampPosition?: 'left' | 'center' | 'right'  // 도장 위치
+    stampSize?: number           // 도장 크기 px (기본 60)
     showCompanyInfo: boolean      // 회사 주소/전화번호
     companyAddress?: string
     companyPhone?: string
