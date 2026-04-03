@@ -145,6 +145,7 @@ export interface SettlementMeta {
   month: number
   generatedAt: string
   documentNumber?: string
+  logoUrl?: string
 }
 
 /* ══════════════════════════════════════════════

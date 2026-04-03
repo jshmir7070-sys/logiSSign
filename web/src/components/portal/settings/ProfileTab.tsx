@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
 import AddressSearch, { type AddressValue } from '@/components/shared/AddressSearch';
 
@@ -17,6 +17,9 @@ export default function ProfileTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [agencyId, setAgencyId] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     async function load() {
@@ -28,11 +31,12 @@ export default function ProfileTab() {
 
       const { data } = await supabase
         .from('agencies')
-        .select('name, owner_name, phone, address, address_detail, business_number, email, invite_code, privacy_officer_name, privacy_officer_phone, privacy_officer_email')
+        .select('name, owner_name, phone, address, address_detail, business_number, email, invite_code, privacy_officer_name, privacy_officer_phone, privacy_officer_email, logo_url')
         .eq('id', aid)
         .single();
 
       if (data) {
+        setLogoUrl((data as Record<string, string>).logo_url ?? null);
         let inviteCode = (data as Record<string, string>).invite_code ?? '';
         
         if (!inviteCode) {
@@ -77,6 +81,35 @@ export default function ProfileTab() {
     setSaving(false);
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !agencyId) return;
+    if (!file.type.startsWith('image/')) { alert('이미지 파일만 업로드 가능합니다'); return; }
+    if (file.size > 2 * 1024 * 1024) { alert('파일 크기는 2MB 이하만 가능합니다'); return; }
+
+    setLogoUploading(true);
+    const supabase = createBrowserSupabaseClient();
+    const ext = file.name.split('.').pop() ?? 'png';
+    const path = `${agencyId}/logo.${ext}`;
+
+    const { error: uploadErr } = await supabase.storage.from('documents').upload(path, file, { upsert: true });
+    if (uploadErr) { alert('업로드 실패: ' + uploadErr.message); setLogoUploading(false); return; }
+
+    const { data: urlData } = supabase.storage.from('documents').getPublicUrl(path);
+    const url = urlData.publicUrl;
+
+    await supabase.from('agencies').update({ logo_url: url }).eq('id', agencyId);
+    setLogoUrl(url);
+    setLogoUploading(false);
+  };
+
+  const handleLogoDelete = async () => {
+    if (!agencyId) return;
+    const supabase = createBrowserSupabaseClient();
+    await supabase.from('agencies').update({ logo_url: null }).eq('id', agencyId);
+    setLogoUrl(null);
+  };
+
   if (loading) {
     return (
       <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-8 flex items-center justify-center h-48">
@@ -88,6 +121,44 @@ export default function ProfileTab() {
   return (
     <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-8 space-y-6">
       <h2 className="text-lg font-headline font-bold text-on-surface font-korean">대리점 정보</h2>
+
+      {/* 로고 업로드 */}
+      <div className="flex items-start gap-6 p-5 rounded-xl bg-surface-container-low/50 border border-outline-variant/15">
+        <div className="flex-shrink-0">
+          {logoUrl ? (
+            <img src={logoUrl} alt="로고" className="w-24 h-24 object-contain rounded-xl border border-outline-variant/20 bg-white p-1" />
+          ) : (
+            <div className="w-24 h-24 rounded-xl border-2 border-dashed border-outline-variant/30 flex items-center justify-center bg-surface-container-lowest">
+              <span className="text-2xl">🏢</span>
+            </div>
+          )}
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-on-surface font-korean mb-1">회사 로고</p>
+          <p className="text-xs text-on-surface-variant font-korean mb-3">
+            정산서 PDF와 기사 앱에 표시됩니다 · PNG/JPG · 2MB 이하
+          </p>
+          <div className="flex items-center gap-2">
+            <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+            <button
+              onClick={() => logoInputRef.current?.click()}
+              disabled={logoUploading}
+              className="h-9 px-4 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors font-korean disabled:opacity-50"
+            >
+              {logoUploading ? '업로드 중...' : logoUrl ? '로고 변경' : '로고 업로드'}
+            </button>
+            {logoUrl && (
+              <button
+                onClick={handleLogoDelete}
+                className="h-9 px-4 rounded-lg bg-error/10 text-error text-xs font-semibold hover:bg-error/20 transition-colors font-korean"
+              >
+                삭제
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-6">
         <div>
           <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">대리점명 (상호)</label>

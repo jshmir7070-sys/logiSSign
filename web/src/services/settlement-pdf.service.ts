@@ -75,6 +75,7 @@ interface Ctx {
   w: number
   h: number
   tpl: SettlementTemplate
+  logoImage?: import('pdf-lib').PDFImage
 }
 
 function cw(c: Ctx) { return c.w - c.m.left - c.m.right }
@@ -111,15 +112,29 @@ function drawHeader(c: Ctx, meta: SettlementMeta, driver: SettlementDriverData):
     const tc = hex(header.textColor)
     const f = font(c, true)
 
+    // 운영사 로고 (좌상단)
+    let logoOffsetX = 0
+    if (meta.logoUrl && c.logoImage) {
+      const logoH = 36
+      const logoDims = c.logoImage.scale(logoH / c.logoImage.height)
+      c.page.drawImage(c.logoImage, {
+        x: c.m.left,
+        y: c.h - 22 - logoH,
+        width: logoDims.width,
+        height: logoDims.height,
+      })
+      logoOffsetX = logoDims.width + 8
+    }
+
     // 부제
     if (header.showSubtitle && header.subtitleText) {
-      c.page.drawText(header.subtitleText.toUpperCase(), { x: c.m.left, y: ty, size: 8, font: font(c), color: rgb(1, 1, 1) })
+      c.page.drawText(header.subtitleText.toUpperCase(), { x: c.m.left + logoOffsetX, y: ty, size: 8, font: font(c), color: rgb(1, 1, 1) })
       ty -= 16
     }
 
     // 타이틀
     const titleText = tplVars(c.tpl.title.text, meta)
-    c.page.drawText(titleText, { x: c.m.left, y: ty, size: c.tpl.title.fontSize, font: f, color: tc })
+    c.page.drawText(titleText, { x: c.m.left + logoOffsetX, y: ty, size: c.tpl.title.fontSize, font: f, color: tc })
     ty -= c.tpl.title.fontSize + 12
 
     // 회사명 + 기사명 (우측)
@@ -412,6 +427,20 @@ export async function generateSettlementPdf(
   const fonts = await loadKoreanFonts(pdfDoc)
 
   let c: Ctx = { page, fonts, y: h - template.layout.margins.top, m: template.layout.margins, w, h, tpl: template }
+
+  // 운영사 로고 이미지 로드
+  if (meta.logoUrl) {
+    try {
+      const logoRes = await fetch(meta.logoUrl)
+      const logoBytes = new Uint8Array(await logoRes.arrayBuffer())
+      const isPng = meta.logoUrl.endsWith('.png') || logoBytes[0] === 0x89
+      c.logoImage = isPng
+        ? await pdfDoc.embedPng(logoBytes)
+        : await pdfDoc.embedJpg(logoBytes)
+    } catch {
+      // 로고 로드 실패 시 무시 — 로고 없이 진행
+    }
+  }
 
   c = drawHeader(c, meta, driver)
   c = drawDriverInfo(c, driver)
