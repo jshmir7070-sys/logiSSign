@@ -27,16 +27,8 @@ export default function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-[240px] bg-sidebar flex flex-col z-50">
       {/* Logo */}
-      <div className="px-6 py-7 flex items-center gap-3">
-        <img src="/logo.png" alt="logiSSign" className="w-9 h-9 object-contain" />
-        <div>
-          <p className="text-white font-headline text-[15px] font-bold leading-tight tracking-tight">
-            logiSSign
-          </p>
-          <p className="text-white/60 font-headline text-[11px] font-medium tracking-widest uppercase">
-            Admin
-          </p>
-        </div>
+      <div className="px-5 py-7">
+        <img src="/logo.png" alt="logiSSign" className="h-8 object-contain" />
       </div>
 
       {/* Navigation */}

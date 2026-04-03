@@ -83,7 +83,7 @@ export default function FindIdPage() {
       <div className="w-full max-w-[420px]">
         {/* 브랜드 */}
         <div className="flex flex-col items-center mb-10">
-          <img src="/logo.png" alt="logiSSign" className="w-12 h-12 object-contain mb-4" />
+          <img src="/logo.png" alt="logiSSign" className="h-12 object-contain mb-5" />
           <h1 className="font-headline text-xl font-bold text-on-surface">아이디(이메일) 찾기</h1>
           <p className="font-korean text-sm text-on-surface-variant mt-1">가입 시 등록한 정보로 찾습니다</p>
         </div>

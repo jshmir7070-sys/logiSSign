@@ -23,11 +23,8 @@ export default function ComingSoonPage() {
         {/* Logo */}
         <div className="logo-section fade-in" style={{ animationDelay: '0.4s' }}>
           <div className="logo-icon">
-            <img src="/logo.png" alt="logiSSign" style={{ width: 48, height: 48 }} />
+            <img src="/logo.png" alt="logiSSign" style={{ height: 64 }} />
           </div>
-          <h1 className="logo-text">
-            logi<span className="logo-highlight">SSign</span>
-          </h1>
         </div>
 
         {/* Headline */}

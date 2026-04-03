@@ -515,11 +515,8 @@ export default function LandingPage() {
       {/* ═══════════════════ NAV ═══════════════════ */}
       <nav className="sticky top-0 z-50 bg-[#0a0f1e]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <img src="/logo.png" alt="logiSSign" className="w-9 h-9 object-contain" />
-            <span className="text-white font-bold text-lg tracking-tight">
-              logi<span className="text-[#60a5fa]">SSign</span>
-            </span>
+          <Link href="/" className="flex items-center">
+            <img src="/logo.png" alt="logiSSign" className="h-8 object-contain" />
           </Link>
           <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
             <a href="#features" className="hover:text-white transition-colors">기능</a>
@@ -967,10 +964,7 @@ export default function LandingPage() {
             {/* Brand */}
             <div>
               <div className="flex items-center gap-2.5 mb-3">
-                <img src="/logo.png" alt="logiSSign" className="w-8 h-8 object-contain" />
-                <span className="text-white font-bold">
-                  logi<span className="text-[#60a5fa]">SSign</span>
-                </span>
+                <img src="/logo.png" alt="logiSSign" className="h-7 object-contain" />
               </div>
               <p className="text-xs text-gray-500 leading-relaxed max-w-xs">
                 택배·배송 대리점의 정산, 전자계약, 기사 관리를
