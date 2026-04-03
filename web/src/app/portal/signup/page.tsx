@@ -423,7 +423,7 @@ function SignupContent() {
       <div className="w-full max-w-[720px]">
         {/* Brand */}
         <div className="flex flex-col items-center mb-8">
-          <img src="/logo.png" alt="logiSSign" className="w-[240px] object-contain mb-5" />
+          <img src="/logo-light.png" alt="logiSSign" className="w-[240px] object-contain mb-5" />
           <h1 className="font-headline text-xl font-bold text-on-surface">회원가입</h1>
           <p className="font-korean text-sm text-on-surface-variant mt-1">대리점 관리 서비스를 시작하세요</p>
         </div>

@@ -94,7 +94,7 @@ export default function AdminLoginPage() {
         <div className="w-full max-w-[400px]">
           {/* Mobile brand */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <img src="/logo.png" alt="logiSSign" className="w-[160px] object-contain" />
+            <img src="/logo-light.png" alt="logiSSign" className="w-[160px] object-contain" />
           </div>
 
           <h2 className="font-headline text-xl font-bold text-on-surface mb-1">관리자 로그인</h2>
