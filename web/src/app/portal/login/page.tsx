@@ -70,7 +70,7 @@ export default function PortalLoginPage() {
       <div className="w-full max-w-[420px]">
         {/* Brand */}
         <div className="flex flex-col items-center mb-10">
-          <img src="/logo.png" alt="logiSSign" className="w-full max-w-sm object-contain mb-6" />
+          <img src="/logo.png" alt="logiSSign" className="w-60 object-contain mb-5" />
           <p className="font-korean text-sm text-on-surface-variant mt-1">
             택배 대리점 정산·전자계약 플랫폼
           </p>
