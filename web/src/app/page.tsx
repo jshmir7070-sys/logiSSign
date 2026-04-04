@@ -255,7 +255,7 @@ export default function HomePage() {
       </main>
 
       <style>{`
-        .landing-page { min-height:100vh; position:relative; overflow-x:hidden; font-family:'Pretendard',-apple-system,BlinkMacSystemFont,sans-serif; color:#e2e8f0; }
+        .landing-page { min-height:100vh; position:relative; overflow-x:hidden; font-family:Pretendard,-apple-system,BlinkMacSystemFont,sans-serif; color:#e2e8f0; }
         .bg-canvas { position:fixed; inset:0; background:#030712; z-index:0; }
         .grid-overlay { position:absolute; inset:0; background-image:linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px); background-size:60px 60px; }
         .glow { position:absolute; border-radius:50%; filter:blur(120px); opacity:0.4; animation:float 20s ease-in-out infinite; }
