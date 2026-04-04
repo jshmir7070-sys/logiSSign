@@ -23,6 +23,8 @@ export default function NewDriverPage() {
   const [agencyName, setAgencyName] = useState('');
   const [agencyBusinessNumber, setAgencyBusinessNumber] = useState('');
   const [agencyAddress, setAgencyAddress] = useState('');
+  const [agencyOwnerName, setAgencyOwnerName] = useState('');
+  const [agencyPhone, setAgencyPhone] = useState('');
   const [principals, setPrincipals] = useState<Principal[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -264,14 +266,16 @@ export default function NewDriverPage() {
       setAgencyId(aid);
       const [principalResult, agencyResult] = await Promise.all([
         getPrincipals(aid),
-        supabase.from('agencies').select('name, business_number, address').eq('id', aid).single(),
+        supabase.from('agencies').select('name, business_number, address, address_detail, owner_name, phone').eq('id', aid).single(),
       ]);
       if (principalResult.data) setPrincipals(principalResult.data);
       if (agencyResult.data) {
-        const agency = agencyResult.data as { name: string; business_number: string | null; address: string | null };
+        const agency = agencyResult.data as { name: string; business_number: string | null; address: string | null; address_detail: string | null; owner_name: string | null; phone: string | null };
         setAgencyName(agency.name);
         setAgencyBusinessNumber(agency.business_number ?? '');
-        setAgencyAddress(agency.address ?? '');
+        setAgencyAddress(agency.address ? (agency.address + (agency.address_detail ? ' ' + agency.address_detail : '')) : '');
+        setAgencyOwnerName(agency.owner_name ?? '');
+        setAgencyPhone(agency.phone ?? '');
       }
     }
     load();
@@ -330,8 +334,8 @@ export default function NewDriverPage() {
     const driverId = result.data.id;
     const supabase = createBrowserSupabaseClient();
 
-    // 2. Update all fields
-    await supabase.from('drivers').update({
+    // 2. Update all fields — service_role API를 거쳐 RLS 우회
+    const updatePayload = {
       employee_code: employeeCode.trim() || null,
       address: (addressDetail ? `${address} ${addressDetail}` : address).trim() || null,
       email: email.trim() || null,
@@ -363,7 +367,22 @@ export default function NewDriverPage() {
       bank_holder: bankHolder.trim() || null,
       vehicle_insurance_by: vehicleInsuranceBy,
       custom_values: Object.keys(customValues).length > 0 ? customValues : null,
-    } as never).eq('id', driverId);
+    };
+
+    // ✅ 서버 API 경유 → service_role로 RLS 우회
+    try {
+      const updateRes = await fetch('/api/drivers/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driverId, ...updatePayload }),
+      });
+      if (!updateRes.ok) {
+        const errData = await updateRes.json().catch(() => ({}));
+        console.error('[Driver Update] API 실패:', errData);
+      }
+    } catch (err) {
+      console.error('[Driver Update] 요청 에러:', err);
+    }
 
     // 3. Save route rates (if unit_price mode with route codes)
     if (fieldConfig?.items?.delivery?.rate_mode === 'unit_price') {
@@ -470,6 +489,10 @@ export default function NewDriverPage() {
         대리점명: agencyName,
         대리점사업자번호: agencyBusinessNumber,
         대리점주소: agencyAddress,
+        대리점대표자: agencyOwnerName,
+        대리점연락처: agencyPhone,
+        택배사업자명: agencyName,
+        생년월일: '', // 기사가 입력한 birth_date — 등록 폼에는 없으므로 빈값
         사업자번호: businessRegNumber.trim(),
         대표자명: representativeName.trim(),
         사업장주소: businessAddress.trim(),
