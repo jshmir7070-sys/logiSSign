@@ -7,8 +7,9 @@ import {
   StyleSheet,
   useWindowDimensions,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import Header from '../../../components/common/Header';
@@ -69,6 +70,7 @@ export default function ContractSignScreen() {
   const router = useRouter();
   const driver = useAuthStore((s) => s.driver);
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [consents, setConsents] = useState<Record<string, boolean>>({});
   const [signing, setSigning] = useState(false);
@@ -300,7 +302,7 @@ export default function ContractSignScreen() {
       </ScrollView>
 
       {/* Footer */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 0) + spacing.lg }]}>
         <Button
           title={signing ? '서명 처리 중...' : `동의 및 서명 완료 (${checkedCount}/${CONSENT_ITEMS.length})`}
           onPress={handleSign}
@@ -514,7 +516,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: spacing.lg,
-    paddingBottom: spacing['3xl'],
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.outlineVariant + '20',
