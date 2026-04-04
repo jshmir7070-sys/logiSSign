@@ -42,7 +42,11 @@ export default function ProfileTab() {
         if (!inviteCode) {
           const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
           for (let i = 0; i < 6; i++) inviteCode += chars[Math.floor(Math.random() * chars.length)];
-          await supabase.from('agencies').update({ invite_code: inviteCode }).eq('id', aid);
+          const { error: updateErr } = await supabase.from('agencies').update({ invite_code: inviteCode }).eq('id', aid);
+          if (updateErr) {
+            console.error('[InviteCode] 생성 실패:', updateErr.message);
+            inviteCode = ''; // 실패 시 빈 상태 유지
+          }
         }
 
         setForm({
@@ -163,14 +167,32 @@ export default function ProfileTab() {
       <div className="flex items-center gap-4 p-5 rounded-xl bg-primary/5 border border-primary/15">
         <div className="flex-1">
           <p className="text-xs font-semibold text-on-surface font-korean mb-1">📨 기사 초대코드</p>
-          <p className="text-2xl font-data font-bold text-primary tracking-[0.3em] select-all cursor-pointer" onClick={(e) => { (e.target as HTMLElement).ownerDocument.defaultView?.getSelection()?.selectAllChildren(e.target as HTMLElement); }}>{form.invite_code || '생성중...'}</p>
+          {form.invite_code ? (
+            <p className="text-2xl font-data font-bold text-primary tracking-[0.3em] select-all cursor-pointer" onClick={(e) => { (e.target as HTMLElement).ownerDocument.defaultView?.getSelection()?.selectAllChildren(e.target as HTMLElement); }}>{form.invite_code}</p>
+          ) : (
+            <p className="text-sm text-on-surface-variant font-korean">코드가 아직 생성되지 않았습니다. 페이지를 새로고침하거나 아래 버튼을 눌러주세요.</p>
+          )}
           <p className="text-[11px] text-on-surface-variant mt-1 font-korean">기사에게 이 코드를 전달하면 앱에서 가입 시 자동으로 소속이 연결됩니다</p>
         </div>
         <button
-          onClick={() => { navigator.clipboard.writeText(form.invite_code); alert('초대코드가 복사되었습니다'); }}
+          onClick={() => {
+            if (form.invite_code) {
+              navigator.clipboard.writeText(form.invite_code);
+              alert('초대코드가 복사되었습니다');
+            } else {
+              // 수동 생성
+              const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+              let code = '';
+              for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+              const supabase = createBrowserSupabaseClient();
+              supabase.from('agencies').update({ invite_code: code }).eq('id', agencyId!).then(() => {
+                setForm(f => ({ ...f, invite_code: code }));
+              });
+            }
+          }}
           className="h-11 px-6 rounded-xl bg-primary text-white text-sm font-label font-semibold hover:bg-primary/90 transition-colors font-korean shrink-0"
         >
-          복사
+          {form.invite_code ? '복사' : '코드 생성'}
         </button>
       </div>
 
