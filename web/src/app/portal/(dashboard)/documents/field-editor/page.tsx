@@ -60,15 +60,24 @@ export default function FieldEditorPage() {
 
       if (doc) {
         setDocTitle(doc.title)
-        // Private 버킷이므로 signed URL 생성
-        const filePath = (doc.file_url as string).split('/documents/')[1]
-        if (filePath) {
+        // file_url에 Storage path가 저장됨 → signed URL 생성
+        const storagePath = doc.file_url as string
+        if (storagePath && !storagePath.startsWith('http')) {
           const { data: signedData } = await supabase.storage
             .from('documents')
-            .createSignedUrl(decodeURIComponent(filePath), 3600)
-          setPdfUrl(signedData?.signedUrl ?? doc.file_url)
-        } else {
-          setPdfUrl(doc.file_url)
+            .createSignedUrl(storagePath, 3600)
+          setPdfUrl(signedData?.signedUrl ?? '')
+        } else if (storagePath) {
+          // 이전 방식 (full URL 저장된 경우)
+          const pathPart = storagePath.split('/documents/')[1]
+          if (pathPart) {
+            const { data: signedData } = await supabase.storage
+              .from('documents')
+              .createSignedUrl(decodeURIComponent(pathPart), 3600)
+            setPdfUrl(signedData?.signedUrl ?? storagePath)
+          } else {
+            setPdfUrl(storagePath)
+          }
         }
       }
 

@@ -67,55 +67,33 @@ export default function DocumentsPage() {
     if (!agencyId || !uploadFile || !uploadTitle.trim()) return;
     setUploading(true);
 
-    const supabase = createBrowserSupabaseClient();
+    try {
+      const formData = new FormData();
+      formData.append('file', uploadFile);
+      formData.append('title', uploadTitle.trim());
 
-    // 1. Storage에 PDF 업로드
-    const fileName = `${agencyId}/${Date.now()}_${uploadFile.name}`;
-    const { error: storageErr } = await supabase.storage
-      .from('documents')
-      .upload(fileName, uploadFile, { 
-        contentType: uploadFile.type || 'application/pdf',
-        upsert: true,
+      const res = await fetch('/api/documents/upload', {
+        method: 'POST',
+        body: formData,
       });
 
-    if (storageErr) {
-      console.error('[Document Upload] Storage error:', storageErr);
-      alert('파일 업로드 실패: ' + storageErr.message + '\n\n버킷이 없거나 권한이 부족할 수 있습니다. 관리자에게 문의하세요.');
+      const result = await res.json();
       setUploading(false);
-      return;
+
+      if (!res.ok || result.error) {
+        alert('업로드 실패: ' + (result.error ?? '알 수 없는 오류'));
+        return;
+      }
+
+      // 필드 에디터로 이동
+      setShowUpload(false);
+      setUploadTitle('');
+      setUploadFile(null);
+      router.push(`/portal/documents/field-editor?docId=${result.id}`);
+    } catch (err) {
+      setUploading(false);
+      alert('업로드 중 오류: ' + (err instanceof Error ? err.message : ''));
     }
-
-    const { data: urlData } = await supabase.storage.from('documents').createSignedUrl(fileName, 3600);
-    const fileUrl = urlData?.signedUrl ?? '';
-
-    // 2. document_files 테이블에 레코드 생성
-    const { data: doc, error: insertErr } = await supabase
-      .from('document_files')
-      .insert({
-        agency_id: agencyId,
-        title: uploadTitle.trim(),
-        file_url: fileUrl,
-        file_name: uploadFile.name,
-        file_size: uploadFile.size,
-        mime_type: 'application/pdf',
-        status: 'draft',
-      })
-      .select()
-      .single();
-
-    setUploading(false);
-
-    if (insertErr || !doc) {
-      console.error('[Document Upload] DB insert error:', insertErr);
-      alert('문서 등록 실패: ' + (insertErr?.message ?? '알 수 없는 오류'));
-      return;
-    }
-
-    // 3. 필드 에디터로 이동
-    setShowUpload(false);
-    setUploadTitle('');
-    setUploadFile(null);
-    router.push(`/portal/documents/field-editor?docId=${doc.id}`);
   };
 
   const handleDelete = async (id: string, title: string) => {
