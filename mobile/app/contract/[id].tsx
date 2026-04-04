@@ -82,6 +82,27 @@ export default function ContractDetailScreen() {
   const canSign = contract.status === 'sent' || contract.status === 'viewed';
   const sections = splitContractSections(contract.content ?? '');
 
+  // 계약서 content에서 당사자 정보 추출
+  const text = contract.content ?? '';
+  const extract = (label: string) => {
+    // {{변수}}가 치환된 후의 패턴 매칭
+    const patterns: Record<string, RegExp[]> = {
+      '위탁자': [/(?:위탁자|갑).*?[：:]?\s*(.+?)(?:\(|$)/m],
+      '수탁자': [/(?:수탁자|을).*?[：:]?\s*(.+?)(?:\(|$)/m],
+      '기사명': [/택배종사자인\s+(.+?)\s*\(/],
+      '대리점명': [/^(.+?)\s*\(\s*이하/m],
+    };
+    for (const p of patterns[label] || []) {
+      const m = text.match(p);
+      if (m?.[1]?.trim()) return m[1].trim();
+    }
+    return '';
+  };
+  const partyInfo = {
+    agency: extract('대리점명'),
+    driver: extract('기사명'),
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <Header title="계약서 상세" showBack />
@@ -119,6 +140,21 @@ export default function ContractDetailScreen() {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* 서명자 정보 */}
+        {partyInfo.driver && (
+          <View style={styles.partyCard}>
+            <View style={styles.partyItem}>
+              <View style={[styles.partyBadge, { backgroundColor: colors.tertiary + '15' }]}>
+                <MaterialIcons name="person" size={18} color={colors.tertiary} />
+              </View>
+              <View style={styles.partyInfo}>
+                <Text style={styles.partyLabel}>서명자 (수탁자)</Text>
+                <Text style={styles.partyName}>{partyInfo.driver}</Text>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* 계약서 본문 */}
         <View style={styles.sectionHeader}>
@@ -214,6 +250,36 @@ const styles = StyleSheet.create({
     ...typography.labelMedium,
     color: colors.primary,
     fontWeight: '600',
+  },
+  partyCard: {
+    backgroundColor: colors.surfaceContainerLowest,
+    borderRadius: borderRadius.xl,
+    padding: spacing.md,
+    ...shadows.sm,
+  },
+  partyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  partyBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  partyInfo: {
+    flex: 1,
+  },
+  partyLabel: {
+    ...typography.labelSmall,
+    color: colors.onSurfaceVariant,
+  },
+  partyName: {
+    ...typography.titleSmall,
+    color: colors.onSurface,
+    marginTop: 1,
   },
   sectionHeader: {
     flexDirection: 'row',
