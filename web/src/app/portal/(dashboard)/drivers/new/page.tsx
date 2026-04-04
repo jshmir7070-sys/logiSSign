@@ -370,37 +370,9 @@ export default function NewDriverPage() {
     };
 
     // ✅ 서버 API 경유 → service_role로 RLS 우회
-    try {
-      const updateRes = await fetch('/api/drivers/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ driverId, ...updatePayload }),
-      });
-      if (!updateRes.ok) {
-        const errData = await updateRes.json().catch(() => ({}));
-        console.error('[Driver Update] API 실패:', errData);
-      }
-    } catch (err) {
-      console.error('[Driver Update] 요청 에러:', err);
-    }
-
-    // 3. Save route rates (if unit_price mode with route codes)
-    if (fieldConfig?.items?.delivery?.rate_mode === 'unit_price') {
-      const validRoutes = routeRates
-        .filter((r) => r.route_code.trim() && (Number(r.delivery_rate) > 0))
-        .map((r) => ({
-          route_code: r.route_code.trim().toUpperCase(),
-          delivery_rate: Number(r.delivery_rate) || 0,
-          return_rate: Number(r.return_rate) || Number(r.delivery_rate) || 0,
-        }));
-      if (validRoutes.length > 0) {
-        await bulkUpsertDriverRouteRates(driverId, validRoutes);
-      }
-    }
-
-    // 4. Save driver_rates from unit price fields (카테고리의 단가 항목 → 기사별 단가)
+    // 기사 기본 정보 + 단가 + 노선단가 + 공제 일괄 전송
+    const driverRatesPayload: { package_type: string; unit_price: number; rate_type: string }[] = [];
     if (fieldConfig) {
-      const driverRates: { package_type: PackageType; unit_price: number; rate_type: RateType }[] = [];
       const types: ('delivery' | 'return' | 'pickup')[] = ['delivery', 'return', 'pickup'];
       const typeLabels: Record<string, string> = { delivery: '배송', return: '반품', pickup: '집하' };
       for (const t of types) {
@@ -409,31 +381,36 @@ export default function NewDriverPage() {
         const key = `${t}_unit_price`;
         const value = Number(customValues[key] ?? 0);
         if (value > 0) {
-          driverRates.push({
-            package_type: typeLabels[t] as PackageType,
+          driverRatesPayload.push({
+            package_type: typeLabels[t],
             unit_price: value,
             rate_type: cfg.rate_mode === 'percentage' ? 'percentage' : 'fixed',
           });
         }
       }
-      // 커스텀 수입 항목도 driver_rates에 저장
       for (const item of fieldConfig.custom_income_items ?? []) {
         const value = Number(customValues[`income_${item.id}`] ?? item.default_value ?? 0);
         if (value > 0) {
-          driverRates.push({
-            package_type: item.name as PackageType,
+          driverRatesPayload.push({
+            package_type: item.name,
             unit_price: value,
             rate_type: item.calc_method === 'rate_percent' ? 'percentage' : 'fixed',
           });
         }
       }
-      if (driverRates.length > 0) {
-        await bulkCreateDriverRates(driverId, driverRates);
-      }
     }
 
-    // 5. Save deduction items
-    const validDeductions = deductions
+    const routeRatesPayload = fieldConfig?.items?.delivery?.rate_mode === 'unit_price'
+      ? routeRates
+          .filter((r) => r.route_code.trim() && (Number(r.delivery_rate) > 0))
+          .map((r) => ({
+            route_code: r.route_code.trim().toUpperCase(),
+            delivery_rate: Number(r.delivery_rate) || 0,
+            return_rate: Number(r.return_rate) || Number(r.delivery_rate) || 0,
+          }))
+      : [];
+
+    const deductionsPayload = deductions
       .filter((d) => d.name.trim() && Number(d.amount) > 0)
       .map((d) => ({
         name: d.name.trim(),
@@ -443,9 +420,9 @@ export default function NewDriverPage() {
 
     // 차량 임대료 자동 공제 추가
     if (vehicleOwner === 'company' && Number(vehicleRentMonthly) > 0) {
-      const alreadyHasRent = validDeductions.some((d) => d.name === '차량 임대료');
+      const alreadyHasRent = deductionsPayload.some((d) => d.name === '차량 임대료');
       if (!alreadyHasRent) {
-        validDeductions.push({
+        deductionsPayload.push({
           name: '차량 임대료',
           deduction_type: 'fixed' as const,
           amount: Number(vehicleRentMonthly),
@@ -453,11 +430,27 @@ export default function NewDriverPage() {
       }
     }
 
-    if (validDeductions.length > 0) {
-      await bulkUpsertDriverDeductions(driverId, validDeductions);
+    try {
+      const updateRes = await fetch('/api/drivers/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          driverId,
+          ...updatePayload,
+          driverRates: driverRatesPayload,
+          routeRates: routeRatesPayload,
+          deductions: deductionsPayload,
+        }),
+      });
+      if (!updateRes.ok) {
+        const errData = await updateRes.json().catch(() => ({}));
+        console.error('[Driver Update] API 실패:', errData);
+      }
+    } catch (err) {
+      console.error('[Driver Update] 요청 에러:', err);
     }
 
-    // 6. 선택된 계약서 자동 생성 + 전송
+    // 3. 선택된 계약서 자동 생성 + 전송
     if (selectedTemplateIds.size > 0 && agencyId) {
       // 노선별 단가 텍스트 생성
       const deliveryRateMode = fieldConfig?.items?.delivery?.rate_mode ?? 'unit_price';
