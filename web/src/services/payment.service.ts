@@ -178,6 +178,7 @@ export function getSubscriptionAmount(plan: string, billing: string): number {
     free: 0,
     basic: 49900,
     standard: 99000,
+    pro: 199000,
   }
 
   const base = prices[plan] ?? 0
@@ -187,12 +188,67 @@ export function getSubscriptionAmount(plan: string, billing: string): number {
     monthly: 0,
     '1year': 0.2,
     '2year': 0.3,
-    '3year': 0.4,
   }
 
   const discount = discounts[billing] ?? 0
-  const months = billing === '1year' ? 12 : billing === '2year' ? 24 : billing === '3year' ? 36 : 1
+  const months = billing === '1year' ? 12 : billing === '2year' ? 24 : 1
 
   if (billing === 'monthly') return base
   return Math.round(base * (1 - discount) * months)
+}
+
+/**
+ * 플랜 업그레이드 시 차액 정산 (프로레이션)
+ * 
+ * 현재 플랜의 잔여일수 크레딧을 계산하고,
+ * 새 플랜의 동일 기간 비용에서 차감한 차액을 반환한다.
+ */
+export function calculateProration(opts: {
+  currentPlan: string
+  currentBilling: string
+  currentStartDate: string     // 현재 결제 시작일 (ISO)
+  newPlan: string
+  newBilling: string
+}): {
+  credit: number               // 기존 플랜 잔여 크레딧
+  newAmount: number             // 새 플랜 잔여 기간 비용
+  chargeAmount: number          // 실제 청구 금액 (차액)
+  remainingDays: number         // 잔여 일수
+  totalDays: number             // 전체 결제 기간 일수
+} {
+  const prices: Record<string, number> = {
+    free: 0, basic: 49900, standard: 99000, pro: 199000,
+  }
+  const discounts: Record<string, number> = {
+    monthly: 0, '1year': 0.2, '2year': 0.3,
+  }
+
+  const now = new Date()
+  const start = new Date(opts.currentStartDate)
+  const currentMonths = opts.currentBilling === '1year' ? 12 : opts.currentBilling === '2year' ? 24 : 1
+  const totalDays = currentMonths * 30
+  const usedDays = Math.max(0, Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)))
+  const remainingDays = Math.max(0, totalDays - usedDays)
+
+  // 기존 플랜 일일 단가
+  const currentBase = prices[opts.currentPlan] ?? 0
+  const currentDiscount = discounts[opts.currentBilling] ?? 0
+  const currentTotal = currentBase * (1 - currentDiscount) * currentMonths
+  const currentDailyRate = totalDays > 0 ? currentTotal / totalDays : 0
+
+  // 크레딧 = 잔여일 × 일일 단가
+  const credit = Math.round(currentDailyRate * remainingDays)
+
+  // 새 플랜 잔여 기간 비용
+  const newBase = prices[opts.newPlan] ?? 0
+  const newDiscount = discounts[opts.newBilling] ?? 0
+  const newMonths = opts.newBilling === '1year' ? 12 : opts.newBilling === '2year' ? 24 : 1
+  const newTotalForPeriod = newBase * (1 - newDiscount) * newMonths
+  const newDailyRate = (newMonths * 30) > 0 ? newTotalForPeriod / (newMonths * 30) : 0
+  const newAmount = Math.round(newDailyRate * remainingDays)
+
+  // 차액 (최소 0원 — 다운그레이드 시 크레딧이 더 큰 경우)
+  const chargeAmount = Math.max(0, newAmount - credit)
+
+  return { credit, newAmount, chargeAmount, remainingDays, totalDays }
 }
