@@ -53,7 +53,7 @@ export default function LoginScreen() {
       >
         <GradientView style={styles.heroSection}>
           <Image
-            source={require('../../assets/logo.png')}
+            source={require('../../assets/logiSSign.png')}
             style={styles.heroLogo}
             resizeMode="contain"
           />
@@ -131,8 +131,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   heroLogo: {
-    width: 240,
-    height: 80,
+    width: 180,
+    height: 180,
     marginBottom: spacing.sm,
   },
   heroTitle: {
