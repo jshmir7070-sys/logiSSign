@@ -74,6 +74,8 @@ export async function verifyMfaToken(
 
 // ── OTP 저장소 (인메모리, TTL 기반) ──
 
+// ── OTP 저장소 (globalThis 기반, HMR/모듈 재로드에도 유지) ──
+
 interface OtpEntry {
   code: string
   expiresAt: number
@@ -82,17 +84,25 @@ interface OtpEntry {
   sentAt: number
 }
 
-const otpStore = new Map<string, OtpEntry>()
+const globalForOtp = globalThis as unknown as { __otpStore?: Map<string, OtpEntry> }
+if (!globalForOtp.__otpStore) {
+  globalForOtp.__otpStore = new Map<string, OtpEntry>()
+}
+const otpStore = globalForOtp.__otpStore
 
-// 만료된 항목 정기 정리 (메모리 누수 방지)
-setInterval(() => {
-  const now = Date.now()
-  const keys = Array.from(otpStore.keys())
-  for (const key of keys) {
-    const entry = otpStore.get(key)
-    if (entry && now > entry.expiresAt + 60_000) otpStore.delete(key)
-  }
-}, 60_000)
+// 만료된 항목 정기 정리 (메모리 누수 방지) — 중복 등록 방지
+const globalForTimer = globalThis as unknown as { __otpCleanupSet?: boolean }
+if (!globalForTimer.__otpCleanupSet) {
+  globalForTimer.__otpCleanupSet = true
+  setInterval(() => {
+    const now = Date.now()
+    const keys = Array.from(otpStore.keys())
+    for (const key of keys) {
+      const entry = otpStore.get(key)
+      if (entry && now > entry.expiresAt + 60_000) otpStore.delete(key)
+    }
+  }, 60_000)
+}
 
 /** OTP 저장 */
 export function storeOtp(userId: string, code: string, phone: string): void {
