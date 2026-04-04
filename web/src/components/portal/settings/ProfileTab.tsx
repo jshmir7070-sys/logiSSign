@@ -13,15 +13,13 @@ export default function ProfileTab() {
     owner_birth_date: '',
     business_type: '',
     business_category: '',
-    bank_name: '',
-    bank_account: '',
-    bank_holder: '',
     privacy_officer_name: '',
     privacy_officer_phone: '',
     privacy_officer_email: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [agencyId, setAgencyId] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
@@ -37,23 +35,13 @@ export default function ProfileTab() {
 
       const { data } = await supabase
         .from('agencies')
-        .select('name, owner_name, phone, address, address_detail, business_number, email, invite_code, owner_birth_date, business_type, business_category, bank_name, bank_account, bank_holder, privacy_officer_name, privacy_officer_phone, privacy_officer_email, logo_url')
+        .select('name, owner_name, phone, address, address_detail, business_number, email, invite_code, owner_birth_date, business_type, business_category, privacy_officer_name, privacy_officer_phone, privacy_officer_email, logo_url')
         .eq('id', aid)
         .single();
 
       if (data) {
         setLogoUrl((data as Record<string, string>).logo_url ?? null);
-        let inviteCode = (data as Record<string, string>).invite_code ?? '';
-        
-        if (!inviteCode) {
-          const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-          for (let i = 0; i < 6; i++) inviteCode += chars[Math.floor(Math.random() * chars.length)];
-          const { error: updateErr } = await supabase.from('agencies').update({ invite_code: inviteCode }).eq('id', aid);
-          if (updateErr) {
-            console.error('[InviteCode] 생성 실패:', updateErr.message);
-            inviteCode = ''; // 실패 시 빈 상태 유지
-          }
-        }
+        const inviteCode = (data as Record<string, string>).invite_code ?? '';
 
         setForm({
           name: (data as Record<string, string>).name ?? '',
@@ -67,9 +55,6 @@ export default function ProfileTab() {
           owner_birth_date: (data as Record<string, string>).owner_birth_date ?? '',
           business_type: (data as Record<string, string>).business_type ?? '',
           business_category: (data as Record<string, string>).business_category ?? '',
-          bank_name: (data as Record<string, string>).bank_name ?? '',
-          bank_account: (data as Record<string, string>).bank_account ?? '',
-          bank_holder: (data as Record<string, string>).bank_holder ?? '',
           privacy_officer_name: (data as Record<string, string>).privacy_officer_name ?? '',
           privacy_officer_phone: (data as Record<string, string>).privacy_officer_phone ?? '',
           privacy_officer_email: (data as Record<string, string>).privacy_officer_email ?? '',
@@ -84,7 +69,7 @@ export default function ProfileTab() {
     if (!agencyId) return;
     setSaving(true);
     const supabase = createBrowserSupabaseClient();
-    await supabase.from('agencies').update({
+    const { error } = await supabase.from('agencies').update({
       name: form.name,
       owner_name: form.owner_name,
       phone: form.phone,
@@ -93,14 +78,17 @@ export default function ProfileTab() {
       owner_birth_date: form.owner_birth_date || null,
       business_type: form.business_type || null,
       business_category: form.business_category || null,
-      bank_name: form.bank_name || null,
-      bank_account: form.bank_account || null,
-      bank_holder: form.bank_holder || null,
       privacy_officer_name: form.privacy_officer_name || null,
       privacy_officer_phone: form.privacy_officer_phone || null,
       privacy_officer_email: form.privacy_officer_email || null,
     }).eq('id', agencyId);
     setSaving(false);
+    if (error) {
+      setSaveMessage({ type: 'error', text: '저장 실패: ' + error.message });
+    } else {
+      setSaveMessage({ type: 'success', text: '저장되었습니다.' });
+    }
+    setTimeout(() => setSaveMessage(null), 3000);
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -260,27 +248,6 @@ export default function ProfileTab() {
           />
         </div>
 
-        {/* 정산 입금 계좌 */}
-        <div className="col-span-2 pt-4 border-t border-outline-variant/20">
-          <p className="text-xs font-semibold text-on-surface font-korean mb-3 flex items-center gap-1.5">
-            🏦 정산 입금 계좌
-          </p>
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">은행명</label>
-              <input type="text" value={form.bank_name} onChange={e => setForm(p => ({ ...p, bank_name: e.target.value }))} placeholder="국민은행" className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30" />
-            </div>
-            <div>
-              <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">계좌번호</label>
-              <input type="text" value={form.bank_account} onChange={e => setForm(p => ({ ...p, bank_account: e.target.value }))} placeholder="000-000000-00-000" className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-data focus:outline-none focus:ring-2 focus:ring-primary/30" />
-            </div>
-            <div>
-              <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">예금주</label>
-              <input type="text" value={form.bank_holder} onChange={e => setForm(p => ({ ...p, bank_holder: e.target.value }))} placeholder="홍길동" className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30" />
-            </div>
-          </div>
-        </div>
-
         <div className="col-span-2 pt-4 border-t border-outline-variant/20">
           <p className="text-xs font-semibold text-on-surface font-korean mb-3 flex items-center gap-1.5">
             🛡️ 개인정보보호 담당자
@@ -306,7 +273,12 @@ export default function ProfileTab() {
           <p className="text-[11px] text-on-surface-variant/50 mt-2 font-korean">기사 앱 개인정보처리방침에 표시됩니다</p>
         </div>
       </div>
-      <div className="flex justify-end pt-2">
+      <div className="flex items-center justify-end gap-4 pt-2">
+        {saveMessage && (
+          <p className={`text-sm font-korean ${saveMessage.type === 'success' ? 'text-tertiary' : 'text-error'}`}>
+            {saveMessage.type === 'success' ? '✅' : '❌'} {saveMessage.text}
+          </p>
+        )}
         <button onClick={handleSave} disabled={saving} className="h-11 px-8 rounded-xl bg-power-gradient text-white font-label font-medium text-sm shadow-ambient hover:shadow-float transition-all font-korean disabled:opacity-50">
           {saving ? '저장 중...' : '저장'}
         </button>
