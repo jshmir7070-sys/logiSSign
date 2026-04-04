@@ -22,7 +22,7 @@ const FIELDS: EditableField[] = [
   { key: 'name', label: '이름', icon: 'person', editable: false, note: '대리점에 수정 요청' },
   { key: 'phone', label: '전화번호', icon: 'phone', editable: true, keyboard: 'phone-pad' },
   { key: 'email', label: '이메일', icon: 'email', editable: true, keyboard: 'email-address' },
-  { key: 'birth_date', label: '생년월일', icon: 'cake', editable: true },
+  { key: 'birth_date', label: '생년월일', icon: 'cake', editable: false, note: '대리점에 수정 요청' },
   { key: 'address', label: '주소', icon: 'home', editable: true },
   { key: 'vehicle_number', label: '차량번호', icon: 'directions-car', editable: true },
   { key: 'vehicle_type', label: '차종', icon: 'local-shipping', editable: true },

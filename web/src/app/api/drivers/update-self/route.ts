@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     // 기사 본인이 수정 가능한 필드만 (보안: 화이트리스트)
     const selfEditable = [
-      'phone', 'address', 'email', 'birth_date',
+      'phone', 'address', 'email',
       'bank_name', 'bank_account', 'bank_holder',
       'vehicle_number', 'vehicle_type', 'vehicle_year', 'vehicle_vin',
     ]
