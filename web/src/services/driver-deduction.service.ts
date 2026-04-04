@@ -36,19 +36,20 @@ export async function bulkUpsertDriverDeductions(driverId: string, deductions: {
   unit_label?: string
 }[]): Promise<{ error: string | null }> {
   if (deductions.length === 0) return { error: null }
-  const supabase = createBrowserSupabaseClient()
   try {
-    const rows = deductions.map((d) => ({
-      driver_id: driverId,
-      name: d.name,
-      deduction_type: d.deduction_type,
-      amount: d.amount,
-      unit_label: d.unit_label || '',
-    }))
-    const { error } = await supabase
-      .from('driver_deductions')
-      .insert(rows)
-    if (error) throw error
+    const res = await fetch('/api/drivers/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ driverId, deductions: deductions.map(d => ({
+        name: d.name,
+        deduction_type: d.deduction_type,
+        amount: d.amount,
+      })) }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      return { error: data.error || 'Failed' }
+    }
     return { error: null }
   } catch (err) {
     return { error: err instanceof Error ? err.message : 'Failed' }
@@ -56,10 +57,16 @@ export async function bulkUpsertDriverDeductions(driverId: string, deductions: {
 }
 
 export async function deleteDriverDeduction(id: string): Promise<{ error: string | null }> {
-  const supabase = createBrowserSupabaseClient()
   try {
-    const { error } = await supabase.from('driver_deductions').delete().eq('id', id)
-    if (error) throw error
+    const res = await fetch('/api/drivers/delete-item', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table: 'driver_deductions', id }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      return { error: data.error || 'Failed' }
+    }
     return { error: null }
   } catch (err) {
     return { error: err instanceof Error ? err.message : 'Failed' }

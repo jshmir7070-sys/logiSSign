@@ -80,17 +80,20 @@ export async function bulkUpsertDriverRouteRates(driverId: string, rates: {
   unit_price?: number
 }[]): Promise<{ error: string | null }> {
   if (rates.length === 0) return { error: null }
-  const supabase = createBrowserSupabaseClient()
   try {
-    const rows = rates.map((r) => ({
-      driver_id: driverId,
-      ...r,
-      unit_price: r.unit_price ?? r.delivery_rate ?? 0,
-    }))
-    const { error } = await supabase
-      .from('driver_route_rates')
-      .upsert(rows as never[], { onConflict: 'driver_id,route_code' })
-    if (error) throw error
+    const res = await fetch('/api/drivers/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ driverId, routeRates: rates.map(r => ({
+        route_code: r.route_code,
+        delivery_rate: r.delivery_rate ?? r.unit_price ?? 0,
+        return_rate: r.return_rate ?? r.delivery_rate ?? r.unit_price ?? 0,
+      })) }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      return { error: data.error || 'Failed' }
+    }
     return { error: null }
   } catch (err) {
     return { error: err instanceof Error ? err.message : 'Failed' }
@@ -103,13 +106,16 @@ export async function updateDriverBusinessSettings(
   driverId: string,
   settings: DriverBusinessSettings
 ): Promise<{ error: string | null }> {
-  const supabase = createBrowserSupabaseClient()
   try {
-    const { error } = await supabase
-      .from('drivers')
-      .update(settings as never)
-      .eq('id', driverId)
-    if (error) throw error
+    const res = await fetch('/api/drivers/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ driverId, ...settings }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      return { error: data.error || 'Failed' }
+    }
     return { error: null }
   } catch (err) {
     return { error: err instanceof Error ? err.message : 'Failed' }
