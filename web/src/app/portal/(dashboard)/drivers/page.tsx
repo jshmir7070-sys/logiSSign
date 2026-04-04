@@ -29,6 +29,27 @@ export default function DriversPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [agencyId, setAgencyId] = useState<string | null>(null);
+  const [sendingInvite, setSendingInvite] = useState<string | null>(null); // driver id being sent
+
+  const handleResendInvite = async (driverId: string, driverName: string, driverPhone: string) => {
+    if (!agencyId || !driverPhone) { alert('전화번호가 없습니다'); return; }
+    if (!confirm(`${driverName}님에게 초대코드 SMS를 전송하시겠습니까?`)) return;
+    setSendingInvite(driverId);
+    try {
+      const res = await fetch('/api/sms/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driverPhone, driverName, agencyId }),
+      });
+      const result = await res.json();
+      if (res.ok && result.sent) {
+        alert(`${driverName}님에게 초대코드 SMS를 전송했습니다.`);
+      } else {
+        alert('SMS 전송 실패: ' + (result.error ?? ''));
+      }
+    } catch { alert('SMS 전송 중 오류'); }
+    setSendingInvite(null);
+  };
 
   // 원청사(카테고리) 필터
   const [principals, setPrincipals] = useState<PrincipalOption[]>([]);
@@ -187,18 +208,21 @@ export default function DriversPage() {
                 <th className="px-6 py-3 text-xs font-label font-semibold text-on-surface-variant uppercase tracking-wider font-korean">
                   등록일
                 </th>
+                <th className="px-6 py-3 text-xs font-label font-semibold text-on-surface-variant uppercase tracking-wider font-korean">
+                  초대
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/30">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-sm text-on-surface-variant font-korean">
+                  <td colSpan={8} className="px-6 py-8 text-center text-sm text-on-surface-variant font-korean">
                     데이터를 불러오는 중...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-sm text-on-surface-variant font-korean">
+                  <td colSpan={8} className="px-6 py-8 text-center text-sm text-on-surface-variant font-korean">
                     {search || statusFilter !== 'all' ? '검색 결과가 없습니다' : '등록된 기사가 없습니다'}
                   </td>
                 </tr>
@@ -242,6 +266,15 @@ export default function DriversPage() {
                     </td>
                     <td className="px-6 py-4 text-sm font-data text-on-surface-variant">
                       {driver.created_at ? new Date(driver.created_at).toLocaleDateString('ko-KR') : '-'}
+                    </td>
+                    <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleResendInvite(driver.id, driver.name, driver.phone ?? '')}
+                        disabled={sendingInvite === driver.id || !driver.phone}
+                        className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-[11px] font-semibold font-korean hover:bg-primary/20 disabled:opacity-40 transition-colors"
+                      >
+                        {sendingInvite === driver.id ? '전송중...' : 'SMS 전송'}
+                      </button>
                     </td>
                   </tr>
                 ))
