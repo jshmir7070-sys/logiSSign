@@ -159,6 +159,21 @@ export default function ProfileTab() {
         </div>
       </div>
 
+      {/* 초대코드 — 눈에 띄게 상단 배치 */}
+      <div className="flex items-center gap-4 p-5 rounded-xl bg-primary/5 border border-primary/15">
+        <div className="flex-1">
+          <p className="text-xs font-semibold text-on-surface font-korean mb-1">📨 기사 초대코드</p>
+          <p className="text-2xl font-data font-bold text-primary tracking-[0.3em] select-all cursor-pointer" onClick={(e) => { (e.target as HTMLElement).ownerDocument.defaultView?.getSelection()?.selectAllChildren(e.target as HTMLElement); }}>{form.invite_code || '생성중...'}</p>
+          <p className="text-[11px] text-on-surface-variant mt-1 font-korean">기사에게 이 코드를 전달하면 앱에서 가입 시 자동으로 소속이 연결됩니다</p>
+        </div>
+        <button
+          onClick={() => { navigator.clipboard.writeText(form.invite_code); alert('초대코드가 복사되었습니다'); }}
+          className="h-11 px-6 rounded-xl bg-primary text-white text-sm font-label font-semibold hover:bg-primary/90 transition-colors font-korean shrink-0"
+        >
+          복사
+        </button>
+      </div>
+
       <div className="grid grid-cols-2 gap-6">
         <div>
           <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">대리점명 (상호)</label>
@@ -189,19 +204,6 @@ export default function ProfileTab() {
           <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">이메일</label>
           <input type="email" value={form.email} disabled className="w-full h-11 px-4 rounded-xl bg-surface-container-high text-on-surface-variant text-sm cursor-not-allowed" />
           <p className="text-xs text-on-surface-variant/60 mt-1 font-korean">이메일은 변경할 수 없습니다</p>
-        </div>
-        <div className="col-span-2">
-          <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">기사 초대코드</label>
-          <div className="flex items-center gap-3">
-            <input type="text" value={form.invite_code} readOnly className="flex-1 h-11 px-4 rounded-xl bg-surface-container-high text-on-surface text-lg font-data font-bold tracking-widest cursor-default select-all" onClick={(e) => (e.target as HTMLInputElement).select()} />
-            <button
-              onClick={() => { navigator.clipboard.writeText(form.invite_code); }}
-              className="h-11 px-4 rounded-xl bg-primary/10 text-primary text-sm font-label font-semibold hover:bg-primary/20 transition-colors font-korean shrink-0"
-            >
-              복사
-            </button>
-          </div>
-          <p className="text-xs text-on-surface-variant/60 mt-1 font-korean">기사에게 이 코드를 전달하면 앱에서 가입 시 자동으로 소속이 연결됩니다</p>
         </div>
 
         <div className="col-span-2 pt-4 border-t border-outline-variant/20">
