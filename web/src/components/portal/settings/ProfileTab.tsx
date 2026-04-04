@@ -92,18 +92,19 @@ export default function ProfileTab() {
     if (file.size > 2 * 1024 * 1024) { alert('파일 크기는 2MB 이하만 가능합니다'); return; }
 
     setLogoUploading(true);
-    const supabase = createBrowserSupabaseClient();
-    const ext = file.name.split('.').pop() ?? 'png';
-    const path = `${agencyId}/logo.${ext}`;
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
 
-    const { error: uploadErr } = await supabase.storage.from('documents').upload(path, file, { upsert: true });
-    if (uploadErr) { alert('업로드 실패: ' + uploadErr.message); setLogoUploading(false); return; }
+      const res = await fetch('/api/agency/logo', { method: 'POST', body: formData });
+      const result = await res.json();
 
-    const { data: urlData } = supabase.storage.from('documents').getPublicUrl(path);
-    const url = urlData.publicUrl;
-
-    await supabase.from('agencies').update({ logo_url: url }).eq('id', agencyId);
-    setLogoUrl(url);
+      if (!res.ok || result.error) {
+        alert('업로드 실패: ' + (result.error ?? ''));
+      } else {
+        setLogoUrl(result.logoUrl);
+      }
+    } catch { alert('업로드 중 오류'); }
     setLogoUploading(false);
   };
 
