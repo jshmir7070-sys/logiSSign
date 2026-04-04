@@ -131,8 +131,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   heroLogo: {
-    width: 360,
-    height: 360,
+    width: 234,
+    height: 234,
     marginBottom: spacing.sm,
   },
   heroTitle: {
