@@ -152,44 +152,6 @@ export default function BillingTab() {
         </div>
       </div>
 
-      {/* 결제 수단 */}
-      <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-8">
-        <h2 className="text-lg font-headline font-bold text-on-surface font-korean mb-6">결제 수단</h2>
-        {cardInfo ? (
-          <div className="flex items-center gap-4 p-4 rounded-xl bg-surface-container-low">
-            <div className="w-10 h-10 rounded-xl bg-tertiary/10 flex items-center justify-center">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-tertiary">
-                <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
-              </svg>
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-on-surface font-korean">{cardInfo.cardName}</p>
-              <p className="text-xs text-on-surface-variant font-data">{cardInfo.cardNumber}</p>
-            </div>
-            <button onClick={handleRegisterCard} disabled={processing}
-              className="h-9 px-4 rounded-lg bg-surface-container-high text-on-surface-variant text-sm font-korean hover:bg-surface-container-highest">
-              변경
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-4 p-4 rounded-xl bg-surface-container-low">
-            <div className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-on-surface-variant">
-                <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
-              </svg>
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-on-surface font-korean">카드 등록 필요</p>
-              <p className="text-xs text-on-surface-variant font-korean">유료 플랜 결제를 위해 카드를 등록하세요</p>
-            </div>
-            <button onClick={handleRegisterCard} disabled={processing}
-              className="h-9 px-4 rounded-lg bg-primary text-white text-sm font-korean hover:bg-primary/90 disabled:opacity-50">
-              {processing ? '처리중...' : '카드 등록'}
-            </button>
-          </div>
-        )}
-      </div>
-
       {/* 플랜 비교 */}
       <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-8">
         <h2 className="text-lg font-headline font-bold text-on-surface font-korean mb-6">플랜 비교</h2>
