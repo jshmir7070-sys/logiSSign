@@ -291,6 +291,21 @@ export default function NewDriverPage() {
       setError('필수 항목을 모두 입력하세요 (카테고리, 이름, 전화번호)');
       return;
     }
+
+    // 플랜별 기사 수 제한 체크
+    const supabaseCheck = createBrowserSupabaseClient();
+    const { data: { user: currentUser } } = await supabaseCheck.auth.getUser();
+    const currentPlan = currentUser?.app_metadata?.plan as string ?? 'free';
+    const { getPlanLimits } = await import('@/lib/plan-limits');
+    const limits = getPlanLimits(currentPlan);
+    if (limits.maxDrivers !== null) {
+      const { count } = await supabaseCheck.from('drivers').select('id', { count: 'exact', head: true }).eq('agency_id', agencyId).eq('status', 'active');
+      if ((count ?? 0) >= limits.maxDrivers) {
+        setError(`현재 ${currentPlan.toUpperCase()} 플랜에서는 기사를 최대 ${limits.maxDrivers}명까지 등록할 수 있습니다. 더 많은 기사를 등록하려면 플랜을 업그레이드하세요.`);
+        return;
+      }
+    }
+
     setSaving(true);
     setError('');
 
