@@ -139,6 +139,7 @@ export default function ContractTemplatesPage() {
   const limits = getPlanLimits(userPlan);
   const paid = isPaidPlan(userPlan as PlanType);
   const isProviderAdmin = userRole === 'provider_admin';
+  const isAdmin = userRole === 'provider_admin' || userRole === 'agency_admin';
 
   // 시스템 템플릿 vs 사용자 업로드 템플릿 구분
   const systemTemplates = templates.filter((t) => SYSTEM_TEMPLATE_IDS.has(t.id));
@@ -162,7 +163,7 @@ export default function ContractTemplatesPage() {
 
   // 관리자 잠금 해제
   async function handleUnlockTemplates() {
-    if (!agencyId || !isProviderAdmin) return;
+    if (!agencyId || !isAdmin) return;
     if (!confirm('템플릿 잠금을 해제하시겠습니까? 운영사가 다시 변경할 수 있게 됩니다.')) return;
 
     const supabase = createBrowserSupabaseClient();
@@ -184,7 +185,7 @@ export default function ContractTemplatesPage() {
             </p>
           )}
         </div>
-        {paid && !templatesLocked && isProviderAdmin && canUploadMore ? (
+        {paid && !templatesLocked && isAdmin && canUploadMore ? (
           <button
             onClick={() => setShowForm(true)}
             className="h-10 px-5 rounded-xl bg-power-gradient text-white font-label text-sm font-semibold shadow-ambient hover:shadow-float transition-all flex items-center gap-2 font-korean"
@@ -192,9 +193,9 @@ export default function ContractTemplatesPage() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
             새 템플릿 만들기
           </button>
-        ) : paid && !isProviderAdmin ? (
+        ) : paid && !isAdmin ? (
           <span className="text-xs text-on-surface-variant/50 font-korean">템플릿 추가는 관리자만 가능</span>
-        ) : paid && templatesLocked && isProviderAdmin ? (
+        ) : paid && templatesLocked && isAdmin ? (
           <button
             onClick={handleUnlockTemplates}
             className="h-10 px-5 rounded-xl border border-error/30 text-error font-label text-sm font-semibold hover:bg-error/5 transition-all flex items-center gap-2 font-korean"
