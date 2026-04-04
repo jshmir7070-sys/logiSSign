@@ -30,7 +30,8 @@ export async function POST(request: NextRequest) {
     }
 
     const agencyId = auth.agencyId
-    const fileName = `${agencyId}/${Date.now()}_${file.name}`
+    const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const fileName = `${agencyId}/${Date.now()}_${safeFileName}`
     const buffer = Buffer.from(await file.arrayBuffer())
 
     // 1. Storage 업로드 (service_role — RLS 우회)
