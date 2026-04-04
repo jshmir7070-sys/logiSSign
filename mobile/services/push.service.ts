@@ -1,10 +1,13 @@
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { supabase } from '../lib/supabase';
 
 /**
  * Expo Push Notification 서비스
+ *
+ * ⚠️ expo-notifications는 Expo Go SDK 53+에서 원격 푸시를 지원하지 않음.
+ *    → lazy import로 실제 디바이스(development build)에서만 로드
+ *    → Expo Go에서는 graceful 스킵
  *
  * 플로우:
  *  1. 앱 시작 시 registerPushToken() → Expo Push Token 발급
@@ -13,16 +16,38 @@ import { supabase } from '../lib/supabase';
  *  4. 앱에서 수신 → 알림 표시 + 탭 시 화면 이동
  */
 
-// 알림 핸들러 설정 — 포그라운드에서도 알림 표시
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+/** expo-notifications 지연 로딩 (Expo Go 호환) */
+async function getNotifications() {
+  try {
+    const mod = await import('expo-notifications');
+    return mod;
+  } catch {
+    console.log('[Push] expo-notifications를 로드할 수 없습니다 (Expo Go 환경)');
+    return null;
+  }
+}
+
+/** 알림 핸들러 초기화 (앱 시작 시 1회 호출) */
+let handlerInitialized = false;
+async function ensureNotificationHandler() {
+  if (handlerInitialized) return;
+  handlerInitialized = true;
+  try {
+    const Notifications = await getNotifications();
+    if (!Notifications) return;
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  } catch {
+    // Expo Go에서 실패 — 무시
+  }
+}
 
 /**
  * 푸시 토큰 등록 + DB 저장
@@ -34,6 +59,14 @@ export async function registerPushToken(driverId: string): Promise<string | null
       console.log('[Push] 시뮬레이터에서는 푸시 알림을 사용할 수 없습니다');
       return null;
     }
+
+    const Notifications = await getNotifications();
+    if (!Notifications) {
+      console.log('[Push] Expo Go에서는 푸시 알림을 사용할 수 없습니다. Development build를 사용하세요.');
+      return null;
+    }
+
+    await ensureNotificationHandler();
 
     // 권한 요청
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -106,10 +139,17 @@ export async function unregisterPushToken(driverId: string): Promise<void> {
  * @param onTapped - 알림 탭 시 콜백 (화면 이동용)
  * @returns cleanup 함수
  */
-export function addNotificationListeners(
-  onReceived?: (notification: Notifications.Notification) => void,
-  onTapped?: (response: Notifications.NotificationResponse) => void,
-): () => void {
+export async function addNotificationListeners(
+  onReceived?: (notification: { request: { content: { data?: Record<string, string> } } }) => void,
+  onTapped?: (response: { notification: { request: { content: { data?: Record<string, string> } } } }) => void,
+): Promise<() => void> {
+  const Notifications = await getNotifications();
+  if (!Notifications) {
+    return () => {}; // noop cleanup
+  }
+
+  await ensureNotificationHandler();
+
   const receivedSub = Notifications.addNotificationReceivedListener((notification) => {
     onReceived?.(notification);
   });
@@ -128,9 +168,9 @@ export function addNotificationListeners(
  * 알림 데이터에서 네비게이션 경로 추출
  */
 export function getNavigationFromNotification(
-  response: Notifications.NotificationResponse
+  response: { notification: { request: { content: { data?: Record<string, string> } } } }
 ): { route: string; params?: Record<string, string> } | null {
-  const data = response.notification.request.content.data as Record<string, string> | undefined;
+  const data = response.notification.request.content.data;
   if (!data?.type) return null;
 
   switch (data.type) {

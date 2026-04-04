@@ -58,8 +58,17 @@ const signupSchema = z.object({
 /**
  * POST /api/auth/signup
  * 서버에서 역할(role)을 강제 설정하는 회원가입 엔드포인트
+ * 
+ * ⛔ 현재 신규 운영사 가입 차단 중 (기존 계정만 허용)
+ *    기사 초대코드 가입(/api/auth/driver-signup)은 별도 엔드포인트로 정상 동작
  */
 export async function POST(request: NextRequest) {
+  return NextResponse.json(
+    { error: '현재 신규 가입이 중단되었습니다. 문의: support@logissign.com' },
+    { status: 403 }
+  )
+
+  /* ── 아래 기존 가입 로직은 가입 재개 시 이 return문만 제거하면 복원됩니다 ──
   const ip = getClientIp(request)
   const limited = rateLimitPublic(ip, '/api/auth/signup')
   if (limited) return limited
@@ -189,4 +198,5 @@ export async function POST(request: NextRequest) {
     console.error('[Signup] 예상치 못한 오류:', err)
     return apiError('회원가입 처리 중 오류가 발생했습니다', 500)
   }
+  ── 기존 가입 로직 끝 ── */
 }

@@ -1,11 +1,24 @@
+'use client';
+
 import Sidebar from '@/components/admin/Sidebar';
 import TopBar from '@/components/admin/TopBar';
+import { useEffect } from 'react';
 
 export default function AdminDashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // ✅ 보안: 브라우저 뒤로가기/이력으로 캐시된 페이지 접속 방지
+  useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        window.location.reload();
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, []);
   return (
     <>
       {/* eslint-disable-next-line @next/next/no-page-custom-font */}

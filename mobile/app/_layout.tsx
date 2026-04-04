@@ -3,7 +3,6 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../hooks/useAuth';
-import { useAuthStore } from '../stores/authStore';
 import {
   registerPushToken,
   addNotificationListeners,
@@ -30,28 +29,34 @@ export default function RootLayout() {
     }
   }, [session, isLoading, segments, router]);
 
-  // 푸시 알림 초기화
+  // 푸시 알림 초기화 (async — Expo Go 호환)
   useEffect(() => {
     if (!driver?.id || pushRegistered.current) return;
     pushRegistered.current = true;
 
-    // 토큰 등록
-    registerPushToken(driver.id);
+    let cleanupFn: (() => void) | null = null;
 
-    // 알림 리스너
-    const cleanup = addNotificationListeners(
-      // 포그라운드 수신 — 별도 처리 필요 없음 (시스템 알림 표시)
-      undefined,
-      // 알림 탭 → 화면 이동
-      (response) => {
-        const nav = getNavigationFromNotification(response);
-        if (nav) {
-          router.push(nav.route as never);
+    (async () => {
+      // 토큰 등록
+      await registerPushToken(driver.id);
+
+      // 알림 리스너
+      cleanupFn = await addNotificationListeners(
+        // 포그라운드 수신 — 별도 처리 필요 없음 (시스템 알림 표시)
+        undefined,
+        // 알림 탭 → 화면 이동
+        (response) => {
+          const nav = getNavigationFromNotification(response);
+          if (nav) {
+            router.push(nav.route as never);
+          }
         }
-      }
-    );
+      );
+    })();
 
-    return cleanup;
+    return () => {
+      cleanupFn?.();
+    };
   }, [driver?.id, router]);
 
   if (isLoading) {

@@ -27,21 +27,21 @@ const nextConfig = {
             key: 'Strict-Transport-Security',
             value: 'max-age=63072000; includeSubDomains; preload',
           },
-          // CSP: Kakao Postcode, Supabase, Google Fonts, Vercel Analytics 허용
+          // CSP: Kakao Postcode, Supabase, Google Fonts, Vercel Analytics, Sentry 허용
           {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://t1.daumcdn.net https://postcode.map.daum.net https://ssl.daumcdn.net https://va.vercel-scripts.com",
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://t1.daumcdn.net",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://t1.daumcdn.net https://postcode.map.daum.net https://ssl.daumcdn.net https://dmaps.daum.net https://spi.maps.daum.net https://va.vercel-scripts.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://t1.daumcdn.net https://postcode.map.daum.net",
               "font-src 'self' https://fonts.gstatic.com data:",
-              "img-src 'self' data: blob: https://*.supabase.co https://t1.daumcdn.net",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://postcode.map.daum.net https://va.vercel-scripts.com https://*.sentry.io https://*.ingest.sentry.io",
-              "frame-src 'self' blob: https://*.supabase.co https://t1.daumcdn.net https://postcode.map.daum.net",
+              "img-src 'self' data: blob: https://*.supabase.co https://t1.daumcdn.net https://postcode.map.daum.net https://*.daumcdn.net",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://postcode.map.daum.net https://dmaps.daum.net https://spi.maps.daum.net https://va.vercel-scripts.com https://*.sentry.io https://*.ingest.sentry.io",
+              "frame-src 'self' blob: https://*.supabase.co https://t1.daumcdn.net https://postcode.map.daum.net https://accounts.kakao.com https://kauth.kakao.com https://accounts.google.com",
               "object-src 'self' blob:",
               "worker-src 'self' blob:",
               "base-uri 'self'",
-              "form-action 'self'",
+              "form-action 'self' https://accounts.kakao.com https://kauth.kakao.com https://accounts.google.com https://*.supabase.co",
               "frame-ancestors 'none'",
             ].join('; '),
           },

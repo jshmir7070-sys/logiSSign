@@ -27,7 +27,9 @@ export default function UserMenu({ initials, name, email, redirectTo }: UserMenu
   const handleLogout = async () => {
     const supabase = createBrowserSupabaseClient();
     await supabase.auth.signOut();
-    router.push(redirectTo);
+    // MFA 쿠키 삭제 (httpOnly이므로 서버에서도 삭제하지만, 경로 이동으로 처리)
+    document.cookie = '__logissign_mfa=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    window.location.replace(redirectTo);
   };
 
   return (

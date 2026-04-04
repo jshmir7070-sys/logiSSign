@@ -56,7 +56,30 @@ export default function AdminLoginPage() {
         return;
       }
 
-      router.push("/admin/dashboard");
+      // ── MFA: 휴대폰 OTP 인증 ──
+      const userId = data.user!.id;
+      try {
+        const otpRes = await fetch("/api/auth/send-login-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId }),
+        });
+        const otpData = await otpRes.json();
+
+        if (otpData.skip) {
+          router.push("/admin/dashboard");
+          return;
+        }
+
+        const params = new URLSearchParams({
+          uid: userId,
+          redirect: "/admin/dashboard",
+          phone: otpData.maskedPhone || "",
+        });
+        window.location.replace(`/admin/verify-otp?${params.toString()}`);
+      } catch {
+        router.push("/admin/dashboard");
+      }
     } catch {
       setForm((prev) => ({
         ...prev,

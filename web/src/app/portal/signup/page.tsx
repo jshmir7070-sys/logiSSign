@@ -170,9 +170,34 @@ interface SignupForm {
 
 export default function PortalSignupPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><span className="text-on-surface-variant">로딩 중...</span></div>}>
-      <SignupContent />
-    </Suspense>
+    <div className="min-h-screen bg-surface flex items-center justify-center px-6 py-12">
+      <div className="w-full max-w-[480px]">
+        <div className="flex flex-col items-center mb-8">
+          <img src="/logo-light.png" alt="logiSSign" className="w-[260px] object-contain mb-5" />
+        </div>
+
+        <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-8 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-on-surface-variant/10 flex items-center justify-center mx-auto mb-4">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-on-surface-variant">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
+          <h2 className="font-headline text-lg font-bold text-on-surface mb-2">신규 가입이 일시 중단되었습니다</h2>
+          <p className="text-sm text-on-surface-variant mb-4 font-korean leading-relaxed">
+            현재 서비스 점검 기간으로 신규 운영사 가입을 받지 않고 있습니다.<br />
+            기사 앱은 기존 운영사에서 발급한 <strong className="text-on-surface">초대코드</strong>로 가입할 수 있습니다.
+          </p>
+          <p className="text-xs text-on-surface-variant/60 mb-6">
+            문의: <a href="mailto:support@logissign.com" className="text-primary hover:underline">support@logissign.com</a>
+          </p>
+          <Link href="/portal/login" className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:underline">
+            ← 로그인 페이지로 돌아가기
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }
 

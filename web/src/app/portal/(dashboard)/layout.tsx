@@ -4,9 +4,22 @@ import Sidebar from '@/components/portal/Sidebar';
 import UserMenu from '@/components/shared/UserMenu';
 import { ToastContainer } from '@/components/shared/Toast';
 import { PlanProvider, usePlan } from '@/contexts/PlanContext';
+import { useEffect } from 'react';
 
 function PortalDashboardInner({ children }: { children: React.ReactNode }) {
   const { plan, ownerName, companyName, email } = usePlan();
+
+  // ✅ 보안: 브라우저 뒤로가기/이력으로 캐시된 페이지 접속 방지
+  useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        // bfcache에서 복원된 페이지 → 새로고침 강제
+        window.location.reload();
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, []);
 
   return (
     <div className="min-h-screen bg-surface">

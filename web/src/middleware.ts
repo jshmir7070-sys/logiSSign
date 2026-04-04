@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { csrfCheck } from "@/lib/csrf";
 import { getFeatureForRoute, hasFeature } from "@/lib/plan-limits";
+import { verifyMfaToken, MFA_COOKIE } from "@/lib/mfa";
 
 // 공개 경로: 인증 불필요
 const PUBLIC_ROUTES = [
@@ -11,16 +12,20 @@ const PUBLIC_ROUTES = [
   "/terms",         // 이용약관
   "/privacy",       // 개인정보처리방침
   "/admin/login",   // 슈퍼관리자 로그인
+  "/admin/verify-otp", // 슈퍼관리자 OTP 인증
   "/portal/login",  // 대리점 로그인
+  "/portal/verify-otp", // 대리점 OTP 인증
   "/portal/signup", // 대리점 회원가입
   "/portal/find-id", // 아이디(이메일) 찾기
   "/portal/reset-password", // 비밀번호 초기화
   "/verify",        // 공개 진위확인 페이지
   "/api/verify",    // 공개 진위확인 API
   "/api/auth/signup", // 운영사 회원가입 API
-  "/api/auth/driver-signup", // 기사 가입 API (초대코드+계정+driver 연결 원자적)
-  "/api/auth/find-id",      // 아이디 찾기 API (공개)
-  "/api/auth/reset-password", // 비밀번호 초기화 API (공개)
+  "/api/auth/driver-signup", // 기사 가입 API
+  "/api/auth/find-id",      // 아이디 찾기 API
+  "/api/auth/reset-password", // 비밀번호 초기화 API
+  "/api/auth/send-login-otp", // OTP 발송 API
+  "/api/auth/verify-login-otp", // OTP 검증 API
   "/api/cron",      // CRON (자체 시크릿 인증)
   "/api/health",    // 헬스체크 (인증 불필요)
   "/api/beta-apply", // 베타 테스트 신청 (공개)
@@ -32,6 +37,18 @@ function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) =>
     route === "/" ? pathname === "/" : pathname.startsWith(route)
   );
+}
+
+/**
+ * 보안 헤더: 인증 필요 페이지에 캐시 방지 헤더 추가
+ * → 브라우저 뒤로가기/재부팅 후 캐시된 페이지 접속 차단
+ */
+function addNoCacheHeaders(response: NextResponse): NextResponse {
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  response.headers.set('Pragma', 'no-cache');
+  response.headers.set('Expires', '0');
+  response.headers.set('Surrogate-Control', 'no-store');
+  return response;
 }
 
 export async function middleware(request: NextRequest) {
@@ -95,10 +112,15 @@ export async function middleware(request: NextRequest) {
       return NextResponse.json({ error: '인증이 필요합니다' }, { status: 401 });
     }
     if (isAdminRoute) {
-      return NextResponse.redirect(new URL("/admin/login", request.url));
+      const redir = NextResponse.redirect(new URL("/admin/login", request.url));
+      // 세션 만료 시 MFA 쿠키도 삭제
+      redir.cookies.delete(MFA_COOKIE);
+      return addNoCacheHeaders(redir);
     }
     if (isPortalRoute) {
-      return NextResponse.redirect(new URL("/portal/login", request.url));
+      const redir = NextResponse.redirect(new URL("/portal/login", request.url));
+      redir.cookies.delete(MFA_COOKIE);
+      return addNoCacheHeaders(redir);
     }
     return NextResponse.redirect(new URL("/", request.url));
   }
@@ -106,12 +128,37 @@ export async function middleware(request: NextRequest) {
   // ⚠️ 보안: app_metadata만 사용 (user_metadata는 클라이언트 조작 가능)
   const role = user.app_metadata?.role as string | undefined;
 
+  // ─── MFA 검증: 대시보드/API 접근 시 MFA 쿠키 필수 ───
+  if ((isAdminRoute || isPortalRoute) && !isApiRoute) {
+    const mfaToken = request.cookies.get(MFA_COOKIE)?.value;
+    const mfaValid = mfaToken ? await verifyMfaToken(mfaToken, user.id) : false;
+
+    if (!mfaValid) {
+      // MFA 미완료 → OTP 인증 페이지로
+      const otpPath = isAdminRoute ? "/admin/verify-otp" : "/portal/verify-otp";
+      const dashPath = isAdminRoute ? "/admin/dashboard" : "/portal/dashboard";
+      const otpUrl = new URL(otpPath, request.url);
+      otpUrl.searchParams.set("uid", user.id);
+      otpUrl.searchParams.set("redirect", pathname || dashPath);
+      return addNoCacheHeaders(NextResponse.redirect(otpUrl));
+    }
+  }
+
+  // API 라우트에서도 MFA 검증 (인증 필요 API)
+  if (isApiRoute) {
+    const mfaToken = request.cookies.get(MFA_COOKIE)?.value;
+    const mfaValid = mfaToken ? await verifyMfaToken(mfaToken, user.id) : false;
+    if (!mfaValid) {
+      return NextResponse.json({ error: 'MFA 인증이 필요합니다' }, { status: 403 });
+    }
+  }
+
   // 슈퍼관리자 경로 보호
   if (isAdminRoute && role !== "provider_admin") {
     if (role === "agency_admin") {
       return NextResponse.redirect(new URL("/portal/dashboard", request.url));
     }
-    return NextResponse.redirect(new URL("/admin/login", request.url));
+    return addNoCacheHeaders(NextResponse.redirect(new URL("/admin/login", request.url)));
   }
 
   // 대리점 경로 보호
@@ -119,7 +166,7 @@ export async function middleware(request: NextRequest) {
     if (role === "provider_admin") {
       return NextResponse.redirect(new URL("/admin/dashboard", request.url));
     }
-    return NextResponse.redirect(new URL("/portal/login", request.url));
+    return addNoCacheHeaders(NextResponse.redirect(new URL("/portal/login", request.url)));
   }
 
   // 포탈 경로: 플랜 기반 접근 제어
@@ -133,7 +180,9 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // API 라우트: 세션 있으면 통과 (각 라우트에서 role/agency_id 추가 검증)
+  // 인증 필요 페이지에 캐시 방지 헤더 추가
+  addNoCacheHeaders(response);
+
   return response;
 }
 

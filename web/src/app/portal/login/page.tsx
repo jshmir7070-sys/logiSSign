@@ -55,7 +55,33 @@ export default function PortalLoginPage() {
         return;
       }
 
-      window.location.replace("/portal/dashboard");
+      // ── MFA: 휴대폰 OTP 인증 ──
+      const userId = data.user!.id;
+      try {
+        const otpRes = await fetch("/api/auth/send-login-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId }),
+        });
+        const otpData = await otpRes.json();
+
+        if (otpData.skip) {
+          // 등록된 전화번호 없음 → MFA 건너뛰기
+          window.location.replace("/portal/dashboard");
+          return;
+        }
+
+        // OTP 발송 성공 → 인증 페이지로 이동
+        const params = new URLSearchParams({
+          uid: userId,
+          redirect: "/portal/dashboard",
+          phone: otpData.maskedPhone || "",
+        });
+        window.location.replace(`/portal/verify-otp?${params.toString()}`);
+      } catch {
+        // OTP 서비스 장애 시 fallback → 대시보드 직행 (서비스 가용성 우선)
+        window.location.replace("/portal/dashboard");
+      }
     } catch (err) {
       setForm((prev) => ({
         ...prev,
