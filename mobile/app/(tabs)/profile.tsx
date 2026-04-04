@@ -201,6 +201,7 @@ export default function ProfileScreen() {
           {MENU_ITEMS.map((item) => (
             <TouchableOpacity key={item.id} style={styles.menuItem} activeOpacity={0.7}
               onPress={() => {
+                if (item.id === 'info') router.push('/profile/edit');
                 if (item.id === 'documents') router.push('/documents');
                 if (item.id === 'seal') router.push('/seal');
               }}>
