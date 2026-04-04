@@ -9,6 +9,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 const ALLOWED_ORIGINS = new Set([
   process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+  'http://localhost:3000',
   'https://logissign.com',
   'https://www.logissign.com',
 ])
@@ -29,6 +30,8 @@ export function csrfCheck(request: NextRequest): NextResponse | null {
     '/api/auth/driver-signup',
     '/api/auth/find-id',
     '/api/auth/reset-password',
+    '/api/auth/send-login-otp',
+    '/api/auth/verify-login-otp',
     '/api/verify',
     '/api/cron/',
     '/api/beta-apply',
