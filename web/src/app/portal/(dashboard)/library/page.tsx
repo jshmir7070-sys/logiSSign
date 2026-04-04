@@ -50,8 +50,8 @@ export default function DocumentLibraryPage() {
 
   const limits = getPlanLimits(userPlan);
   const planLabel = PLAN_LABELS[userPlan as PlanType] ?? userPlan;
-  const systemTemplates = templates.filter(t => t.is_system);
-  const userTemplates = templates.filter(t => !t.is_system);
+  const systemTemplates = templates.filter(t => !t.agency_id);
+  const userTemplates = templates.filter(t => !!t.agency_id);
   const activeSystemCount = systemTemplates.filter(t => t.is_active).length;
 
   const totalUsed = activeSystemCount + userTemplates.length + uploadedDocs.length;
