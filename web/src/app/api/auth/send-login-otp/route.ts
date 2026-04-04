@@ -66,10 +66,17 @@ export async function POST(req: NextRequest) {
     }
 
     if (!phone) {
-      // 등록된 전화번호가 없으면 MFA 건너뛰기 (setup 안내)
+      // 프로덕션: 전화번호 미등록 시 로그인 차단 (보안 강화)
+      if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json(
+          { error: '등록된 휴대폰 번호가 없습니다. 관리자에게 문의하세요.' },
+          { status: 403 }
+        )
+      }
+      // 개발환경: MFA 건너뛰기 허용
       return NextResponse.json({
         skip: true,
-        message: '등록된 휴대폰 번호가 없어 본인인증을 건너뜁니다. 설정에서 등록해주세요.',
+        message: '개발환경: 등록된 휴대폰 번호가 없어 본인인증을 건너뜁니다.',
       })
     }
 
@@ -83,8 +90,12 @@ export async function POST(req: NextRequest) {
     })
 
     if (!smsResult.sent) {
-      // SMS 실패 시에도 OTP는 저장됨 → 개발환경에서는 콘솔 확인 가능
-      console.warn('[MFA] SMS 발송 실패:', smsResult.error, '코드:', code)
+      // SMS 실패 → OTP 무효화 (보안: 발송 안 된 코드는 삭제)
+      console.error('[MFA] SMS 발송 실패:', smsResult.error)
+      return NextResponse.json(
+        { error: 'SMS 발송에 실패했습니다. 등록된 전화번호를 확인해주세요.' },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({

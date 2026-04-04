@@ -152,6 +152,8 @@ interface SignupForm {
   agreeTerms: boolean;
   agreePrivacy: boolean;
   agreeDataProcessing: boolean;  // 개인정보처리 서약
+  agreeMarketing: boolean;       // 선택: 마케팅 정보 수신
+  agreeAnalytics: boolean;       // 선택: 서비스 분석
   /* 본인인증 */
   identityVerified: boolean;
   identityName: string;
@@ -227,6 +229,8 @@ function SignupContent() {
     agreeTerms: false,
     agreePrivacy: false,
     agreeDataProcessing: false,
+    agreeMarketing: false,
+    agreeAnalytics: false,
     identityVerified: false,
     identityName: '',
     identityPhone: '',
@@ -850,6 +854,17 @@ function SignupContent() {
                   <input type="checkbox" checked={form.agreeDataProcessing} onChange={(e) => updateForm({ agreeDataProcessing: e.target.checked })} className="w-4 h-4 rounded accent-primary" />
                   <span className="text-xs text-on-surface-variant">[필수] <strong className="text-on-surface">개인정보처리 서약</strong> — 소속 기사의 개인정보를 관련 법령에 따라 안전하게 관리하며, 목적 외 이용·제3자 제공·유출 시 법적 책임을 부담할 것을 서약합니다</span>
                 </label>
+                <div className="border-t border-outline-variant/20 pt-2 mt-2">
+                  <p className="text-[10px] text-on-surface-variant/60 mb-2 font-korean">선택 동의 항목</p>
+                  <label className="flex items-center gap-2.5 cursor-pointer">
+                    <input type="checkbox" checked={form.agreeMarketing} onChange={(e) => updateForm({ agreeMarketing: e.target.checked })} className="w-4 h-4 rounded accent-primary" />
+                    <span className="text-xs text-on-surface-variant">[선택] 마케팅 정보 수신 (이메일, SMS)</span>
+                  </label>
+                  <label className="flex items-center gap-2.5 cursor-pointer mt-1.5">
+                    <input type="checkbox" checked={form.agreeAnalytics} onChange={(e) => updateForm({ agreeAnalytics: e.target.checked })} className="w-4 h-4 rounded accent-primary" />
+                    <span className="text-xs text-on-surface-variant">[선택] 서비스 이용 분석 및 개선 목적 데이터 활용</span>
+                  </label>
+                </div>
               </div>
 
               {form.error && <p className="text-error text-xs">{form.error}</p>}
