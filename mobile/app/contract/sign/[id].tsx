@@ -162,7 +162,7 @@ export default function ContractSignScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <Header title="전자서명" showBack />
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -318,7 +318,7 @@ export default function ContractSignScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
-  content: { padding: spacing.lg, paddingBottom: 120, gap: spacing.lg },
+  content: { padding: spacing.lg, paddingBottom: spacing.xl, gap: spacing.lg },
   infoCard: {
     backgroundColor: colors.primaryFixed + '30',
     borderRadius: borderRadius.lg,
@@ -511,11 +511,8 @@ const styles = StyleSheet.create({
   padLabel: { ...typography.labelLarge, color: colors.onSurface },
   padHint: { ...typography.labelSmall, color: colors.onSurfaceVariant, textAlign: 'center' },
   footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     padding: spacing.lg,
+    paddingBottom: spacing.lg,
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.outlineVariant + '20',
