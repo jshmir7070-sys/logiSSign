@@ -60,6 +60,7 @@ const navItems: NavItem[] = [
     children: [
       { label: '계약서 목록', href: '/portal/contracts', featureKey: 'contracts' },
       { label: '계약서 양식', href: '/portal/contracts/templates', featureKey: 'contracts.templates' },
+      { label: '내 문서함', href: '/portal/library', featureKey: 'contracts' },
       { label: '변경이력', href: '/portal/amendments', featureKey: 'contracts' },
       { label: '외부문서 관리', href: '/portal/documents', featureKey: 'contracts' },
     ],
