@@ -296,8 +296,8 @@ export default function ContractSignScreen() {
             width={padWidth}
             height={padHeight}
             onSignatureChange={setSignatureData}
+            fullScreen
           />
-          <Text style={styles.padHint}>손가락으로 서명해 주세요</Text>
         </View>
       </ScrollView>
 
