@@ -57,8 +57,6 @@ export default function LoginScreen() {
             style={styles.heroLogo}
             resizeMode="contain"
           />
-          <Text style={styles.heroTitle}>logiSSign</Text>
-          <Text style={styles.heroSubtitle}>기사님 전용 앱</Text>
         </GradientView>
 
         <View style={styles.formCard}>
@@ -133,9 +131,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   heroLogo: {
-    width: 72,
-    height: 72,
-    marginBottom: spacing.md,
+    width: 240,
+    height: 80,
+    marginBottom: spacing.sm,
   },
   heroTitle: {
     ...typography.displayLarge,
