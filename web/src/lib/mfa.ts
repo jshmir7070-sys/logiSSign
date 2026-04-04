@@ -52,24 +52,31 @@ export async function verifyMfaToken(
   token: string,
   expectedUserId?: string
 ): Promise<boolean> {
-  if (!token) return false
-  const parts = token.split(':')
-  if (parts.length !== 3) return false
+  try {
+    if (!token) return false
+    const parts = token.split(':')
+    if (parts.length !== 3) return false
 
-  const [uid, ts, sig] = parts
-  const timestamp = parseInt(ts, 10)
-  if (isNaN(timestamp)) return false
-  if (Date.now() - timestamp > MFA_TOKEN_TTL_MS) return false
-  if (expectedUserId && uid !== expectedUserId) return false
+    const [uid, ts, sig] = parts
+    const timestamp = parseInt(ts, 10)
+    if (isNaN(timestamp)) return false
+    if (Date.now() - timestamp > MFA_TOKEN_TTL_MS) return false
+    if (expectedUserId && uid !== expectedUserId) return false
 
-  const expected = await hmacSign(`${uid}:${ts}`, getHmacSecret())
-  // 타이밍 세이프 비교 (Edge 환경에서는 직접 비교)
-  if (sig.length !== expected.length) return false
-  let mismatch = 0
-  for (let i = 0; i < sig.length; i++) {
-    mismatch |= sig.charCodeAt(i) ^ expected.charCodeAt(i)
+    const secret = getHmacSecret()
+    if (!secret) return false
+
+    const expected = await hmacSign(`${uid}:${ts}`, secret)
+    // 타이밍 세이프 비교
+    if (sig.length !== expected.length) return false
+    let mismatch = 0
+    for (let i = 0; i < sig.length; i++) {
+      mismatch |= sig.charCodeAt(i) ^ expected.charCodeAt(i)
+    }
+    return mismatch === 0
+  } catch {
+    return false
   }
-  return mismatch === 0
 }
 
 // ── OTP 저장소 (인메모리, TTL 기반) ──
