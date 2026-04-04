@@ -179,6 +179,13 @@ export default function FieldEditorPage() {
       default_value: f.default_value,
     }))
     const { error } = await saveSignFields(docId, inputs)
+
+    // 필드 저장 성공 시 문서 상태를 'ready'로 변경
+    if (!error) {
+      const supabase = createBrowserSupabaseClient()
+      await supabase.from('document_files').update({ status: 'ready' }).eq('id', docId)
+    }
+
     setSaving(false)
     if (error) {
       alert(`저장 실패: ${error}`)

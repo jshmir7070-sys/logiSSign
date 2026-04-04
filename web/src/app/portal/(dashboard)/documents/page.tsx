@@ -36,14 +36,21 @@ export default function DocumentsPage() {
       .order('created_at', { ascending: false });
 
     if (data) {
-      // 각 문서의 필드 수 조회
+      // 각 문서의 필드 수 조회 + draft인데 필드 있으면 자동 ready
       const docs: DocumentFile[] = [];
       for (const doc of data) {
         const { count } = await supabase
           .from('document_sign_fields')
           .select('id', { count: 'exact', head: true })
           .eq('document_file_id', doc.id);
-        docs.push({ ...doc, field_count: count ?? 0 } as DocumentFile);
+        const fieldCount = count ?? 0;
+        let status = (doc as Record<string, unknown>).status as string;
+        if (status === 'draft' && fieldCount > 0) {
+          status = 'ready';
+          await supabase.from('document_files').update({ status: 'ready' }).eq('id', doc.id);
+        }
+        docs.push({ ...doc, field_count: fieldCount, status } as DocumentFile);
+      }
       }
       setDocuments(docs);
     }
