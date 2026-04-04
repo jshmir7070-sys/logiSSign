@@ -2,22 +2,36 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
-import AddressSearch, { type AddressValue } from '@/components/shared/AddressSearch';
+
+interface AgencyData {
+  name: string;
+  owner_name: string;
+  phone: string;
+  address: string;
+  address_detail: string;
+  business_number: string;
+  email: string;
+  invite_code: string;
+  owner_birth_date: string;
+  business_type: string;
+  business_category: string;
+  privacy_officer_name: string;
+  privacy_officer_phone: string;
+  privacy_officer_email: string;
+}
+
+const EMPTY: AgencyData = {
+  name: '', owner_name: '', phone: '', address: '', address_detail: '',
+  business_number: '', email: '', invite_code: '', owner_birth_date: '',
+  business_type: '', business_category: '',
+  privacy_officer_name: '', privacy_officer_phone: '', privacy_officer_email: '',
+};
 
 export default function ProfileTab() {
-  const [form, setForm] = useState({
-    name: '', owner_name: '', phone: '',
-    address: '', address_detail: '',
-    business_number: '', email: '',
-    invite_code: '',
-    owner_birth_date: '',
-    business_type: '',
-    business_category: '',
-    privacy_officer_name: '',
-    privacy_officer_phone: '',
-    privacy_officer_email: '',
-  });
+  const [data, setData] = useState<AgencyData>(EMPTY);
+  const [editData, setEditData] = useState<AgencyData>(EMPTY);
   const [loading, setLoading] = useState(true);
+  const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [agencyId, setAgencyId] = useState<string | null>(null);
@@ -33,81 +47,89 @@ export default function ProfileTab() {
       if (!aid) { setLoading(false); return; }
       setAgencyId(aid);
 
-      const { data, error: fetchError } = await supabase
+      const { data: row, error } = await supabase
         .from('agencies')
         .select('name, owner_name, phone, address, address_detail, business_number, email, invite_code, owner_birth_date, business_type, business_category, privacy_officer_name, privacy_officer_phone, privacy_officer_email')
         .eq('id', aid)
         .single();
 
-      if (fetchError) {
-        console.error('[ProfileTab] 데이터 조회 실패:', fetchError.message);
+      if (error || !row) {
+        console.error('[ProfileTab] 조회 실패:', error?.message);
         setLoading(false);
         return;
       }
 
-      if (data) {
-        // logo_url은 별도 조회 (컬럼 미존재 시 에러 방지)
-        try {
-          const { data: logoData } = await supabase
-            .from('agencies')
-            .select('logo_url')
-            .eq('id', aid)
-            .single();
-          if (logoData) setLogoUrl((logoData as Record<string, string>).logo_url ?? null);
-        } catch {
-          // logo_url 컬럼이 없으면 무시
-        }
+      // logo_url 별도 조회 (컬럼 미존재 방어)
+      try {
+        const { data: logoRow } = await supabase.from('agencies').select('logo_url').eq('id', aid).single();
+        if (logoRow) setLogoUrl((logoRow as Record<string, string>).logo_url ?? null);
+      } catch { /* 무시 */ }
 
-        const inviteCode = (data as Record<string, string>).invite_code ?? '';
+      const d = row as Record<string, string>;
+      const loaded: AgencyData = {
+        name: d.name ?? '',
+        owner_name: d.owner_name ?? '',
+        phone: d.phone ?? '',
+        address: d.address ?? '',
+        address_detail: d.address_detail ?? '',
+        business_number: d.business_number ?? '',
+        email: d.email ?? '',
+        invite_code: d.invite_code ?? '',
+        owner_birth_date: d.owner_birth_date ?? '',
+        business_type: d.business_type ?? '',
+        business_category: d.business_category ?? '',
+        privacy_officer_name: d.privacy_officer_name ?? '',
+        privacy_officer_phone: d.privacy_officer_phone ?? '',
+        privacy_officer_email: d.privacy_officer_email ?? '',
+      };
 
-        setForm({
-          name: (data as Record<string, string>).name ?? '',
-          owner_name: (data as Record<string, string>).owner_name ?? '',
-          phone: (data as Record<string, string>).phone ?? '',
-          address: (data as Record<string, string>).address ?? '',
-          address_detail: (data as Record<string, string>).address_detail ?? '',
-          business_number: (data as Record<string, string>).business_number ?? '',
-          email: (data as Record<string, string>).email ?? '',
-          invite_code: inviteCode,
-          owner_birth_date: (data as Record<string, string>).owner_birth_date ?? '',
-          business_type: (data as Record<string, string>).business_type ?? '',
-          business_category: (data as Record<string, string>).business_category ?? '',
-          privacy_officer_name: (data as Record<string, string>).privacy_officer_name ?? '',
-          privacy_officer_phone: (data as Record<string, string>).privacy_officer_phone ?? '',
-          privacy_officer_email: (data as Record<string, string>).privacy_officer_email ?? '',
-        });
-      }
+      setData(loaded);
+      setEditData(loaded);
       setLoading(false);
     }
     load();
   }, []);
 
+  // ── 수정 모드 토글 ──
+  const handleEditToggle = () => {
+    if (editMode) {
+      // 취소 → 원래 데이터로 복원
+      setEditData(data);
+    }
+    setEditMode(!editMode);
+  };
+
+  // ── 저장 ──
   const handleSave = async () => {
     if (!agencyId) return;
     setSaving(true);
     const supabase = createBrowserSupabaseClient();
     const { error } = await supabase.from('agencies').update({
-      name: form.name,
-      owner_name: form.owner_name,
-      phone: form.phone,
-      address: form.address,
-      address_detail: form.address_detail,
-      owner_birth_date: form.owner_birth_date || null,
-      business_type: form.business_type || null,
-      business_category: form.business_category || null,
-      privacy_officer_name: form.privacy_officer_name || null,
-      privacy_officer_phone: form.privacy_officer_phone || null,
-      privacy_officer_email: form.privacy_officer_email || null,
+      name: editData.name,
+      owner_name: editData.owner_name,
+      phone: editData.phone,
+      address: editData.address,
+      address_detail: editData.address_detail,
+      owner_birth_date: editData.owner_birth_date || null,
+      business_type: editData.business_type || null,
+      business_category: editData.business_category || null,
+      privacy_officer_name: editData.privacy_officer_name || null,
+      privacy_officer_phone: editData.privacy_officer_phone || null,
+      privacy_officer_email: editData.privacy_officer_email || null,
     }).eq('id', agencyId);
     setSaving(false);
+
     if (error) {
       setSaveMessage({ type: 'error', text: '저장 실패: ' + error.message });
     } else {
+      setData(editData);
+      setEditMode(false);
       setSaveMessage({ type: 'success', text: '저장되었습니다.' });
     }
     setTimeout(() => setSaveMessage(null), 3000);
   };
 
+  // ── 로고 업로드 ──
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !agencyId) return;
@@ -118,10 +140,8 @@ export default function ProfileTab() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-
       const res = await fetch('/api/agency/logo', { method: 'POST', body: formData });
       const result = await res.json();
-
       if (!res.ok || result.error) {
         alert('업로드 실패: ' + (result.error ?? ''));
       } else {
@@ -138,6 +158,36 @@ export default function ProfileTab() {
     setLogoUrl(null);
   };
 
+  // ── 읽기 전용 필드 컴포넌트 ──
+  const ReadOnlyField = ({ label, value }: { label: string; value: string }) => (
+    <div>
+      <p className="text-xs font-medium text-on-surface-variant mb-1 font-korean">{label}</p>
+      <p className="h-11 flex items-center px-4 rounded-xl bg-surface-container-low/50 text-on-surface text-sm font-korean">
+        {value || <span className="text-on-surface-variant/40">—</span>}
+      </p>
+    </div>
+  );
+
+  // ── 편집 가능 필드 컴포넌트 ──
+  const EditField = ({ label, field, placeholder, dataFont }: { label: string; field: keyof AgencyData; placeholder?: string; dataFont?: boolean }) => (
+    <div>
+      <p className="text-xs font-medium text-on-surface-variant mb-1 font-korean">{label}</p>
+      {editMode ? (
+        <input
+          type="text"
+          value={editData[field]}
+          onChange={e => setEditData(p => ({ ...p, [field]: e.target.value }))}
+          placeholder={placeholder}
+          className={`w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 ${dataFont ? 'font-data' : 'font-korean'}`}
+        />
+      ) : (
+        <p className={`h-11 flex items-center px-4 rounded-xl bg-surface-container-low/50 text-on-surface text-sm ${dataFont ? 'font-data' : 'font-korean'}`}>
+          {data[field] || <span className="text-on-surface-variant/40">—</span>}
+        </p>
+      )}
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-8 flex items-center justify-center h-48">
@@ -148,9 +198,43 @@ export default function ProfileTab() {
 
   return (
     <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-8 space-y-6">
-      <h2 className="text-lg font-headline font-bold text-on-surface font-korean">대리점 정보</h2>
+      {/* 헤더 + 수정 버튼 */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-headline font-bold text-on-surface font-korean">대리점 정보</h2>
+        <div className="flex items-center gap-3">
+          {saveMessage && (
+            <p className={`text-sm font-korean ${saveMessage.type === 'success' ? 'text-tertiary' : 'text-error'}`}>
+              {saveMessage.type === 'success' ? '✅' : '❌'} {saveMessage.text}
+            </p>
+          )}
+          {editMode ? (
+            <div className="flex gap-2">
+              <button
+                onClick={handleEditToggle}
+                className="h-9 px-5 rounded-xl bg-surface-container-high text-on-surface-variant text-sm font-medium hover:bg-surface-container-highest transition-colors font-korean"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="h-9 px-5 rounded-xl bg-power-gradient text-white text-sm font-medium shadow-ambient hover:shadow-float transition-all disabled:opacity-50 font-korean"
+              >
+                {saving ? '저장 중...' : '저장'}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleEditToggle}
+              className="h-9 px-5 rounded-xl bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/20 transition-colors font-korean"
+            >
+              수정
+            </button>
+          )}
+        </div>
+      </div>
 
-      {/* 로고 업로드 */}
+      {/* 로고 */}
       <div className="flex items-start gap-6 p-5 rounded-xl bg-surface-container-low/50 border border-outline-variant/15">
         <div className="flex-shrink-0">
           {logoUrl ? (
@@ -176,95 +260,64 @@ export default function ProfileTab() {
               {logoUploading ? '업로드 중...' : logoUrl ? '로고 변경' : '로고 업로드'}
             </button>
             {logoUrl && (
-              <button
-                onClick={handleLogoDelete}
-                className="h-9 px-4 rounded-lg bg-error/10 text-error text-xs font-semibold hover:bg-error/20 transition-colors font-korean"
-              >
-                삭제
-              </button>
+              <button onClick={handleLogoDelete} className="h-9 px-4 rounded-lg bg-error/10 text-error text-xs font-semibold hover:bg-error/20 transition-colors font-korean">삭제</button>
             )}
           </div>
         </div>
       </div>
 
-      {/* 초대코드 — 눈에 띄게 상단 배치 */}
+      {/* 초대코드 */}
       <div className="flex items-center gap-4 p-5 rounded-xl bg-primary/5 border border-primary/15">
         <div className="flex-1">
           <p className="text-xs font-semibold text-on-surface font-korean mb-1">📨 기사 초대코드</p>
-          {form.invite_code ? (
-            <p className="text-2xl font-data font-bold text-primary tracking-[0.3em] select-all cursor-pointer" onClick={(e) => { (e.target as HTMLElement).ownerDocument.defaultView?.getSelection()?.selectAllChildren(e.target as HTMLElement); }}>{form.invite_code}</p>
+          {data.invite_code ? (
+            <p className="text-2xl font-data font-bold text-primary tracking-[0.3em] select-all cursor-pointer"
+              onClick={(e) => { (e.target as HTMLElement).ownerDocument.defaultView?.getSelection()?.selectAllChildren(e.target as HTMLElement); }}>
+              {data.invite_code}
+            </p>
           ) : (
-            <p className="text-sm text-on-surface-variant font-korean">코드가 아직 생성되지 않았습니다. 페이지를 새로고침하거나 아래 버튼을 눌러주세요.</p>
+            <p className="text-sm text-on-surface-variant font-korean">코드가 생성되지 않았습니다.</p>
           )}
           <p className="text-[11px] text-on-surface-variant mt-1 font-korean">기사에게 이 코드를 전달하면 앱에서 가입 시 자동으로 소속이 연결됩니다</p>
         </div>
         <button
           onClick={() => {
-            if (form.invite_code) {
-              navigator.clipboard.writeText(form.invite_code);
-              alert('초대코드가 복사되었습니다');
-            } else {
-              // 수동 생성
-              const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-              let code = '';
-              for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
-              const supabase = createBrowserSupabaseClient();
-              supabase.from('agencies').update({ invite_code: code }).eq('id', agencyId!).then(() => {
-                setForm(f => ({ ...f, invite_code: code }));
-              });
+            if (data.invite_code) {
+              navigator.clipboard.writeText(data.invite_code);
+              setSaveMessage({ type: 'success', text: '초대코드가 복사되었습니다.' });
+              setTimeout(() => setSaveMessage(null), 2000);
             }
           }}
           className="h-11 px-6 rounded-xl bg-primary text-white text-sm font-label font-semibold hover:bg-primary/90 transition-colors font-korean shrink-0"
         >
-          {form.invite_code ? '복사' : '코드 생성'}
+          복사
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
-        <div>
-          <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">대리점명 (상호)</label>
-          <input type="text" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30" />
-        </div>
-        <div>
-          <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">사업자등록번호</label>
-          <input type="text" value={form.business_number} readOnly disabled className="w-full h-11 px-4 rounded-xl bg-surface-container-high text-on-surface/60 text-sm font-data cursor-not-allowed" />
-          <p className="text-[11px] text-on-surface-variant/50 mt-1 font-korean">사업자등록번호는 가입 시 등록한 번호로 고정되며 변경할 수 없습니다</p>
-        </div>
-        <div>
-          <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">대표자명</label>
-          <input type="text" value={form.owner_name} onChange={e => setForm(p => ({ ...p, owner_name: e.target.value }))} className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30" />
-        </div>
-        <div>
-          <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">대표자 생년월일</label>
-          <input type="text" value={form.owner_birth_date} onChange={e => setForm(p => ({ ...p, owner_birth_date: e.target.value }))} placeholder="1990-01-01" className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-data focus:outline-none focus:ring-2 focus:ring-primary/30" />
-        </div>
-        <div>
-          <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">연락처</label>
-          <input type="text" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-data focus:outline-none focus:ring-2 focus:ring-primary/30" />
-        </div>
-        <div>
-          <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">이메일</label>
-          <input type="email" value={form.email} disabled className="w-full h-11 px-4 rounded-xl bg-surface-container-high text-on-surface-variant text-sm cursor-not-allowed" />
-          <p className="text-[11px] text-on-surface-variant/50 mt-1 font-korean">이메일은 변경할 수 없습니다</p>
-        </div>
-        <div>
-          <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">업태</label>
-          <input type="text" value={form.business_type} onChange={e => setForm(p => ({ ...p, business_type: e.target.value }))} placeholder="운수및창고업" className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30" />
-        </div>
-        <div>
-          <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">종목</label>
-          <input type="text" value={form.business_category} onChange={e => setForm(p => ({ ...p, business_category: e.target.value }))} placeholder="기타육상운송서비스업" className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30" />
-        </div>
+      {/* 가입 정보 — 읽기 전용 (수정 모드에서만 편집 가능) */}
+      <div className="grid grid-cols-2 gap-5">
+        <EditField label="대리점명 (상호)" field="name" />
+        <ReadOnlyField label="사업자등록번호" value={data.business_number} />
+        <EditField label="대표자명" field="owner_name" />
+        <EditField label="대표자 생년월일" field="owner_birth_date" placeholder="1990-01-01" dataFont />
+        <EditField label="연락처" field="phone" dataFont />
+        <ReadOnlyField label="이메일" value={data.email} />
+        <EditField label="업태" field="business_type" placeholder="운수및창고업" />
+        <EditField label="종목" field="business_category" placeholder="기타육상운송서비스업" />
 
+        {/* 주소 — 출력 전용 */}
         <div className="col-span-2">
-          <AddressSearch
-            label="주소"
-            value={form.address}
-            detailValue={form.address_detail}
-            onChange={(addr: AddressValue) => setForm(p => ({ ...p, address: addr.address, address_detail: addr.addressDetail }))}
-          />
+          <p className="text-xs font-medium text-on-surface-variant mb-1 font-korean">주소</p>
+          <p className="h-11 flex items-center px-4 rounded-xl bg-surface-container-low/50 text-on-surface text-sm font-korean">
+            {data.address ? (
+              <>{data.address}{data.address_detail ? ` ${data.address_detail}` : ''}</>
+            ) : (
+              <span className="text-on-surface-variant/40">등록된 주소 없음</span>
+            )}
+          </p>
         </div>
 
+        {/* 개인정보보호 담당자 — 항상 수정 가능 */}
         <div className="col-span-2 pt-4 border-t border-outline-variant/20">
           <p className="text-xs font-semibold text-on-surface font-korean mb-3 flex items-center gap-1.5">
             🛡️ 개인정보보호 담당자
@@ -272,33 +325,29 @@ export default function ProfileTab() {
           </p>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">담당자 이름</label>
-              <input type="text" value={form.privacy_officer_name} onChange={e => setForm(f => ({ ...f, privacy_officer_name: e.target.value }))}
-                placeholder="홍길동" className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              <label className="block text-xs font-medium text-on-surface-variant mb-1 font-korean">담당자 이름</label>
+              <input type="text" value={editData.privacy_officer_name}
+                onChange={e => setEditData(f => ({ ...f, privacy_officer_name: e.target.value }))}
+                placeholder="홍길동"
+                className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30" />
             </div>
             <div>
-              <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">연락처</label>
-              <input type="tel" value={form.privacy_officer_phone} onChange={e => setForm(f => ({ ...f, privacy_officer_phone: e.target.value }))}
-                placeholder="010-0000-0000" className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-data focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              <label className="block text-xs font-medium text-on-surface-variant mb-1 font-korean">연락처</label>
+              <input type="tel" value={editData.privacy_officer_phone}
+                onChange={e => setEditData(f => ({ ...f, privacy_officer_phone: e.target.value }))}
+                placeholder="010-0000-0000"
+                className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-data focus:outline-none focus:ring-2 focus:ring-primary/30" />
             </div>
             <div>
-              <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">이메일</label>
-              <input type="email" value={form.privacy_officer_email} onChange={e => setForm(f => ({ ...f, privacy_officer_email: e.target.value }))}
-                placeholder="privacy@company.com" className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-data focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              <label className="block text-xs font-medium text-on-surface-variant mb-1 font-korean">이메일</label>
+              <input type="email" value={editData.privacy_officer_email}
+                onChange={e => setEditData(f => ({ ...f, privacy_officer_email: e.target.value }))}
+                placeholder="privacy@company.com"
+                className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-data focus:outline-none focus:ring-2 focus:ring-primary/30" />
             </div>
           </div>
           <p className="text-[11px] text-on-surface-variant/50 mt-2 font-korean">기사 앱 개인정보처리방침에 표시됩니다</p>
         </div>
-      </div>
-      <div className="flex items-center justify-end gap-4 pt-2">
-        {saveMessage && (
-          <p className={`text-sm font-korean ${saveMessage.type === 'success' ? 'text-tertiary' : 'text-error'}`}>
-            {saveMessage.type === 'success' ? '✅' : '❌'} {saveMessage.text}
-          </p>
-        )}
-        <button onClick={handleSave} disabled={saving} className="h-11 px-8 rounded-xl bg-power-gradient text-white font-label font-medium text-sm shadow-ambient hover:shadow-float transition-all font-korean disabled:opacity-50">
-          {saving ? '저장 중...' : '저장'}
-        </button>
       </div>
     </div>
   );
