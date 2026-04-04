@@ -10,6 +10,12 @@ export default function ProfileTab() {
     address: '', address_detail: '',
     business_number: '', email: '',
     invite_code: '',
+    owner_birth_date: '',
+    business_type: '',
+    business_category: '',
+    bank_name: '',
+    bank_account: '',
+    bank_holder: '',
     privacy_officer_name: '',
     privacy_officer_phone: '',
     privacy_officer_email: '',
@@ -31,7 +37,7 @@ export default function ProfileTab() {
 
       const { data } = await supabase
         .from('agencies')
-        .select('name, owner_name, phone, address, address_detail, business_number, email, invite_code, privacy_officer_name, privacy_officer_phone, privacy_officer_email, logo_url')
+        .select('name, owner_name, phone, address, address_detail, business_number, email, invite_code, owner_birth_date, business_type, business_category, bank_name, bank_account, bank_holder, privacy_officer_name, privacy_officer_phone, privacy_officer_email, logo_url')
         .eq('id', aid)
         .single();
 
@@ -58,6 +64,12 @@ export default function ProfileTab() {
           business_number: (data as Record<string, string>).business_number ?? '',
           email: (data as Record<string, string>).email ?? '',
           invite_code: inviteCode,
+          owner_birth_date: (data as Record<string, string>).owner_birth_date ?? '',
+          business_type: (data as Record<string, string>).business_type ?? '',
+          business_category: (data as Record<string, string>).business_category ?? '',
+          bank_name: (data as Record<string, string>).bank_name ?? '',
+          bank_account: (data as Record<string, string>).bank_account ?? '',
+          bank_holder: (data as Record<string, string>).bank_holder ?? '',
           privacy_officer_name: (data as Record<string, string>).privacy_officer_name ?? '',
           privacy_officer_phone: (data as Record<string, string>).privacy_officer_phone ?? '',
           privacy_officer_email: (data as Record<string, string>).privacy_officer_email ?? '',
@@ -78,6 +90,12 @@ export default function ProfileTab() {
       phone: form.phone,
       address: form.address,
       address_detail: form.address_detail,
+      owner_birth_date: form.owner_birth_date || null,
+      business_type: form.business_type || null,
+      business_category: form.business_category || null,
+      bank_name: form.bank_name || null,
+      bank_account: form.bank_account || null,
+      bank_holder: form.bank_holder || null,
       privacy_officer_name: form.privacy_officer_name || null,
       privacy_officer_phone: form.privacy_officer_phone || null,
       privacy_officer_email: form.privacy_officer_email || null,
@@ -212,9 +230,27 @@ export default function ProfileTab() {
           <input type="text" value={form.owner_name} onChange={e => setForm(p => ({ ...p, owner_name: e.target.value }))} className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30" />
         </div>
         <div>
+          <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">대표자 생년월일</label>
+          <input type="text" value={form.owner_birth_date} onChange={e => setForm(p => ({ ...p, owner_birth_date: e.target.value }))} placeholder="1990-01-01" className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-data focus:outline-none focus:ring-2 focus:ring-primary/30" />
+        </div>
+        <div>
           <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">연락처</label>
           <input type="text" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-data focus:outline-none focus:ring-2 focus:ring-primary/30" />
         </div>
+        <div>
+          <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">이메일</label>
+          <input type="email" value={form.email} disabled className="w-full h-11 px-4 rounded-xl bg-surface-container-high text-on-surface-variant text-sm cursor-not-allowed" />
+          <p className="text-[11px] text-on-surface-variant/50 mt-1 font-korean">이메일은 변경할 수 없습니다</p>
+        </div>
+        <div>
+          <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">업태</label>
+          <input type="text" value={form.business_type} onChange={e => setForm(p => ({ ...p, business_type: e.target.value }))} placeholder="운수및창고업" className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30" />
+        </div>
+        <div>
+          <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">종목</label>
+          <input type="text" value={form.business_category} onChange={e => setForm(p => ({ ...p, business_category: e.target.value }))} placeholder="기타육상운송서비스업" className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30" />
+        </div>
+
         <div className="col-span-2">
           <AddressSearch
             label="주소"
@@ -223,10 +259,26 @@ export default function ProfileTab() {
             onChange={(addr: AddressValue) => setForm(p => ({ ...p, address: addr.address, address_detail: addr.addressDetail }))}
           />
         </div>
-        <div className="col-span-2">
-          <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">이메일</label>
-          <input type="email" value={form.email} disabled className="w-full h-11 px-4 rounded-xl bg-surface-container-high text-on-surface-variant text-sm cursor-not-allowed" />
-          <p className="text-xs text-on-surface-variant/60 mt-1 font-korean">이메일은 변경할 수 없습니다</p>
+
+        {/* 정산 입금 계좌 */}
+        <div className="col-span-2 pt-4 border-t border-outline-variant/20">
+          <p className="text-xs font-semibold text-on-surface font-korean mb-3 flex items-center gap-1.5">
+            🏦 정산 입금 계좌
+          </p>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">은행명</label>
+              <input type="text" value={form.bank_name} onChange={e => setForm(p => ({ ...p, bank_name: e.target.value }))} placeholder="국민은행" className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            </div>
+            <div>
+              <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">계좌번호</label>
+              <input type="text" value={form.bank_account} onChange={e => setForm(p => ({ ...p, bank_account: e.target.value }))} placeholder="000-000000-00-000" className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-data focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            </div>
+            <div>
+              <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">예금주</label>
+              <input type="text" value={form.bank_holder} onChange={e => setForm(p => ({ ...p, bank_holder: e.target.value }))} placeholder="홍길동" className="w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            </div>
+          </div>
         </div>
 
         <div className="col-span-2 pt-4 border-t border-outline-variant/20">
