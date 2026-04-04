@@ -134,13 +134,9 @@ export async function middleware(request: NextRequest) {
     const mfaValid = mfaToken ? await verifyMfaToken(mfaToken, user.id) : false;
 
     if (!mfaValid) {
-      // MFA 미완료 → OTP 인증 페이지로
-      const otpPath = isAdminRoute ? "/admin/verify-otp" : "/portal/verify-otp";
-      const dashPath = isAdminRoute ? "/admin/dashboard" : "/portal/dashboard";
-      const otpUrl = new URL(otpPath, request.url);
-      otpUrl.searchParams.set("uid", user.id);
-      otpUrl.searchParams.set("redirect", pathname || dashPath);
-      return addNoCacheHeaders(NextResponse.redirect(otpUrl));
+      // MFA 미완료 → 로그인 페이지로 리다이렉트 (모달에서 OTP 인증)
+      const loginPath = isAdminRoute ? "/admin/login" : "/portal/login";
+      return addNoCacheHeaders(NextResponse.redirect(new URL(loginPath, request.url)));
     }
   }
 
