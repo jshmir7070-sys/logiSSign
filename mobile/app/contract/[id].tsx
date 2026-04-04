@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, useWindowDimensions, TouchableOpacity, Linking } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, ScrollView, StyleSheet, useWindowDimensions, TouchableOpacity, Linking, Platform } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import Header from '../../components/common/Header';
@@ -23,27 +23,37 @@ function splitContractSections(content: string): {
   privacyCollect: string | null;
   privacyThirdParty: string | null;
 } {
-  // 구분자: ━━━ 또는 【별지】 또는 [별지]
-  const dividerPattern = /━{5,}|─{5,}/g;
-  const parts = content.split(dividerPattern).map((s) => s.trim()).filter(Boolean);
+  // 【별지】 또는 [별지] 키워드로 분리 (표 테두리 ━━━와 구분)
+  const byeoljiPattern = /\n\s*(?:【별지】|【별지\s*\d*】|\[별지\]|\[별지\s*\d*\])/;
+  const idx = content.search(byeoljiPattern);
 
-  if (parts.length >= 3) {
+  if (idx === -1) {
+    return { body: content, privacyCollect: null, privacyThirdParty: null };
+  }
+
+  const body = content.slice(0, idx).trim();
+  const annexPart = content.slice(idx).trim();
+
+  // 별지 내부에서 "개인정보 제3자 제공" 키워드로 2차 분리
+  const thirdPartyPattern = /\n\s*(?:개인정보\s*제3자\s*제공|고유식별정보\s*제3자\s*제공)/;
+  const thirdIdx = annexPart.search(thirdPartyPattern);
+
+  if (thirdIdx > 0) {
     return {
-      body: parts[0],
-      privacyCollect: parts[1],
-      privacyThirdParty: parts[2],
+      body,
+      privacyCollect: annexPart.slice(0, thirdIdx).trim(),
+      privacyThirdParty: annexPart.slice(thirdIdx).trim(),
     };
   }
-  if (parts.length === 2) {
-    return { body: parts[0], privacyCollect: parts[1], privacyThirdParty: null };
-  }
-  return { body: content, privacyCollect: null, privacyThirdParty: null };
+
+  return { body, privacyCollect: annexPart, privacyThirdParty: null };
 }
 
 export default function ContractDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [contract, setContract] = useState<Contract | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -163,7 +173,7 @@ export default function ContractDetailScreen() {
 
       {/* Sign Button */}
       {canSign && (
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 0) + spacing.lg }]}>
           <Button
             title="동의 및 전자서명 하기"
             onPress={() => router.push(`/contract/sign/${contract.id}`)}
@@ -180,7 +190,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   errorText: { ...typography.bodyMedium, color: colors.error },
-  content: { padding: spacing.lg, paddingBottom: 120, gap: spacing.md },
+  content: { padding: spacing.lg, paddingBottom: spacing.xl, gap: spacing.md },
   metaCard: {
     backgroundColor: colors.surfaceContainerLowest,
     borderRadius: borderRadius.xl,
@@ -253,12 +263,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     padding: spacing.lg,
-    paddingBottom: spacing['3xl'],
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.outlineVariant + '20',
