@@ -110,11 +110,37 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: result.error }, { status: 500 })
       }
 
-      // 플랜 업데이트
+      // 플랜 업데이트 (agencies + subscriptions + app_metadata 3곳 동기화)
       await supabaseAdmin
         .from('agencies')
         .update({ plan, monthly_fee: amount })
         .eq('id', auth.agencyId)
+
+      await supabaseAdmin
+        .from('subscriptions')
+        .update({ plan, updated_at: new Date().toISOString() })
+        .eq('agency_id', auth.agencyId)
+
+      // 해당 대리점 소속 모든 유저의 app_metadata.plan 동기화
+      const { data: allUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
+      const agencyUsers = (allUsers?.users ?? []).filter(
+        u => u.app_metadata?.agency_id === auth.agencyId
+      )
+      for (const u of agencyUsers) {
+        await supabaseAdmin.auth.admin.updateUserById(u.id, {
+          app_metadata: { ...u.app_metadata, plan },
+        })
+      }
+
+      // 감사 로그
+      await supabaseAdmin.from('plan_change_log').insert({
+        agency_id: auth.agencyId,
+        old_plan: null,
+        new_plan: plan,
+        changed_by: auth.userId,
+        change_type: 'self_upgrade',
+        reason: `셀프 업그레이드 (${billing})`,
+      })
 
       return NextResponse.json({ paymentId: result.paymentId, amount: result.amount })
     }

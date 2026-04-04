@@ -81,8 +81,8 @@ export default function DocumentsPage() {
       return;
     }
 
-    const { data: urlData } = supabase.storage.from('documents').getPublicUrl(fileName);
-    const fileUrl = urlData?.publicUrl ?? '';
+    const { data: urlData } = await supabase.storage.from('documents').createSignedUrl(fileName, 3600);
+    const fileUrl = urlData?.signedUrl ?? '';
 
     // 2. document_files 테이블에 레코드 생성
     const { data: doc, error: insertErr } = await supabase

@@ -1,35 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Sidebar from '@/components/portal/Sidebar';
 import UserMenu from '@/components/shared/UserMenu';
 import { ToastContainer } from '@/components/shared/Toast';
-import { createBrowserSupabaseClient } from '@/lib/supabase';
+import { PlanProvider, usePlan } from '@/contexts/PlanContext';
 
-export default function PortalDashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const [user, setUser] = useState<{ name: string; email: string; plan: string; ownerName: string } | null>(null);
-
-  useEffect(() => {
-    const supabase = createBrowserSupabaseClient();
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        setUser({
-          name: data.user.user_metadata?.company_name || '대리점',
-          email: data.user.email || '',
-          plan: data.user.app_metadata?.plan || 'free',
-          ownerName: data.user.user_metadata?.owner_name || '',
-        });
-      }
-    });
-  }, []);
+function PortalDashboardInner({ children }: { children: React.ReactNode }) {
+  const { plan, ownerName, companyName, email } = usePlan();
 
   return (
     <div className="min-h-screen bg-surface">
-      <Sidebar plan={user?.plan} ownerName={user?.ownerName} />
+      <Sidebar plan={plan} ownerName={ownerName} />
 
       {/* TopBar — Glass */}
       <header className="fixed top-0 left-[240px] right-0 h-16 bg-white/80 backdrop-blur-[20px] z-30 flex items-center justify-between px-8">
@@ -44,9 +25,9 @@ export default function PortalDashboardLayout({
             </span>
           </button>
           <UserMenu
-            initials={user?.name?.charAt(0) || 'AG'}
-            name={user?.name}
-            email={user?.email}
+            initials={companyName?.charAt(0) || 'AG'}
+            name={companyName}
+            email={email}
             redirectTo="/portal/login"
           />
         </div>
@@ -60,5 +41,17 @@ export default function PortalDashboardLayout({
 
       <ToastContainer />
     </div>
+  );
+}
+
+export default function PortalDashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <PlanProvider>
+      <PortalDashboardInner>{children}</PortalDashboardInner>
+    </PlanProvider>
   );
 }

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { csrfCheck } from "@/lib/csrf";
+import { getFeatureForRoute, hasFeature } from "@/lib/plan-limits";
 
 // 공개 경로: 인증 불필요
 const PUBLIC_ROUTES = [
@@ -119,6 +120,17 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/admin/dashboard", request.url));
     }
     return NextResponse.redirect(new URL("/portal/login", request.url));
+  }
+
+  // 포탈 경로: 플랜 기반 접근 제어
+  if (isPortalRoute) {
+    const userPlan = user.app_metadata?.plan as string | undefined;
+    const feature = getFeatureForRoute(pathname);
+    if (feature && !hasFeature(userPlan, feature)) {
+      return NextResponse.redirect(
+        new URL("/portal/settings?tab=billing&upgrade=1", request.url)
+      );
+    }
   }
 
   // API 라우트: 세션 있으면 통과 (각 라우트에서 role/agency_id 추가 검증)

@@ -78,8 +78,7 @@ export default function PortalLoginPage() {
 
         {/* Login Card */}
         <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-8">
-          <h2 className="font-headline text-lg font-bold text-on-surface mb-1">로그인</h2>
-          <p className="text-sm text-on-surface-variant mb-6">대리점 관리자 계정으로 로그인하세요</p>
+          <h2 className="font-headline text-lg font-bold text-on-surface mb-6 text-center">로그인</h2>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {/* Email */}

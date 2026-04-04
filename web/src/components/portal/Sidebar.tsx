@@ -1,15 +1,31 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { type PlanFeature, hasFeature, PLAN_LABELS as PLAN_LABEL_MAP, getMinimumPlan } from '@/lib/plan-limits';
+import { toastWarning } from '@/components/shared/Toast';
+
+interface NavChild {
+  label: string;
+  href: string;
+  featureKey?: PlanFeature;
+}
 
 interface NavItem {
   label: string;
   icon: React.ReactNode;
   href: string;
-  children?: { label: string; href: string }[];
+  featureKey?: PlanFeature;
+  children?: NavChild[];
 }
+
+const LockIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-white/30 shrink-0">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0110 0v4" />
+  </svg>
+);
 
 const navItems: NavItem[] = [
   {
@@ -20,6 +36,7 @@ const navItems: NavItem[] = [
       </svg>
     ),
     href: '/portal/dashboard',
+    featureKey: 'dashboard',
   },
   {
     label: '기사 관리',
@@ -29,6 +46,7 @@ const navItems: NavItem[] = [
       </svg>
     ),
     href: '/portal/drivers',
+    featureKey: 'drivers',
   },
   {
     label: '계약서 관리',
@@ -38,11 +56,12 @@ const navItems: NavItem[] = [
       </svg>
     ),
     href: '/portal/contracts',
+    featureKey: 'contracts',
     children: [
-      { label: '계약서 목록', href: '/portal/contracts' },
-      { label: '계약서 양식', href: '/portal/contracts/templates' },
-      { label: '변경이력', href: '/portal/amendments' },
-      { label: '외부문서 관리', href: '/portal/documents' },
+      { label: '계약서 목록', href: '/portal/contracts', featureKey: 'contracts' },
+      { label: '계약서 양식', href: '/portal/contracts/templates', featureKey: 'contracts.templates' },
+      { label: '변경이력', href: '/portal/amendments', featureKey: 'contracts' },
+      { label: '외부문서 관리', href: '/portal/documents', featureKey: 'contracts' },
     ],
   },
   {
@@ -53,13 +72,14 @@ const navItems: NavItem[] = [
       </svg>
     ),
     href: '/portal/settlements/generate',
+    featureKey: 'settlements.basic',
     children: [
-      { label: '원청사 관리', href: '/portal/principals' },
-      { label: '엑셀 업로드 정산', href: '/portal/settlements/upload' },
-      { label: '정산서 일괄생성', href: '/portal/settlements/generate' },
-      { label: '정산서 양식 편집', href: '/portal/settlements/builder' },
-      { label: '생성 이력', href: '/portal/settlements/history' },
-      { label: '세금계산서', href: '/portal/tax-invoices' },
+      { label: '원청사 관리', href: '/portal/principals', featureKey: 'settlements.basic' },
+      { label: '엑셀 업로드 정산', href: '/portal/settlements/upload', featureKey: 'settlements.upload' },
+      { label: '정산서 일괄생성', href: '/portal/settlements/generate', featureKey: 'settlements.basic' },
+      { label: '정산서 양식 편집', href: '/portal/settlements/builder', featureKey: 'settlements.builder' },
+      { label: '생성 이력', href: '/portal/settlements/history', featureKey: 'settlements.basic' },
+      { label: '세금계산서', href: '/portal/tax-invoices', featureKey: 'settlements.tax' },
     ],
   },
   {
@@ -70,6 +90,7 @@ const navItems: NavItem[] = [
       </svg>
     ),
     href: '/portal/reports',
+    featureKey: 'reports',
   },
   {
     label: '공지 관리',
@@ -79,6 +100,7 @@ const navItems: NavItem[] = [
       </svg>
     ),
     href: '/portal/notices',
+    featureKey: 'notices',
   },
   {
     label: '설정',
@@ -88,6 +110,7 @@ const navItems: NavItem[] = [
       </svg>
     ),
     href: '/portal/settings',
+    featureKey: 'settings',
   },
   {
     label: '사용 가이드',
@@ -100,20 +123,21 @@ const navItems: NavItem[] = [
   },
 ];
 
-const PLAN_LABELS: Record<string, string> = {
-  free: 'Free',
-  basic: 'Basic',
-  standard: 'Standard',
-  enterprise: 'Enterprise',
-};
-
 export default function Sidebar({ plan, ownerName }: { plan?: string; ownerName?: string }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [expandedItem, setExpandedItem] = useState<string | null>('정산 관리');
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
   const isParentActive = (item: NavItem) =>
     item.children?.some((child) => isActive(child.href)) || isActive(item.href);
+
+  const handleLockedClick = (feature: PlanFeature) => {
+    const minPlan = getMinimumPlan(feature);
+    const label = PLAN_LABEL_MAP[minPlan] || minPlan;
+    toastWarning(`${label} 플랜부터 이용 가능합니다`);
+    router.push('/portal/settings?tab=billing');
+  };
 
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-[240px] bg-sidebar flex flex-col z-40">
@@ -128,54 +152,89 @@ export default function Sidebar({ plan, ownerName }: { plan?: string; ownerName?
           {navItems.map((item) => {
             const active = isParentActive(item);
             const expanded = expandedItem === item.label;
+            const locked = item.featureKey ? !hasFeature(plan, item.featureKey) : false;
 
             return (
               <li key={item.label}>
                 {item.children ? (
                   <>
                     <button
-                      onClick={() =>
-                        setExpandedItem(expanded ? null : item.label)
-                      }
+                      onClick={() => {
+                        if (locked) { handleLockedClick(item.featureKey!); return; }
+                        setExpandedItem(expanded ? null : item.label);
+                      }}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-label transition-colors ${
-                        active
-                          ? 'bg-primary-container text-white'
-                          : 'text-white/60 hover:text-white/90 hover:bg-white/5'
+                        locked
+                          ? 'text-white/30 cursor-not-allowed'
+                          : active
+                            ? 'bg-primary-container text-white'
+                            : 'text-white/60 hover:text-white/90 hover:bg-white/5'
                       }`}
                     >
-                      <span className={active ? 'text-white' : 'text-white/50'}>
+                      <span className={locked ? 'text-white/20' : active ? 'text-white' : 'text-white/50'}>
                         {item.icon}
                       </span>
                       <span className="flex-1 text-left font-korean">{item.label}</span>
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        className={`transition-transform ${expanded ? 'rotate-180' : ''}`}
-                      >
-                        <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
-                      </svg>
+                      {locked ? (
+                        <LockIcon />
+                      ) : (
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          className={`transition-transform ${expanded ? 'rotate-180' : ''}`}
+                        >
+                          <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
+                        </svg>
+                      )}
                     </button>
-                    {expanded && (
+                    {expanded && !locked && (
                       <ul className="mt-1 ml-8 flex flex-col gap-0.5">
-                        {item.children.map((child) => (
-                          <li key={child.href}>
-                            <Link
-                              href={child.href}
-                              className={`block px-3 py-2 rounded-lg text-xs font-label transition-colors ${
-                                isActive(child.href)
-                                  ? 'text-white bg-white/10'
-                                  : 'text-white/50 hover:text-white/80'
-                              }`}
-                            >
-                              <span className="font-korean">{child.label}</span>
-                            </Link>
-                          </li>
-                        ))}
+                        {item.children.map((child) => {
+                          const childLocked = child.featureKey ? !hasFeature(plan, child.featureKey) : false;
+
+                          if (childLocked) {
+                            return (
+                              <li key={child.href}>
+                                <button
+                                  onClick={() => handleLockedClick(child.featureKey!)}
+                                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-label text-white/25 cursor-not-allowed"
+                                >
+                                  <span className="font-korean">{child.label}</span>
+                                  <LockIcon />
+                                </button>
+                              </li>
+                            );
+                          }
+
+                          return (
+                            <li key={child.href}>
+                              <Link
+                                href={child.href}
+                                className={`block px-3 py-2 rounded-lg text-xs font-label transition-colors ${
+                                  isActive(child.href)
+                                    ? 'text-white bg-white/10'
+                                    : 'text-white/50 hover:text-white/80'
+                                }`}
+                              >
+                                <span className="font-korean">{child.label}</span>
+                              </Link>
+                            </li>
+                          );
+                        })}
                       </ul>
                     )}
                   </>
+                ) : locked ? (
+                  <button
+                    onClick={() => handleLockedClick(item.featureKey!)}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-label text-white/30 cursor-not-allowed"
+                  >
+                    <span className="text-white/20">{item.icon}</span>
+                    <span className="flex-1 text-left font-korean">{item.label}</span>
+                    <LockIcon />
+                  </button>
                 ) : (
                   <Link
                     href={item.href}
@@ -204,7 +263,7 @@ export default function Sidebar({ plan, ownerName }: { plan?: string; ownerName?
             <span className="text-white text-xs font-bold">{ownerName ? ownerName.charAt(0) : 'U'}</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-white/40 text-[10px] font-label">{PLAN_LABELS[plan || 'free'] || 'Free'} 고객님</p>
+            <p className="text-white/40 text-[10px] font-label">{PLAN_LABEL_MAP[(plan || 'free') as keyof typeof PLAN_LABEL_MAP] || 'Free'} 고객님</p>
             <p className="text-white text-sm font-korean truncate">{ownerName || '—'}</p>
           </div>
         </div>

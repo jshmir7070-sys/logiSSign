@@ -60,7 +60,16 @@ export default function FieldEditorPage() {
 
       if (doc) {
         setDocTitle(doc.title)
-        setPdfUrl(doc.file_url)
+        // Private 버킷이므로 signed URL 생성
+        const filePath = (doc.file_url as string).split('/documents/')[1]
+        if (filePath) {
+          const { data: signedData } = await supabase.storage
+            .from('documents')
+            .createSignedUrl(decodeURIComponent(filePath), 3600)
+          setPdfUrl(signedData?.signedUrl ?? doc.file_url)
+        } else {
+          setPdfUrl(doc.file_url)
+        }
       }
 
       // 기존 필드
