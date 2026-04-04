@@ -75,9 +75,12 @@ export default function NewDriverPage() {
       if (res.ok) {
         setInviteSentResult('success');
       } else {
+        const errData = await res.json().catch(() => ({}));
+        console.error('[초대코드 전송 실패]', res.status, errData);
         setInviteSentResult('fail');
       }
-    } catch {
+    } catch (err) {
+      console.error('[초대코드 전송 에러]', err);
       setInviteSentResult('fail');
     }
     setInviteSending(false);
@@ -534,6 +537,9 @@ export default function NewDriverPage() {
     }
 
     setSaving(false);
+
+    // ✅ 등록 완료 팝업
+    alert(`✅ ${name.trim()}님이 기사로 등록되었습니다.`);
     router.push(`/portal/drivers/${driverId}`);
   }
 

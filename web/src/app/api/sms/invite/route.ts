@@ -20,8 +20,16 @@ const supabaseAdmin = createClient(
  */
 export async function POST(request: NextRequest) {
   // 인증 확인
-  const { auth, error: authError } = await authenticateAdmin(request)
-  if (authError || !auth) return authError!
+  let auth;
+  try {
+    const result = await authenticateAdmin(request)
+    if (result.error || !result.auth) return result.error!
+    auth = result.auth
+    console.log('[SMS Invite] auth:', auth.userId.slice(0,8), 'agencyId:', auth.agencyId)
+  } catch (err) {
+    console.error('[SMS Invite] auth 에러:', err)
+    return NextResponse.json({ error: '인증 처리 중 오류' }, { status: 500 })
+  }
 
   try {
     const rawBody = await request.json()
@@ -74,6 +82,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ sent: true, messageId: result.messageId })
   } catch (err) {
+    console.error('[SMS Invite] 예외 발생:', err instanceof Error ? err.stack : err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'SMS 발송 실패' },
       { status: 500 }
