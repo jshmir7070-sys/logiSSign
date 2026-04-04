@@ -3,6 +3,24 @@ import { createClient } from '@supabase/supabase-js'
 import { authenticateRequest } from '@/lib/api-auth'
 import { BINDING_FIELDS } from '@/lib/binding-fields'
 
+/** 계약 기간 계산 (일/월/년 단위 자동 표시) */
+function calcDuration(start: string, end: string): string {
+  const s = new Date(start)
+  const e = new Date(end)
+  const diffMs = e.getTime() - s.getTime()
+  if (diffMs <= 0) return '당일'
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24))
+  if (diffDays < 31) return `${diffDays}일`
+  const diffMonths = (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth())
+  if (diffMonths % 12 === 0 && diffMonths >= 12) return `${diffMonths / 12}년`
+  if (diffMonths >= 12) {
+    const years = Math.floor(diffMonths / 12)
+    const months = diffMonths % 12
+    return months > 0 ? `${years}년 ${months}개월` : `${years}년`
+  }
+  return `${diffMonths}개월`
+}
+
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -133,9 +151,9 @@ export async function POST(request: NextRequest) {
       A009: str(a.name),
       // C: 계약
       C001: fmtDate(periodStart) || new Date().toLocaleDateString('ko-KR'),
-      C002: fmtDate(periodEnd) || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString('ko-KR'),
+      C002: fmtDate(periodEnd) || '',
       C003: new Date().toLocaleDateString('ko-KR'),
-      C004: periodStart && periodEnd ? '' : '1년',
+      C004: periodStart && periodEnd ? calcDuration(periodStart, periodEnd) : '',
       // S: 기타
       S001: '',
     }

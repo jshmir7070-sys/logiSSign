@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
             autoData['대표자명'] = str(d.representative_name) || str(d.name)
             autoData['세금처리'] = d.is_business_owner ? (d.tax_type === 'vat_invoice' ? '세금계산서 발행' : str(d.tax_type)) : '3.3% 원천징수'
             autoData['계약시작일'] = new Date().toLocaleDateString('ko-KR')
-            autoData['계약종료일'] = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString('ko-KR')
+            autoData['계약종료일'] = ''
             driverBindingData = autoData
           }
         } catch (bindErr) {
