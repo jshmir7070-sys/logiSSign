@@ -292,9 +292,41 @@ export default function FieldEditorPage() {
                   onMouseDown={(e) => handleMouseDown(e, field._id)}
                   onClick={(e) => { e.stopPropagation(); setSelectedId(field._id) }}
                 >
-                  <span style={{ color: meta.color, fontSize: '0.65rem' }}>
-                    {meta.icon} {field.label || meta.label}
+                  {/* 아이콘만 표시 (텍스트 제거) */}
+                  <span style={{ color: meta.color, fontSize: '0.7rem', opacity: 0.7 }}>
+                    {meta.icon}
                   </span>
+                  {/* 리사이즈 핸들 (선택된 필드만) */}
+                  {isSelected && (
+                    <div
+                      className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize"
+                      style={{ backgroundColor: meta.color, borderRadius: '0 0 3px 0' }}
+                      onMouseDown={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        const rect = containerRef.current?.getBoundingClientRect()
+                        if (!rect) return
+                        const startX = e.clientX
+                        const startY = e.clientY
+                        const startW = field.width
+                        const startH = field.height
+                        const onMove = (ev: MouseEvent) => {
+                          const dxPct = ((ev.clientX - startX) / rect.width) * 100 / (zoom / 100)
+                          const dyPct = ((ev.clientY - startY) / rect.height) * 100 / (zoom / 100)
+                          updateField(field._id, {
+                            width: Math.max(1, Math.round((startW + dxPct) * 10) / 10),
+                            height: Math.max(1, Math.round((startH + dyPct) * 10) / 10),
+                          })
+                        }
+                        const onUp = () => {
+                          window.removeEventListener('mousemove', onMove)
+                          window.removeEventListener('mouseup', onUp)
+                        }
+                        window.addEventListener('mousemove', onMove)
+                        window.addEventListener('mouseup', onUp)
+                      }}
+                    />
+                  )}
                 </div>
               )
             })}
