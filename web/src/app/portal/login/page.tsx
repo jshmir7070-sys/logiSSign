@@ -21,6 +21,7 @@ interface OtpState {
   error: string | null;
   isVerifying: boolean;
   resendCooldown: number;
+  expireTimer: number;
 }
 
 export default function PortalLoginPage() {
@@ -41,6 +42,7 @@ export default function PortalLoginPage() {
     error: null,
     isVerifying: false,
     resendCooldown: 30,
+    expireTimer: 180,
   });
 
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -51,6 +53,13 @@ export default function PortalLoginPage() {
     const t = setTimeout(() => setOtp((p) => ({ ...p, resendCooldown: p.resendCooldown - 1 })), 1000);
     return () => clearTimeout(t);
   }, [otp.show, otp.resendCooldown]);
+
+  // OTP 만료 타이머 (3분)
+  useEffect(() => {
+    if (!otp.show || otp.expireTimer <= 0) return;
+    const t = setTimeout(() => setOtp((p) => ({ ...p, expireTimer: p.expireTimer - 1 })), 1000);
+    return () => clearTimeout(t);
+  }, [otp.show, otp.expireTimer]);
 
   // OTP 모달 열리면 첫 입력란 포커스
   useEffect(() => {
@@ -106,6 +115,7 @@ export default function PortalLoginPage() {
           error: null,
           isVerifying: false,
           resendCooldown: 30,
+          expireTimer: 180,
         });
       } catch {
         window.location.replace("/portal/dashboard");
@@ -182,7 +192,7 @@ export default function PortalLoginPage() {
   // ── OTP 재발송 ──
   const handleResend = async () => {
     if (otp.resendCooldown > 0) return;
-    setOtp((p) => ({ ...p, resendCooldown: 30, error: null }));
+    setOtp((p) => ({ ...p, resendCooldown: 30, expireTimer: 180, error: null }));
     try {
       const res = await fetch("/api/auth/send-login-otp", {
         method: "POST",
@@ -323,8 +333,14 @@ export default function PortalLoginPage() {
             <h3 className="font-headline text-lg font-bold text-on-surface text-center mb-2">본인인증</h3>
             <p className="text-sm text-on-surface-variant text-center mb-1 font-korean">등록된 휴대폰으로 인증번호를 발송했습니다.</p>
             {otp.maskedPhone && (
-              <p className="text-sm text-primary font-semibold text-center mb-5 font-data">{otp.maskedPhone}</p>
+              <p className="text-sm text-primary font-semibold text-center mb-2 font-data">{otp.maskedPhone}</p>
             )}
+            {/* 만료 타이머 */}
+            <p className={`text-center text-sm font-data mb-5 ${otp.expireTimer <= 30 ? 'text-error' : 'text-on-surface-variant'}`}>
+              {otp.expireTimer > 0
+                ? `${Math.floor(otp.expireTimer / 60)}:${(otp.expireTimer % 60).toString().padStart(2, '0')}`
+                : '인증번호가 만료되었습니다'}
+            </p>
 
             {/* 6자리 OTP 입력 */}
             <div className="flex gap-2 justify-center mb-5" onPaste={handleOtpPaste}>
@@ -352,7 +368,7 @@ export default function PortalLoginPage() {
             <button
               type="button"
               onClick={handleOtpSubmit}
-              disabled={otp.isVerifying || otp.digits.some((d) => !d)}
+              disabled={otp.isVerifying || otp.digits.some((d) => !d) || otp.expireTimer <= 0}
               className="w-full h-11 rounded-xl bg-power-gradient text-white font-medium text-sm shadow-ambient hover:shadow-float transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {otp.isVerifying ? "확인 중..." : "인증 확인"}

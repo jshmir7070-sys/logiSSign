@@ -21,6 +21,7 @@ interface OtpState {
   error: string | null;
   isVerifying: boolean;
   resendCooldown: number;
+  expireTimer: number;
 }
 
 export default function AdminLoginPage() {
@@ -30,7 +31,7 @@ export default function AdminLoginPage() {
   });
   const [otp, setOtp] = useState<OtpState>({
     show: false, userId: "", maskedPhone: "", digits: ["", "", "", "", "", ""],
-    error: null, isVerifying: false, resendCooldown: 30,
+    error: null, isVerifying: false, resendCooldown: 30, expireTimer: 180,
   });
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -39,6 +40,12 @@ export default function AdminLoginPage() {
     const t = setTimeout(() => setOtp((p) => ({ ...p, resendCooldown: p.resendCooldown - 1 })), 1000);
     return () => clearTimeout(t);
   }, [otp.show, otp.resendCooldown]);
+
+  useEffect(() => {
+    if (!otp.show || otp.expireTimer <= 0) return;
+    const t = setTimeout(() => setOtp((p) => ({ ...p, expireTimer: p.expireTimer - 1 })), 1000);
+    return () => clearTimeout(t);
+  }, [otp.show, otp.expireTimer]);
 
   useEffect(() => { if (otp.show) otpRefs.current[0]?.focus(); }, [otp.show]);
 
@@ -65,7 +72,7 @@ export default function AdminLoginPage() {
         const otpData = await otpRes.json();
         if (otpData.skip) { router.push("/admin/dashboard"); return; }
         setForm((prev) => ({ ...prev, isLoading: false }));
-        setOtp({ show: true, userId, maskedPhone: otpData.maskedPhone || "", digits: ["", "", "", "", "", ""], error: null, isVerifying: false, resendCooldown: 30 });
+        setOtp({ show: true, userId, maskedPhone: otpData.maskedPhone || "", digits: ["", "", "", "", "", ""], error: null, isVerifying: false, resendCooldown: 30, expireTimer: 180 });
       } catch { router.push("/admin/dashboard"); }
     } catch {
       setForm((prev) => ({ ...prev, isLoading: false, error: "로그인 중 오류가 발생했습니다." }));
@@ -104,7 +111,7 @@ export default function AdminLoginPage() {
 
   const handleResend = async () => {
     if (otp.resendCooldown > 0) return;
-    setOtp((p) => ({ ...p, resendCooldown: 30, error: null }));
+    setOtp((p) => ({ ...p, resendCooldown: 30, expireTimer: 180, error: null }));
     try {
       const res = await fetch("/api/auth/send-login-otp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: otp.userId }) });
       const data = await res.json();
@@ -189,7 +196,10 @@ export default function AdminLoginPage() {
 
             <h3 className="font-headline text-lg font-bold text-on-surface text-center mb-2">관리자 본인인증</h3>
             <p className="text-sm text-on-surface-variant text-center mb-1 font-korean">등록된 휴대폰으로 인증번호를 발송했습니다.</p>
-            {otp.maskedPhone && <p className="text-sm text-primary font-semibold text-center mb-5 font-data">{otp.maskedPhone}</p>}
+            {otp.maskedPhone && <p className="text-sm text-primary font-semibold text-center mb-2 font-data">{otp.maskedPhone}</p>}
+            <p className={`text-center text-sm font-data mb-5 ${otp.expireTimer <= 30 ? 'text-error' : 'text-on-surface-variant'}`}>
+              {otp.expireTimer > 0 ? `${Math.floor(otp.expireTimer / 60)}:${(otp.expireTimer % 60).toString().padStart(2, '0')}` : '인증번호가 만료되었습니다'}
+            </p>
 
             <div className="flex gap-2 justify-center mb-5" onPaste={handleOtpPaste}>
               {otp.digits.map((d, i) => (
@@ -200,7 +210,7 @@ export default function AdminLoginPage() {
 
             {otp.error && <p className="text-error text-xs text-center mb-4 font-body">{otp.error}</p>}
 
-            <button type="button" onClick={handleOtpSubmit} disabled={otp.isVerifying || otp.digits.some((d) => !d)} className="w-full h-11 rounded-xl bg-sidebar text-white font-medium text-sm shadow-ambient hover:shadow-float transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+            <button type="button" onClick={handleOtpSubmit} disabled={otp.isVerifying || otp.digits.some((d) => !d) || otp.expireTimer <= 0} className="w-full h-11 rounded-xl bg-sidebar text-white font-medium text-sm shadow-ambient hover:shadow-float transition-all disabled:opacity-50 disabled:cursor-not-allowed">
               {otp.isVerifying ? "확인 중..." : "인증 확인"}
             </button>
 
