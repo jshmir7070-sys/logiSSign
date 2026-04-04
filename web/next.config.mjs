@@ -32,7 +32,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' https://t1.daumcdn.net https://postcode.map.daum.net https://ssl.daumcdn.net https://va.vercel-scripts.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://t1.daumcdn.net https://postcode.map.daum.net https://ssl.daumcdn.net https://va.vercel-scripts.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://t1.daumcdn.net",
               "font-src 'self' https://fonts.gstatic.com data:",
               "img-src 'self' data: blob: https://*.supabase.co https://t1.daumcdn.net",
