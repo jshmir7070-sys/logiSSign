@@ -54,7 +54,7 @@ const QUICK_ITEMS: QuickItem[] = [
   { id: '1', icon: 'receipt-long', label: '정산서', route: '/(tabs)/settlement' },
   { id: '2', icon: 'description', label: '세금계산서', route: '/(tabs)/settlement' },
   { id: '3', icon: 'campaign', label: '공지사항', route: '/(tabs)/notice' },
-  { id: '4', icon: 'edit-document', label: '계약서', route: '/(tabs)/profile' },
+  { id: '4', icon: 'edit-document', label: '계약서', route: '/(tabs)/contracts' },
 ];
 
 export default function HomeScreen() {
