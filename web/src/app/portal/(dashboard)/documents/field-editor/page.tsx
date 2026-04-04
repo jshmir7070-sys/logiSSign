@@ -41,6 +41,7 @@ export default function FieldEditorPage() {
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, _setTotalPages] = useState(1)
+  const [zoom, setZoom] = useState(100)
   const [dragging, setDragging] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null)
 
   const containerRef = useRef<HTMLDivElement>(null)
@@ -195,7 +196,7 @@ export default function FieldEditorPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] gap-0">
+    <div className="flex h-[calc(100vh-4rem)] gap-0 -mx-8 -mt-8" style={{ width: 'calc(100% + 4rem)' }}>
       {/* ══════ 좌측: PDF 미리보기 + 필드 오버레이 ══════ */}
       <div className="flex-1 flex flex-col bg-neutral-100 overflow-hidden">
         {/* 상단 바 */}
@@ -213,6 +214,11 @@ export default function FieldEditorPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* 줌 */}
+            <button onClick={() => setZoom(z => Math.max(50, z - 10))} className="px-2 py-1 text-xs rounded border border-outline-variant/30 hover:bg-surface-variant/30">−</button>
+            <span className="text-xs font-data text-on-surface-variant w-10 text-center">{zoom}%</span>
+            <button onClick={() => setZoom(z => Math.min(200, z + 10))} className="px-2 py-1 text-xs rounded border border-outline-variant/30 hover:bg-surface-variant/30">+</button>
+            <span className="mx-1 text-outline-variant/30">|</span>
             {/* 페이지 네비 */}
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
@@ -244,10 +250,11 @@ export default function FieldEditorPage() {
 
         {/* PDF + 오버레이 */}
         <div className="flex-1 overflow-auto p-4 flex justify-center">
+          <div style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}>
           <div
             ref={containerRef}
             className="relative bg-white shadow-lg"
-            style={{ width: 595, height: 841, minWidth: 595 }}
+            style={{ width: 794, height: 1123, minWidth: 794 }}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
@@ -293,10 +300,11 @@ export default function FieldEditorPage() {
             })}
           </div>
         </div>
+          </div>
       </div>
 
       {/* ══════ 우측: 도구 패널 ══════ */}
-      <div className="w-72 bg-white border-l border-outline-variant/20 flex flex-col">
+      <div className="w-64 bg-white border-l border-outline-variant/20 flex flex-col shrink-0">
         {/* 필드 추가 버튼들 */}
         <div className="p-4 border-b border-outline-variant/20">
           <h2 className="text-xs font-bold text-on-surface-variant/60 mb-3 font-korean">필드 추가</h2>
