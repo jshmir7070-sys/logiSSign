@@ -70,13 +70,17 @@ export default function DocumentsPage() {
     const supabase = createBrowserSupabaseClient();
 
     // 1. Storage에 PDF 업로드
-    const fileName = `documents/${agencyId}/${Date.now()}_${uploadFile.name}`;
+    const fileName = `${agencyId}/${Date.now()}_${uploadFile.name}`;
     const { error: storageErr } = await supabase.storage
       .from('documents')
-      .upload(fileName, uploadFile, { contentType: 'application/pdf' });
+      .upload(fileName, uploadFile, { 
+        contentType: uploadFile.type || 'application/pdf',
+        upsert: true,
+      });
 
     if (storageErr) {
-      alert('파일 업로드 실패: ' + storageErr.message);
+      console.error('[Document Upload] Storage error:', storageErr);
+      alert('파일 업로드 실패: ' + storageErr.message + '\n\n버킷이 없거나 권한이 부족할 수 있습니다. 관리자에게 문의하세요.');
       setUploading(false);
       return;
     }
@@ -102,7 +106,8 @@ export default function DocumentsPage() {
     setUploading(false);
 
     if (insertErr || !doc) {
-      alert('문서 등록 실패: ' + (insertErr?.message ?? ''));
+      console.error('[Document Upload] DB insert error:', insertErr);
+      alert('문서 등록 실패: ' + (insertErr?.message ?? '알 수 없는 오류'));
       return;
     }
 
