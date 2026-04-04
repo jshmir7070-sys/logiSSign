@@ -38,9 +38,10 @@ function bytesToHex(bytes: Uint8Array): string {
 }
 
 async function importKey(keyHex: string): Promise<CryptoKey> {
+  const keyBytes = hexToBytes(keyHex)
   return crypto.subtle.importKey(
     'raw',
-    hexToBytes(keyHex),
+    keyBytes.buffer as ArrayBuffer,
     { name: ALGORITHM, length: KEY_LENGTH },
     false,
     ['encrypt', 'decrypt']
@@ -55,16 +56,16 @@ export async function encryptPii(plaintext: string): Promise<string> {
   if (!plaintext) return ''
 
   const key = await importKey(getEncryptionKey())
-  const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH))
+  const ivArr = crypto.getRandomValues(new Uint8Array(IV_LENGTH))
   const encoded = new TextEncoder().encode(plaintext)
 
   const encrypted = await crypto.subtle.encrypt(
-    { name: ALGORITHM, iv, tagLength: TAG_LENGTH },
+    { name: ALGORITHM, iv: ivArr.buffer as ArrayBuffer, tagLength: TAG_LENGTH },
     key,
     encoded
   )
 
-  return `${bytesToHex(iv)}:${bytesToHex(new Uint8Array(encrypted))}`
+  return `${bytesToHex(ivArr)}:${bytesToHex(new Uint8Array(encrypted))}`
 }
 
 /**
@@ -79,13 +80,13 @@ export async function decryptPii(ciphertext: string): Promise<string> {
 
   try {
     const key = await importKey(getEncryptionKey())
-    const iv = hexToBytes(ivHex)
+    const ivArr = hexToBytes(ivHex)
     const data = hexToBytes(dataHex)
 
     const decrypted = await crypto.subtle.decrypt(
-      { name: ALGORITHM, iv, tagLength: TAG_LENGTH },
+      { name: ALGORITHM, iv: ivArr.buffer as ArrayBuffer, tagLength: TAG_LENGTH },
       key,
-      data
+      data.buffer as ArrayBuffer
     )
 
     return new TextDecoder().decode(decrypted)
