@@ -98,7 +98,61 @@ export async function POST(request: NextRequest) {
 
     for (const did of driverIds) {
       if (!validDriverIds.has(did)) continue
-      const driverBindingData = bindingDataMap?.[did] ?? bindingData ?? {}
+      let driverBindingData = bindingDataMap?.[did] ?? bindingData ?? {}
+
+      // bindingData가 비어있으면 → DB에서 자동 조회 (bind 엔진)
+      if (!driverBindingData || Object.keys(driverBindingData).length === 0) {
+        try {
+          const { BINDING_FIELDS } = await import('@/lib/binding-fields')
+          const [driverRes, ratesRes, routeRes, deductionsRes] = await Promise.all([
+            supabaseAdmin.from('drivers').select('*').eq('id', did).single(),
+            supabaseAdmin.from('driver_rates').select('package_type, unit_price').eq('driver_id', did).eq('is_active', true),
+            supabaseAdmin.from('driver_route_rates').select('route_code, delivery_rate, return_rate').eq('driver_id', did).eq('is_active', true),
+            supabaseAdmin.from('driver_deductions').select('name, amount, deduction_type').eq('driver_id', did).eq('is_active', true),
+          ])
+          const agencyRes = await supabaseAdmin.from('agencies').select('*').eq('id', agencyId).single()
+          const d = driverRes.data as Record<string, unknown> | null
+          const a = agencyRes.data as Record<string, unknown> | null
+          if (d && a) {
+            const rateMap: Record<string, number> = {}
+            ;(ratesRes.data || []).forEach((r: { package_type: string; unit_price: number }) => { rateMap[r.package_type] = r.unit_price })
+            const routeText = (routeRes.data || []).map((r: { route_code: string; delivery_rate: number; return_rate: number }) =>
+              `${r.route_code}: ${r.delivery_rate?.toLocaleString()}원/${(r.return_rate || r.delivery_rate)?.toLocaleString()}원`).join('\n')
+            const deductionText = (deductionsRes.data || []).map((dd: { name: string; amount: number; deduction_type: string }) =>
+              `${dd.name}: ${dd.deduction_type === 'percentage' ? dd.amount + '%' : dd.amount.toLocaleString() + '원'}`).join('\n')
+            const str = (v: unknown) => v != null ? String(v) : ''
+            const fmt = (v: unknown) => v && Number(v) ? Number(v).toLocaleString() + '원' : ''
+
+            // 레지스트리 기반 자동 바인딩
+            const autoData: Record<string, string> = {}
+            for (const f of BINDING_FIELDS) {
+              let val = ''
+              if (f.source.startsWith('drivers.')) { val = str(d[f.source.replace('drivers.', '')]) }
+              else if (f.source.startsWith('agencies.')) { val = str(a[f.source.replace('agencies.', '')]) }
+              else if (f.source === 'driver_rates.배송') { val = fmt(rateMap['배송'] || d.flat_rate) }
+              else if (f.source === 'driver_rates.반품') { val = fmt(rateMap['반품']) }
+              else if (f.source === 'driver_rates.집하') { val = fmt(rateMap['집하']) }
+              else if (f.source === 'driver_route_rates') { val = routeText }
+              else if (f.source === 'driver_deductions') { val = deductionText }
+              else if (f.source === 'system.today') { val = new Date().toLocaleDateString('ko-KR') }
+              if (val) autoData[f.templateVar] = val
+            }
+            // 특수 처리
+            autoData['대리점주소'] = a.address ? (str(a.address) + (a.address_detail ? ' ' + str(a.address_detail) : '')) : ''
+            autoData['부가세구분'] = d.vat_included ? '포함가 (VAT 포함)' : '별도 (VAT 별도)'
+            autoData['사업자여부'] = d.is_business_owner ? '사업자' : '개인'
+            autoData['보험부담'] = d.vehicle_insurance_by === 'lessor' ? '임대인' : '임차인'
+            autoData['차량소유'] = d.vehicle_owner === 'company' ? '회사차' : '자차'
+            autoData['대표자명'] = str(d.representative_name) || str(d.name)
+            autoData['세금처리'] = d.is_business_owner ? (d.tax_type === 'vat_invoice' ? '세금계산서 발행' : str(d.tax_type)) : '3.3% 원천징수'
+            autoData['계약시작일'] = new Date().toLocaleDateString('ko-KR')
+            autoData['계약종료일'] = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString('ko-KR')
+            driverBindingData = autoData
+          }
+        } catch (bindErr) {
+          console.warn('[ContractSend] auto-bind failed:', bindErr)
+        }
+      }
 
       for (const tmpl of templates) {
         const boundContent = bindVariables((tmpl as { content: string }).content, driverBindingData)

@@ -8,7 +8,7 @@ import { createDriver } from '@/services/driver.service';
 import { bulkUpsertDriverRouteRates } from '@/services/driver-route-rate.service';
 import { bulkUpsertDriverDeductions } from '@/services/driver-deduction.service';
 import { bulkCreateDriverRates } from '@/services/driver-rate.service';
-import { getContractTemplates, createAndSendContracts, type ContractTemplate, type ContractBindingData } from '@/services/contract.service';
+import { getContractTemplates, createAndSendContracts, type ContractTemplate } from '@/services/contract.service';
 import { createContractPeriod, type RateConfig } from '@/services/contractPeriod.service';
 import AddressSearch, { type AddressValue } from '@/components/shared/AddressSearch';
 import { formatPhoneNumber, formatBusinessNumber } from '@/lib/formatters';
@@ -450,69 +450,35 @@ export default function NewDriverPage() {
       console.error('[Driver Update] 요청 에러:', err);
     }
 
-    // 3. 선택된 계약서 자동 생성 + 전송
+    // 3. 선택된 계약서 자동 생성 + 전송 — bind API로 자동 바인딩
     if (selectedTemplateIds.size > 0 && agencyId) {
-      // 노선별 단가 텍스트 생성
-      const deliveryRateMode = fieldConfig?.items?.delivery?.rate_mode ?? 'unit_price';
-      const routeRateText = deliveryRateMode === 'unit_price'
-        ? routeRates
-            .filter((r) => r.route_code.trim() && Number(r.delivery_rate) > 0)
-            .map((r) => `${r.route_code}: 배송 ${Number(r.delivery_rate).toLocaleString()}원 / 반품 ${Number(r.return_rate || r.delivery_rate).toLocaleString()}원`)
-            .join('\n') || '-'
-        : '-';
+      try {
+        // bind API: DB에서 68개 필드 자동 조회
+        const bindRes = await fetch('/api/contracts/bind', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            driverId,
+            agencyId,
+            principalId: principalId || undefined,
+            periodStart: contractStartDate || undefined,
+            periodEnd: contractEndDate || undefined,
+          }),
+        });
+        const bindResult = await bindRes.json();
 
-      const taxLabel = isBusinessOwner
-        ? (taxType === 'vat_invoice' ? '세금계산서 발행' : '수기 역발행')
-        : '3.3% 원천징수';
-
-      const bindingData: ContractBindingData = {
-        기사명: name.trim(),
-        전화번호: phone.trim(),
-        주소: address.trim(),
-        사번: employeeCode.trim(),
-        카테고리명: selectedPrincipal?.name ?? '',
-        배송지역: deliveryArea.trim(),
-        배송단가: customValues['delivery_unit_price'] ? `${Number(customValues['delivery_unit_price']).toLocaleString()}원` : '-',
-        반품단가: customValues['return_unit_price'] ? `${Number(customValues['return_unit_price']).toLocaleString()}원` : '-',
-        집하단가: customValues['pickup_unit_price'] ? `${Number(customValues['pickup_unit_price']).toLocaleString()}원` : '-',
-        노선별단가: routeRateText,
-        계약시작일: contractStartDate ? new Date(contractStartDate).toLocaleDateString('ko-KR') : '',
-        계약종료일: contractEndDate ? new Date(contractEndDate).toLocaleDateString('ko-KR') : '',
-        계약일: new Date().toLocaleDateString('ko-KR'),
-        대리점명: agencyName,
-        대리점사업자번호: agencyBusinessNumber,
-        대리점주소: agencyAddress,
-        대리점대표자: agencyOwnerName,
-        대리점연락처: agencyPhone,
-        택배사업자명: agencyName,
-        생년월일: '', // 기사가 입력한 birth_date — 등록 폼에는 없으므로 빈값
-        사업자번호: businessRegNumber.trim(),
-        대표자명: representativeName.trim(),
-        사업장주소: businessAddress.trim(),
-        부가세구분: isBusinessOwner ? (vatIncluded ? '포함가 (VAT 포함)' : '별도 (VAT 별도)') : '해당없음',
-        세금처리: taxLabel,
-        차종: vehicleType.trim() || '-',
-        연식: vehicleYear.trim() || '-',
-        차량번호: vehicleNumber.trim() || '-',
-        차대번호: vehicleVin.trim() || '-',
-        인도시주행거리: vehicleMileage ? Number(vehicleMileage).toLocaleString() : '-',
-        월임대료: vehicleRentMonthly ? `${Number(vehicleRentMonthly).toLocaleString()}원` : '-',
-        보증금: vehicleDeposit ? `${Number(vehicleDeposit).toLocaleString()}원` : '-',
-        보험부담: vehicleInsuranceBy === 'lessor' ? '임대인' : '임차인',
-        고용보험_기사부담: fieldConfig?.deduction_section?.employment_insurance?.enabled
-          ? (fieldConfig.deduction_section.employment_insurance.split_mode === 'split_50_50' ? '50%' : '0%')
-          : '-',
-        고용보험_사업주부담: fieldConfig?.deduction_section?.employment_insurance?.enabled
-          ? (fieldConfig.deduction_section.employment_insurance.split_mode === 'split_50_50' ? '50%' : '100%')
-          : '-',
-        산재보험_기사부담: fieldConfig?.deduction_section?.industrial_insurance?.enabled
-          ? (fieldConfig.deduction_section.industrial_insurance.split_mode === 'split_50_50' ? '50%' : '0%')
-          : '-',
-        산재보험_사업주부담: fieldConfig?.deduction_section?.industrial_insurance?.enabled
-          ? (fieldConfig.deduction_section.industrial_insurance.split_mode === 'split_50_50' ? '50%' : '100%')
-          : '-',
-      };
-      await createAndSendContracts(agencyId, driverId, Array.from(selectedTemplateIds), bindingData);
+        if (bindRes.ok && bindResult.bindingData) {
+          await createAndSendContracts(agencyId, driverId, Array.from(selectedTemplateIds), bindResult.bindingData);
+          console.log('[계약서] 바인딩 meta:', bindResult.meta);
+        } else {
+          console.error('[계약서] bind API 실패:', bindResult.error);
+          // fallback: 바인딩 없이 원본 발송
+          await createAndSendContracts(agencyId, driverId, Array.from(selectedTemplateIds), {});
+        }
+      } catch (err) {
+        console.error('[계약서] bind 에러:', err);
+        await createAndSendContracts(agencyId, driverId, Array.from(selectedTemplateIds), {});
+      }
     }
 
     // 7. 계약 기간 (정산 적용 기간) 자동 생성
