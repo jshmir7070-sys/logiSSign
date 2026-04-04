@@ -33,14 +33,31 @@ export default function ProfileTab() {
       if (!aid) { setLoading(false); return; }
       setAgencyId(aid);
 
-      const { data } = await supabase
+      const { data, error: fetchError } = await supabase
         .from('agencies')
-        .select('name, owner_name, phone, address, address_detail, business_number, email, invite_code, owner_birth_date, business_type, business_category, privacy_officer_name, privacy_officer_phone, privacy_officer_email, logo_url')
+        .select('name, owner_name, phone, address, address_detail, business_number, email, invite_code, owner_birth_date, business_type, business_category, privacy_officer_name, privacy_officer_phone, privacy_officer_email')
         .eq('id', aid)
         .single();
 
+      if (fetchError) {
+        console.error('[ProfileTab] 데이터 조회 실패:', fetchError.message);
+        setLoading(false);
+        return;
+      }
+
       if (data) {
-        setLogoUrl((data as Record<string, string>).logo_url ?? null);
+        // logo_url은 별도 조회 (컬럼 미존재 시 에러 방지)
+        try {
+          const { data: logoData } = await supabase
+            .from('agencies')
+            .select('logo_url')
+            .eq('id', aid)
+            .single();
+          if (logoData) setLogoUrl((logoData as Record<string, string>).logo_url ?? null);
+        } catch {
+          // logo_url 컬럼이 없으면 무시
+        }
+
         const inviteCode = (data as Record<string, string>).invite_code ?? '';
 
         setForm({
