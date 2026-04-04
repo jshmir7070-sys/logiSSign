@@ -51,7 +51,6 @@ export default function DocumentsPage() {
         }
         docs.push({ ...doc, field_count: fieldCount, status } as DocumentFile);
       }
-      }
       setDocuments(docs);
     }
     setLoading(false);
