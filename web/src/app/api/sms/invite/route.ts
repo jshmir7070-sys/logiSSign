@@ -36,10 +36,11 @@ export async function POST(request: NextRequest) {
     const { driverPhone, driverName } = body
     let inviteCode = body.inviteCode
     let agencyName = body.agencyName
-    const { agencyId } = body
+    // ✅ 보안: 클라이언트가 보낸 agencyId 대신 인증된 사용자의 agencyId 사용
+    const agencyId = auth.agencyId
 
     // agencyId로 초대코드/대리점명 자동 조회
-    if (agencyId && (!inviteCode || !agencyName)) {
+    if (!inviteCode || !agencyName) {
       const { data: agency } = await supabaseAdmin
         .from('agencies')
         .select('name, invite_code')
@@ -47,6 +48,7 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (!agency?.invite_code) {
+        console.error('[SMS Invite] invite_code 없음 | agencyId:', agencyId, '| agency:', JSON.stringify(agency))
         return NextResponse.json(
           { error: '대리점 초대코드가 설정되지 않았습니다. 설정 > 대리점 정보에서 초대코드를 확인하세요.' },
           { status: 400 }

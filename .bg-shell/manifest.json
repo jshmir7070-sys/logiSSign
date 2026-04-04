@@ -1,16 +1,16 @@
 [
   {
-    "id": "13d72efa",
+    "id": "f21ffc93",
     "label": "next-dev",
-    "command": "cd web && npm run dev",
+    "command": "cd web && npm run dev 2>&1",
     "cwd": "C:\\Users\\jshmi\\Downloads\\logiSSign",
     "ownerSessionFile": "C:\\Users\\jshmi\\.gsd\\sessions\\--C--Users-jshmi-Downloads-logiSSign--\\2026-04-04T03-49-56-853Z_35c1ef4e-732c-4601-a0bc-2660ee4cfa30.jsonl",
     "persistAcrossSessions": false,
-    "startedAt": 1775276268371,
+    "startedAt": 1775283986266,
     "processType": "server",
     "group": null,
     "readyPattern": null,
     "readyPort": 3000,
-    "pid": 31408
+    "pid": 13624
   }
 ]
