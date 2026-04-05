@@ -144,6 +144,8 @@ function ContractFieldEditorPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [dragging, setDragging] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [savedFields, setSavedFields] = useState<string>('[]') // 저장 시점 스냅샷 (JSON)
 
   // 대리점 도장 목록
   const [agencySeals, setAgencySeals] = useState<SealRecord[]>([])
@@ -229,11 +231,13 @@ function ContractFieldEditorPage() {
         }
         const existing = t.sign_fields as SignFieldInput[] | null
         if (existing && Array.isArray(existing)) {
-          setFields(existing.map((f, i) => ({
+          const loaded = existing.map((f, i) => ({
             ...f,
             field_owner: f.field_owner || 'receiver', // 기존 데이터 호환
             _id: `f_${i}_${Date.now()}`,
-          })))
+          }))
+          setFields(loaded)
+          setSavedFields(JSON.stringify(existing))
         }
 
         // 2) 대리점 도장 목록 조회
@@ -264,6 +268,27 @@ function ContractFieldEditorPage() {
       setLoading(false)
     })()
   }, [templateId])
+
+  // ── 변경 감지 ──
+  useEffect(() => {
+    const currentSnapshot = JSON.stringify(fields.map(f => ({
+      field_type: f.field_type, field_owner: f.field_owner, page_number: f.page_number,
+      x: f.x, y: f.y, width: f.width, height: f.height,
+      label: f.label, required: f.required,
+      default_value: f.default_value, binding_var: f.binding_var,
+    })))
+    setHasUnsavedChanges(currentSnapshot !== savedFields)
+  }, [fields, savedFields])
+
+  // ── 브라우저 닫기/새로고침 시 경고 ──
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) { e.preventDefault(); e.returnValue = '' }
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [hasUnsavedChanges])
+
 
   // ── 파일 업로드 ──
   const handleUploadFile = useCallback(async (file: File) => {
@@ -308,24 +333,24 @@ function ContractFieldEditorPage() {
       const { data: { user } } = await supabase.auth.getUser()
       const aid = user?.app_metadata?.agency_id as string
       const { data: docFiles } = aid
-        ? await supabase.from('document_files').select('id, title, file_url').eq('agency_id', aid).order('created_at', { ascending: false }).limit(20)
+        ? await supabase.from('document_files').select('id, title, file_url, status').eq('agency_id', aid).neq('status', 'deleted').order('created_at', { ascending: false }).limit(20)
         : { data: null }
 
       const items: { name: string; path: string; url: string }[] = []
 
-      // Storage 파일들
+      // Storage 파일들 (빈 폴더 플레이스홀더 제외)
       if (storageFiles) {
         for (const f of storageFiles) {
-          if (f.name.endsWith('.pdf')) {
+          if (f.name.endsWith('.pdf') && !f.name.startsWith('.')) {
             const { data: signed } = await supabase.storage.from('contracts').createSignedUrl(`templates/${f.name}`, 3600)
             if (signed?.signedUrl) items.push({ name: f.name, path: `templates/${f.name}`, url: signed.signedUrl })
           }
         }
       }
-      // 문서함 파일들
+      // 문서함 파일들 (삭제된 문서 제외)
       if (docFiles) {
-        for (const doc of docFiles as { id: string; title: string; file_url: string }[]) {
-          if (doc.file_url) {
+        for (const doc of docFiles as { id: string; title: string; file_url: string; status: string }[]) {
+          if (doc.file_url && doc.status !== 'deleted') {
             const storagePath = doc.file_url.startsWith('http') ? doc.file_url.split('/documents/')[1] : doc.file_url
             if (storagePath) {
               const { data: signed } = await supabase.storage.from('documents').createSignedUrl(decodeURIComponent(storagePath), 3600)
@@ -438,8 +463,13 @@ function ContractFieldEditorPage() {
       .update({ sign_fields: signFields as unknown as Record<string, unknown>[], template_type: 'pdf' })
       .eq('id', templateId)
     setSaving(false)
-    if (error) alert('저장 실패: ' + error.message)
-    else alert('필드 배치가 저장되었습니다.')
+    if (error) {
+      alert('저장 실패: ' + error.message)
+    } else {
+      setSavedFields(JSON.stringify(signFields))
+      setHasUnsavedChanges(false)
+      alert('필드 배치가 저장되었습니다.')
+    }
   }, [templateId, fields])
 
   const pageFields = fields.filter(f => f.page_number === currentPage)
@@ -581,7 +611,12 @@ function ContractFieldEditorPage() {
       {/* ══ 상단 바 ══ */}
       <div className="flex items-center justify-between px-4 h-12 bg-white border-b border-neutral-200 shrink-0 shadow-sm z-10">
         <div className="flex items-center gap-3">
-          <button onClick={() => router.push('/portal/contracts/templates')}
+          <button onClick={() => {
+              if (hasUnsavedChanges) {
+                if (!confirm('저장하지 않은 변경사항이 있습니다. 저장하지 않고 나가시겠습니까?')) return
+              }
+              router.push('/portal/contracts/templates')
+            }}
             className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-800 font-korean">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             뒤로
@@ -598,9 +633,14 @@ function ContractFieldEditorPage() {
             className="px-3 py-1.5 text-xs text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg font-korean transition-colors">문서 교체</button>
           <input ref={fileInputRef} type="file" accept=".pdf,.docx,.hwp,.hwpx,.jpg,.jpeg,.png,.bmp,.gif,.tiff,.tif,.webp" className="hidden"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUploadFile(f) }} />
+          {hasUnsavedChanges && (
+            <span className="text-[10px] text-amber-500 font-korean font-bold animate-pulse">변경사항 있음</span>
+          )}
           <button onClick={handleSave} disabled={saving}
-            className="px-5 py-1.5 bg-blue-600 text-white text-sm font-bold font-korean rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
-            {saving ? '저장 중...' : '저장'}
+            className={`px-5 py-1.5 text-white text-sm font-bold font-korean rounded-lg disabled:opacity-50 transition-colors shrink-0 ${
+              hasUnsavedChanges ? 'bg-amber-500 hover:bg-amber-600 ring-2 ring-amber-300' : 'bg-blue-600 hover:bg-blue-700'
+            }`}>
+            {saving ? '저장 중...' : hasUnsavedChanges ? '저장하기' : '저장됨'}
           </button>
         </div>
       </div>
