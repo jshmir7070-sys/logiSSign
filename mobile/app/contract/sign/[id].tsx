@@ -44,6 +44,7 @@ type FieldType = 'checkbox' | 'signature' | 'seal' | 'date' | 'text';
 interface SignField {
   id: string;
   field_type: FieldType;
+  field_owner?: 'sender' | 'receiver';
   page_number: number;
   x: number;
   y: number;
@@ -53,6 +54,8 @@ interface SignField {
   required: boolean;
   sort_order: number;
   binding_variable?: string;
+  binding_var?: string;
+  default_value?: string | null;
 }
 
 interface FieldResponse {
@@ -163,12 +166,26 @@ export default function ContractSignScreen() {
         const fields = (contract as Record<string, unknown>).sign_fields;
         if (Array.isArray(fields)) {
           setSignFields(fields as SignField[]);
-          // 바인딩 변수 자동 채움
+          // 자동 채움: sender 필드 + receiver 바인딩 필드
           const autoResponses: Record<string, FieldResponse> = {};
           for (const f of fields as SignField[]) {
-            if (f.binding_variable && f.field_type === 'text') {
-              const val = resolveBindingVariable(f.binding_variable, driver);
-              if (val) autoResponses[f.id] = { value: val };
+            // sender 필드: default_value가 이미 전송 시 채워져 옴
+            if (f.field_owner === 'sender' && f.default_value) {
+              if (f.field_type === 'seal' || f.field_type === 'signature') {
+                autoResponses[f.id] = { imageData: f.default_value };
+              } else {
+                autoResponses[f.id] = { value: f.default_value };
+              }
+            }
+            // receiver 필드: default_value(바인딩으로 채워진 값) 또는 바인딩 변수 해석
+            if (f.field_owner !== 'sender' || !f.field_owner) {
+              if (f.default_value && (f.field_type === 'text' || f.field_type === 'date')) {
+                autoResponses[f.id] = { value: f.default_value };
+              } else if ((f.binding_variable || f.binding_var) && f.field_type === 'text') {
+                const bindKey = f.binding_variable || f.binding_var || '';
+                const val = resolveBindingVariable(bindKey, driver);
+                if (val) autoResponses[f.id] = { value: val };
+              }
             }
           }
           setFieldResponses(autoResponses);
@@ -276,6 +293,9 @@ export default function ContractSignScreen() {
   }, []);
 
   const handleFieldTap = useCallback((field: SignField) => {
+    // sender 필드는 읽기 전용 — 터치 무시
+    if (field.field_owner === 'sender') return;
+
     switch (field.field_type) {
       case 'checkbox':
         toggleCheckbox(field.id);
@@ -304,9 +324,10 @@ export default function ContractSignScreen() {
   // PDF 필드 완료 상태
   const pageFields = signFields.filter(f => f.page_number === currentPage);
   const totalPages = Math.max(1, ...signFields.map(f => f.page_number));
-  const totalRequired = signFields.filter(f => f.required).length;
+  // receiver 필드만 필수 체크 (sender는 자동 채움)
+  const totalRequired = signFields.filter(f => f.required && f.field_owner !== 'sender').length;
   const completedRequired = signFields.filter(f => {
-    if (!f.required) return false;
+    if (!f.required || f.field_owner === 'sender') return false;
     const r = fieldResponses[f.id];
     return r && (r.value || r.imageData);
   }).length;
@@ -507,13 +528,15 @@ export default function ContractSignScreen() {
             {pageFields.map(field => {
               const resp = fieldResponses[field.id];
               const isCompleted = resp && (resp.value || resp.imageData);
-              const fieldColor = FIELD_COLORS[field.field_type];
+              const isSender = field.field_owner === 'sender';
+              const fieldColor = isSender ? '#E11D48' : FIELD_COLORS[field.field_type];
 
               return (
                 <TouchableOpacity
                   key={field.id}
-                  activeOpacity={0.7}
+                  activeOpacity={isSender ? 1 : 0.7}
                   onPress={() => handleFieldTap(field)}
+                  disabled={isSender}
                   style={[
                     styles.fieldOverlay,
                     {
@@ -521,8 +544,8 @@ export default function ContractSignScreen() {
                       top: `${field.y}%`,
                       width: `${field.width}%`,
                       height: `${field.height}%`,
-                      borderColor: isCompleted ? '#22C55E' : fieldColor,
-                      backgroundColor: isCompleted ? '#22C55E18' : `${fieldColor}18`,
+                      borderColor: isSender ? '#E11D4830' : (isCompleted ? '#22C55E' : fieldColor),
+                      backgroundColor: isSender ? '#E11D4808' : (isCompleted ? '#22C55E18' : `${fieldColor}18`),
                     },
                   ]}
                 >

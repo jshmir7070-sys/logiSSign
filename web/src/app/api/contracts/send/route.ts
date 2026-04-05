@@ -119,6 +119,9 @@ export async function POST(request: NextRequest) {
     const contracts: Record<string, unknown>[] = []
     const pushTokens: string[] = []
 
+    // sender(대리점) 데이터 캐시 — 기사 루프 밖에서 한 번만 조회
+    let senderDataCache: Record<string, string> | null = null
+
     for (const did of driverIds) {
       if (!validDriverIds.has(did)) continue
       let driverBindingData = bindingDataMap?.[did] ?? bindingData ?? {}
@@ -183,6 +186,50 @@ export async function POST(request: NextRequest) {
         const signToken = crypto.randomUUID()
 
         const tRec = tmpl as Record<string, unknown>
+
+        // PDF 타입: sender 필드 자동 채움 처리
+        let resolvedSignFields = tRec.sign_fields as Record<string, unknown>[] | null
+        if (tRec.template_type === 'pdf' && resolvedSignFields && Array.isArray(resolvedSignFields)) {
+          // 대리점 정보 조회 (한 번만)
+          if (!senderDataCache) {
+            const { data: agencyData } = await supabaseAdmin
+              .from('agencies').select('*').eq('id', agencyId).single()
+            const { data: defaultSeal } = await supabaseAdmin
+              .from('seals')
+              .select('seal_data_uri, seal_image_url')
+              .eq('owner_type', 'agency').eq('owner_id', agencyId).eq('is_default', true)
+              .maybeSingle()
+            const a = agencyData as Record<string, unknown> | null
+            senderDataCache = {
+              '대리점명': String(a?.name ?? ''),
+              '대표자명_대리점': String(a?.owner_name ?? ''),
+              '대리점사업자번호': String(a?.business_number ?? ''),
+              '대리점주소': a?.address ? (String(a.address) + (a.address_detail ? ' ' + String(a.address_detail) : '')) : '',
+              '대리점전화': String(a?.phone ?? ''),
+              '대리점이메일': String(a?.email ?? ''),
+              '업태': String(a?.business_type ?? ''),
+              '종목': String(a?.business_category ?? ''),
+              '대리점도장': defaultSeal?.seal_data_uri || defaultSeal?.seal_image_url || '',
+            }
+          }
+
+          // sender 필드의 바인딩 값을 default_value로 채움
+          resolvedSignFields = resolvedSignFields.map(field => {
+            const f = { ...field }
+            if (f.field_owner === 'sender' && f.binding_var && senderDataCache) {
+              const val = senderDataCache[f.binding_var as string]
+              if (val) f.default_value = val
+            }
+            // receiver 필드의 바인딩 값도 기사 데이터로 채움
+            if (f.field_owner === 'receiver' && f.binding_var && driverBindingData) {
+              const bindKey = f.binding_var as string
+              const val = driverBindingData[bindKey]
+              if (val) f.default_value = val
+            }
+            return f
+          })
+        }
+
         contracts.push({
           agency_id: agencyId,
           template_id: (tmpl as { id: string }).id,
@@ -194,11 +241,11 @@ export async function POST(request: NextRequest) {
           binding_data: driverBindingData,
           status: 'sent',
           sent_at: new Date().toISOString(),
-          // PDF 타입: 템플릿 PDF URL + 서명 필드 복사
+          // PDF 타입: 템플릿 PDF URL + 서명 필드 (sender 자동 채움 완료)
           ...(tRec.template_type === 'pdf' ? {
             template_type: 'pdf',
             template_pdf_url: tRec.template_pdf_url,
-            sign_fields: tRec.sign_fields,
+            sign_fields: resolvedSignFields,
           } : {}),
         })
       }
