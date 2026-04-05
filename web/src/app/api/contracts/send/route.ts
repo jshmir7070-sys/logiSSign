@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import { authenticateRequest } from '@/lib/api-auth'
 import { sendContractSchema, validateInput } from '@/lib/api-schemas'
 import { rateLimitAuth } from '@/lib/rate-limit'
-import { isPaidPlan, type PlanType } from '@/lib/plan-limits'
+import { isPaidPlan, getPlanLimits, type PlanType } from '@/lib/plan-limits'
 import { deductPoints, hasEnoughPoints } from '@/services/point.service'
 
 const supabaseAdmin = createClient(
@@ -79,15 +79,34 @@ export async function POST(request: NextRequest) {
       .single()
     const agencyPlan = (agency?.plan ?? 'free') as PlanType
 
-    // 포인트 차감 대상 여부 확인 (구독형은 계약서 무제한)
-    const isSubscription = isPaidPlan(agencyPlan) && agencyPlan !== 'point'
+    // 월 무료 발송 건수 체크
+    const planLimits = getPlanLimits(agencyPlan)
     const totalContracts = driverIds.length * templateIds.length
+    const monthlyFreeLimit = planLimits.monthlyFreeContracts // null = 무제한
 
-    if (!isSubscription && totalContracts > 0) {
-      const check = await hasEnoughPoints(agencyId, 'contract_send', totalContracts)
+    // 이번 달 발송 건수 조회
+    const startOfMonth = new Date()
+    startOfMonth.setDate(1)
+    startOfMonth.setHours(0, 0, 0, 0)
+    const { count: monthlyUsed } = await supabaseAdmin
+      .from('contracts')
+      .select('id', { count: 'exact', head: true })
+      .eq('agency_id', agencyId)
+      .gte('created_at', startOfMonth.toISOString())
+
+    const usedThisMonth = monthlyUsed ?? 0
+    const remainingFree = monthlyFreeLimit === null ? totalContracts : Math.max(0, monthlyFreeLimit - usedThisMonth)
+    const chargeableContracts = Math.max(0, totalContracts - remainingFree) // 무료 한도 초과분만 과금
+
+    // 구독형 여부 (point 제외한 유료 플랜은 구독형)
+    const isSubscription = isPaidPlan(agencyPlan) && agencyPlan !== 'point'
+
+    // 포인트 차감 대상: 무료 한도 초과분에 대해서만
+    if (chargeableContracts > 0 && !isSubscription) {
+      const check = await hasEnoughPoints(agencyId, 'contract_send', chargeableContracts)
       if (!check.enough) {
         return NextResponse.json({
-          error: `포인트 잔액 부족 (필요: ${check.required.toLocaleString()}P, 잔액: ${check.balance.toLocaleString()}P). 포인트를 충전하거나 구독 플랜으로 변경해주세요.`,
+          error: `월 무료 ${monthlyFreeLimit}건 중 ${usedThisMonth}건 사용 완료. 추가 ${chargeableContracts}건 발송에 포인트 부족 (필요: ${check.required.toLocaleString()}P, 잔액: ${check.balance.toLocaleString()}P)`,
         }, { status: 402 })
       }
     }
@@ -266,14 +285,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '계약서 생성 실패: ' + insertErr.message }, { status: 500 })
     }
 
-    // 포인트 차감 (INSERT 성공 후)
+    // 포인트 차감 (INSERT 성공 후 — 무료 한도 초과분만)
     const actualCreated = inserted?.length ?? 0
-    if (!isSubscription && actualCreated > 0) {
+    // 실제 생성 수가 예상보다 적을 수 있으므로 과금 건수 재계산
+    const actualChargeable = Math.min(chargeableContracts, actualCreated)
+    if (!isSubscription && actualChargeable > 0) {
       try {
         await deductPoints({
           agencyId,
           action: 'contract_send',
-          count: actualCreated,
+          count: actualChargeable,
           referenceType: 'contract',
           userId: auth!.userId,
         })

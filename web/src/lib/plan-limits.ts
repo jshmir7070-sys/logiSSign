@@ -24,6 +24,7 @@ export interface PlanLimits {
   maxAdminAccounts: number;          // 추가 관리자 계정 수
   maxDefaultTemplates: number;       // 기본 템플릿 선택 가능 수
   maxUploadTemplates: number;        // 업로드 템플릿 수
+  monthlyFreeContracts: number | null; // 월 무료 전자계약 발송 건수 (null = 무제한)
   features: Record<PlanFeature, boolean>;
 }
 
@@ -104,45 +105,51 @@ const POINT_FEATURES: Record<PlanFeature, boolean> = {
 
 export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
   free: {
-    maxDrivers: 5,            // 무료 5명, 초과 시 계정당 ₩1,500/월
+    maxDrivers: 5,
     maxAdminAccounts: 0,
-    maxDefaultTemplates: 999,   // 무제한
-    maxUploadTemplates: 999,    // 무제한
+    maxDefaultTemplates: 999,
+    maxUploadTemplates: 999,
+    monthlyFreeContracts: 60,     // 월 60건 무료
     features: FREE_FEATURES,
   },
   point: {
-    maxDrivers: null,  // 무제한 (5명 초과 시 ₩1,500/명/월)
+    maxDrivers: null,
     maxAdminAccounts: 2,
-    maxDefaultTemplates: 999,   // 무제한
-    maxUploadTemplates: 999,    // 무제한
+    maxDefaultTemplates: 999,
+    maxUploadTemplates: 999,
+    monthlyFreeContracts: 60,     // 월 60건 무료 (초과 시 포인트 차감)
     features: POINT_FEATURES,
   },
   basic: {
     maxDrivers: 30,
     maxAdminAccounts: 2,
-    maxDefaultTemplates: 999,   // 무제한
-    maxUploadTemplates: 999,    // 무제한
+    maxDefaultTemplates: 999,
+    maxUploadTemplates: 999,
+    monthlyFreeContracts: 160,    // 월 160건 무료
     features: BASIC_FEATURES,
   },
   standard: {
     maxDrivers: 80,
     maxAdminAccounts: 5,
-    maxDefaultTemplates: 999,   // 무제한
-    maxUploadTemplates: 999,    // 무제한
+    maxDefaultTemplates: 999,
+    maxUploadTemplates: 999,
+    monthlyFreeContracts: 300,    // 월 300건 무료
     features: STANDARD_FEATURES,
   },
   pro: {
     maxDrivers: 150,
     maxAdminAccounts: 10,
-    maxDefaultTemplates: 999,   // 무제한
-    maxUploadTemplates: 999,    // 무제한
+    maxDefaultTemplates: 999,
+    maxUploadTemplates: 999,
+    monthlyFreeContracts: null,   // 무제한
     features: ALL_FEATURES,
   },
   enterprise: {
     maxDrivers: null,
     maxAdminAccounts: 99,
-    maxDefaultTemplates: 999,   // 무제한
-    maxUploadTemplates: 999,    // 무제한
+    maxDefaultTemplates: 999,
+    maxUploadTemplates: 999,
+    monthlyFreeContracts: null,   // 무제한
     features: ALL_FEATURES,
   },
 };
@@ -176,12 +183,12 @@ export const PLAN_DISCOUNTS: Record<string, number> = {
 
 /** 플랜별 주요 기능 요약 (UI 표시용) */
 export const PLAN_HIGHLIGHTS: Record<PlanType, string[]> = {
-  free: ['기사 5명 무료', '초과 시 1,500P/명/월 차감', '기본 정산', '가입 시 5,000P 지급'],
-  point: ['기사 5명 무료', '초과 시 1,500P/명/월 차감', '사용한 만큼만 결제', '가입 시 5,000P 지급'],
-  basic: ['기사 30명', '전자계약서', '정산서 빌더', '세금계산서', '엑셀 업로드'],
-  standard: ['기사 80명', 'Basic 전체', '매출 리포트', '푸시 알림'],
-  pro: ['기사 150명', 'Standard 전체', 'API 연동', '대용량 처리'],
-  enterprise: ['기사 무제한', '전담 매니저', 'SLA 99.9%', '맞춤형 정산'],
+  free: ['기사 5명 무료', '전자계약 월 60건 무료', '기본 정산', '가입 시 5,000P 지급'],
+  point: ['기사 5명 무료', '전자계약 월 60건 무료', '사용한 만큼만 결제', '가입 시 5,000P 지급'],
+  basic: ['기사 30명', '전자계약 월 160건 무료', '정산서 빌더', '세금계산서'],
+  standard: ['기사 80명', '전자계약 월 300건 무료', '매출 리포트', '푸시 알림'],
+  pro: ['기사 150명', '전자계약 무제한', 'API 연동', '대용량 처리'],
+  enterprise: ['기사 무제한', '전자계약 무제한', '전담 매니저', '맞춤형 정산'],
 };
 
 /** 구독 금액 계산 (billing cycle 반영) */
