@@ -29,6 +29,12 @@ import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase'
 import { type SignFieldType, FIELD_TYPE_META } from '@/services/document-sign-field.service'
+import * as pdfjsLib from 'pdfjs-dist'
+
+// PDF.js worker 설정
+if (typeof window !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`
+}
 
 /* ── 타입 ── */
 
@@ -150,6 +156,45 @@ function ContractFieldEditorPage() {
 
   const containerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const pdfDocRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null)
+
+  // ── PDF 캔버스 렌더링 ──
+  const renderPdfPage = useCallback(async (pageNum: number) => {
+    if (!pdfDocRef.current || !canvasRef.current) return
+    try {
+      const page = await pdfDocRef.current.getPage(pageNum)
+      const viewport = page.getViewport({ scale: 1.5 })
+      const canvas = canvasRef.current
+      canvas.width = viewport.width
+      canvas.height = viewport.height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      await page.render({ canvasContext: ctx, viewport }).promise
+    } catch (err) {
+      console.error('PDF 페이지 렌더링 실패:', err)
+    }
+  }, [])
+
+  // PDF URL 변경 시 문서 로드
+  useEffect(() => {
+    if (!pdfUrl) return
+    ;(async () => {
+      try {
+        const doc = await pdfjsLib.getDocument(pdfUrl).promise
+        pdfDocRef.current = doc
+        setTotalPages(doc.numPages)
+        renderPdfPage(currentPage)
+      } catch (err) {
+        console.error('PDF 로드 실패:', err)
+      }
+    })()
+  }, [pdfUrl]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 페이지 변경 시 다시 렌더링
+  useEffect(() => {
+    if (pdfDocRef.current) renderPdfPage(currentPage)
+  }, [currentPage, renderPdfPage])
 
   // ── 데이터 로드 ──
   useEffect(() => {
@@ -664,22 +709,18 @@ function ContractFieldEditorPage() {
           </div>
         </div>
 
-        {/* ── 중앙: PDF 미리보기 ── */}
+        {/* ── 중앙: PDF 미리보기 (캔버스) ── */}
         <div className="flex-1 overflow-auto flex items-start justify-center py-4 px-4 bg-neutral-200/40 min-w-0">
           <div
             ref={containerRef}
             className="relative bg-white shadow-2xl rounded"
-            style={{ width: '100%', maxWidth: 850, aspectRatio: '595 / 841' }}
+            style={{ width: '100%', maxWidth: 850 }}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
             onClick={() => setSelectedId(null)}
           >
-            <iframe
-              src={`${pdfUrl}#page=${currentPage}`}
-              className="absolute inset-0 w-full h-full pointer-events-none"
-              style={{ border: 'none' }}
-            />
+            <canvas ref={canvasRef} className="w-full h-auto block" />
 
             {/* 필드 오버레이 */}
             {pageFields.map((field) => {
@@ -714,8 +755,21 @@ function ContractFieldEditorPage() {
                   </div>
 
                   {/* 도장 미리보기 (sender seal) */}
-                  {field.field_owner === 'sender' && field.field_type === 'seal' && field.default_value ? (
+                  {field.field_type === 'seal' && field.default_value ? (
                     <img src={field.default_value} alt="도장" className="max-w-full max-h-full object-contain opacity-70" />
+                  ) : (field.field_type === 'text' || field.field_type === 'date') && isSelected ? (
+                    <input
+                      type="text"
+                      value={field.default_value ?? ''}
+                      onChange={e => { e.stopPropagation(); updateField(field._id, { default_value: e.target.value }) }}
+                      onClick={e => e.stopPropagation()}
+                      onMouseDown={e => e.stopPropagation()}
+                      placeholder={field.binding_var ? `자동: ${field.binding_var}` : field.label || meta.label}
+                      className="w-full h-full text-[10px] px-1 bg-transparent outline-none border-none font-korean"
+                      style={{ color: ownerMeta.color }}
+                    />
+                  ) : field.default_value && (field.field_type === 'text' || field.field_type === 'date') ? (
+                    <span className="text-[10px] px-1 truncate font-korean" style={{ color: ownerMeta.color }}>{field.default_value}</span>
                   ) : (
                     <span style={{ color: ownerMeta.color, fontSize: '0.85rem' }}>{meta.icon}</span>
                   )}
