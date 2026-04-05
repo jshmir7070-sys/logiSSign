@@ -12,9 +12,9 @@ import { createServerSupabaseClient } from '@/lib/supabase'
  *  - 둘 다 표준창(WebView) 방식으로 연동
  *
  * 필요 환경변수:
- *  NEXT_PUBLIC_IDENTITY_PROVIDER_ID   — 본인인증 서비스 제공업체 ID
- *  NEXT_PUBLIC_IDENTITY_API_KEY       — API Key
- *  NEXT_PUBLIC_IDENTITY_CALLBACK_URL  — 인증 완료 콜백 URL
+ *  IDENTITY_PROVIDER_ID   — 본인인증 서비스 제공업체 ID
+ *  IDENTITY_API_KEY       — API Key
+ *  IDENTITY_CALLBACK_URL  — 인증 완료 콜백 URL
  *
  * 연동 업체 옵션:
  *  1. 다날 (danal.co.kr) — PASS + 카카오 동시 지원, 중소기업 친화적
@@ -77,9 +77,9 @@ export async function createVerificationSession(
   verificationUrl: string
   error: string | null
 }> {
-  const apiKey = process.env.NEXT_PUBLIC_IDENTITY_API_KEY
-  const providerId = process.env.NEXT_PUBLIC_IDENTITY_PROVIDER_ID
-  const _callbackUrl = process.env.NEXT_PUBLIC_IDENTITY_CALLBACK_URL
+  const apiKey = process.env.IDENTITY_API_KEY
+  const providerId = process.env.IDENTITY_PROVIDER_ID
+  const _callbackUrl = process.env.IDENTITY_CALLBACK_URL
 
   if (!apiKey || !providerId) {
     // 프로덕션에서 API 키 미설정 시 차단
@@ -124,7 +124,7 @@ export async function createVerificationSession(
 export async function getVerificationResult(
   sessionId: string
 ): Promise<IdentityVerificationResult> {
-  const apiKey = process.env.NEXT_PUBLIC_IDENTITY_API_KEY
+  const apiKey = process.env.IDENTITY_API_KEY
 
   if (!apiKey) {
     // 프로덕션에서 차단

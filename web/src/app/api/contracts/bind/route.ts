@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { authenticateRequest } from '@/lib/api-auth'
 import { BINDING_FIELDS } from '@/lib/binding-fields'
+import { rateLimitAuth } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/get-ip'
 
 /** 계약 기간 계산 (일/월/년 단위 자동 표시) */
 function calcDuration(start: string, end: string): string {
@@ -41,15 +43,22 @@ const supabaseAdmin = createClient(
  * }
  */
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const limited = rateLimitAuth(ip, '/api/contracts/bind')
+  if (limited) return limited
+
   const { auth, error: authError } = await authenticateRequest(request)
   if (authError || !auth) return authError!
 
   try {
     const body = await request.json()
-    const { driverId, agencyId, principalId, periodStart, periodEnd } = body
+    const { driverId, principalId, periodStart, periodEnd } = body
 
-    if (!driverId || !agencyId) {
-      return NextResponse.json({ error: 'driverId, agencyId 필수' }, { status: 400 })
+    // ✅ 보안: agencyId는 반드시 인증된 세션에서 가져옴 (IDOR 방지)
+    const agencyId = auth.agencyId
+
+    if (!driverId) {
+      return NextResponse.json({ error: 'driverId 필수' }, { status: 400 })
     }
 
     // ── DB 조회 (병렬) ──

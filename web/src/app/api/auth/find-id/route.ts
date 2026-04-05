@@ -81,7 +81,8 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
 
     if (dbErr || !agency) {
-      // 보안: 존재 여부를 노출하지 않음
+      // ✅ 보안: 타이밍 공격 방지 — 사용자 미존재 시에도 일정 지연 후 응답
+      await new Promise(r => setTimeout(r, 200 + Math.random() * 300))
       return NextResponse.json(
         { error: '입력한 정보와 일치하는 계정을 찾을 수 없습니다.' },
         { status: 404 }

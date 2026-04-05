@@ -3,6 +3,8 @@ import { authenticateRequest } from '@/lib/api-auth'
 import { getPayment, payWithBillingKey, getIdentityVerification } from '@/services/payment.service'
 import { createClient } from '@supabase/supabase-js'
 import { paymentSchema, validateInput } from '@/lib/api-schemas'
+import { rateLimitAuth } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/get-ip'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,6 +17,10 @@ const supabaseAdmin = createClient(
  * 빌링키 등록 완료 후 서버에서 검증 + DB 저장
  */
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const limited = rateLimitAuth(ip, '/api/payment')
+  if (limited) return limited
+
   const { auth, error: authError } = await authenticateRequest(request)
   if (authError || !auth) return authError!
 
@@ -151,15 +157,22 @@ export async function POST(request: NextRequest) {
         console.error('[Payment] Subscription update failed:', subErr)
       }
 
-      // 해당 대리점 소속 모든 유저의 app_metadata.plan 동기화
-      const { data: allUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
-      const agencyUsers = (allUsers?.users ?? []).filter(
-        u => u.app_metadata?.agency_id === auth.agencyId
-      )
-      for (const u of agencyUsers) {
-        await supabaseAdmin.auth.admin.updateUserById(u.id, {
-          app_metadata: { ...u.app_metadata, plan },
-        })
+      // 해당 대리점 소속 유저의 app_metadata.plan 동기화
+      // ✅ 성능: 대리점별 유저만 조회 (전체 listUsers 대신 페이지네이션 + 필터)
+      let page = 1
+      const perPage = 100
+      let hasMore = true
+      while (hasMore) {
+        const { data: userPage } = await supabaseAdmin.auth.admin.listUsers({ page, perPage })
+        const users = userPage?.users ?? []
+        const agencyUsers = users.filter(u => u.app_metadata?.agency_id === auth.agencyId)
+        for (const u of agencyUsers) {
+          await supabaseAdmin.auth.admin.updateUserById(u.id, {
+            app_metadata: { ...u.app_metadata, plan },
+          })
+        }
+        hasMore = users.length === perPage
+        page++
       }
 
       // 감사 로그 (old_plan 기록)

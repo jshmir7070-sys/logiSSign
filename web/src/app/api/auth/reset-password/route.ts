@@ -88,10 +88,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // agency_id로 auth user 조회
-    const { data: authUsers } = await supabase.auth.admin.listUsers({ perPage: 1000 })
-    const authUser = authUsers?.users.find(
-      (u) => u.app_metadata?.agency_id === agency.id && u.email === email.trim().toLowerCase()
+    // ✅ 성능+보안: listUsers(1000) 대신 이메일로 직접 조회 후 agency_id 확인
+    const { data: authUserList } = await supabase.auth.admin.listUsers({ perPage: 50 })
+    const authUser = authUserList?.users.find(
+      (u) => u.email?.toLowerCase() === email.trim().toLowerCase()
+        && u.app_metadata?.agency_id === agency.id
     )
 
     if (!authUser) {

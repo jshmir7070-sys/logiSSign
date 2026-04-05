@@ -49,8 +49,8 @@ export async function GET(request: NextRequest) {
     const { data, error } = await queryBuilder
 
     if (error) {
-      console.error('[ContractList] Query error:', error)
-      return NextResponse.json({ data: null, error: error.message }, { status: 500 })
+      console.error('[ContractList] Query error:', error.message)
+      return NextResponse.json({ data: null, error: '계약서 목록 조회 중 오류가 발생했습니다' }, { status: 500 })
     }
 
     return NextResponse.json({ data, error: null })

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { authenticateRequest } from '@/lib/api-auth'
+import { rateLimitAuth } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/get-ip'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,6 +16,10 @@ const supabaseAdmin = createClient(
  * Body: { table: 'driver_rates'|'driver_deductions'|'driver_incentives', id: string }
  */
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const limited = rateLimitAuth(ip, '/api/drivers/delete-item')
+  if (limited) return limited
+
   const { auth, error: authError } = await authenticateRequest(request)
   if (authError || !auth) return authError!
 
@@ -48,7 +54,8 @@ export async function POST(request: NextRequest) {
 
     const { error } = await supabaseAdmin.from(table).delete().eq('id', id)
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('[DriverDeleteItem] 삭제 오류:', error.message)
+      return NextResponse.json({ error: '데이터 삭제 처리 중 오류가 발생했습니다' }, { status: 500 })
     }
 
     return NextResponse.json({ deleted: true })

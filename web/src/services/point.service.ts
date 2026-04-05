@@ -130,32 +130,22 @@ export async function deductPoints(params: {
     return { balanceAfter: bal.balance, deducted: 0 }
   }
 
-  // ⚡ 원자적 차감: DB 레벨에서 잔액 체크 + 업데이트를 한번에
-  // RPC 함수가 없으므로 조건부 UPDATE 사용
-  // balance >= totalCost인 경우에만 업데이트 성공
-  const { data: updated, error: updateErr } = await supabaseAdmin
-    .from('point_balances')
-    .update({
-      balance: 0, // rpc 미사용 시 직접 계산
-      updated_at: new Date().toISOString(),
-    })
-    .eq('agency_id', agencyId)
-    .gte('balance', totalCost) // 잔액 >= 차감액일 때만 업데이트
-    .select('balance, total_used')
-    .single()
+  // ⚡ 원자적 차감: 잔액 조회 → 계산 → 낙관적 잠금으로 1회 UPDATE
+  // 읽은 시점의 balance 값이 동일할 때만 업데이트 성공 (TOCTOU 방지)
+  const bal = await getPointBalance(agencyId)
+  const currentBalance = bal.balance
+  const currentUsed = bal.totalUsed
 
-  // gte 조건이 맞지 않으면 data가 null — 잔액 부족
-  if (updateErr || !updated) {
-    const bal = await getPointBalance(agencyId)
-    throw new Error(`포인트 잔액 부족 (필요: ${totalCost}P, 잔액: ${bal.balance}P)`)
+  // 잔액 부족 체크
+  if (currentBalance < totalCost) {
+    throw new Error(`포인트 잔액 부족 (필요: ${totalCost}P, 잔액: ${currentBalance}P)`)
   }
 
-  // 실제 차감 적용 (현재 DB값 기준 - totalCost)
-  const currentBalance = updated.balance
-  const currentUsed = updated.total_used
   const newBalance = currentBalance - totalCost
 
-  const { error: finalErr } = await supabaseAdmin
+  // 낙관적 잠금: 읽은 시점의 balance와 같을 때만 업데이트
+  // 동시 요청이 먼저 차감했다면 balance가 달라져서 0 rows updated
+  const { data: updated, error: updateErr } = await supabaseAdmin
     .from('point_balances')
     .update({
       balance: newBalance,
@@ -163,10 +153,12 @@ export async function deductPoints(params: {
       updated_at: new Date().toISOString(),
     })
     .eq('agency_id', agencyId)
-    .eq('balance', currentBalance) // 낙관적 잠금: 읽은 값과 같을 때만 업데이트
+    .eq('balance', currentBalance) // 낙관적 잠금
+    .select('balance')
+    .single()
 
-  if (finalErr) {
-    // 동시 요청으로 값이 변경됨 — 재시도
+  if (updateErr || !updated) {
+    // 동시 요청으로 값이 변경됨 — 재시도 필요
     throw new Error('포인트 차감 충돌 — 잠시 후 다시 시도해주세요')
   }
 

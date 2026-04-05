@@ -3,6 +3,8 @@ import { authenticateRequest } from '@/lib/api-auth'
 import { generateSignedPdf } from '@/services/signed-pdf.service'
 import { createClient } from '@supabase/supabase-js'
 import { signedPdfSchema, validateInput } from '@/lib/api-schemas'
+import { rateLimitAuth } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/get-ip'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,6 +17,10 @@ export const maxDuration = 60
 
 /** POST /api/contracts/signed-pdf — 서명 완료 계약서 PDF 생성 */
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const limited = rateLimitAuth(ip, '/api/contracts/signed-pdf')
+  if (limited) return limited
+
   const { auth, error } = await authenticateRequest(request)
   if (error) return error
 

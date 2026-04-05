@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/lib/api-auth'
 import { createClient } from '@supabase/supabase-js'
+import { rateLimitAuth } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/get-ip'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,6 +12,10 @@ const supabaseAdmin = createClient(
 
 /** POST /api/agency/logo — 운영사 로고 업로드 */
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const limited = rateLimitAuth(ip, '/api/agency/logo')
+  if (limited) return limited
+
   const { auth, error: authError } = await authenticateRequest(request)
   if (authError || !auth) return authError!
 

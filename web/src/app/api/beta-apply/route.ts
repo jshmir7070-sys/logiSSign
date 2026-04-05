@@ -34,6 +34,21 @@ export async function POST(request: NextRequest) {
 
   const { companyName, contactName, email, phone, driverCount, message } = data
 
+  // ✅ 보안: HTML 이스케이프 (Stored XSS 방지)
+  const esc = (s: string) => s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+
+  const safeCompanyName = esc(companyName)
+  const safeContactName = esc(contactName)
+  const safeEmail = esc(email)
+  const safePhone = esc(phone)
+  const safeDriverCount = driverCount ? esc(driverCount) : '미기입'
+  const safeMessage = message ? esc(message) : ''
+
   // Resend API로 이메일 전송
   const resendApiKey = process.env.RESEND_API_KEY
   if (!resendApiKey) {
@@ -51,7 +66,7 @@ export async function POST(request: NextRequest) {
     await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL || 'logiSSign <onboarding@resend.dev>',
       to: NOTIFY_EMAIL,
-      subject: `[베타 테스트 신청] ${companyName} - ${contactName}`,
+      subject: `[베타 테스트 신청] ${safeCompanyName} - ${safeContactName}`,
       html: `
         <div style="font-family: 'Pretendard', -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
           <div style="background: linear-gradient(135deg, #004ac6, #2563eb); padding: 24px 32px; border-radius: 16px 16px 0 0;">
@@ -61,28 +76,28 @@ export async function POST(request: NextRequest) {
             <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
               <tr>
                 <td style="padding: 12px 0; color: #64748b; width: 120px; vertical-align: top;">업체명</td>
-                <td style="padding: 12px 0; color: #1e293b; font-weight: 600;">${companyName}</td>
+                <td style="padding: 12px 0; color: #1e293b; font-weight: 600;">${safeCompanyName}</td>
               </tr>
               <tr style="border-top: 1px solid #e2e8f0;">
                 <td style="padding: 12px 0; color: #64748b;">담당자</td>
-                <td style="padding: 12px 0; color: #1e293b; font-weight: 600;">${contactName}</td>
+                <td style="padding: 12px 0; color: #1e293b; font-weight: 600;">${safeContactName}</td>
               </tr>
               <tr style="border-top: 1px solid #e2e8f0;">
                 <td style="padding: 12px 0; color: #64748b;">이메일</td>
-                <td style="padding: 12px 0; color: #1e293b;"><a href="mailto:${email}" style="color: #2563eb;">${email}</a></td>
+                <td style="padding: 12px 0; color: #1e293b;"><a href="mailto:${safeEmail}" style="color: #2563eb;">${safeEmail}</a></td>
               </tr>
               <tr style="border-top: 1px solid #e2e8f0;">
                 <td style="padding: 12px 0; color: #64748b;">연락처</td>
-                <td style="padding: 12px 0; color: #1e293b;">${phone}</td>
+                <td style="padding: 12px 0; color: #1e293b;">${safePhone}</td>
               </tr>
               <tr style="border-top: 1px solid #e2e8f0;">
                 <td style="padding: 12px 0; color: #64748b;">기사 수</td>
-                <td style="padding: 12px 0; color: #1e293b;">${driverCount || '미기입'}</td>
+                <td style="padding: 12px 0; color: #1e293b;">${safeDriverCount}</td>
               </tr>
-              ${message ? `
+              ${safeMessage ? `
               <tr style="border-top: 1px solid #e2e8f0;">
                 <td style="padding: 12px 0; color: #64748b; vertical-align: top;">문의사항</td>
-                <td style="padding: 12px 0; color: #1e293b;">${message}</td>
+                <td style="padding: 12px 0; color: #1e293b;">${safeMessage}</td>
               </tr>
               ` : ''}
             </table>

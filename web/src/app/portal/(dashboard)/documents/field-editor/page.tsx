@@ -121,6 +121,23 @@ export default function FieldEditorPage() {
     setSelectedId(newField._id)
   }, [currentPage, fields.length])
 
+  // ── 필드 복제 ──
+  const duplicateField = useCallback((id: string) => {
+    const source = fields.find(f => f._id === id)
+    if (!source) return
+    const cloned: LocalField = {
+      ...source,
+      _id: `new_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      label: `${source.label || FIELD_TYPE_META[source.field_type].label} (복사)`,
+      // 살짝 오프셋을 줘서 겹치지 않게
+      x: Math.min(95, source.x + 2),
+      y: Math.min(95, source.y + 2),
+      sort_order: fields.length,
+    }
+    setFields(prev => [...prev, cloned])
+    setSelectedId(cloned._id)
+  }, [fields])
+
   // ── 필드 삭제 ──
   const removeField = useCallback((id: string) => {
     setFields(prev => prev.filter(f => f._id !== id))
@@ -298,6 +315,11 @@ export default function FieldEditorPage() {
                   }}
                   onMouseDown={(e) => handleMouseDown(e, field._id)}
                   onClick={(e) => { e.stopPropagation(); setSelectedId(field._id) }}
+                  onContextMenu={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    duplicateField(field._id)
+                  }}
                 >
                   {/* 아이콘만 표시 (텍스트 제거) */}
                   <span style={{ color: meta.color, fontSize: '0.7rem', opacity: 0.7 }}>
@@ -392,12 +414,22 @@ export default function FieldEditorPage() {
                       <span className="truncate">{f.label || meta.label}</span>
                       <span className="text-on-surface-variant/40">p{f.page_number}</span>
                     </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); removeField(f._id) }}
-                      className="text-red-400 hover:text-red-600 ml-1 shrink-0"
-                    >
-                      ✕
-                    </button>
+                    <div className="flex items-center gap-0.5 shrink-0 ml-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); duplicateField(f._id) }}
+                        className="text-blue-400 hover:text-blue-600 p-0.5"
+                        title="복제"
+                      >
+                        ⧉
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); removeField(f._id) }}
+                        className="text-red-400 hover:text-red-600 p-0.5"
+                        title="삭제"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </div>
                 )
               })}
@@ -472,6 +504,22 @@ export default function FieldEditorPage() {
               />
               <span className="text-xs font-korean text-on-surface-variant">필수 항목</span>
             </label>
+
+            {/* 복제 + 삭제 버튼 */}
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => duplicateField(selectedField._id)}
+                className="flex-1 px-3 py-1.5 text-xs font-korean rounded-lg border border-blue-300 text-blue-600 hover:bg-blue-50 transition-colors"
+              >
+                ⧉ 복제
+              </button>
+              <button
+                onClick={() => removeField(selectedField._id)}
+                className="flex-1 px-3 py-1.5 text-xs font-korean rounded-lg border border-red-300 text-red-500 hover:bg-red-50 transition-colors"
+              >
+                ✕ 삭제
+              </button>
+            </div>
           </div>
         )}
       </div>

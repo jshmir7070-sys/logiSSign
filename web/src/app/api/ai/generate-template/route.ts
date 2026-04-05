@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateAdmin } from '@/lib/api-auth'
 import { aiGenerateTemplateSchema, validateInput } from '@/lib/api-schemas'
+import { rateLimitAuth } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/get-ip'
 
 /**
  * POST /api/ai/generate-template
@@ -10,6 +12,10 @@ import { aiGenerateTemplateSchema, validateInput } from '@/lib/api-schemas'
  * Returns: { content }
  */
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const limited = rateLimitAuth(ip, '/api/ai/generate-template')
+  if (limited) return limited
+
   const { auth, error: authError } = await authenticateAdmin(request)
   if (authError || !auth) return authError!
 
@@ -67,6 +73,7 @@ export async function POST(request: NextRequest) {
     const result = await response.json()
     return NextResponse.json({ content: result.choices?.[0]?.message?.content ?? '' })
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : 'AI 생성 실패' }, { status: 500 })
+    console.error('[AI GenerateTemplate] 예외 발생:', err instanceof Error ? err.message : err)
+    return NextResponse.json({ error: '계약서 템플릿 생성 중 오류가 발생했습니다' }, { status: 500 })
   }
 }

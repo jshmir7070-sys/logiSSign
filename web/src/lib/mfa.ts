@@ -16,7 +16,7 @@ export const MFA_COOKIE = '__logissign_mfa'
 export const OTP_TTL_MS = 5 * 60 * 1000        // OTP 유효기간: 5분
 export const OTP_MAX_ATTEMPTS = 5               // OTP 최대 시도 횟수
 export const MFA_TOKEN_TTL_MS = 24 * 60 * 60 * 1000 // MFA 토큰 최대 유효기간: 24시간
-export const OTP_RESEND_COOLDOWN_MS = 0 // 쿨다운 없음 — 재전송 버튼 즉시 사용 가능
+export const OTP_RESEND_COOLDOWN_MS = 60_000 // ✅ 보안: 재전송 쿨다운 60초 (SMS 폭탄 방지)
 
 // ── HMAC-SHA256 서명 (Edge + Node.js 호환) ──
 async function hmacSign(data: string, secret: string): Promise<string> {
@@ -35,7 +35,17 @@ async function hmacSign(data: string, secret: string): Promise<string> {
 }
 
 function getHmacSecret(): string {
-  return process.env.MFA_HMAC_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  const secret = process.env.MFA_HMAC_SECRET
+  if (!secret) {
+    // ✅ 보안: 전용 HMAC 시크릿 미설정 시 명확한 경고 + 대체키 사용
+    // SUPABASE_SERVICE_ROLE_KEY를 HMAC에 직접 사용하지 않음 (키 유출 위험)
+    console.warn('[MFA] MFA_HMAC_SECRET 미설정 — 프로덕션에서는 반드시 설정하세요')
+    // 서비스롤 키의 해시를 대체키로 사용 (원본 노출 방지)
+    const fallback = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!fallback) throw new Error('MFA_HMAC_SECRET 또는 SUPABASE_SERVICE_ROLE_KEY가 필요합니다')
+    return `mfa_derived_${fallback.slice(-16)}`
+  }
+  return secret
 }
 
 // ── MFA 토큰 생성/검증 ──

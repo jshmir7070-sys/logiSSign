@@ -34,14 +34,14 @@ export async function GET() {
         service: 'database',
         status: error ? 'degraded' : 'ok',
         latencyMs: Date.now() - dbStart,
-        detail: error?.message,
+        detail: error ? 'query failed' : undefined,
       })
-    } catch (e) {
+    } catch {
       checks.push({
         service: 'database',
         status: 'down',
         latencyMs: Date.now() - dbStart,
-        detail: e instanceof Error ? e.message : 'connection failed',
+        detail: 'connection failed',
       })
     }
 
@@ -53,14 +53,14 @@ export async function GET() {
         service: 'storage',
         status: error ? 'degraded' : 'ok',
         latencyMs: Date.now() - storageStart,
-        detail: error?.message,
+        detail: error ? 'storage error' : undefined,
       })
-    } catch (e) {
+    } catch {
       checks.push({
         service: 'storage',
         status: 'down',
         latencyMs: Date.now() - storageStart,
-        detail: e instanceof Error ? e.message : 'connection failed',
+        detail: 'connection failed',
       })
     }
 
@@ -73,26 +73,26 @@ export async function GET() {
         status: 'ok',
         latencyMs: Date.now() - authStart,
       })
-    } catch (e) {
+    } catch {
       checks.push({
         service: 'auth',
         status: 'down',
         latencyMs: Date.now() - authStart,
-        detail: e instanceof Error ? e.message : 'connection failed',
+        detail: 'connection failed',
       })
     }
   } else {
     checks.push({ service: 'database', status: 'degraded', latencyMs: 0, detail: 'Supabase not configured' })
   }
 
-  // 4. Environment check
+  // 4. Environment check — ✅ 보안: 환경변수 이름 노출하지 않음
   const requiredEnvs = ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'CRON_SECRET']
-  const missingEnvs = requiredEnvs.filter(k => !process.env[k])
+  const missingCount = requiredEnvs.filter(k => !process.env[k]).length
   checks.push({
     service: 'environment',
-    status: missingEnvs.length === 0 ? 'ok' : 'degraded',
+    status: missingCount === 0 ? 'ok' : 'degraded',
     latencyMs: 0,
-    detail: missingEnvs.length > 0 ? `missing: ${missingEnvs.join(', ')}` : undefined,
+    detail: missingCount > 0 ? `${missingCount} required env vars missing` : undefined,
   })
 
   const overallStatus = checks.some(c => c.status === 'down')

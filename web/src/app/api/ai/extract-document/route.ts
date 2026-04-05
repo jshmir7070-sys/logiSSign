@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateAdmin } from '@/lib/api-auth'
+import { rateLimitAuth } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/get-ip'
 
 /**
  * POST /api/ai/extract-document
@@ -9,6 +11,10 @@ import { authenticateAdmin } from '@/lib/api-auth'
  * Returns: { content, detectedVariables }
  */
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const limited = rateLimitAuth(ip, '/api/ai/extract-document')
+  if (limited) return limited
+
   const { auth, error: authError } = await authenticateAdmin(request)
   if (authError || !auth) return authError!
 
@@ -68,6 +74,7 @@ export async function POST(request: NextRequest) {
       detectedVariables: parsed.detectedVariables ?? [],
     })
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : '문서 분석 실패' }, { status: 500 })
+    console.error('[AI ExtractDocument] 예외 발생:', err instanceof Error ? err.message : err)
+    return NextResponse.json({ error: '문서 분석 처리 중 오류가 발생했습니다' }, { status: 500 })
   }
 }

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sendSms } from '@/services/sms.service'
 import { authenticateAdmin } from '@/lib/api-auth'
 import { smsSendSchema, validateInput } from '@/lib/api-schemas'
+import { rateLimitAuth } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/get-ip'
 
 /**
  * POST /api/sms/send
@@ -9,6 +11,10 @@ import { smsSendSchema, validateInput } from '@/lib/api-schemas'
  * ✅ 인증 필수: agency_admin 또는 provider_admin만 호출 가능
  */
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const limited = rateLimitAuth(ip, '/api/sms/send')
+  if (limited) return limited
+
   // 인증 확인
   const { auth, error: authError } = await authenticateAdmin(request)
   if (authError || !auth) return authError!
@@ -39,8 +45,9 @@ export async function POST(request: NextRequest) {
       messageId: result.messageId,
     })
   } catch (err) {
+    console.error('[SMS Send] 예외 발생:', err instanceof Error ? err.message : err)
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Internal Server Error' },
+      { error: 'SMS 발송 처리 중 오류가 발생했습니다' },
       { status: 500 }
     )
   }

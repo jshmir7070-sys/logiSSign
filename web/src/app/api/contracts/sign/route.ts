@@ -63,7 +63,8 @@ export async function POST(request: NextRequest) {
 
     // 3. 로그인 사용자 = 요청 기사인지 확인
     //    모바일 사용자의 app_metadata 또는 user_metadata에서 driver_id 확인
-    const metaDriverId = user.app_metadata?.driver_id ?? user.user_metadata?.driver_id
+    // ✅ 보안: app_metadata만 사용 (user_metadata는 클라이언트가 수정 가능하므로 신뢰 불가)
+    const metaDriverId = user.app_metadata?.driver_id
     if (metaDriverId && metaDriverId !== driverId) {
       return NextResponse.json({ error: '본인의 계약서만 서명할 수 있습니다' }, { status: 403 })
     }

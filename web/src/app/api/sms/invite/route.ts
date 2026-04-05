@@ -3,6 +3,8 @@ import { sendInviteCodeSms } from '@/services/sms.service'
 import { createClient } from '@supabase/supabase-js'
 import { authenticateAdmin } from '@/lib/api-auth'
 import { smsInviteSchema, validateInput } from '@/lib/api-schemas'
+import { rateLimitAuth } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/get-ip'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,6 +21,10 @@ const supabaseAdmin = createClient(
  *  - inviteCode, agencyName (직접 전달) OR agencyId (DB에서 자동 조회)
  */
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const limited = rateLimitAuth(ip, '/api/sms/invite')
+  if (limited) return limited
+
   // 인증 확인
   let auth;
   try {
@@ -82,9 +88,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ sent: true, messageId: result.messageId })
   } catch (err) {
-    console.error('[SMS Invite] 예외 발생:', err instanceof Error ? err.stack : err)
+    console.error('[SMS Invite] 예외 발생:', err instanceof Error ? err.message : err)
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'SMS 발송 실패' },
+      { error: '초대 SMS 발송 처리 중 오류가 발생했습니다' },
       { status: 500 }
     )
   }

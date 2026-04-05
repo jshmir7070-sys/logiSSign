@@ -23,7 +23,7 @@ async function getNotifications() {
     const mod = await import('expo-notifications');
     return mod;
   } catch {
-    console.log('[Push] expo-notifications를 로드할 수 없습니다 (Expo Go 환경)');
+    __DEV__ && console.log('[Push] expo-notifications를 로드할 수 없습니다 (Expo Go 환경)');
     return null;
   }
 }
@@ -57,13 +57,13 @@ export async function registerPushToken(driverId: string): Promise<string | null
   try {
     // 실제 디바이스에서만 동작
     if (!Device.isDevice) {
-      console.log('[Push] 시뮬레이터에서는 푸시 알림을 사용할 수 없습니다');
+      __DEV__ && console.log('[Push] 시뮬레이터에서는 푸시 알림을 사용할 수 없습니다');
       return null;
     }
 
     const Notifications = await getNotifications();
     if (!Notifications) {
-      console.log('[Push] Expo Go에서는 푸시 알림을 사용할 수 없습니다. Development build를 사용하세요.');
+      __DEV__ && console.log('[Push] Expo Go에서는 푸시 알림을 사용할 수 없습니다. Development build를 사용하세요.');
       return null;
     }
 
@@ -79,7 +79,7 @@ export async function registerPushToken(driverId: string): Promise<string | null
     }
 
     if (finalStatus !== 'granted') {
-      console.log('[Push] 알림 권한이 거부되었습니다');
+      __DEV__ && console.log('[Push] 알림 권한이 거부되었습니다');
       return null;
     }
 
@@ -97,7 +97,7 @@ export async function registerPushToken(driverId: string): Promise<string | null
     // Expo Push Token 발급
     const projectId = Constants.expoConfig?.extra?.eas?.projectId;
     if (!projectId) {
-      console.warn('[Push] EAS projectId not found in app.json');
+      __DEV__ && console.warn('[Push] EAS projectId not found in app.json');
       return null;
     }
     const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
@@ -110,14 +110,14 @@ export async function registerPushToken(driverId: string): Promise<string | null
       .eq('id', driverId);
 
     if (error) {
-      console.warn('[Push] 토큰 저장 실패:', error.message);
+      __DEV__ && console.warn('[Push] 토큰 저장 실패:', error.message);
     } else {
-      console.log('[Push] 토큰 등록 완료:', token.slice(0, 20) + '...');
+      __DEV__ && console.log('[Push] 토큰 등록 완료:', token.slice(0, 20) + '...');
     }
 
     return token;
   } catch (err) {
-    console.warn('[Push] 토큰 등록 오류:', err);
+    __DEV__ && console.warn('[Push] 토큰 등록 오류:', err);
     return null;
   }
 }

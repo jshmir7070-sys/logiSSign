@@ -3,6 +3,8 @@ import { authenticateRequest } from '@/lib/api-auth'
 import { getPointBalance, chargePoints, getPointTransactions, getPointPackages } from '@/services/point.service'
 import { payWithBillingKey } from '@/services/payment.service'
 import { createClient } from '@supabase/supabase-js'
+import { rateLimitAuth } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/get-ip'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,6 +13,10 @@ const supabaseAdmin = createClient(
 )
 
 export async function GET(request: NextRequest) {
+  const ip = getClientIp(request)
+  const limited = rateLimitAuth(ip, '/api/points')
+  if (limited) return limited
+
   const { auth, error: authError } = await authenticateRequest(request)
   if (authError || !auth) return authError!
 
@@ -42,6 +48,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const limited = rateLimitAuth(ip, '/api/points')
+  if (limited) return limited
+
   const { auth, error: authError } = await authenticateRequest(request)
   if (authError || !auth) return authError!
 

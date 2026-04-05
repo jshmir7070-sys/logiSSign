@@ -64,10 +64,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Supabase 미설정 시 통과 (개발용)
+  // Supabase 미설정 시 — 프로덕션에서는 차단, 개발에서만 통과
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !supabaseKey || supabaseUrl === "your-project-url") {
+    if (process.env.NODE_ENV === 'production') {
+      // ✅ 보안: 프로덕션에서 Supabase 미설정 시 인증 페이지 접근 차단
+      return NextResponse.json({ error: 'Service configuration error' }, { status: 503 });
+    }
     return NextResponse.next();
   }
 

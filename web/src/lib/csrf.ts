@@ -7,11 +7,12 @@ import { NextResponse, type NextRequest } from 'next/server'
  * POST/PATCH/DELETE 요청에서 Origin이 허용 목록에 없으면 차단
  */
 
+// ✅ 보안: localhost는 개발환경에서만 허용
 const ALLOWED_ORIGINS = new Set([
-  process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-  'http://localhost:3000',
+  process.env.NEXT_PUBLIC_APP_URL || 'https://logissign.com',
   'https://logissign.com',
   'https://www.logissign.com',
+  ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3000'] : []),
 ])
 
 export function csrfCheck(request: NextRequest): NextResponse | null {

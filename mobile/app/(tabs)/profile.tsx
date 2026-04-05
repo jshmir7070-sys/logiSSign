@@ -111,8 +111,8 @@ export default function ProfileScreen() {
         return;
       }
 
-      const { data: urlData } = supabase.storage.from('documents').getPublicUrl(fileName);
-      const fileUrl = urlData?.publicUrl ?? '';
+      const { data: urlData } = await supabase.storage.from('documents').createSignedUrl(fileName, 3600); // 1시간 유효
+      const fileUrl = urlData?.signedUrl ?? '';
 
       // DB 저장 (기존 삭제 후 재삽입)
       await supabase

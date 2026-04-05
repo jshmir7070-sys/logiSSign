@@ -1,24 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import {
   renderSealCanvas,
   ensureSealFontsLoaded,
   ALL_SEAL_FONTS,
   type SealShape,
 } from '@/services/seal.service'
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-)
+import { authenticateRequest } from '@/lib/api-auth'
+import { rateLimitAuth } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/get-ip'
 
 /**
  * POST /api/seals/generate
  * 도장 이미지 생성 API — 이름 + 옵션 → data URI 반환
  * 모바일/웹 공용
+ *
+ * ✅ 보안: 인증 + 레이트리밋 추가
  */
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const limited = rateLimitAuth(ip, '/api/seals/generate')
+  if (limited) return limited
+
+  const { auth, error: authError } = await authenticateRequest(request)
+  if (authError || !auth) return authError!
+
   try {
     const body = await request.json()
     const { name, shape, fontIdx, fontSize, letterSpacing, sealSize, showDot } = body
@@ -58,8 +63,17 @@ export async function POST(request: NextRequest) {
 /**
  * GET /api/seals/generate?name=홍길동
  * 여러 스타일 미리보기 일괄 생성 (모바일에서 선택용)
+ *
+ * ✅ 보안: 인증 + 레이트리밋 추가
  */
 export async function GET(request: NextRequest) {
+  const ip = getClientIp(request)
+  const limited = rateLimitAuth(ip, '/api/seals/generate-preview')
+  if (limited) return limited
+
+  const { auth, error: authError } = await authenticateRequest(request)
+  if (authError || !auth) return authError!
+
   try {
     const name = request.nextUrl.searchParams.get('name')
     if (!name?.trim()) {

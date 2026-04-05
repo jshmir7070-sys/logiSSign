@@ -50,6 +50,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '계약서를 찾을 수 없습니다.' }, { status: 404 })
     }
 
+    // ✅ 보안: 요청된 driverId가 실제 계약서의 driver_id와 일치하는지 확인 (IDOR 방지)
+    if (contract.driver_id !== driverId) {
+      return NextResponse.json({ error: '본인의 계약서만 서명할 수 있습니다.' }, { status: 403 })
+    }
+
     if (contract.status === 'signed') {
       return NextResponse.json({ error: '이미 서명이 완료된 계약서입니다.' }, { status: 400 })
     }

@@ -9,6 +9,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/lib/api-auth'
 import { createClient } from '@supabase/supabase-js'
+import { rateLimitAuth } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/get-ip'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,6 +23,10 @@ const supabaseAdmin = createClient(
  * 개인정보보호법 제35조 (개인정보의 열람)
  */
 export async function GET(request: NextRequest) {
+  const ip = getClientIp(request)
+  const limited = rateLimitAuth(ip, '/api/user-data')
+  if (limited) return limited
+
   const { auth, error } = await authenticateRequest(request)
   if (error || !auth) return error!
 
@@ -93,6 +99,10 @@ export async function GET(request: NextRequest) {
  * 개인정보보호법 제36조 (개인정보의 정정·삭제)
  */
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const limited = rateLimitAuth(ip, '/api/user-data')
+  if (limited) return limited
+
   const { auth, error } = await authenticateRequest(request)
   if (error || !auth) return error!
 

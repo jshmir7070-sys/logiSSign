@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/lib/api-auth'
 import { PDFDocument } from 'pdf-lib'
+import { rateLimitAuth } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/get-ip'
 
 export const maxDuration = 60
 
@@ -17,6 +19,10 @@ export const maxDuration = 60
  * Response: { pdfBuffer: base64, originalName, convertedFrom }
  */
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const limited = rateLimitAuth(ip, '/api/contracts/convert')
+  if (limited) return limited
+
   const { auth, error: authError } = await authenticateRequest(request)
   if (authError) return authError
 
@@ -90,9 +96,9 @@ export async function POST(request: NextRequest) {
       error: `지원하지 않는 파일 형식입니다 (.${ext}).\n\n지원 형식: PDF, DOCX, JPG, PNG, 이미지 파일\n한글(HWP) 파일은 PDF로 변환 후 업로드해주세요.`,
     }, { status: 400 })
   } catch (err) {
-    console.error('[ConvertAPI] Error:', err)
+    console.error('[ConvertAPI] Error:', err instanceof Error ? err.message : err)
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : '파일 변환 중 오류가 발생했습니다' },
+      { error: '파일 변환 중 오류가 발생했습니다' },
       { status: 500 }
     )
   }

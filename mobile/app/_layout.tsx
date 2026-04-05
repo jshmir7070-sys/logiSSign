@@ -48,7 +48,11 @@ export default function RootLayout() {
         (response) => {
           const nav = getNavigationFromNotification(response);
           if (nav) {
-            router.push(nav.route as never);
+            const SAFE_ROUTES = ['/contract/', '/document/', '/settlement/', '/notice/', '/(tabs)', '/amendment/', '/seal'];
+            const isSafeRoute = SAFE_ROUTES.some(prefix => nav.route.startsWith(prefix));
+            if (isSafeRoute) {
+              router.push(nav.route as never);
+            }
           }
         }
       );

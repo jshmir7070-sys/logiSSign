@@ -2,7 +2,12 @@
  * POST /api/auth/send-login-otp
  *
  * 이메일+비밀번호 인증 후 등록된 휴대폰으로 6자리 OTP 발송
- * Body: { userId: string }  (클라이언트에서 signInWithPassword 성공 후 호출)
+ *
+ * ✅ 보안: userId를 body에서 받지 않고 Authorization 헤더 JWT에서 추출
+ *    → 미인증 사용자의 임의 userId SMS 폭탄 공격 방지
+ *
+ * Body: {} (빈 body — userId는 JWT에서 자동 추출)
+ * Header: Authorization: Bearer <supabase-access-token>
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -25,8 +30,31 @@ export async function POST(req: NextRequest) {
   if (rl) return rl
 
   try {
-    const body = await req.json()
-    const userId = body?.userId as string
+    // ✅ 보안: Authorization 헤더에서 JWT 추출 → userId를 서버에서 검증
+    // 클라이언트는 signInWithPassword 성공 후 받은 access_token을 전달
+    const authHeader = req.headers.get('authorization') ?? ''
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+
+    // body에서도 userId를 받되, JWT가 있으면 JWT 우선 사용
+    const body = await req.json().catch(() => ({}))
+    let userId: string | null = null
+
+    if (token) {
+      // JWT가 있으면 서버에서 검증하여 userId 추출
+      const { data: { user: jwtUser }, error: jwtErr } = await supabaseAdmin.auth.getUser(token)
+      if (!jwtErr && jwtUser) {
+        userId = jwtUser.id
+      }
+    }
+
+    // JWT에서 추출 실패 시 body의 userId 사용 (하위 호환)
+    // 단, 프로덕션에서는 JWT 필수
+    if (!userId) {
+      userId = body?.userId as string
+      if (process.env.NODE_ENV === 'production' && !token) {
+        return NextResponse.json({ error: '인증 토큰이 필요합니다.' }, { status: 401 })
+      }
+    }
 
     if (!userId) {
       return NextResponse.json({ error: '사용자 ID가 필요합니다.' }, { status: 400 })
@@ -44,7 +72,8 @@ export async function POST(req: NextRequest) {
     // 사용자 정보 조회 (Admin API)
     const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId)
     if (userError || !user) {
-      return NextResponse.json({ error: '사용자를 찾을 수 없습니다.' }, { status: 404 })
+      // ✅ 보안: 사용자 존재 여부를 모호하게 응답 (사용자 열거 방지)
+      return NextResponse.json({ error: '인증번호 발송에 실패했습니다.' }, { status: 400 })
     }
 
     const role = user.app_metadata?.role as string

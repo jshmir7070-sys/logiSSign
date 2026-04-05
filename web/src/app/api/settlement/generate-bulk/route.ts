@@ -11,6 +11,8 @@ import { authenticateRequest } from '@/lib/api-auth'
 import { generateSettlementPdf } from '@/services/settlement-pdf.service'
 import { updateSettlementJob } from '@/services/settlement-template.service'
 import { createAdminSupabaseClient } from '@/lib/supabase'
+import { rateLimitAuth } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/get-ip'
 import type {
   SettlementTemplate,
   SettlementDriverData,
@@ -29,6 +31,10 @@ async function createZip(files: Array<{ name: string; data: Uint8Array }>): Prom
 }
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const limited = rateLimitAuth(ip, '/api/settlement/generate-bulk')
+  if (limited) return limited
+
   const authResult = await authenticateRequest(request)
   if (authResult.error || !authResult.auth) {
     return authResult.error ?? NextResponse.json({ error: '인증이 필요합니다' }, { status: 401 })
@@ -194,8 +200,9 @@ export async function POST(request: NextRequest) {
         error_log: { error: err instanceof Error ? err.message : 'unknown' } as Record<string, unknown>,
       }).catch(err => console.error('Settlement job update failed:', err))
     }
+    console.error('[SettlementBulk] 예외 발생:', err instanceof Error ? err.message : err)
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : '정산서 생성 실패' },
+      { error: '정산서 일괄 생성 처리 중 오류가 발생했습니다' },
       { status: 500 }
     )
   }

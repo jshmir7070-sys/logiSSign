@@ -120,9 +120,16 @@ export async function POST(request: NextRequest) {
 
     // 4. 기존 이메일 → 퇴사 후 다른 업체 재가입 처리
     if (existingAuthUser === 'email_exists') {
-      // 기존 Auth 사용자 조회 (이메일로)
-      const { data: allUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
-      const foundUser = allUsers?.users?.find(u => u.email?.toLowerCase() === trimmedEmail)
+      // ✅ 성능: 전체 listUsers 대신 페이지네이션으로 이메일 검색
+      let foundUser = null as Awaited<ReturnType<typeof supabaseAdmin.auth.admin.listUsers>>['data']['users'][0] | null
+      let searchPage = 1
+      while (!foundUser) {
+        const { data: userPage } = await supabaseAdmin.auth.admin.listUsers({ page: searchPage, perPage: 100 })
+        const users = userPage?.users ?? []
+        foundUser = users.find(u => u.email?.toLowerCase() === trimmedEmail) ?? null
+        if (users.length < 100) break
+        searchPage++
+      }
 
       if (!foundUser) {
         return NextResponse.json({ error: '이미 등록된 이메일이지만 사용자를 찾을 수 없습니다. 고객센터에 문의하세요.' }, { status: 409 })
@@ -247,12 +254,14 @@ async function linkOrCreateDriver(params: {
   const { userId, agencyId, name, phone, normalizedPhone, email, birthDate } = params
 
   // 기존 driver row 조회 (대리점에서 미리 등록한 경우 — user_id 없는 레코드)
+  // ✅ 보안: .or() 내 사용자 입력 직접 삽입 대신 안전한 .in() 쿼리 사용 (PostgREST 인젝션 방지)
+  const phoneCandidates = Array.from(new Set([normalizedPhone, phone].filter(Boolean)))
   const { data: existingDriver } = await supabaseAdmin
     .from('drivers')
     .select('id')
     .eq('agency_id', agencyId)
     .is('user_id', null)
-    .or(`phone.eq."${normalizedPhone.replace(/"/g, '')}",phone.eq."${phone.replace(/"/g, '')}"`)
+    .in('phone', phoneCandidates)
     .limit(1)
     .maybeSingle()
 

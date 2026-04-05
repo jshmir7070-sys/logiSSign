@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { rateLimitAuth } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/get-ip'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,6 +17,10 @@ const supabaseAdmin = createClient(
  * 수정 불가 항목: 이름, 사번, 단가, 공제 (대리점만 수정 가능)
  */
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const limited = rateLimitAuth(ip, '/api/drivers/update-self')
+  if (limited) return limited
+
   try {
     // 기사 본인 인증 (쿠키 기반)
     const supabase = createServerClient(

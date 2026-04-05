@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { authenticateAdmin } from '@/lib/api-auth'
+import { rateLimitAuth } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/get-ip'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,6 +17,10 @@ const VALID_PLANS = ['free', 'basic', 'standard', 'pro', 'enterprise']
  * 3곳 동시 업데이트: agencies.plan, subscriptions.plan, 모든 유저 app_metadata.plan
  */
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const limited = rateLimitAuth(ip, '/api/admin/plan-change')
+  if (limited) return limited
+
   const { auth, error } = await authenticateAdmin(request)
   if (error || !auth) return error ?? NextResponse.json({ error: '인증 실패' }, { status: 401 })
 
@@ -62,7 +68,8 @@ export async function POST(request: NextRequest) {
     .eq('id', agencyId)
 
   if (updateErr) {
-    return NextResponse.json({ error: '대리점 플랜 업데이트 실패: ' + updateErr.message }, { status: 500 })
+    console.error('[PlanChange] 대리점 플랜 업데이트 실패:', updateErr.message)
+    return NextResponse.json({ error: '대리점 플랜 업데이트 처리 중 오류가 발생했습니다' }, { status: 500 })
   }
 
   // 3. subscriptions.plan 업데이트 (있는 경우)
@@ -72,17 +79,25 @@ export async function POST(request: NextRequest) {
     .eq('agency_id', agencyId)
 
   // 4. 해당 대리점 소속 모든 유저의 app_metadata.plan 업데이트
-  const { data: users } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
-  const agencyUsers = (users?.users ?? []).filter(
-    u => u.app_metadata?.agency_id === agencyId
-  )
-
+  // ✅ 성능: 전체 listUsers 대신 페이지네이션
   const metadataErrors: string[] = []
-  for (const u of agencyUsers) {
-    const { error: metaErr } = await supabaseAdmin.auth.admin.updateUserById(u.id, {
-      app_metadata: { ...u.app_metadata, plan: newPlan },
-    })
-    if (metaErr) metadataErrors.push(`${u.id}: ${metaErr.message}`)
+  let usersUpdatedCount = 0
+  let page = 1
+  const perPage = 100
+  let hasMore = true
+  while (hasMore) {
+    const { data: userPage } = await supabaseAdmin.auth.admin.listUsers({ page, perPage })
+    const pageUsers = userPage?.users ?? []
+    const agencyUsers = pageUsers.filter(u => u.app_metadata?.agency_id === agencyId)
+    usersUpdatedCount += agencyUsers.length
+    for (const u of agencyUsers) {
+      const { error: metaErr } = await supabaseAdmin.auth.admin.updateUserById(u.id, {
+        app_metadata: { ...u.app_metadata, plan: newPlan },
+      })
+      if (metaErr) metadataErrors.push(`${u.id}: ${metaErr.message}`)
+    }
+    hasMore = pageUsers.length === perPage
+    page++
   }
 
   // 5. 감사 로그 기록
@@ -100,7 +115,7 @@ export async function POST(request: NextRequest) {
     agencyId,
     oldPlan,
     newPlan,
-    usersUpdated: agencyUsers.length,
+    usersUpdated: usersUpdatedCount,
     metadataErrors: metadataErrors.length > 0 ? metadataErrors : undefined,
   })
 }

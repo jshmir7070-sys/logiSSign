@@ -192,7 +192,11 @@ export default function HomeScreen() {
               <TouchableOpacity
                 key={banner.id}
                 activeOpacity={0.9}
-                onPress={() => banner.link_url && Linking.openURL(banner.link_url)}
+                onPress={() => {
+                  if (banner.link_url && (banner.link_url.startsWith('https://') || banner.link_url.startsWith('http://'))) {
+                    Linking.openURL(banner.link_url);
+                  }
+                }}
                 style={styles.bannerCard}
               >
                 <Image
@@ -289,7 +293,9 @@ export default function HomeScreen() {
               <TouchableOpacity
                 activeOpacity={0.95}
                 onPress={() => {
-                  if (popupBanner.link_url) Linking.openURL(popupBanner.link_url);
+                  if (popupBanner.link_url && (popupBanner.link_url.startsWith('https://') || popupBanner.link_url.startsWith('http://'))) {
+                    Linking.openURL(popupBanner.link_url);
+                  }
                   setShowPopup(false);
                 }}
               >

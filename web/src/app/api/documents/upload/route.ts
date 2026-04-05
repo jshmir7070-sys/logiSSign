@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/lib/api-auth'
 import { createClient } from '@supabase/supabase-js'
+import { rateLimitAuth } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/get-ip'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,7 +14,22 @@ const supabaseAdmin = createClient(
  * POST /api/documents/upload
  * 외부문서 PDF 업로드 (service_role로 Storage 접근)
  */
+// ✅ 보안: 허용 파일 타입 화이트리스트
+const ALLOWED_MIME_TYPES = new Set([
+  'application/pdf',
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
+  'application/msword', // doc
+])
+const ALLOWED_EXTENSIONS = new Set(['.pdf', '.png', '.jpg', '.jpeg', '.doc', '.docx'])
+
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const limited = rateLimitAuth(ip, '/api/documents/upload')
+  if (limited) return limited
+
   const { auth, error: authError } = await authenticateRequest(request)
   if (authError || !auth) return authError!
 
@@ -27,6 +44,15 @@ export async function POST(request: NextRequest) {
 
     if (file.size > 10 * 1024 * 1024) {
       return NextResponse.json({ error: '파일 크기는 10MB 이하만 가능합니다' }, { status: 400 })
+    }
+
+    // ✅ 보안: 파일 타입 검증 (MIME + 확장자 이중 체크)
+    const fileExt = '.' + (file.name.split('.').pop()?.toLowerCase() ?? '')
+    if (!ALLOWED_EXTENSIONS.has(fileExt)) {
+      return NextResponse.json({ error: '허용되지 않는 파일 형식입니다 (PDF, PNG, JPG, DOC, DOCX만 가능)' }, { status: 400 })
+    }
+    if (file.type && !ALLOWED_MIME_TYPES.has(file.type)) {
+      return NextResponse.json({ error: '허용되지 않는 파일 형식입니다' }, { status: 400 })
     }
 
     const agencyId = auth.agencyId
@@ -44,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     if (storageErr) {
       console.error('[Document Upload] Storage error:', storageErr)
-      return NextResponse.json({ error: '파일 업로드 실패: ' + storageErr.message }, { status: 500 })
+      return NextResponse.json({ error: '파일 업로드에 실패했습니다' }, { status: 500 })
     }
 
     // 2. Signed URL 생성
@@ -71,7 +97,7 @@ export async function POST(request: NextRequest) {
 
     if (insertErr || !doc) {
       console.error('[Document Upload] DB error:', insertErr)
-      return NextResponse.json({ error: '문서 등록 실패: ' + (insertErr?.message ?? '') }, { status: 500 })
+      return NextResponse.json({ error: '문서 등록에 실패했습니다' }, { status: 500 })
     }
 
     return NextResponse.json({ id: doc.id, fileUrl, error: null })
