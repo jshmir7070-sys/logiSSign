@@ -7,7 +7,6 @@ import {
   type PlanType,
   PLAN_LABELS,
   PLAN_LIMITS,
-  PLAN_PRICES,
   PLAN_HIGHLIGHTS,
   POINT_PACKAGES,
   isPlanAtLeast,
@@ -108,11 +107,9 @@ export default function TopStatusBar({ pointBalance, onPointBalanceChange }: Top
           title="플랜 관리"
         >
           <span>{planLabel}</span>
-          <span className={`text-[10px] font-normal ${
-            plan === 'free' || plan === 'point' ? 'text-on-surface-variant/60' : 'text-primary/60'
-          }`}>
-            {plan === 'free' || plan === 'point' ? '(무료)' : `₩${fmt(PLAN_PRICES[plan])}/월`}
-          </span>
+          {(plan === 'free' || plan === 'point') && (
+            <span className="text-[10px] font-normal text-on-surface-variant/60">(무료)</span>
+          )}
         </button>
 
         {/* 전자계약 발송량 */}
@@ -235,7 +232,7 @@ function PlanPointModal({
 
   // 포인트 충전
   const handleCharge = async (points: number, price: number) => {
-    if (!confirm(`${fmt(points)}P를 ₩${fmt(price)}에 충전하시겠습니까?`)) return;
+    if (!confirm(`${fmt(points)}P를 충전하시겠습니까?`)) return;
     setCharging(points);
     try {
       const res = await fetch('/api/points', {
@@ -259,7 +256,7 @@ function PlanPointModal({
 
   // 플랜 업그레이드
   const handleUpgrade = async (targetPlan: PlanType) => {
-    if (!confirm(`${PLAN_LABELS[targetPlan]} 플랜으로 업그레이드하시겠습니까?\n\n월 ₩${fmt(PLAN_PRICES[targetPlan])}이 결제됩니다.`)) return;
+    if (!confirm(`${PLAN_LABELS[targetPlan]} 플랜으로 업그레이드하시겠습니까?`)) return;
     setUpgrading(targetPlan);
     try {
       const res = await fetch('/api/payment', {
@@ -334,7 +331,7 @@ function PlanPointModal({
                 <div>
                   <p className="text-sm font-bold text-on-surface font-korean">현재 플랜: {planLabel}</p>
                   <p className="text-xs text-on-surface-variant font-korean">
-                    {PLAN_PRICES[plan] === 0 ? '무료' : `월 ₩${fmt(PLAN_PRICES[plan])}`}
+                    {plan === 'free' || plan === 'point' ? '무료' : '구독형'}
                   </p>
                 </div>
               </div>
@@ -355,7 +352,7 @@ function PlanPointModal({
                     <p className="text-xs text-on-surface-variant mt-1.5 font-korean">
                       이번 달 남은 무료 발송: <strong className="text-on-surface">{fmt(Math.max(0, monthlyFree - monthlyUsed))}건</strong>
                       {monthlyUsed >= monthlyFree && (
-                        <span className="text-red-500 ml-1">(초과 시 건당 1,200P 차감)</span>
+                        <span className="text-red-500 ml-1">(초과 시 포인트 차감)</span>
                       )}
                     </p>
                   </>
@@ -436,9 +433,6 @@ function PlanPointModal({
                     <p className="text-lg font-bold text-on-surface font-data">
                       {fmt(pkg.points)}P
                     </p>
-                    <p className="text-sm text-on-surface-variant font-data mt-0.5">
-                      ₩{fmt(pkg.price)}
-                    </p>
                     {pkg.bonus > 0 && (
                       <p className="text-xs text-amber-600 font-bold mt-1 font-korean">
                         +{fmt(pkg.bonus)}P 보너스
@@ -463,7 +457,6 @@ function PlanPointModal({
                 const l = PLAN_LIMITS[p];
                 const isCurrent = p === plan;
                 const isLower = !isPlanAtLeast(p, plan);
-                const price = PLAN_PRICES[p];
 
                 return (
                   <div
@@ -488,12 +481,6 @@ function PlanPointModal({
                           기사 {l.maxDrivers === null ? '무제한' : `${l.maxDrivers}명`}
                           {' · '}발송 {l.monthlyFreeContracts === null ? '무제한' : `월 ${fmt(l.monthlyFreeContracts)}건`}
                         </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-on-surface font-data">
-                          {price === 0 ? '무료' : `₩${fmt(price)}`}
-                        </p>
-                        {price > 0 && <p className="text-[10px] text-on-surface-variant">/월</p>}
                       </div>
                     </div>
 
