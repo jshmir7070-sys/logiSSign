@@ -16,6 +16,7 @@ export async function getDriverSettlements(driverId: string): Promise<{
       .from('settlements')
       .select('*, principals(name)')
       .eq('driver_id', driverId)
+      .neq('status', 'draft')
       .order('year_month', { ascending: false });
     if (error) throw error;
     return { data: data as SettlementWithPrincipal[], error: null };
@@ -33,6 +34,7 @@ export async function getSettlementDetail(settlementId: string): Promise<{
       .from('settlements')
       .select('*, principals(name)')
       .eq('id', settlementId)
+      .neq('status', 'draft')
       .single();
     if (error) throw error;
     return { data: data as SettlementWithPrincipal, error: null };

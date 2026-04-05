@@ -145,6 +145,7 @@ export default function ContractSignScreen() {
                 consent_privacy_3rd: consents['privacy_3rd'] ?? false,
                 consent_privacy_3rd_id: consents['privacy_3rd_id'] ?? false,
               },
+              identityResult?.certId,
             );
             setSigning(false);
 

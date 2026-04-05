@@ -352,12 +352,36 @@ export default function SettlementUploadPage() {
     setProcessing(true);
     setError('');
 
+    // 엑셀 업로드 포인트 사전 확인
+    try {
+      const checkRes = await fetch('/api/settlements/excel-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'check' }),
+      });
+      const checkData = await checkRes.json();
+      if (!checkRes.ok || (checkData.enough === false)) {
+        setError(checkData.error || `포인트 잔액 부족 (필요: ${checkData.required?.toLocaleString()}P, 잔액: ${checkData.balance?.toLocaleString()}P)`);
+        setProcessing(false);
+        return;
+      }
+    } catch { /* 확인 실패 시 일단 진행 */ }
+
     const result = await saveSettlements(agencyId, yearMonth, principalId || null, settlements);
     if (result.error) {
       setError(result.error);
       setProcessing(false);
       return;
     }
+
+    // 저장 성공 후 포인트 차감
+    try {
+      await fetch('/api/settlements/excel-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'deduct', yearMonth }),
+      });
+    } catch { /* 차감 실패는 로그만 */ }
 
     setStep('done');
     setProcessing(false);

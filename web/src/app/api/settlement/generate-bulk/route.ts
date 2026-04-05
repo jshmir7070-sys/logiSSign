@@ -111,11 +111,37 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 개별 PDF를 Storage에 업로드 + settlements.pdf_url 저장
+    const supabase = createAdminSupabaseClient()
+    for (const pdfFile of pdfFiles) {
+      const driverData = drivers.find((d) => pdfFile.name.includes(d.name))
+      if (!driverData?.id) continue
+
+      const pdfPath = `settlements/${agencyId}/${meta.year}_${String(meta.month).padStart(2, '0')}/${pdfFile.name}`
+      const { error: pdfUpErr } = await supabase.storage
+        .from('documents')
+        .upload(pdfPath, pdfFile.data, {
+          contentType: 'application/pdf',
+          cacheControl: '86400',
+          upsert: true,
+        })
+      if (!pdfUpErr) {
+        const { data: pdfUrlData } = await supabase.storage
+          .from('documents')
+          .createSignedUrl(pdfPath, 86400 * 365) // 1년
+        if (pdfUrlData?.signedUrl) {
+          await supabase
+            .from('settlements')
+            .update({ pdf_url: pdfUrlData.signedUrl })
+            .eq('agency_id', agencyId)
+            .eq('driver_id', driverData.id)
+            .eq('year_month', `${meta.year}-${String(meta.month).padStart(2, '0')}`)
+        }
+      }
+    }
+
     // ZIP 생성
     const zipBytes = await createZip(pdfFiles)
-
-    // Supabase Storage 업로드
-    const supabase = createAdminSupabaseClient()
     const zipFilename = `settlement_${meta.year}_${String(meta.month).padStart(2, '0')}_${Date.now()}.zip`
     const storagePath = `settlements/${agencyId}/${zipFilename}`
 

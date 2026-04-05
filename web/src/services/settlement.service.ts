@@ -134,15 +134,17 @@ export async function getSettlementSummary(
 export async function sendSettlements(
   settlementIds: string[]
 ): Promise<{ count: number; error: string | null }> {
-  const supabase = createBrowserSupabaseClient()
   try {
-    const { error, count } = await supabase
-      .from('settlements')
-      .update({ status: 'sent', sent_at: new Date().toISOString() } as never)
-      .in('id', settlementIds)
-      .eq('status', 'draft')
-    if (error) throw error
-    return { count: count ?? settlementIds.length, error: null }
+    const res = await fetch('/api/settlements/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ settlementIds }),
+    })
+    const result = await res.json()
+    if (!res.ok) {
+      return { count: 0, error: result.error || '발송 실패' }
+    }
+    return { count: result.sent ?? settlementIds.length, error: null }
   } catch (err) {
     return { count: 0, error: err instanceof Error ? err.message : 'Failed to send' }
   }

@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { supabase } from '../lib/supabase';
 
 /**
@@ -94,9 +95,12 @@ export async function registerPushToken(driverId: string): Promise<string | null
     }
 
     // Expo Push Token 발급
-    const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: 'your-eas-project-id', // app.json extra.eas.projectId와 동일
-    });
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+    if (!projectId) {
+      console.warn('[Push] EAS projectId not found in app.json');
+      return null;
+    }
+    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
     const token = tokenData.data;
 
     // DB에 토큰 저장

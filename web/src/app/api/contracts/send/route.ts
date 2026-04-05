@@ -5,6 +5,8 @@ import { createClient } from '@supabase/supabase-js'
 import { authenticateRequest } from '@/lib/api-auth'
 import { sendContractSchema, validateInput } from '@/lib/api-schemas'
 import { rateLimitAuth } from '@/lib/rate-limit'
+import { isPaidPlan, type PlanType } from '@/lib/plan-limits'
+import { deductPoints, hasEnoughPoints } from '@/services/point.service'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -67,6 +69,27 @@ export async function POST(request: NextRequest) {
     const agencyId = auth!.agencyId
     if (!agencyId) {
       return NextResponse.json({ error: '대리점 정보가 없습니다' }, { status: 403 })
+    }
+
+    // 대리점 플랜 조회
+    const { data: agency } = await supabaseAdmin
+      .from('agencies')
+      .select('plan')
+      .eq('id', agencyId)
+      .single()
+    const agencyPlan = (agency?.plan ?? 'free') as PlanType
+
+    // 포인트 차감 대상 여부 확인 (구독형은 계약서 무제한)
+    const isSubscription = isPaidPlan(agencyPlan) && agencyPlan !== 'point'
+    const totalContracts = driverIds.length * templateIds.length
+
+    if (!isSubscription && totalContracts > 0) {
+      const check = await hasEnoughPoints(agencyId, 'contract_send', totalContracts)
+      if (!check.enough) {
+        return NextResponse.json({
+          error: `포인트 잔액 부족 (필요: ${check.required.toLocaleString()}P, 잔액: ${check.balance.toLocaleString()}P). 포인트를 충전하거나 구독 플랜으로 변경해주세요.`,
+        }, { status: 402 })
+      }
     }
 
     // 소속 기사 일괄 확인
@@ -194,6 +217,23 @@ export async function POST(request: NextRequest) {
     if (insertErr) {
       console.error('[ContractSend] Insert error:', insertErr)
       return NextResponse.json({ error: '계약서 생성 실패: ' + insertErr.message }, { status: 500 })
+    }
+
+    // 포인트 차감 (INSERT 성공 후)
+    const actualCreated = inserted?.length ?? 0
+    if (!isSubscription && actualCreated > 0) {
+      try {
+        await deductPoints({
+          agencyId,
+          action: 'contract_send',
+          count: actualCreated,
+          referenceType: 'contract',
+          userId: auth!.userId,
+        })
+      } catch (pointErr) {
+        console.error('[ContractSend] Point deduction failed:', pointErr)
+        // 계약서는 이미 생성됨 — 포인트 차감 실패를 로그로 남기고 계속 진행
+      }
     }
 
     // 푸시 알림 일괄 발송 (SMS 대신 푸시)

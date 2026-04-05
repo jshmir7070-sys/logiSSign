@@ -30,16 +30,20 @@ export async function getDriverContracts(driverId: string): Promise<{
   }
 }
 
-export async function getContractDetail(contractId: string): Promise<{
+export async function getContractDetail(contractId: string, driverId?: string): Promise<{
   data: Contract | null;
   error: string | null;
 }> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('contracts')
       .select('*')
-      .eq('id', contractId)
-      .single();
+      .eq('id', contractId);
+    // 본인 계약서만 조회 (driver_id 필터)
+    if (driverId) {
+      query = query.eq('driver_id', driverId);
+    }
+    const { data, error } = await query.single();
     if (error) throw error;
     return { data, error: null };
   } catch (err) {
@@ -70,49 +74,40 @@ export async function signContract(
   contractId: string,
   driverId: string,
   signatureBase64: string,
-  signerIp: string,
-  signerUserAgent: string,
+  _signerIp: string,
+  _signerUserAgent: string,
   consentData?: ConsentData,
+  certId?: string,
 ): Promise<{ error: string | null }> {
   try {
-    // 실제 IP 가져오기 (전달받은 값이 placeholder면 조회)
-    const actualIp = signerIp === '0.0.0.0' ? await getClientIp() : signerIp;
-    const actualUserAgent = signerUserAgent || `logiSSign-Mobile/${Platform.OS}/${Platform.Version}`;
+    // Supabase 세션에서 JWT 토큰 가져오기
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) {
+      return { error: '로그인이 필요합니다. 다시 로그인해주세요.' };
+    }
 
-    // 1. Insert signature record
-    const { error: sigError } = await supabase
-      .from('contract_signatures')
-      .insert({
-        contract_id: contractId,
-        driver_id: driverId,
-        phone_verified: 'app_auth',
-        signature_image_base64: signatureBase64,
-        signer_ip: actualIp,
-        signer_user_agent: actualUserAgent,
-        signed_at: new Date().toISOString(),
-        consent_contract: consentData?.consent_contract ?? false,
-        consent_privacy_collect: consentData?.consent_privacy_collect ?? false,
-        consent_privacy_id: consentData?.consent_privacy_id ?? false,
-        consent_privacy_3rd: consentData?.consent_privacy_3rd ?? false,
-        consent_privacy_3rd_id: consentData?.consent_privacy_3rd_id ?? false,
-        audit_log: {
-          action: 'signed',
-          method: 'in_app',
-          timestamp: new Date().toISOString(),
-          consents: consentData ?? {},
-        },
-      });
-    if (sigError) throw sigError;
+    const APP_URL = process.env.EXPO_PUBLIC_APP_URL || 'https://logissign.com';
 
-    // 2. Update contract status
-    const { error: updateError } = await supabase
-      .from('contracts')
-      .update({
-        status: 'signed' as const,
-        signed_at: new Date().toISOString(),
-      })
-      .eq('id', contractId);
-    if (updateError) throw updateError;
+    const res = await fetch(`${APP_URL}/api/contracts/sign`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        contractId,
+        driverId,
+        signatureBase64,
+        certId,
+        consentData,
+      }),
+    });
+
+    const result = await res.json();
+    if (!res.ok) {
+      return { error: result.error || '서명 처리 실패' };
+    }
 
     return { error: null };
   } catch (err) {

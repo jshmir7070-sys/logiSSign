@@ -1062,21 +1062,35 @@ export async function saveSettlements(
   const supabase = createBrowserSupabaseClient()
 
   try {
-    // Delete existing settlements for this month/agency to avoid duplicates
-    await supabase
+    // Delete existing settlements for this month/agency/principal to avoid duplicates
+    let deleteQuery = supabase
       .from('settlements')
       .delete()
       .eq('agency_id', agencyId)
       .eq('year_month', yearMonth)
+    if (principalId) {
+      deleteQuery = deleteQuery.eq('principal_id', principalId)
+    } else {
+      deleteQuery = deleteQuery.is('principal_id', null)
+    }
+    await deleteQuery
 
     const rows = results.map((r) => ({
       agency_id: agencyId,
       driver_id: r.driver_id,
       principal_id: principalId,
       year_month: yearMonth,
-      delivery_count: r.total_count,
+      delivery_count: r.delivery_count,
+      delivery_amount: r.base_amount,
+      return_count: r.return_count,
+      return_amount: 0,
+      pickup_count: r.collect_count,
+      pickup_amount: 0,
       base_amount: r.base_amount,
+      fresh_incentive: r.fresh_incentive ?? 0,
+      extra_incentive: r.extra_incentive ?? 0,
       incentive_amount: (r.fresh_incentive ?? 0) + (r.extra_incentive ?? 0),
+      gross_total: r.base_amount + (r.fresh_incentive ?? 0) + (r.extra_incentive ?? 0),
       total_amount: r.base_amount + (r.fresh_incentive ?? 0) + (r.extra_incentive ?? 0),
       total_deduction: r.total_deduction,
       vat_amount: r.vat_amount,
@@ -1086,6 +1100,7 @@ export async function saveSettlements(
       deduction_detail: Object.fromEntries(
         r.deduction_details.map((d) => [d.name, d.calculated])
       ),
+      route_details: r.route_details.length > 0 ? r.route_details : null,
       status: 'draft' as const,
     }))
 

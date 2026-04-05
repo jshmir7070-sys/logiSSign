@@ -253,7 +253,7 @@ CREATE TABLE tax_invoices (
   supply_amount INTEGER NOT NULL,
   tax_amount INTEGER NOT NULL,
   total_amount INTEGER NOT NULL,
-  invoice_type TEXT CHECK (invoice_type IN ('tax','cash_receipt','none')) DEFAULT 'tax',
+  invoice_type TEXT CHECK (invoice_type IN ('tax','cash_receipt','none','vat_invoice','withholding_3_3')) DEFAULT 'tax',
   status TEXT CHECK (status IN ('pending','issued','cancelled')) DEFAULT 'pending',
   issued_at TIMESTAMPTZ,
   pdf_url TEXT
@@ -311,6 +311,7 @@ CREATE TABLE contract_signatures (
   consent_privacy_id BOOLEAN DEFAULT false,        -- 고유식별정보 수집·이용 동의
   consent_privacy_3rd BOOLEAN DEFAULT false,       -- 개인정보 제3자 제공 동의
   consent_privacy_3rd_id BOOLEAN DEFAULT false,    -- 고유식별정보 제3자 제공 동의
+  identity_cert_id TEXT,                 -- 포트원 V2 본인인증 verificationId
   audit_log JSONB,
   audit_certificate_url TEXT              -- 감사추적인증서 PDF URL
 );
