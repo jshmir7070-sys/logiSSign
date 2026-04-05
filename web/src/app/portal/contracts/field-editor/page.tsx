@@ -928,6 +928,30 @@ function ContractFieldEditorPage() {
                   className="w-full h-8 px-2.5 mt-1 text-xs rounded-lg border border-neutral-200 font-korean focus:ring-2 focus:ring-blue-300 outline-none" />
               </div>
 
+              {/* 기본값 직접 입력 (텍스트/날짜 필드) */}
+              {(selectedField.field_type === 'text' || selectedField.field_type === 'date') && (
+                <div>
+                  <label className="text-[10px] text-neutral-500 font-bold font-korean">
+                    {selectedField.field_owner === 'sender' ? '발송인 입력값' : '기본값'}
+                  </label>
+                  <input type={selectedField.field_type === 'date' ? 'date' : 'text'}
+                    value={selectedField.default_value ?? ''}
+                    onChange={e => updateField(selectedField._id, { default_value: e.target.value })}
+                    placeholder={selectedField.field_owner === 'sender' ? '발송인이 직접 입력할 값' : '기본값 (선택)'}
+                    className="w-full h-8 px-2.5 mt-1 text-xs rounded-lg border border-neutral-200 font-korean focus:ring-2 focus:ring-blue-300 outline-none" />
+                  {selectedField.field_owner === 'sender' && !selectedField.binding_var && (
+                    <p className="text-[9px] text-amber-600 mt-1 font-korean">
+                      &#9998; 직접 입력한 값이 계약서에 표시됩니다
+                    </p>
+                  )}
+                  {selectedField.field_owner === 'sender' && selectedField.binding_var && selectedField.default_value && (
+                    <p className="text-[9px] text-amber-600 mt-1 font-korean">
+                      &#9888; 직접 입력값이 자동 바인딩보다 우선 적용됩니다
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* 바인딩 변수 (텍스트/날짜 필드만) */}
               {(selectedField.field_type === 'text' || selectedField.field_type === 'date') && (
                 <div>
@@ -943,6 +967,11 @@ function ContractFieldEditorPage() {
                     <p className="text-[9px] text-green-600 mt-1 font-korean">
                       &check; &ldquo;{selectedField.binding_var}&rdquo;
                       {selectedField.field_owner === 'sender' ? ' — 전송 시 자동 채움' : ' — 기사별 자동 입력'}
+                    </p>
+                  )}
+                  {selectedField.binding_var && (
+                    <p className="text-[9px] text-neutral-400 mt-0.5 font-korean">
+                      위에 직접 입력값이 있으면 바인딩 대신 입력값이 사용됩니다
                     </p>
                   )}
                 </div>

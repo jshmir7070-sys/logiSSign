@@ -213,10 +213,10 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // sender 필드의 바인딩 값을 default_value로 채움
+          // sender 필드의 바인딩 값을 default_value로 채움 (직접 입력값이 있으면 우선)
           resolvedSignFields = resolvedSignFields.map(field => {
             const f = { ...field }
-            if (f.field_owner === 'sender' && f.binding_var && senderDataCache) {
+            if (f.field_owner === 'sender' && !f.default_value && f.binding_var && senderDataCache) {
               const val = senderDataCache[f.binding_var as string]
               if (val) f.default_value = val
             }
