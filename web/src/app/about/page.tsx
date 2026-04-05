@@ -1,6 +1,10 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
+import {
+  PLAN_PRICES, PLAN_HIGHLIGHTS, PLAN_LABELS,
+  FREE_PLAN_FREE_DRIVERS, type PlanType,
+} from '@/lib/plan-limits';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -696,183 +700,61 @@ export default function LandingPage() {
 
       {/* ═══════════════════ PRICING (Light) ═══════════════════ */}
       <section id="pricing" className="bg-[#f7f9fb] py-24 md:py-32">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-10">
-            <span className="inline-block text-xs font-bold text-primary tracking-widest uppercase mb-3">
-              요금제
-            </span>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-on-surface tracking-tight">
-              기사 수에 맞게, 합리적으로
-            </h2>
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="text-center mb-12">
+            <span className="inline-block text-xs font-bold text-primary tracking-widest uppercase mb-3">요금제</span>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-on-surface tracking-tight">기사 수에 맞게, 합리적으로</h2>
             <p className="mt-4 text-on-surface-variant text-base max-w-xl mx-auto">
-              전자서명 건당 과금 없음. 장기 결제할수록 최대 40% 할인.
+              기사 {FREE_PLAN_FREE_DRIVERS}명까지 <strong className="text-on-surface">완전 무료</strong>.
+              그 이상은 구독형(월정액) 또는 포인트형(쓴 만큼만) 선택.
             </p>
           </div>
 
-          {/* ── 결제주기 토글 ── */}
-          <div className="flex items-center justify-center gap-2 mb-12 flex-wrap">
-            {(['monthly', '1year', '2year'] as BillingCycle[]).map((cycle) => {
-              const isActive = billingCycle === cycle;
-              const discounts: Record<BillingCycle, string> = { monthly: '', '1year': '20% 할인', '2year': '30% 할인' };
+          <div className="grid grid-cols-5 gap-4 mb-8">
+            {([
+              { id: 'free' as PlanType },
+              { id: 'point' as PlanType },
+              { id: 'basic' as PlanType },
+              { id: 'standard' as PlanType, popular: true },
+              { id: 'pro' as PlanType },
+            ]).map(({ id, popular }) => {
+              const price = PLAN_PRICES[id];
               return (
-                <button
-                  key={cycle}
-                  onClick={() => setBillingCycle(cycle)}
-                  className={`relative px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                    isActive
-                      ? 'bg-gradient-to-r from-[#004ac6] to-[#2563eb] text-white shadow-md shadow-blue-500/15'
-                      : 'bg-white text-on-surface-variant border border-outline-variant/15 hover:border-primary/30'
-                  }`}
-                >
-                  {CYCLE_LABELS[cycle]}
-                  {discounts[cycle] && (
-                    <span className={`ml-1.5 text-[10px] font-bold ${isActive ? 'text-blue-200' : 'text-tertiary'}`}>
-                      {discounts[cycle]}
-                    </span>
+                <div key={id} className={`relative bg-white rounded-2xl p-6 flex flex-col border-2 transition-all duration-300 ${
+                  popular ? 'border-primary shadow-ambient ring-1 ring-primary/20 scale-[1.02]' : 'border-outline-variant/15 shadow-sm hover:shadow-card'
+                }`}>
+                  {popular && (
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-[#004ac6] to-[#2563eb] text-white text-[11px] font-bold tracking-wide whitespace-nowrap">추천</span>
                   )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* ── 기능/기술 토글 ── */}
-          <div className="flex items-center justify-center gap-3 mb-8">
-            <button
-              onClick={() => setShowTech(false)}
-              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${!showTech ? 'bg-on-surface text-white' : 'text-on-surface-variant hover:text-on-surface'}`}
-            >
-              기능 설명
-            </button>
-            <button
-              onClick={() => setShowTech(true)}
-              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${showTech ? 'bg-on-surface text-white' : 'text-on-surface-variant hover:text-on-surface'}`}
-            >
-              기술적 설명
-            </button>
-          </div>
-
-          {/* ── 플랜 카드 그리드 ── */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
-            {PLANS.map((plan) => {
-              const monthlyEq = getMonthlyEquivalent(plan, billingCycle);
-              const totalPrice = getTotalPrice(plan, billingCycle);
-              const discount = getDiscount(plan, billingCycle);
-              const isEnterprise = !plan.pricing;
-
-              const planHref = plan.id === 'enterprise'
-                ? 'mailto:contact@logissign.com'
-                : `/portal/signup?plan=${plan.id}&billing=${billingCycle}`;
-
-              return (
-                <div
-                  key={plan.id}
-                  onClick={() => { if (plan.id !== 'enterprise') window.location.href = planHref; }}
-                  className={`relative bg-white rounded-2xl p-7 flex flex-col transition-all duration-300 border cursor-pointer ${
-                    plan.popular
-                      ? 'border-primary shadow-ambient ring-1 ring-primary/20 scale-[1.02]'
-                      : 'border-outline-variant/15 shadow-sm hover:shadow-card'
-                  }`}
-                >
-                  {plan.popular && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-[#004ac6] to-[#2563eb] text-white text-[11px] font-bold tracking-wide">
-                      추천
-                    </span>
-                  )}
-                  <h3 className="text-lg font-bold text-on-surface">{plan.name}</h3>
-                  <p className="text-xs text-on-surface-variant mt-1 mb-4">{plan.desc}</p>
-
-                  {/* 가격 표시 */}
-                  {isEnterprise ? (
-                    <>
-                      <span className="text-2xl font-extrabold text-on-surface mb-1">별도 상담</span>
-                      <p className="text-xs text-on-surface-variant mb-5">기사 무제한</p>
-                    </>
-                  ) : plan.pricing && plan.pricing.monthly === 0 ? (
-                    <>
-                      <div className="flex items-baseline gap-1 mb-1">
-                        <span className="text-3xl font-extrabold text-on-surface">₩0</span>
-                        <span className="text-sm text-on-surface-variant">원/월</span>
-                      </div>
-                      <p className="text-xs text-on-surface-variant mb-5">기사 최대 {plan.maxDrivers}명</p>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-baseline gap-1 mb-1">
-                        <span className={`text-3xl font-extrabold tracking-tight ${plan.popular ? 'text-primary' : 'text-on-surface'}`}>
-                          ₩{formatPrice(monthlyEq)}
-                        </span>
-                        <span className="text-sm text-on-surface-variant">원/월</span>
-                        {discount > 0 && (
-                          <span className="ml-2 px-2 py-0.5 rounded-md bg-tertiary/15 text-tertiary text-[11px] font-bold">
-                            -{discount}%
-                          </span>
-                        )}
-                      </div>
-                      {billingCycle !== 'monthly' && plan.pricing && plan.pricing.monthly > 0 && (
-                        <p className="text-xs text-on-surface-variant mb-1">
-                          <span className="line-through mr-1">₩{formatPrice(plan.pricing.monthly)}</span>
-                          → 총 ₩{formatPrice(totalPrice)} 일시불
-                        </p>
-                      )}
-                      <p className="text-xs text-on-surface-variant mb-5">
-                        기사 최대 {plan.maxDrivers}명
-                      </p>
-                    </>
-                  )}
-
-                  {/* 기능 또는 기술 설명 */}
-                  <ul className="flex-1 space-y-2.5 mb-6">
-                    {!showTech ? (
-                      <>
-                        {plan.features.map((f) => (
-                          <li key={f} className="flex items-start gap-2 text-sm text-on-surface">
-                            <svg className="w-4 h-4 text-tertiary shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                            {f}
-                          </li>
-                        ))}
-                        {plan.disabled.map((f) => (
-                          <li key={f} className="flex items-start gap-2 text-sm text-on-surface-variant/50 line-through">
-                            <span className="w-4 text-center shrink-0 mt-0.5">—</span>
-                            {f}
-                          </li>
-                        ))}
-                      </>
-                    ) : (
-                      plan.techFeatures.map((f) => (
-                        <li key={f} className="flex items-start gap-2 text-sm text-on-surface">
-                          <svg className="w-4 h-4 text-primary shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                          {f}
-                        </li>
-                      ))
-                    )}
+                  <h3 className="text-sm font-bold text-on-surface">{PLAN_LABELS[id]}</h3>
+                  <p className="text-2xl font-extrabold text-on-surface mt-2 font-data">
+                    {id === 'point' ? '충전식' : price === 0 ? '무료' : `₩${price.toLocaleString()}`}
+                    {price > 0 && <span className="text-xs text-on-surface-variant font-normal">/월</span>}
+                  </p>
+                  <ul className="mt-4 space-y-1.5 flex-1">
+                    {PLAN_HIGHLIGHTS[id].map(h => (
+                      <li key={h} className="flex items-start gap-1.5 text-xs text-on-surface-variant">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-tertiary shrink-0 mt-0.5"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                        {h}
+                      </li>
+                    ))}
                   </ul>
-
-                  <Link
-                    href={
-                      plan.id === 'enterprise'
-                        ? 'mailto:contact@logissign.com'
-                        : `/portal/signup?plan=${plan.id}&billing=${billingCycle}`
-                    }
-                    className={`h-11 rounded-xl font-semibold text-sm flex items-center justify-center transition-all ${
-                      plan.popular
+                  <Link href="/portal/signup"
+                    className={`mt-5 h-10 rounded-xl text-sm font-semibold flex items-center justify-center transition-all ${
+                      popular
                         ? 'bg-gradient-to-r from-[#004ac6] to-[#2563eb] text-white hover:shadow-lg hover:shadow-blue-500/20'
-                        : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'
-                    }`}
-                  >
-                    {plan.cta}
+                        : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
+                    }`}>                    {id === 'free' || id === 'point' ? '무료 시작' : '시작하기'}
                   </Link>
                 </div>
               );
             })}
           </div>
 
-          <p className="text-center text-xs text-on-surface-variant mt-8">
-            모든 유료 플랜은 14일 무료 체험 제공 · 언제든 해지 가능 · 부가세 별도
-          </p>
-
-          {/* ── 맞춤 플랜 찾기 ── */}
-          <div className="max-w-lg mx-auto">
-            <PlanFinder />
+          <div className="text-center">
+            <Link href="/pricing" className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
+              요금제 상세 비교 · 포인트 단가 →
+            </Link>
           </div>
         </div>
       </section>
