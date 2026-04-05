@@ -25,7 +25,7 @@
  *  └─────────────────────────────────────────────────────────────────┘
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase'
 import { type SignFieldType, FIELD_TYPE_META } from '@/services/document-sign-field.service'
@@ -108,7 +108,22 @@ const OWNER_META: Record<FieldOwner, { label: string; color: string; bgColor: st
 
 /* ── 메인 ── */
 
-export default function ContractFieldEditorPage() {
+export default function ContractFieldEditorPageWrapper() {
+  return (
+    <Suspense fallback={
+      <div className="h-screen w-screen flex items-center justify-center bg-white">
+        <div className="flex items-center gap-3">
+          <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm text-neutral-500 font-korean">로딩 중...</span>
+        </div>
+      </div>
+    }>
+      <ContractFieldEditorPage />
+    </Suspense>
+  )
+}
+
+function ContractFieldEditorPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const templateId = searchParams.get('templateId') ?? ''
