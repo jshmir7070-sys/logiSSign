@@ -7,6 +7,7 @@ import {
   type PlanType,
   PLAN_LABELS,
   PLAN_LIMITS,
+  PLAN_PRICES,
   PLAN_HIGHLIGHTS,
   POINT_PACKAGES,
   isPlanAtLeast,
@@ -433,6 +434,9 @@ function PlanPointModal({
                     <p className="text-lg font-bold text-on-surface font-data">
                       {fmt(pkg.points)}P
                     </p>
+                    <p className="text-xs text-on-surface-variant font-data mt-0.5">
+                      ₩{fmt(pkg.price)}
+                    </p>
                     {pkg.bonus > 0 && (
                       <p className="text-xs text-amber-600 font-bold mt-1 font-korean">
                         +{fmt(pkg.bonus)}P 보너스
@@ -481,6 +485,12 @@ function PlanPointModal({
                           기사 {l.maxDrivers === null ? '무제한' : `${l.maxDrivers}명`}
                           {' · '}발송 {l.monthlyFreeContracts === null ? '무제한' : `월 ${fmt(l.monthlyFreeContracts)}건`}
                         </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-on-surface font-data">
+                          {PLAN_PRICES[p] === 0 ? '무료' : `₩${fmt(PLAN_PRICES[p])}`}
+                        </p>
+                        {PLAN_PRICES[p] > 0 && <p className="text-[10px] text-on-surface-variant">/월</p>}
                       </div>
                     </div>
 
