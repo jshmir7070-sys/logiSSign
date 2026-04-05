@@ -85,21 +85,51 @@ export default function ContractFieldEditorPage() {
     })()
   }, [templateId])
 
-  // ── PDF 업로드 ──
-  const handleUploadPdf = useCallback(async (file: File) => {
+  // ── 파일 업로드 (PDF / 이미지 / DOCX / HWP 등) ──
+  const handleUploadFile = useCallback(async (file: File) => {
     if (!templateId) return
     setUploading(true)
     try {
+      const ext = (file.name.split('.').pop() || '').toLowerCase()
+      const isPdf = ext === 'pdf'
+      let pdfBlob: Blob
+
+      if (isPdf) {
+        pdfBlob = file
+      } else {
+        // 비PDF → 서버 변환 API 호출
+        const formData = new FormData()
+        formData.append('file', file)
+        const res = await fetch('/api/contracts/convert', { method: 'POST', body: formData })
+        const result = await res.json()
+
+        if (!res.ok) {
+          alert(result.error || '파일 변환 실패')
+          setUploading(false)
+          return
+        }
+
+        if (result.message) {
+          alert(result.message)
+        }
+
+        // base64 → Blob
+        const binaryStr = atob(result.pdfBase64)
+        const bytes = new Uint8Array(binaryStr.length)
+        for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i)
+        pdfBlob = new Blob([bytes], { type: 'application/pdf' })
+      }
+
+      // Storage에 PDF로 업로드
       const supabase = createBrowserSupabaseClient()
-      const ext = file.name.split('.').pop() || 'pdf'
-      const path = `templates/${templateId}.${ext}`
+      const path = `templates/${templateId}.pdf`
 
       const { error: uploadErr } = await supabase.storage
         .from('contracts')
-        .upload(path, file, { upsert: true, contentType: 'application/pdf' })
+        .upload(path, pdfBlob, { upsert: true, contentType: 'application/pdf' })
 
       if (uploadErr) {
-        alert('PDF 업로드 실패: ' + uploadErr.message)
+        alert('파일 업로드 실패: ' + uploadErr.message)
         setUploading(false)
         return
       }
@@ -116,7 +146,7 @@ export default function ContractFieldEditorPage() {
         .createSignedUrl(path, 3600)
       setPdfUrl(signed?.signedUrl ?? '')
     } catch {
-      alert('업로드 중 오류')
+      alert('업로드 중 오류가 발생했습니다')
     }
     setUploading(false)
   }, [templateId])
@@ -258,12 +288,13 @@ export default function ContractFieldEditorPage() {
                   <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/>
                   <line x1="15" y1="15" x2="12" y2="12"/>
                 </svg>
-                <p className="text-sm text-on-surface-variant font-korean">PDF 파일을 업로드하세요</p>
-                <p className="text-xs text-on-surface-variant/50 mt-1 font-korean">클릭하여 파일 선택</p>
-                <input ref={fileInputRef} type="file" accept=".pdf" className="hidden"
+                <p className="text-sm text-on-surface-variant font-korean">계약서 파일을 업로드하세요</p>
+                <p className="text-xs text-on-surface-variant/50 mt-1 font-korean">PDF, 워드(DOCX), 이미지(JPG/PNG) 지원</p>
+                <p className="text-xs text-on-surface-variant/40 mt-0.5 font-korean">한글(HWP)은 PDF 변환 후 업로드</p>
+                <input ref={fileInputRef} type="file" accept=".pdf,.docx,.hwp,.hwpx,.jpg,.jpeg,.png,.bmp,.gif,.tiff,.tif,.webp" className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0]
-                    if (file) handleUploadPdf(file)
+                    if (file) handleUploadFile(file)
                   }} />
                 {uploading && <p className="text-xs text-primary mt-3 font-korean">업로드 중...</p>}
               </div>
@@ -344,10 +375,10 @@ export default function ContractFieldEditorPage() {
           <div className="p-4 border-b border-outline-variant/20">
             <button onClick={() => fileInputRef.current?.click()}
               className="w-full h-9 rounded-lg bg-surface-container-high text-on-surface-variant text-xs font-korean hover:bg-surface-container-highest transition-colors">
-              PDF 교체
+              문서 교체
             </button>
-            <input ref={fileInputRef} type="file" accept=".pdf" className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUploadPdf(f) }} />
+            <input ref={fileInputRef} type="file" accept=".pdf,.docx,.hwp,.hwpx,.jpg,.jpeg,.png,.bmp,.gif,.tiff,.tif,.webp" className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUploadFile(f) }} />
           </div>
         )}
 

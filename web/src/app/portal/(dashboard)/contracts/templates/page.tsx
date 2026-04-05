@@ -199,7 +199,7 @@ export default function ContractTemplatesPage() {
               className="h-10 px-5 rounded-xl bg-surface-container-high text-on-surface font-label text-sm font-semibold hover:bg-surface-container-highest transition-all flex items-center gap-2 font-korean"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
-              PDF 업로드
+              문서 업로드
             </button>
           </div>
         ) : paid && !isAdmin ? (
