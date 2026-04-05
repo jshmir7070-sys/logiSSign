@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       .select('id')
       .eq('agency_id', agency.id)
       .is('user_id', null)
-      .or(`phone.eq.${normalizedPhone},phone.eq.${phone.trim()}`)
+      .or(`phone.eq."${normalizedPhone}",phone.eq."${phone.trim().replace(/"/g, '')}"`)
       .limit(1)
       .maybeSingle()
 

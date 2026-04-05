@@ -40,7 +40,7 @@ async function sendExpoPush(tokens: string[], title: string, body: string, data?
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(batch.length === 1 ? batch[0] : batch),
-    }).catch(() => {})
+    }).catch(err => console.error('Push notification failed:', err))
   }
 }
 

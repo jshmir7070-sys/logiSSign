@@ -155,7 +155,8 @@ export async function middleware(request: NextRequest) {
         return NextResponse.json({ error: 'MFA 인증이 필요합니다' }, { status: 403 });
       }
     } catch {
-      // MFA 검증 실패 시 — 세션 인증은 통과했으므로 API 접근 허용 (가용성 우선)
+      // MFA 검증 실패 시 — 접근 거부 (보안 우선)
+      return NextResponse.json({ error: 'MFA 인증 검증에 실패했습니다' }, { status: 403 });
     }
   }
 

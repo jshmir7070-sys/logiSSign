@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
         status: 'failed',
         processing_time_ms: processingTimeMs,
         error_log: { error: err instanceof Error ? err.message : 'unknown' } as Record<string, unknown>,
-      }).catch(() => {})
+      }).catch(err => console.error('Settlement job update failed:', err))
     }
     return NextResponse.json(
       { error: err instanceof Error ? err.message : '정산서 생성 실패' },

@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
         const verifiedCardName = billingInfo.methods?.[0]?.card?.name ?? cardName ?? ''
         const verifiedCardNumber = billingInfo.methods?.[0]?.card?.number ?? cardNumber ?? ''
 
-        await supabaseAdmin
+        const { error: upsertError } = await supabaseAdmin
           .from('subscriptions')
           .upsert({
             agency_id: auth.agencyId,
@@ -67,6 +67,11 @@ export async function POST(request: NextRequest) {
             status: 'active',
             updated_at: new Date().toISOString(),
           }, { onConflict: 'agency_id' })
+
+        if (upsertError) {
+          console.error('[Payment] Subscription upsert failed:', upsertError)
+          return NextResponse.json({ error: '카드 정보 저장에 실패했습니다' }, { status: 500 })
+        }
 
         return NextResponse.json({ success: true, cardName: verifiedCardName })
       } catch (e) {

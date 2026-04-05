@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { apiError } from '@/lib/api-error'
+import { getClientIp } from '@/lib/get-ip'
+import { rateLimitAuth } from '@/lib/rate-limit'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,6 +21,10 @@ const supabaseAdmin = createClient(
  * 4. 서명 기록 INSERT + 상태 업데이트
  */
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const limited = rateLimitAuth(ip, '/api/contracts/sign')
+  if (limited) return limited
+
   try {
     // 1. JWT 인증 — Authorization 헤더 또는 쿠키에서 토큰 추출
     const authHeader = request.headers.get('authorization') ?? ''
