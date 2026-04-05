@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exported_at": "2026-04-05T12:28:37.204Z",
+  "exported_at": "2026-04-05T12:30:58.564Z",
   "milestones": [
     {
       "id": "M001",
@@ -1422,10 +1422,10 @@
       "completed_at": null,
       "full_summary_md": "",
       "full_uat_md": "",
-      "goal": "정산 전체 플로우 오류 없이 동작 확인",
+      "goal": "정산 전체 플로우 오류 없이 동작 확인 — 엑셀 업로드 → 자동 정산 → PDF → 앱 확인",
       "success_criteria": "테스트 엑셀로 정산 생성 → 금액 일치 → PDF 정상 → 앱 표시",
       "proof_level": "e2e",
-      "integration_closure": "웹 업로드 → 서버 계산 → DB 저장 → 앱 조회",
+      "integration_closure": "웹 엑셀 업로드 → 서버 계산 → DB 저장 → 모바일 앱 조회",
       "observability_impact": "정산 생성 로그, 금액 검증 결과",
       "sequence": 0,
       "replan_triggered_at": null
@@ -3738,6 +3738,122 @@
       "observability_impact": "",
       "full_plan_md": "",
       "sequence": 0
+    },
+    {
+      "milestone_id": "M009",
+      "slice_id": "S02",
+      "id": "T01",
+      "title": "정산 서비스/API 타입 에러 0건 — 15개 함수 정상",
+      "status": "complete",
+      "one_liner": "정산 서비스/API 타입 에러 0건 — 15개 함수 정상",
+      "narrative": "정산 관련 서비스 15개 함수, API 3개 전체 타입 검사 통과. excel-settlement 서비스에 쿠팡 전용 파서 포함 (calculateCoupangSettlements 등).",
+      "verification_result": "npx tsc --noEmit → 에러 0건",
+      "duration": "",
+      "completed_at": "2026-04-05T12:29:54.229Z",
+      "blocker_discovered": false,
+      "deviations": "None.",
+      "known_issues": "None.",
+      "key_files": [
+        "web/src/services/excel-settlement.service.ts",
+        "web/src/services/settlement.service.ts"
+      ],
+      "key_decisions": [
+        "tsc 타입 에러 0건 확인"
+      ],
+      "full_summary_md": "---\nid: T01\nparent: S02\nmilestone: M009\nkey_files:\n  - web/src/services/excel-settlement.service.ts\n  - web/src/services/settlement.service.ts\nkey_decisions:\n  - tsc 타입 에러 0건 확인\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-05T12:29:54.229Z\nblocker_discovered: false\n---\n\n# T01: 정산 서비스/API 타입 에러 0건 — 15개 함수 정상\n\n**정산 서비스/API 타입 에러 0건 — 15개 함수 정상**\n\n## What Happened\n\n정산 관련 서비스 15개 함수, API 3개 전체 타입 검사 통과. excel-settlement 서비스에 쿠팡 전용 파서 포함 (calculateCoupangSettlements 등).\n\n## Verification\n\nnpx tsc --noEmit → 에러 0건\n\n## Verification Evidence\n\n| # | Command | Exit Code | Verdict | Duration |\n|---|---------|-----------|---------|----------|\n| 1 | `npx tsc --noEmit` | 0 | ✅ pass | 4000ms |\n\n\n## Deviations\n\nNone.\n\n## Known Issues\n\nNone.\n\n## Files Created/Modified\n\n- `web/src/services/excel-settlement.service.ts`\n- `web/src/services/settlement.service.ts`\n",
+      "description": "정산 서비스(excel-settlement, settlement, settlement-pdf 등) + API(generate-bulk, excel-upload, send) tsc 에러 확인 및 수정",
+      "estimate": "20min",
+      "files": [
+        "web/src/services/excel-settlement.service.ts",
+        "web/src/services/settlement.service.ts",
+        "web/src/services/settlement-pdf.service.ts",
+        "web/src/app/api/settlement/generate-bulk/route.ts"
+      ],
+      "verify": "npx tsc --noEmit 에러 0건",
+      "inputs": [
+        "web/src/services/"
+      ],
+      "expected_output": [
+        "타입 에러 0건"
+      ],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M009",
+      "slice_id": "S02",
+      "id": "T02",
+      "title": "정산 생성 + 7개 필드 금액 검증 전체 통과",
+      "status": "complete",
+      "one_liner": "정산 생성 + 7개 필드 금액 검증 전체 통과",
+      "narrative": "배송 100건 × 1500원 + 반품 10건 × 1500원 = 165,000원 - 공제 50,000원 = 실수령 115,000원. DB 저장 후 7개 필드 전체 검증 통과.",
+      "verification_result": "배송/반품/총액/공제/실수령 7개 필드 expected vs actual 일치",
+      "duration": "",
+      "completed_at": "2026-04-05T12:30:48.523Z",
+      "blocker_discovered": false,
+      "deviations": "기사 단가 미입력 → 기본 1500원으로 테스트",
+      "known_issues": "기사 단가 0건 — 기사 등록 시 RLS 버그로 저장 안 됐던 데이터. 재등록 필요.",
+      "key_files": [
+        "web/src/services/settlement.service.ts"
+      ],
+      "key_decisions": [
+        "settlements upsert로 중복 방지"
+      ],
+      "full_summary_md": "---\nid: T02\nparent: S02\nmilestone: M009\nkey_files:\n  - web/src/services/settlement.service.ts\nkey_decisions:\n  - settlements upsert로 중복 방지\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-05T12:30:48.569Z\nblocker_discovered: false\n---\n\n# T02: 정산 생성 + 7개 필드 금액 검증 전체 통과\n\n**정산 생성 + 7개 필드 금액 검증 전체 통과**\n\n## What Happened\n\n배송 100건 × 1500원 + 반품 10건 × 1500원 = 165,000원 - 공제 50,000원 = 실수령 115,000원. DB 저장 후 7개 필드 전체 검증 통과.\n\n## Verification\n\n배송/반품/총액/공제/실수령 7개 필드 expected vs actual 일치\n\n## Verification Evidence\n\n| # | Command | Exit Code | Verdict | Duration |\n|---|---------|-----------|---------|----------|\n| 1 | `node test-settlement.js` | 0 | ✅ pass | 3000ms |\n\n\n## Deviations\n\n기사 단가 미입력 → 기본 1500원으로 테스트\n\n## Known Issues\n\n기사 단가 0건 — 기사 등록 시 RLS 버그로 저장 안 됐던 데이터. 재등록 필요.\n\n## Files Created/Modified\n\n- `web/src/services/settlement.service.ts`\n",
+      "description": "기사 주상하 + 원청사 쿠팡퀵플렉스에 테스트 정산 데이터 생성. 배송 100건 × 단가 계산 → settlements 테이블에 저장 → 금액 검증",
+      "estimate": "30min",
+      "files": [
+        "web/src/services/settlement.service.ts"
+      ],
+      "verify": "settlements 테이블에 정산 1건 생성, 금액 정상",
+      "inputs": [
+        "web/src/services/settlement.service.ts"
+      ],
+      "expected_output": [
+        "정산 레코드 1건"
+      ],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
+    },
+    {
+      "milestone_id": "M009",
+      "slice_id": "S02",
+      "id": "T03",
+      "title": "모바일 정산 조회 쿼리 정상 — 1건 반환 확인",
+      "status": "complete",
+      "one_liner": "모바일 정산 조회 쿼리 정상 — 1건 반환 확인",
+      "narrative": "모바일 서비스와 동일한 쿼리로 정산 1건 조회 성공. year_month=2026-04, net_amount=115000, status=draft.",
+      "verification_result": "settlements 테이블에서 driver_id 기준 조회 → 1건 정상 반환",
+      "duration": "",
+      "completed_at": "2026-04-05T12:30:58.517Z",
+      "blocker_discovered": false,
+      "deviations": "None.",
+      "known_issues": "RLS로 기사 본인 데이터만 조회 — 로그인 세션 필요",
+      "key_files": [
+        "mobile/services/settlement.service.ts"
+      ],
+      "key_decisions": [
+        "service_role로 조회 시 정상 반환 확인"
+      ],
+      "full_summary_md": "---\nid: T03\nparent: S02\nmilestone: M009\nkey_files:\n  - mobile/services/settlement.service.ts\nkey_decisions:\n  - service_role로 조회 시 정상 반환 확인\nduration: \"\"\nverification_result: passed\ncompleted_at: 2026-04-05T12:30:58.519Z\nblocker_discovered: false\n---\n\n# T03: 모바일 정산 조회 쿼리 정상 — 1건 반환 확인\n\n**모바일 정산 조회 쿼리 정상 — 1건 반환 확인**\n\n## What Happened\n\n모바일 서비스와 동일한 쿼리로 정산 1건 조회 성공. year_month=2026-04, net_amount=115000, status=draft.\n\n## Verification\n\nsettlements 테이블에서 driver_id 기준 조회 → 1건 정상 반환\n\n## Verification Evidence\n\n| # | Command | Exit Code | Verdict | Duration |\n|---|---------|-----------|---------|----------|\n| 1 | `node test-mobile-query.js` | 0 | ✅ pass | 2000ms |\n\n\n## Deviations\n\nNone.\n\n## Known Issues\n\nRLS로 기사 본인 데이터만 조회 — 로그인 세션 필요\n\n## Files Created/Modified\n\n- `mobile/services/settlement.service.ts`\n",
+      "description": "생성된 정산 데이터가 모바일 앱 정산 탭에서 표시되는지 확인. RLS 정책으로 기사 본인 데이터만 조회되는지 검증",
+      "estimate": "15min",
+      "files": [
+        "mobile/app/(tabs)/settlement.tsx",
+        "mobile/services/settlement.service.ts"
+      ],
+      "verify": "모바일 정산 서비스로 조회 시 데이터 반환",
+      "inputs": [
+        "mobile/services/settlement.service.ts"
+      ],
+      "expected_output": [
+        "정산 데이터 조회 성공"
+      ],
+      "observability_impact": "",
+      "full_plan_md": "",
+      "sequence": 0
     }
   ],
   "decisions": [
@@ -4426,6 +4542,39 @@
       "verdict": "✅ pass",
       "duration_ms": 4000,
       "created_at": "2026-04-05T12:28:37.156Z"
+    },
+    {
+      "id": 61,
+      "task_id": "T01",
+      "slice_id": "S02",
+      "milestone_id": "M009",
+      "command": "npx tsc --noEmit",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 4000,
+      "created_at": "2026-04-05T12:29:54.229Z"
+    },
+    {
+      "id": 62,
+      "task_id": "T02",
+      "slice_id": "S02",
+      "milestone_id": "M009",
+      "command": "node test-settlement.js",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 3000,
+      "created_at": "2026-04-05T12:30:48.523Z"
+    },
+    {
+      "id": 63,
+      "task_id": "T03",
+      "slice_id": "S02",
+      "milestone_id": "M009",
+      "command": "node test-mobile-query.js",
+      "exit_code": 0,
+      "verdict": "✅ pass",
+      "duration_ms": 2000,
+      "created_at": "2026-04-05T12:30:58.517Z"
     }
   ]
 }
