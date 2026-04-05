@@ -107,9 +107,9 @@ const RECEIVER_BINDING_OPTIONS = [
 ]
 
 /* ── 소유자별 색상/라벨 ── */
-const OWNER_META: Record<FieldOwner, { label: string; color: string; bgColor: string }> = {
-  sender: { label: '발송인', color: '#E11D48', bgColor: '#FFF1F2' },    // rose
-  receiver: { label: '수신자', color: '#2563EB', bgColor: '#EFF6FF' },   // blue
+const OWNER_META: Record<FieldOwner, { label: string; color: string; bgColor: string; textColor: string }> = {
+  sender: { label: '발송인', color: '#E11D48', bgColor: '#FFF1F2', textColor: '#111111' },    // 라벨=rose, 텍스트=검정
+  receiver: { label: '수신자', color: '#2563EB', bgColor: '#EFF6FF', textColor: '#2563EB' },   // 라벨=blue, 텍스트=파랑
 }
 
 /* ── 메인 ── */
@@ -801,7 +801,7 @@ function ContractFieldEditorPage() {
                     {field.binding_var && <span className="ml-1 opacity-70">&rarr;자동</span>}
                   </div>
 
-                  {/* 도장 미리보기 (sender seal) */}
+                  {/* 도장 미리보기 — 도장만 원본 색상 유지 */}
                   {field.field_type === 'seal' && field.default_value ? (
                     <img src={field.default_value} alt="도장" className="max-w-full max-h-full object-contain opacity-70" />
                   ) : (field.field_type === 'text' || field.field_type === 'date') && isSelected ? (
@@ -813,10 +813,10 @@ function ContractFieldEditorPage() {
                       onMouseDown={e => e.stopPropagation()}
                       placeholder={field.binding_var ? `자동: ${field.binding_var}` : field.label || meta.label}
                       className="w-full h-full text-[10px] px-1 bg-transparent outline-none border-none font-korean"
-                      style={{ color: ownerMeta.color }}
+                      style={{ color: ownerMeta.textColor }}
                     />
                   ) : field.default_value && (field.field_type === 'text' || field.field_type === 'date') ? (
-                    <span className="text-[10px] px-1 truncate font-korean" style={{ color: ownerMeta.color }}>{field.default_value}</span>
+                    <span className="text-[10px] px-1 truncate font-korean" style={{ color: ownerMeta.textColor }}>{field.default_value}</span>
                   ) : (
                     <span style={{ color: ownerMeta.color, fontSize: '0.85rem' }}>{meta.icon}</span>
                   )}
