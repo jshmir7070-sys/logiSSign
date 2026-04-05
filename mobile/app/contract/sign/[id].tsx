@@ -425,7 +425,7 @@ export default function ContractSignScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <Header title="전자서명" showBack />
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -496,7 +496,7 @@ export default function ContractSignScreen() {
 
   if (templateType === 'pdf') {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <Header title={contractTitle || '계약서 서명'} showBack />
 
         {/* 진행률 바 */}
@@ -615,7 +615,7 @@ export default function ContractSignScreen() {
         </ScrollView>
 
         {/* 하단 버튼 */}
-        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 0) + spacing.lg }]}>
+        <View style={[styles.footer, { paddingBottom: Platform.OS === 'android' ? spacing.xl : spacing.md }]}>
           <Button
             title={signing ? '서명 처리 중...' : `서명 제출 (${completedRequired}/${totalRequired})`}
             onPress={handleSign}
@@ -657,7 +657,7 @@ export default function ContractSignScreen() {
   // ════════════════ TEXT 모드 렌더링 (기존) ════════════════
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <Header title="전자서명" showBack />
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -746,7 +746,7 @@ export default function ContractSignScreen() {
       </ScrollView>
 
       {/* Footer */}
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 0) + spacing.lg }]}>
+      <View style={[styles.footer, { paddingBottom: Platform.OS === 'android' ? spacing.xl : spacing.md }]}>
         <Button
           title={signing ? '서명 처리 중...' : `동의 및 서명 완료 (${checkedCount}/${CONSENT_ITEMS.length})`}
           onPress={handleSign}
