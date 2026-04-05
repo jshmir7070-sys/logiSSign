@@ -352,7 +352,7 @@ export default function NewDriverPage() {
       fresh_incentive_pct: Number(freshPct) || 100,
       extra_incentive_pct: Number(incentivePct) || 100,
       rate_mode: fieldConfig?.items?.delivery?.rate_mode === 'unit_price' ? 'route' : fieldConfig?.items?.delivery?.rate_mode === 'percentage' ? 'percentage' : 'flat',
-      flat_rate: Number(customValues['delivery_unit_price'] || 0),
+      flat_rate: Number(customValues['delivery_fee_same'] || customValues['delivery_delivery_price'] || customValues['delivery_unit_price'] || 0),
       rate_percentage: Number(customValues['delivery_rate_pct'] || 0),
       vehicle_number: vehicleNumber.trim() || null,
       vehicle_type: vehicleType.trim() || null,
@@ -373,19 +373,49 @@ export default function NewDriverPage() {
     // 기사 기본 정보 + 단가 + 노선단가 + 공제 일괄 전송
     const driverRatesPayload: { package_type: string; unit_price: number; rate_type: string }[] = [];
     if (fieldConfig) {
-      const types: ('delivery' | 'return' | 'pickup')[] = ['delivery', 'return', 'pickup'];
+      const deliveryCfg = fieldConfig.items.delivery;
+      const feeSame = deliveryCfg?.fee_same;
+      const feeSeparate = deliveryCfg?.fee_separate;
       const typeLabels: Record<string, string> = { delivery: '배송', return: '반품', pickup: '집하' };
-      for (const t of types) {
-        const cfg = fieldConfig.items[t];
-        if (!cfg?.enabled) continue;
-        const key = `${t}_unit_price`;
-        const value = Number(customValues[key] ?? 0);
-        if (value > 0) {
-          driverRatesPayload.push({
-            package_type: typeLabels[t],
-            unit_price: value,
-            rate_type: cfg.rate_mode === 'percentage' ? 'percentage' : 'fixed',
-          });
+      const rateType = deliveryCfg?.rate_mode === 'percentage' ? 'percentage' : 'fixed';
+
+      if (feeSame) {
+        // 동일수수료: 배송/반품에 같은 단가 적용
+        const sameValue = Number(customValues['delivery_fee_same'] ?? customValues['delivery_unit_price'] ?? 0);
+        if (sameValue > 0) {
+          driverRatesPayload.push({ package_type: '배송', unit_price: sameValue, rate_type: rateType });
+          if (fieldConfig.items.return?.enabled) {
+            driverRatesPayload.push({ package_type: '반품', unit_price: sameValue, rate_type: rateType });
+          }
+        }
+      } else if (feeSeparate) {
+        // 별도수수료: 배송/반품 각각
+        const delVal = Number(customValues['delivery_delivery_price'] ?? 0);
+        const retVal = Number(customValues['delivery_return_price'] ?? 0);
+        if (delVal > 0) driverRatesPayload.push({ package_type: '배송', unit_price: delVal, rate_type: rateType });
+        if (retVal > 0) driverRatesPayload.push({ package_type: '반품', unit_price: retVal, rate_type: rateType });
+      } else {
+        // 기본: 타입별 개별 입력
+        const types: ('delivery' | 'return' | 'pickup')[] = ['delivery', 'return', 'pickup'];
+        for (const t of types) {
+          const cfg = fieldConfig.items[t];
+          if (!cfg?.enabled) continue;
+          const value = Number(customValues[`${t}_unit_price`] ?? 0);
+          if (value > 0) {
+            driverRatesPayload.push({
+              package_type: typeLabels[t],
+              unit_price: value,
+              rate_type: cfg.rate_mode === 'percentage' ? 'percentage' : 'fixed',
+            });
+          }
+        }
+      }
+
+      // 집하 (pickup) 별도 처리
+      if (fieldConfig.items.pickup?.enabled) {
+        const pickupVal = Number(customValues['pickup_unit_price'] ?? 0);
+        if (pickupVal > 0 && !driverRatesPayload.some(r => r.package_type === '집하')) {
+          driverRatesPayload.push({ package_type: '집하', unit_price: pickupVal, rate_type: rateType });
         }
       }
       for (const item of fieldConfig.custom_income_items ?? []) {
@@ -879,6 +909,7 @@ export default function NewDriverPage() {
           const rateMode = cfg.rate_mode;
           const feeSame = cfg.fee_same;
           const feeSeparate = cfg.fee_separate;
+          // 카테고리 설정 그대로 반영 (독립 체크박스)
           const routeSame = cfg.route_same;
           const routeSeparate = cfg.route_separate;
           const hasAnyFeeMode = feeSame || feeSeparate || routeSame || routeSeparate;
@@ -1163,9 +1194,9 @@ export default function NewDriverPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* ── 좌측: 수익 항목 ── */}
             <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-primary/10 text-primary">수익</span>
-                <span className="text-xs font-semibold text-on-surface font-korean">수익 항목</span>
+              <div className="flex items-center gap-2 pb-2 border-b border-primary/20">
+                <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-primary/10 text-primary">수입</span>
+                <span className="text-sm font-bold text-on-surface font-korean">수입설정</span>
               </div>
 
               {/* 커스텀 수입 항목 */}
@@ -1191,10 +1222,12 @@ export default function NewDriverPage() {
                 </div>
               )}
 
-              {/* 인센티브 지급 설정 */}
+              {/* 인센티브 지급 설정 — 카테고리에서 활성화된 항목만 표시 */}
+              {(fieldConfig?.additional_items?.fresh_back?.enabled || fieldConfig?.additional_items?.incentive?.enabled) && (
               <div className="space-y-2">
                 <p className="text-xs font-label font-medium text-on-surface-variant font-korean">인센티브 지급 설정</p>
                 <div className="grid grid-cols-2 gap-3">
+                  {fieldConfig?.additional_items?.fresh_back?.enabled && (
                   <div>
                     <label className={labelCls}>프레쉬백</label>
                     <div className="flex items-center gap-1">
@@ -1203,6 +1236,8 @@ export default function NewDriverPage() {
                       <span className="text-sm text-on-surface-variant">%</span>
                     </div>
                   </div>
+                  )}
+                  {fieldConfig?.additional_items?.incentive?.enabled && (
                   <div>
                     <label className={labelCls}>인센티브</label>
                     <div className="flex items-center gap-1">
@@ -1211,8 +1246,10 @@ export default function NewDriverPage() {
                       <span className="text-sm text-on-surface-variant">%</span>
                     </div>
                   </div>
+                  )}
                 </div>
               </div>
+              )}
 
               {/* 수입항목 없을 때 안내 */}
               {(!fieldConfig || (fieldConfig.custom_income_items ?? []).length === 0) && (
@@ -1222,10 +1259,10 @@ export default function NewDriverPage() {
 
             {/* ── 우측: 차감(공제) 항목 ── */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between pb-2 border-b border-error/20">
                 <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-error/10 text-error">차감</span>
-                  <span className="text-xs font-semibold text-on-surface font-korean">공제 항목</span>
+                  <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-error/10 text-error">차감</span>
+                  <span className="text-sm font-bold text-on-surface font-korean">차감설정</span>
                 </div>
                 <button onClick={addDeductionRow}
                   className="h-7 px-3 rounded-lg bg-surface-container-high text-on-surface-variant font-label text-[11px] hover:bg-surface-container-highest transition-colors font-korean">

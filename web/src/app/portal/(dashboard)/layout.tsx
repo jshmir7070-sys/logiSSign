@@ -4,10 +4,21 @@ import Sidebar from '@/components/portal/Sidebar';
 import UserMenu from '@/components/shared/UserMenu';
 import { ToastContainer } from '@/components/shared/Toast';
 import { PlanProvider, usePlan } from '@/contexts/PlanContext';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 function PortalDashboardInner({ children }: { children: React.ReactNode }) {
   const { plan, ownerName, companyName, email } = usePlan();
+  const [pointBalance, setPointBalance] = useState<number | undefined>(undefined);
+
+  // 포인트형 플랜이면 잔액 조회
+  useEffect(() => {
+    if (plan === 'point') {
+      fetch('/api/points?action=balance')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) setPointBalance(data.balance); })
+        .catch(() => {});
+    }
+  }, [plan]);
 
   // ✅ 보안: 브라우저 뒤로가기/이력으로 캐시된 페이지 접속 방지
   useEffect(() => {
@@ -23,7 +34,7 @@ function PortalDashboardInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-surface">
-      <Sidebar plan={plan} ownerName={ownerName} />
+      <Sidebar plan={plan} ownerName={ownerName} pointBalance={pointBalance} />
 
       {/* TopBar — Glass */}
       <header className="fixed top-0 left-[240px] right-0 h-16 bg-white/80 backdrop-blur-[20px] z-30 flex items-center justify-between px-8">

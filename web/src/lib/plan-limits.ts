@@ -3,7 +3,7 @@
  * 모든 플랜 제한 로직은 이 파일을 참조합니다.
  */
 
-export type PlanType = 'free' | 'basic' | 'standard' | 'pro' | 'enterprise';
+export type PlanType = 'free' | 'point' | 'basic' | 'standard' | 'pro' | 'enterprise';
 
 /** 플랜별 접근 가능 기능 키 */
 export type PlanFeature =
@@ -27,8 +27,8 @@ export interface PlanLimits {
   features: Record<PlanFeature, boolean>;
 }
 
-/** 플랜 등급 순서 (비교용) */
-const PLAN_ORDER: PlanType[] = ['free', 'basic', 'standard', 'pro', 'enterprise'];
+/** 플랜 등급 순서 (비교용) — point는 별도 트랙이므로 free와 동급 */
+const PLAN_ORDER: PlanType[] = ['free', 'point', 'basic', 'standard', 'pro', 'enterprise'];
 
 const FREE_FEATURES: Record<PlanFeature, boolean> = {
   dashboard: true,
@@ -87,6 +87,21 @@ const ALL_FEATURES: Record<PlanFeature, boolean> = {
   settings: true,
 };
 
+/** 포인트 플랜: 모든 기능 사용 가능하지만 건별 포인트 차감 */
+const POINT_FEATURES: Record<PlanFeature, boolean> = {
+  dashboard: true,
+  drivers: true,
+  contracts: true,
+  'contracts.templates': true,
+  'settlements.basic': true,
+  'settlements.builder': true,
+  'settlements.tax': true,
+  'settlements.upload': true,
+  reports: true,
+  notices: true,
+  settings: true,
+};
+
 export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
   free: {
     maxDrivers: 10,
@@ -94,6 +109,13 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     maxDefaultTemplates: 0,
     maxUploadTemplates: 0,
     features: FREE_FEATURES,
+  },
+  point: {
+    maxDrivers: null,  // 무제한 (포인트로 제한)
+    maxAdminAccounts: 2,
+    maxDefaultTemplates: 5,
+    maxUploadTemplates: 5,
+    features: POINT_FEATURES,
   },
   basic: {
     maxDrivers: 30,
@@ -127,11 +149,49 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
 
 export const PLAN_LABELS: Record<PlanType, string> = {
   free: 'Free',
+  point: '포인트 충전형',
   basic: 'Basic',
   standard: 'Standard',
   pro: 'Pro',
   enterprise: 'Enterprise',
 };
+
+/** 플랜별 월 가격 (원) — 모든 가격 참조의 단일 소스 */
+export const PLAN_PRICES: Record<PlanType, number> = {
+  free: 0,
+  point: 0,       // 포인트형은 월정액 없음 (충전제)
+  basic: 49900,
+  standard: 99000,
+  pro: 149000,
+  enterprise: 199000,
+};
+
+/** 연간 할인율 (%) */
+export const PLAN_DISCOUNTS: Record<string, number> = {
+  monthly: 0,
+  '1year': 20,
+  '2year': 30,
+  '3year': 40,
+};
+
+/** 플랜별 주요 기능 요약 (UI 표시용) */
+export const PLAN_HIGHLIGHTS: Record<PlanType, string[]> = {
+  free: ['기사 10명', '기본 정산', '공지 관리'],
+  point: ['기사 무제한', '전 기능 사용', '사용한 만큼만 결제', '소량 사용에 유리'],
+  basic: ['기사 30명', '전자계약서', '정산서 빌더', '세금계산서', '엑셀 업로드'],
+  standard: ['기사 80명', 'Basic 전체', '매출 리포트', '푸시 알림'],
+  pro: ['기사 150명', 'Standard 전체', 'API 연동', '대용량 처리'],
+  enterprise: ['기사 무제한', '전담 매니저', 'SLA 99.9%', '맞춤형 정산'],
+};
+
+/** 구독 금액 계산 (billing cycle 반영) */
+export function getSubscriptionPrice(plan: PlanType, billing: string = 'monthly'): number {
+  const monthly = PLAN_PRICES[plan] ?? 0;
+  if (monthly === 0) return 0;
+  const discount = PLAN_DISCOUNTS[billing] ?? 0;
+  const months = billing === '1year' ? 12 : billing === '2year' ? 24 : billing === '3year' ? 36 : 1;
+  return Math.round(monthly * (1 - discount / 100) * months);
+}
 
 /** 기능별 한글 라벨 (업그레이드 안내 UI용) */
 export const FEATURE_LABELS: Record<PlanFeature, string> = {
@@ -179,6 +239,58 @@ export function isPlanAtLeast(current: string | undefined, required: PlanType): 
   const requiredIdx = PLAN_ORDER.indexOf(required);
   if (currentIdx === -1) return false;
   return currentIdx >= requiredIdx;
+}
+
+/* ══════════════════════ 포인트 단가 체계 ══════════════════════ */
+
+/** 포인트 차감 항목 키 */
+export type PointAction =
+  | 'contract_send'        // 계약서 전송 (건당)
+  | 'settlement_generate'  // 정산서 생성 (건당)
+  | 'settlement_pdf'       // 정산서 PDF 다운로드 (건당)
+  | 'sms_send'             // SMS 발송 (건당)
+  | 'push_send'            // 푸시 알림 (건당)
+  | 'driver_register'      // 기사 등록 (건당)
+  | 'excel_upload'         // 엑셀 업로드 정산 (회당)
+  | 'tax_invoice'          // 세금계산서 발행 (건당)
+  | 'report_generate'      // 리포트 생성 (건당)
+  | 'template_upload'      // 템플릿 업로드 (건당)
+
+/** 항목별 포인트 차감 단가 (기사 25명 이상이면 구독형이 유리하도록 설계) */
+export const POINT_COSTS: Record<PointAction, { cost: number; label: string; desc: string }> = {
+  contract_send:       { cost: 1500, label: '계약서 전송',      desc: '기사 1명에게 계약서 1건 전송' },
+  settlement_generate: { cost: 800,  label: '정산서 생성',      desc: '기사 1명 월 정산서 생성' },
+  settlement_pdf:      { cost: 500,  label: '정산서 PDF',       desc: '정산서 PDF 다운로드' },
+  sms_send:            { cost: 300,  label: 'SMS 발송',         desc: '문자 메시지 1건 발송' },
+  push_send:           { cost: 0,    label: '푸시 알림',        desc: '앱 푸시 알림 (무료)' },
+  driver_register:     { cost: 0,    label: '기사 등록',        desc: '기사 신규 등록 (무료)' },
+  excel_upload:        { cost: 3000, label: '엑셀 업로드 정산', desc: '엑셀 파일 1회 업로드 처리' },
+  tax_invoice:         { cost: 1500, label: '세금계산서 발행',  desc: '세금계산서 1건 발행' },
+  report_generate:     { cost: 800,  label: '리포트 생성',      desc: '매출/정산 리포트 1건' },
+  template_upload:     { cost: 500,  label: '템플릿 업로드',    desc: 'PDF 템플릿 1건 업로드' },
+}
+
+/** 포인트 충전 패키지 (클라이언트 표시용 — DB에도 동일 시드 있음) */
+export const POINT_PACKAGES = [
+  { points:   5000, price:   5000, bonus:     0 },
+  { points:  10000, price:  10000, bonus:   500 },
+  { points:  30000, price:  30000, bonus:  2000 },
+  { points:  50000, price:  50000, bonus:  5000 },
+  { points: 100000, price: 100000, bonus: 15000 },
+]
+
+/**
+ * 구독형 vs 포인트형 월 예상 비용 계산
+ * @param actions 월간 예상 사용량 { action: 횟수 }
+ * @returns 포인트형 예상 비용
+ */
+export function estimatePointCost(actions: Partial<Record<PointAction, number>>): number {
+  let total = 0
+  for (const [action, count] of Object.entries(actions)) {
+    const cost = POINT_COSTS[action as PointAction]?.cost ?? 0
+    total += cost * (count ?? 0)
+  }
+  return total
 }
 
 /** URL 경로 → 기능 키 매핑 (사이드바 + 미들웨어용) */

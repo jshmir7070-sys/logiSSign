@@ -140,8 +140,8 @@ export async function unregisterPushToken(driverId: string): Promise<void> {
  * @returns cleanup 함수
  */
 export async function addNotificationListeners(
-  onReceived?: (notification: { request: { content: { data?: Record<string, string> } } }) => void,
-  onTapped?: (response: { notification: { request: { content: { data?: Record<string, string> } } } }) => void,
+  onReceived?: (notification: { request: { content: { data?: Record<string, unknown> } } }) => void,
+  onTapped?: (response: { notification: { request: { content: { data?: Record<string, unknown> } } } }) => void,
 ): Promise<() => void> {
   const Notifications = await getNotifications();
   if (!Notifications) {
@@ -168,8 +168,8 @@ export async function addNotificationListeners(
  * 알림 데이터에서 네비게이션 경로 추출
  */
 export function getNavigationFromNotification(
-  response: { notification: { request: { content: { data?: Record<string, string> } } } }
-): { route: string; params?: Record<string, string> } | null {
+  response: { notification: { request: { content: { data?: Record<string, unknown> } } } }
+): { route: string; params?: Record<string, unknown> } | null {
   const data = response.notification.request.content.data;
   if (!data?.type) return null;
 

@@ -186,13 +186,22 @@ export default function ContractTemplatesPage() {
           )}
         </div>
         {paid && !templatesLocked && isAdmin && canUploadMore ? (
-          <button
-            onClick={() => setShowForm(true)}
-            className="h-10 px-5 rounded-xl bg-power-gradient text-white font-label text-sm font-semibold shadow-ambient hover:shadow-float transition-all flex items-center gap-2 font-korean"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-            새 템플릿 만들기
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowForm(true)}
+              className="h-10 px-5 rounded-xl bg-power-gradient text-white font-label text-sm font-semibold shadow-ambient hover:shadow-float transition-all flex items-center gap-2 font-korean"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+              텍스트 템플릿
+            </button>
+            <button
+              onClick={() => setShowForm(true)}
+              className="h-10 px-5 rounded-xl bg-surface-container-high text-on-surface font-label text-sm font-semibold hover:bg-surface-container-highest transition-all flex items-center gap-2 font-korean"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+              PDF 업로드
+            </button>
+          </div>
         ) : paid && !isAdmin ? (
           <span className="text-xs text-on-surface-variant/50 font-korean">템플릿 추가는 관리자만 가능</span>
         ) : paid && templatesLocked && isAdmin ? (
@@ -388,9 +397,16 @@ export default function ContractTemplatesPage() {
                     </div>
                   </label>
                 </div>
-                <h3 className="text-base font-headline font-bold text-on-surface font-korean">{tmpl.title}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-headline font-bold text-on-surface font-korean">{tmpl.title}</h3>
+                  {(tmpl as unknown as Record<string, unknown>).template_type === 'pdf' && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary">PDF</span>
+                  )}
+                </div>
                 <p className="text-xs text-on-surface-variant mt-1 font-korean line-clamp-2">
-                  {tmpl.content.substring(0, 100)}...
+                  {(tmpl as unknown as Record<string, unknown>).template_type === 'pdf'
+                    ? 'PDF 문서 — 필드 배치 에디터에서 서명/도장 위치를 설정하세요'
+                    : `${tmpl.content.substring(0, 100)}...`}
                 </p>
               </div>
 
@@ -399,6 +415,12 @@ export default function ContractTemplatesPage() {
                   {new Date(tmpl.created_at).toLocaleDateString('ko-KR')}
                 </span>
                 <div className="flex gap-2">
+                  {(tmpl as unknown as Record<string, unknown>).template_type === 'pdf' && (
+                    <a href={`/portal/contracts/field-editor?templateId=${tmpl.id}`}
+                      className="h-8 px-3 rounded-lg bg-amber-50 text-amber-700 font-label text-xs font-semibold hover:bg-amber-100 transition-colors font-korean flex items-center gap-1">
+                      필드 편집
+                    </a>
+                  )}
                   <button
                     onClick={() => setPreviewTemplate(tmpl)}
                     className="h-8 px-3 rounded-lg bg-primary/10 text-primary font-label text-xs font-semibold hover:bg-primary/20 transition-colors font-korean"

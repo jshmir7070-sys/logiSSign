@@ -6,6 +6,8 @@
  * 포트원 V2 API 문서: https://developers.portone.io/
  */
 
+import { PLAN_PRICES, PLAN_DISCOUNTS } from '@/lib/plan-limits'
+
 const PORTONE_API_BASE = 'https://api.portone.io'
 
 /* ══════════════════════ Types ══════════════════════ */
@@ -172,30 +174,8 @@ export function getPortoneChannelKey(): string {
   return process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY ?? ''
 }
 
-/** 구독 결제 금액 계산 */
-export function getSubscriptionAmount(plan: string, billing: string): number {
-  const prices: Record<string, number> = {
-    free: 0,
-    basic: 49900,
-    standard: 99000,
-    pro: 199000,
-  }
-
-  const base = prices[plan] ?? 0
-  if (base === 0) return 0
-
-  const discounts: Record<string, number> = {
-    monthly: 0,
-    '1year': 0.2,
-    '2year': 0.3,
-  }
-
-  const discount = discounts[billing] ?? 0
-  const months = billing === '1year' ? 12 : billing === '2year' ? 24 : 1
-
-  if (billing === 'monthly') return base
-  return Math.round(base * (1 - discount) * months)
-}
+/** 구독 결제 금액 계산 — plan-limits.ts 중앙 가격 참조 */
+export { getSubscriptionPrice as getSubscriptionAmount } from '@/lib/plan-limits'
 
 /**
  * 플랜 업그레이드 시 차액 정산 (프로레이션)
@@ -216,12 +196,9 @@ export function calculateProration(opts: {
   remainingDays: number         // 잔여 일수
   totalDays: number             // 전체 결제 기간 일수
 } {
-  const prices: Record<string, number> = {
-    free: 0, basic: 49900, standard: 99000, pro: 199000,
-  }
-  const discounts: Record<string, number> = {
-    monthly: 0, '1year': 0.2, '2year': 0.3,
-  }
+  const prices = PLAN_PRICES as Record<string, number>
+  const discounts: Record<string, number> = {}
+  for (const [k, v] of Object.entries(PLAN_DISCOUNTS as Record<string, number>)) { discounts[k] = v / 100 }
 
   const now = new Date()
   const start = new Date(opts.currentStartDate)

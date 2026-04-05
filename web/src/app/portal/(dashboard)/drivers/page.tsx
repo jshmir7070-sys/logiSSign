@@ -126,8 +126,8 @@ export default function DriversPage() {
         </Link>
       </div>
 
-      {/* 원청사(카테고리) 탭 — 2개 이상일 때만 표시 */}
-      {principals.length >= 2 && (
+      {/* 원청사(카테고리) 탭 */}
+      {principals.length >= 1 && (
         <div className="flex items-center gap-1 bg-surface-container-low rounded-xl p-1">
           <button
             onClick={() => setSelectedPrincipal(null)}

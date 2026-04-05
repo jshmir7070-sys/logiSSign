@@ -341,5 +341,3 @@ const fsStyles = StyleSheet.create({
   },
   modalTitle: { ...typography.titleMedium, color: colors.onSurface, fontWeight: '700' },
 });
-
-export { clearSignature } from '../../components/common/SignaturePad';

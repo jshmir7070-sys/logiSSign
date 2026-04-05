@@ -364,80 +364,100 @@ export default function PrincipalDetailPage() {
                   <span className="text-sm font-bold text-on-surface font-korean">수입설정</span>
                 </div>
 
-                {/* ── 수수료 방식 선택 (각 그룹 하나만 선택) ── */}
+                {/* ── 단가 설정 (체크박스 조합) ── */}
                 <div className="p-4 rounded-2xl bg-primary/[0.03] border border-primary/10 space-y-4">
-                  {/* 그룹 1: 수수료 방식 */}
-                  <div>
-                    <p className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-wider font-korean mb-2">수수료 방식</p>
-                    <div className="space-y-1">
-                      <RadioOption
-                        checked={fieldConfig.items.delivery.fee_same === true}
-                        onChange={() =>
-                          setFieldConfig((fc) => ({
-                            ...fc,
-                            items: {
-                              delivery: { ...fc.items.delivery, fee_same: true, fee_separate: false },
-                              return: { ...fc.items.return, fee_same: true, fee_separate: false },
-                              pickup: { ...fc.items.pickup, fee_same: true, fee_separate: false },
-                            },
-                          }))
-                        }
-                        label="동일수수료"
-                        desc="배송/반품 동일 단가 또는 요율 1개 입력"
-                      />
-                      <RadioOption
-                        checked={fieldConfig.items.delivery.fee_separate === true}
-                        onChange={() =>
-                          setFieldConfig((fc) => ({
-                            ...fc,
-                            items: {
-                              delivery: { ...fc.items.delivery, fee_same: false, fee_separate: true },
-                              return: { ...fc.items.return, fee_same: false, fee_separate: true },
-                              pickup: { ...fc.items.pickup, fee_same: false, fee_separate: true },
-                            },
-                          }))
-                        }
-                        label="별도 수수료"
-                        desc="배송단가·반품단가를 각각 입력"
-                      />
-                    </div>
-                  </div>
+                  <p className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-wider font-korean mb-1">단가 설정 (복수 선택 가능)</p>
 
-                  {/* 그룹 2: 라우트 방식 */}
-                  <div className="pt-3 border-t border-primary/10">
-                    <p className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-wider font-korean mb-2">라우트 방식</p>
-                    <div className="space-y-1">
-                      <RadioOption
-                        checked={fieldConfig.items.delivery.route_same === true}
-                        onChange={() =>
-                          setFieldConfig((fc) => ({
-                            ...fc,
-                            items: {
-                              delivery: { ...fc.items.delivery, route_same: true, route_separate: false },
-                              return: { ...fc.items.return, route_same: true, route_separate: false },
-                              pickup: { ...fc.items.pickup, route_same: true, route_separate: false },
-                            },
-                          }))
-                        }
-                        label="동일 라우트 수수료"
-                        desc="라우트별 동일 단가 1개 입력"
-                      />
-                      <RadioOption
-                        checked={fieldConfig.items.delivery.route_separate === true}
-                        onChange={() =>
-                          setFieldConfig((fc) => ({
-                            ...fc,
-                            items: {
-                              delivery: { ...fc.items.delivery, route_same: false, route_separate: true },
-                              return: { ...fc.items.return, route_same: false, route_separate: true },
-                              pickup: { ...fc.items.pickup, route_same: false, route_separate: true },
-                            },
-                          }))
-                        }
-                        label="별도 라우트 수수료"
-                        desc="라우트별 배송단가·반품단가를 개별 입력"
-                      />
+                  {/* 배송/반품 동일단가 */}
+                  <label className="flex items-start gap-3 p-3 rounded-xl hover:bg-primary/[0.03] cursor-pointer transition-colors">
+                    <input type="checkbox"
+                      checked={fieldConfig.items.delivery.fee_same === true}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setFieldConfig((fc) => ({
+                          ...fc,
+                          items: {
+                            delivery: { ...fc.items.delivery, fee_same: checked, fee_separate: checked ? false : fc.items.delivery.fee_separate },
+                            return: { ...fc.items.return, fee_same: checked, fee_separate: checked ? false : fc.items.return.fee_separate },
+                            pickup: { ...fc.items.pickup, fee_same: checked, fee_separate: checked ? false : fc.items.pickup.fee_separate },
+                          },
+                        }));
+                      }}
+                      className="w-4 h-4 mt-0.5 accent-primary shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-on-surface font-korean">배송/반품 동일 단가</p>
+                      <p className="text-xs text-on-surface-variant font-korean">배송·반품에 같은 단가 1개 적용</p>
                     </div>
+                  </label>
+
+                  {/* 배송/반품 별도단가 */}
+                  <label className="flex items-start gap-3 p-3 rounded-xl hover:bg-primary/[0.03] cursor-pointer transition-colors">
+                    <input type="checkbox"
+                      checked={fieldConfig.items.delivery.fee_separate === true}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setFieldConfig((fc) => ({
+                          ...fc,
+                          items: {
+                            delivery: { ...fc.items.delivery, fee_separate: checked, fee_same: checked ? false : fc.items.delivery.fee_same },
+                            return: { ...fc.items.return, fee_separate: checked, fee_same: checked ? false : fc.items.return.fee_same },
+                            pickup: { ...fc.items.pickup, fee_separate: checked, fee_same: checked ? false : fc.items.pickup.fee_same },
+                          },
+                        }));
+                      }}
+                      className="w-4 h-4 mt-0.5 accent-primary shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-on-surface font-korean">배송/반품 별도 단가</p>
+                      <p className="text-xs text-on-surface-variant font-korean">배송단가·반품단가를 각각 입력</p>
+                    </div>
+                  </label>
+
+                  <div className="border-t border-primary/10 pt-3">
+                    <p className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-wider font-korean mb-2">배송지역 설정</p>
+
+                    {/* 배송지역별 동일단가 */}
+                    <label className="flex items-start gap-3 p-3 rounded-xl hover:bg-primary/[0.03] cursor-pointer transition-colors">
+                      <input type="checkbox"
+                        checked={fieldConfig.items.delivery.route_same === true}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setFieldConfig((fc) => ({
+                            ...fc,
+                            items: {
+                              delivery: { ...fc.items.delivery, route_same: checked, route_separate: checked ? false : fc.items.delivery.route_separate },
+                              return: { ...fc.items.return, route_same: checked, route_separate: checked ? false : fc.items.return.route_separate },
+                              pickup: { ...fc.items.pickup, route_same: checked, route_separate: checked ? false : fc.items.pickup.route_separate },
+                            },
+                          }));
+                        }}
+                        className="w-4 h-4 mt-0.5 accent-primary shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-on-surface font-korean">배송지역별 동일 단가</p>
+                        <p className="text-xs text-on-surface-variant font-korean">A구역 ₩5,000 / B구역 ₩4,500 — 구역별 동일 단가 1개</p>
+                      </div>
+                    </label>
+
+                    {/* 배송지역별 별도단가 */}
+                    <label className="flex items-start gap-3 p-3 rounded-xl hover:bg-primary/[0.03] cursor-pointer transition-colors">
+                      <input type="checkbox"
+                        checked={fieldConfig.items.delivery.route_separate === true}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setFieldConfig((fc) => ({
+                            ...fc,
+                            items: {
+                              delivery: { ...fc.items.delivery, route_separate: checked, route_same: checked ? false : fc.items.delivery.route_same },
+                              return: { ...fc.items.return, route_separate: checked, route_same: checked ? false : fc.items.return.route_same },
+                              pickup: { ...fc.items.pickup, route_separate: checked, route_same: checked ? false : fc.items.pickup.route_same },
+                            },
+                          }));
+                        }}
+                        className="w-4 h-4 mt-0.5 accent-primary shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-on-surface font-korean">배송지역별 별도 단가</p>
+                        <p className="text-xs text-on-surface-variant font-korean">구역별 배송단가·반품단가를 각각 입력</p>
+                      </div>
+                    </label>
                   </div>
                 </div>
 

@@ -47,7 +47,6 @@ export async function getDrivers(agencyId: string, principalId?: string | null):
         .from('driver_principals')
         .select('driver_id')
         .eq('principal_id', principalId)
-        .eq('status', 'active')
 
       if (linkErr) throw linkErr
       const driverIds = (links ?? []).map(l => l.driver_id)
@@ -187,7 +186,6 @@ export async function createDriver(data: {
       const links = data.principalIds.map(pid => ({
         driver_id: driver.id,
         principal_id: pid,
-        status: 'active' as const,
       }))
       const { error: linkErr } = await supabase
         .from('driver_principals')

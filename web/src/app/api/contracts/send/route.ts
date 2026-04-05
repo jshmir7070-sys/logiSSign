@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     // 템플릿 조회
     const { data: templates, error: fetchErr } = await supabaseAdmin
       .from('contract_templates')
-      .select('id, title, content')
+      .select('id, title, content, template_type, template_pdf_url, sign_fields')
       .in('id', templateIds)
       .or(`agency_id.eq.${agencyId},agency_id.is.null`)
 
@@ -159,6 +159,7 @@ export async function POST(request: NextRequest) {
         const contentHash = await sha256(boundContent)
         const signToken = crypto.randomUUID()
 
+        const tRec = tmpl as Record<string, unknown>
         contracts.push({
           agency_id: agencyId,
           template_id: (tmpl as { id: string }).id,
@@ -170,6 +171,12 @@ export async function POST(request: NextRequest) {
           binding_data: driverBindingData,
           status: 'sent',
           sent_at: new Date().toISOString(),
+          // PDF 타입: 템플릿 PDF URL + 서명 필드 복사
+          ...(tRec.template_type === 'pdf' ? {
+            template_type: 'pdf',
+            template_pdf_url: tRec.template_pdf_url,
+            sign_fields: tRec.sign_fields,
+          } : {}),
         })
       }
 

@@ -30,12 +30,36 @@ interface DriverDetail {
   phone: string
   employee_code: string | null
   delivery_area: string | null
+  camp_name: string | null
+  address: string | null
+  email: string | null
   status: string
   is_business_owner: boolean
   vat_included: boolean
   fresh_incentive_pct: number
   extra_incentive_pct: number
   tax_type: string
+  business_reg_number: string | null
+  representative_name: string | null
+  business_address: string | null
+  business_type: string | null
+  business_category: string | null
+  vehicle_number: string | null
+  vehicle_type: string | null
+  vehicle_year: string | null
+  vehicle_vin: string | null
+  vehicle_mileage: number | null
+  vehicle_owner: string | null
+  vehicle_rent_monthly: number | null
+  vehicle_deposit: number | null
+  vehicle_insurance_by: string | null
+  bank_name: string | null
+  bank_account: string | null
+  bank_holder: string | null
+  rate_mode: string | null
+  flat_rate: number | null
+  rate_percentage: number | null
+  custom_values: Record<string, string> | null
   principals: { name: string } | null
 }
 
@@ -60,6 +84,9 @@ export default function DriverDetailPage() {
   const [newRoutes, setNewRoutes] = useState<{ route_code: string; delivery_rate: string; return_rate: string }[]>([
     { route_code: '', delivery_rate: '', return_rate: '' },
   ]);
+  const [isRouteSame, setIsRouteSame] = useState(false); // 원청사 설정: 라우트 동일단가
+  const [editMode, setEditMode] = useState(false);
+  const [editFields, setEditFields] = useState<Record<string, string>>({});
 
   /* ── Business settings ── */
   const [bizSettings, setBizSettings] = useState<DriverBusinessSettings>({
@@ -75,7 +102,15 @@ export default function DriverDetailPage() {
 
     const { data: driverData } = await supabase
       .from('drivers')
-      .select('id, name, phone, employee_code, delivery_area, status, is_business_owner, vat_included, fresh_incentive_pct, extra_incentive_pct, tax_type, principals(name)')
+      .select(`
+        id, name, phone, employee_code, delivery_area, camp_name, address, email, status,
+        is_business_owner, vat_included, fresh_incentive_pct, extra_incentive_pct, tax_type,
+        business_reg_number, representative_name, business_address, business_type, business_category,
+        vehicle_number, vehicle_type, vehicle_year, vehicle_vin, vehicle_mileage,
+        vehicle_owner, vehicle_rent_monthly, vehicle_deposit, vehicle_insurance_by,
+        bank_name, bank_account, bank_holder,
+        rate_mode, flat_rate, rate_percentage, custom_values
+      `)
       .eq('id', id)
       .single();
 
@@ -89,6 +124,26 @@ export default function DriverDetailPage() {
         extra_incentive_pct: d.extra_incentive_pct,
         tax_type: d.tax_type || (d.is_business_owner ? 'vat_invoice' : 'withholding_3_3'),
       });
+    }
+
+    // 원청사 field_config에서 route_same 설정 조회
+    const { data: dpLinks } = await supabase
+      .from('driver_principals')
+      .select('principal_id')
+      .eq('driver_id', id)
+      .limit(1);
+    if (dpLinks && dpLinks.length > 0) {
+      const pid = (dpLinks[0] as Record<string, string>).principal_id;
+      const { data: principal } = await supabase
+        .from('principals')
+        .select('field_config')
+        .eq('id', pid)
+        .single();
+      if (principal) {
+        const fc = (principal as Record<string, Record<string, unknown>>).field_config as Record<string, unknown> | null;
+        const items = fc?.items as Record<string, Record<string, boolean>> | undefined;
+        setIsRouteSame(items?.delivery?.route_same === true);
+      }
     }
 
     const ratesResult = await getDriverRouteRates(id);
@@ -112,6 +167,55 @@ export default function DriverDetailPage() {
   }, [id]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  /* ── Edit mode ── */
+  function enterEditMode() {
+    if (!driver) return;
+    setEditFields({
+      name: driver.name || '',
+      phone: driver.phone || '',
+      email: driver.email || '',
+      employee_code: driver.employee_code || '',
+      camp_name: driver.camp_name || '',
+      delivery_area: driver.delivery_area || '',
+      address: driver.address || '',
+      business_reg_number: driver.business_reg_number || '',
+      representative_name: driver.representative_name || '',
+      business_type: driver.business_type || '',
+      business_category: driver.business_category || '',
+      business_address: driver.business_address || '',
+      vehicle_number: driver.vehicle_number || '',
+      vehicle_type: driver.vehicle_type || '',
+      vehicle_year: driver.vehicle_year || '',
+      vehicle_vin: driver.vehicle_vin || '',
+      bank_name: driver.bank_name || '',
+      bank_account: driver.bank_account || '',
+      bank_holder: driver.bank_holder || '',
+    });
+    setEditMode(true);
+  }
+
+  async function handleSaveInfo() {
+    if (!id) return;
+    setSaving(true);
+    setError('');
+    try {
+      const res = await fetch('/api/drivers/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driverId: id, ...editFields }),
+      });
+      if (res.ok) {
+        setSuccess('기본 정보가 저장되었습니다');
+        setEditMode(false);
+        await loadData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setError(err.error || '저장 실패');
+      }
+    } catch { setError('저장 중 오류'); }
+    setSaving(false);
+  }
 
   /* ── Add new route rate row ── */
   function addNewRouteRow() {
@@ -260,6 +364,225 @@ export default function DriverDetailPage() {
       {error && <div className="bg-error/10 text-error rounded-xl px-4 py-3 text-sm font-korean">{error}</div>}
       {success && <div className="bg-success/10 text-success rounded-xl px-4 py-3 text-sm font-korean">{success}</div>}
 
+      {/* ═══ Section 0: 기본 정보 ═══ */}
+      <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-headline font-semibold text-on-surface font-korean">기본 정보</h2>
+          {!editMode ? (
+            <button onClick={enterEditMode}
+              className="h-9 px-4 rounded-xl bg-surface-container-high text-on-surface-variant font-label text-xs font-medium hover:bg-surface-container-highest transition-colors font-korean flex items-center gap-1.5">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+              수정
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button onClick={() => setEditMode(false)}
+                className="h-9 px-4 rounded-xl bg-surface-container-high text-on-surface-variant font-label text-xs font-medium hover:bg-surface-container-highest transition-colors font-korean">
+                취소
+              </button>
+              <button onClick={handleSaveInfo} disabled={saving}
+                className="h-9 px-5 rounded-xl bg-primary text-white font-label text-xs font-semibold hover:bg-primary/90 transition-colors font-korean disabled:opacity-50">
+                {saving ? '저장 중...' : '저장'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {editMode ? (
+          /* ── 수정 모드 ── */
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {([
+                ['name', '이름'], ['phone', '연락처'], ['email', '이메일'], ['employee_code', '사번'],
+                ['camp_name', '캠프명'], ['delivery_area', '배송구역'],
+              ] as [string, string][]).map(([key, label]) => (
+                <div key={key}>
+                  <label className="block text-xs font-label font-medium text-on-surface-variant mb-1 font-korean">{label}</label>
+                  <input type="text" value={editFields[key] ?? ''}
+                    onChange={e => setEditFields(p => ({ ...p, [key]: e.target.value }))}
+                    className="w-full h-10 px-3 rounded-xl bg-surface-container-low text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 font-korean" />
+                </div>
+              ))}
+              <div className="col-span-2">
+                <label className="block text-xs font-label font-medium text-on-surface-variant mb-1 font-korean">주소</label>
+                <input type="text" value={editFields.address ?? ''}
+                  onChange={e => setEditFields(p => ({ ...p, address: e.target.value }))}
+                  className="w-full h-10 px-3 rounded-xl bg-surface-container-low text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 font-korean" />
+              </div>
+            </div>
+
+            {/* 사업자 */}
+            {driver.is_business_owner && (
+              <div className="border-t border-outline-variant/15 pt-4">
+                <p className="text-xs font-bold text-on-surface-variant font-korean mb-3">사업자 정보</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {([
+                    ['business_reg_number', '사업자등록번호'], ['representative_name', '대표자명'],
+                    ['business_type', '업종'], ['business_category', '업태'],
+                  ] as [string, string][]).map(([key, label]) => (
+                    <div key={key}>
+                      <label className="block text-xs font-label font-medium text-on-surface-variant mb-1 font-korean">{label}</label>
+                      <input type="text" value={editFields[key] ?? ''}
+                        onChange={e => setEditFields(p => ({ ...p, [key]: e.target.value }))}
+                        className="w-full h-10 px-3 rounded-xl bg-surface-container-low text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 font-korean" />
+                    </div>
+                  ))}
+                  <div className="col-span-2">
+                    <label className="block text-xs font-label font-medium text-on-surface-variant mb-1 font-korean">사업장 주소</label>
+                    <input type="text" value={editFields.business_address ?? ''}
+                      onChange={e => setEditFields(p => ({ ...p, business_address: e.target.value }))}
+                      className="w-full h-10 px-3 rounded-xl bg-surface-container-low text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 font-korean" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 차량 */}
+            <div className="border-t border-outline-variant/15 pt-4">
+              <p className="text-xs font-bold text-on-surface-variant font-korean mb-3">차량 정보</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {([
+                  ['vehicle_number', '차량번호'], ['vehicle_type', '차종'],
+                  ['vehicle_year', '연식'], ['vehicle_vin', '차대번호'],
+                ] as [string, string][]).map(([key, label]) => (
+                  <div key={key}>
+                    <label className="block text-xs font-label font-medium text-on-surface-variant mb-1 font-korean">{label}</label>
+                    <input type="text" value={editFields[key] ?? ''}
+                      onChange={e => setEditFields(p => ({ ...p, [key]: e.target.value }))}
+                      className="w-full h-10 px-3 rounded-xl bg-surface-container-low text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 font-data" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 계좌 */}
+            <div className="border-t border-outline-variant/15 pt-4">
+              <p className="text-xs font-bold text-on-surface-variant font-korean mb-3">계좌 정보</p>
+              <div className="grid grid-cols-3 gap-4">
+                {([
+                  ['bank_name', '은행'], ['bank_account', '계좌번호'], ['bank_holder', '예금주'],
+                ] as [string, string][]).map(([key, label]) => (
+                  <div key={key}>
+                    <label className="block text-xs font-label font-medium text-on-surface-variant mb-1 font-korean">{label}</label>
+                    <input type="text" value={editFields[key] ?? ''}
+                      onChange={e => setEditFields(p => ({ ...p, [key]: e.target.value }))}
+                      className="w-full h-10 px-3 rounded-xl bg-surface-container-low text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 font-data" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* ── 읽기 모드 ── */
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
+              {([
+                ['이름', driver.name], ['연락처', driver.phone], ['이메일', driver.email], ['사번', driver.employee_code],
+                ['캠프명', driver.camp_name], ['배송구역', driver.delivery_area],
+              ] as [string, string | null][]).map(([label, val]) => (
+                <div key={label}>
+                  <p className="text-xs text-on-surface-variant font-korean mb-1">{label}</p>
+                  <p className={`${label === '이름' ? 'font-semibold font-korean' : 'font-data'} text-on-surface`}>{val || '-'}</p>
+                </div>
+              ))}
+              <div className="col-span-2">
+                <p className="text-xs text-on-surface-variant font-korean mb-1">주소</p>
+                <p className="font-korean text-on-surface">{driver.address || '-'}</p>
+              </div>
+            </div>
+
+            {driver.is_business_owner && (
+              <div className="border-t border-outline-variant/15 pt-4">
+                <p className="text-xs font-bold text-on-surface-variant font-korean mb-3">사업자 정보</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
+                  {([
+                    ['사업자등록번호', driver.business_reg_number], ['대표자명', driver.representative_name],
+                    ['업종', driver.business_type], ['업태', driver.business_category],
+                  ] as [string, string | null][]).map(([label, val]) => (
+                    <div key={label}>
+                      <p className="text-xs text-on-surface-variant font-korean mb-1">{label}</p>
+                      <p className="font-data text-on-surface">{val || '-'}</p>
+                    </div>
+                  ))}
+                  <div className="col-span-2">
+                    <p className="text-xs text-on-surface-variant font-korean mb-1">사업장 주소</p>
+                    <p className="font-korean text-on-surface">{driver.business_address || '-'}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {(driver.vehicle_number || driver.vehicle_type) && (
+              <div className="border-t border-outline-variant/15 pt-4">
+                <p className="text-xs font-bold text-on-surface-variant font-korean mb-3">차량 정보</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
+                  {([
+                    ['차량번호', driver.vehicle_number], ['차종', driver.vehicle_type],
+                    ['연식', driver.vehicle_year], ['차대번호', driver.vehicle_vin],
+                    ['소유구분', driver.vehicle_owner === 'company' ? '회사 소유' : driver.vehicle_owner === 'personal' ? '개인 소유' : null],
+                  ] as [string, string | null][]).map(([label, val]) => (
+                    <div key={label}>
+                      <p className="text-xs text-on-surface-variant font-korean mb-1">{label}</p>
+                      <p className="font-data text-on-surface">{val || '-'}</p>
+                    </div>
+                  ))}
+                  {driver.vehicle_owner === 'company' && (
+                    <>
+                      <div>
+                        <p className="text-xs text-on-surface-variant font-korean mb-1">월 임대료</p>
+                        <p className="font-data text-on-surface">{driver.vehicle_rent_monthly ? `₩${Number(driver.vehicle_rent_monthly).toLocaleString()}` : '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-on-surface-variant font-korean mb-1">보증금</p>
+                        <p className="font-data text-on-surface">{driver.vehicle_deposit ? `₩${Number(driver.vehicle_deposit).toLocaleString()}` : '-'}</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {(driver.bank_name || driver.bank_account) && (
+              <div className="border-t border-outline-variant/15 pt-4">
+                <p className="text-xs font-bold text-on-surface-variant font-korean mb-3">계좌 정보</p>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  {([['은행', driver.bank_name], ['계좌번호', driver.bank_account], ['예금주', driver.bank_holder]] as [string, string | null][]).map(([label, val]) => (
+                    <div key={label}>
+                      <p className="text-xs text-on-surface-variant font-korean mb-1">{label}</p>
+                      <p className="font-data text-on-surface">{val || '-'}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(driver.flat_rate || driver.rate_percentage) && (
+              <div className="border-t border-outline-variant/15 pt-4">
+                <p className="text-xs font-bold text-on-surface-variant font-korean mb-3">단가 설정</p>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <p className="text-xs text-on-surface-variant font-korean mb-1">정산 방식</p>
+                    <p className="font-korean text-on-surface">{driver.rate_mode === 'route' ? '건당 단가' : driver.rate_mode === 'percentage' ? '요율제' : driver.rate_mode === 'flat' ? '고정급여' : '-'}</p>
+                  </div>
+                  {driver.flat_rate ? (
+                    <div>
+                      <p className="text-xs text-on-surface-variant font-korean mb-1">기본 단가</p>
+                      <p className="font-data text-on-surface font-semibold">₩{Number(driver.flat_rate).toLocaleString()}</p>
+                    </div>
+                  ) : null}
+                  {driver.rate_percentage ? (
+                    <div>
+                      <p className="text-xs text-on-surface-variant font-korean mb-1">수수료율</p>
+                      <p className="font-data text-on-surface font-semibold">{driver.rate_percentage}%</p>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
       {/* ═══ Section 1: Business / Tax Settings ═══ */}
       <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 space-y-4">
         <h2 className="text-base font-headline font-semibold text-on-surface font-korean">사업자 / 세금 / 정산 설정</h2>
@@ -382,8 +705,12 @@ export default function DriverDetailPage() {
               <thead>
                 <tr className="bg-surface-container-low">
                   <th className="px-4 py-2.5 text-xs font-label font-semibold text-on-surface-variant font-korean">라우트</th>
-                  <th className="px-4 py-2.5 text-xs font-label font-semibold text-on-surface-variant font-korean text-right">배송 단가</th>
-                  <th className="px-4 py-2.5 text-xs font-label font-semibold text-on-surface-variant font-korean text-right">반품 단가</th>
+                  <th className="px-4 py-2.5 text-xs font-label font-semibold text-on-surface-variant font-korean text-right">
+                    {isRouteSame ? '단가' : '배송 단가'}
+                  </th>
+                  {!isRouteSame && (
+                    <th className="px-4 py-2.5 text-xs font-label font-semibold text-on-surface-variant font-korean text-right">반품 단가</th>
+                  )}
                   <th className="px-4 py-2.5 text-xs font-label font-semibold text-on-surface-variant font-korean w-16"></th>
                 </tr>
               </thead>
@@ -392,7 +719,9 @@ export default function DriverDetailPage() {
                   <tr key={rr.id}>
                     <td className="px-4 py-2.5 font-data font-semibold text-on-surface">{rr.route_code}</td>
                     <td className="px-4 py-2.5 font-data text-on-surface text-right">₩{Number(rr.delivery_rate).toLocaleString()}</td>
-                    <td className="px-4 py-2.5 font-data text-on-surface text-right">₩{Number(rr.return_rate).toLocaleString()}</td>
+                    {!isRouteSame && (
+                      <td className="px-4 py-2.5 font-data text-on-surface text-right">₩{Number(rr.return_rate).toLocaleString()}</td>
+                    )}
                     <td className="px-4 py-2.5 text-right">
                       <button
                         onClick={() => handleDeleteRoute(rr.id)}
@@ -423,23 +752,28 @@ export default function DriverDetailPage() {
               <div className="flex items-center gap-1">
                 <input
                   type="number"
-                  placeholder="배송 단가"
+                  placeholder={isRouteSame ? '단가' : '배송 단가'}
                   value={nr.delivery_rate}
-                  onChange={(e) => updateNewRoute(idx, 'delivery_rate', e.target.value)}
+                  onChange={(e) => {
+                    updateNewRoute(idx, 'delivery_rate', e.target.value);
+                    if (isRouteSame) updateNewRoute(idx, 'return_rate', e.target.value);
+                  }}
                   className="w-28 h-10 px-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-data focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
                 <span className="text-xs text-on-surface-variant font-korean">원</span>
               </div>
-              <div className="flex items-center gap-1">
-                <input
-                  type="number"
-                  placeholder="반품 단가"
-                  value={nr.return_rate}
-                  onChange={(e) => updateNewRoute(idx, 'return_rate', e.target.value)}
-                  className="w-28 h-10 px-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-data focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-                <span className="text-xs text-on-surface-variant font-korean">원</span>
-              </div>
+              {!isRouteSame && (
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    placeholder="반품 단가"
+                    value={nr.return_rate}
+                    onChange={(e) => updateNewRoute(idx, 'return_rate', e.target.value)}
+                    className="w-28 h-10 px-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-data focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                  <span className="text-xs text-on-surface-variant font-korean">원</span>
+                </div>
+              )}
               {newRoutes.length > 1 && (
                 <button
                   onClick={() => removeNewRouteRow(idx)}

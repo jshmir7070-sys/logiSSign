@@ -131,8 +131,8 @@ const PLANS: Plan[] = [
     name: 'Basic',
     pricing: {
       monthly: 49900,
-      yearly1: 49900 * 12 * 0.8,
-      yearly2: 49900 * 24 * 0.7,
+      yearly1: Math.round(49900 * 12 * 0.8),
+      yearly2: Math.round(49900 * 24 * 0.7),
       discountYear1: 20, discountYear2: 30,
     },
     desc: '성장하는 대리점에 추천',

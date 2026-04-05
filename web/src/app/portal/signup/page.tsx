@@ -9,67 +9,76 @@ import { formatBusinessNumber, formatPhoneNumber, formatBirthDate } from "@/lib/
 
 /* ───────────────────────── 타입 & 상수 ───────────────────────── */
 
-type PlanType = "free" | "basic" | "standard" | "pro" | "enterprise";
+type PlanMode = "point" | "subscription";
+type PlanType = "point" | "basic" | "standard" | "pro" | "enterprise";
 type BillingCycle = "monthly" | "1year" | "2year";
 
-interface PlanPricing {
+/* ── 포인트 과금 단가 ── */
+const POINT_PRICES = {
+  signup_bonus: 10000,          // 가입 시 무료 지급
+  driver_register: 1500,        // 기사 등록 1명당
+  contract_send: 500,           // 계약서 전송 1건당 (본인인증 포함)
+  settlement_send: 0,           // 정산서 전송 무료
+} as const;
+
+/* ── 포인트 충전 패키지 ── */
+const POINT_PACKAGES = [
+  { amount: 10000,  price: 10000,  bonus: 0,     label: "10,000P" },
+  { amount: 30000,  price: 30000,  bonus: 3000,  label: "30,000P + 3,000P" },
+  { amount: 50000,  price: 50000,  bonus: 8000,  label: "50,000P + 8,000P" },
+  { amount: 100000, price: 100000, bonus: 20000, label: "100,000P + 20,000P" },
+] as const;
+
+/* ── 구독 플랜 ── */
+interface SubPlan {
+  id: PlanType;
+  name: string;
   monthly: number;
   discountYear1: number;
   discountYear2: number;
-}
-
-interface Plan {
-  id: PlanType;
-  name: string;
-  pricing: PlanPricing | null;
   maxDrivers: number | null;
   features: string[];
-  disabled: string[];
   popular?: boolean;
   contactOnly?: boolean;
 }
 
-const PLANS: Plan[] = [
-  {
-    id: "free",
-    name: "무료",
-    pricing: { monthly: 0, discountYear1: 0, discountYear2: 0 },
-    maxDrivers: 10,
-    features: ["기사 10명까지", "기본 정산 관리", "엑셀 업로드 정산"],
-    disabled: ["관리자 추가 ✕", "기본 템플릿 ✕", "템플릿 업로드 ✕", "기사 모바일 앱 ✕", "전자계약서 ✕", "세금계산서 ✕", "리포트 ✕"],
-  },
+const SUB_PLANS: SubPlan[] = [
   {
     id: "basic",
     name: "Basic",
-    pricing: { monthly: 49900, discountYear1: 20, discountYear2: 30 },
-    maxDrivers: 30,
-    features: ["기사 30명까지", "관리자 2명 추가", "기본 템플릿 3개", "업로드 템플릿 3개", "기사 모바일 앱", "정산서 발송", "전자계약서 발송/서명", "세금계산서 발행", "이메일 지원"],
-    disabled: [],
+    monthly: 39900,
+    discountYear1: 20,
+    discountYear2: 30,
+    maxDrivers: 50,
+    features: ["기사 50명까지", "관리자 3명", "전자계약 무제한", "정산서 무제한", "기사 앱 무제한", "세금계산서", "이메일 지원"],
   },
   {
     id: "standard",
     name: "Standard",
-    pricing: { monthly: 99000, discountYear1: 20, discountYear2: 30 },
-    maxDrivers: 80,
-    features: ["기사 80명까지", "관리자 5명 추가", "기본 템플릿 6개", "업로드 템플릿 6개", "Basic 전체 기능 포함", "매출 리포트", "푸시 알림", "전화 지원"],
-    disabled: [],
+    monthly: 79900,
+    discountYear1: 20,
+    discountYear2: 30,
+    maxDrivers: 100,
+    features: ["기사 100명까지", "관리자 5명", "Basic 전체 포함", "매출 리포트", "푸시 알림", "전화 지원"],
     popular: true,
   },
   {
     id: "pro",
     name: "Pro",
-    pricing: { monthly: 199000, discountYear1: 20, discountYear2: 30 },
-    maxDrivers: 150,
-    features: ["기사 150명까지", "관리자 10명 추가", "기본 템플릿 10개", "업로드 템플릿 10개", "Standard 전체 기능 포함", "전담 지원", "API 연동", "맞춤형 정산 규칙"],
-    disabled: [],
+    monthly: 149900,
+    discountYear1: 20,
+    discountYear2: 30,
+    maxDrivers: 200,
+    features: ["기사 200명까지", "관리자 10명", "Standard 전체 포함", "전담 지원", "API 연동", "맞춤형 정산 규칙"],
   },
   {
     id: "enterprise",
     name: "Enterprise",
-    pricing: null,
+    monthly: 0,
+    discountYear1: 0,
+    discountYear2: 0,
     maxDrivers: null,
-    features: ["기사 150명 이상", "관리자 무제한", "Pro 전체 기능 포함", "전담 매니저 배정", "SLA 99.9%", "커스텀 계약서", "온보딩 지원"],
-    disabled: [],
+    features: ["기사 200명 이상", "관리자 무제한", "Pro 전체 포함", "전담 매니저", "SLA 99.9%", "온보딩 지원"],
     contactOnly: true,
   },
 ];
@@ -93,12 +102,12 @@ function formatPrice(n: number): string {
   return new Intl.NumberFormat("ko-KR").format(Math.round(n));
 }
 
-function getDiscountRate(plan: Plan, cycle: BillingCycle): number {
-  if (!plan.pricing) return 0;
+function getDiscountRate(plan: SubPlan, cycle: BillingCycle): number {
+  if (plan.contactOnly) return 0;
   switch (cycle) {
     case "monthly": return 0;
-    case "1year": return plan.pricing.discountYear1;
-    case "2year": return plan.pricing.discountYear2;
+    case "1year": return plan.discountYear1;
+    case "2year": return plan.discountYear2;
   }
 }
 
@@ -110,20 +119,20 @@ function getMonths(cycle: BillingCycle): number {
   }
 }
 
-function getMonthlyEquivalent(plan: Plan, cycle: BillingCycle): number {
-  if (!plan.pricing) return 0;
+function getMonthlyEquivalent(plan: SubPlan, cycle: BillingCycle): number {
+  if (plan.contactOnly) return 0;
   const discount = getDiscountRate(plan, cycle);
-  return plan.pricing.monthly * (1 - discount / 100);
+  return plan.monthly * (1 - discount / 100);
 }
 
-function getTotalPrice(plan: Plan, cycle: BillingCycle): number {
+function getTotalPrice(plan: SubPlan, cycle: BillingCycle): number {
   return getMonthlyEquivalent(plan, cycle) * getMonths(cycle);
 }
 
-function getSaving(plan: Plan, cycle: BillingCycle): number {
-  if (!plan.pricing || cycle === "monthly") return 0;
+function getSaving(plan: SubPlan, cycle: BillingCycle): number {
+  if (plan.contactOnly || cycle === "monthly") return 0;
   const months = getMonths(cycle);
-  return plan.pricing.monthly * months - getTotalPrice(plan, cycle);
+  return plan.monthly * months - getTotalPrice(plan, cycle);
 }
 
 /* ───────────────────────── 폼 타입 ───────────────────────── */
@@ -132,6 +141,7 @@ type StepType = 1 | 2 | 3 | 4;
 
 interface SignupForm {
   step: StepType;
+  planMode: PlanMode;
   plan: PlanType;
   billingCycle: BillingCycle;
   companyName: string;
@@ -209,7 +219,8 @@ function SignupContent() {
 
   const [form, setForm] = useState<SignupForm>({
     step: 1,
-    plan: "basic",
+    planMode: "point",
+    plan: "point",
     billingCycle: "monthly",
     companyName: "",
     businessNumber: "",
@@ -246,9 +257,14 @@ function SignupContent() {
   useEffect(() => {
     const planParam = searchParams.get("plan");
     const billingParam = searchParams.get("billing");
+    const modeParam = searchParams.get("mode");
     const updates: Partial<SignupForm> = {};
-    if (planParam && ["free", "basic", "standard", "pro", "enterprise"].includes(planParam)) {
+    if (modeParam === "subscription") {
+      updates.planMode = "subscription";
+    }
+    if (planParam && ["point", "basic", "standard", "pro", "enterprise"].includes(planParam)) {
       updates.plan = planParam as PlanType;
+      if (planParam !== "point") updates.planMode = "subscription";
     }
     if (billingParam && ["monthly", "1year", "2year"].includes(billingParam)) {
       updates.billingCycle = billingParam as BillingCycle;
@@ -262,16 +278,17 @@ function SignupContent() {
     setForm((prev) => ({ ...prev, ...updates }));
   };
 
-  const selectedPlan = PLANS.find((p) => p.id === form.plan)!;
-  const isPaidPlan = selectedPlan.pricing !== null && selectedPlan.pricing.monthly > 0;
-  const totalSteps = isPaidPlan ? 4 : 3;
-  const monthlyEq = getMonthlyEquivalent(selectedPlan, form.billingCycle);
-  const totalPrice = getTotalPrice(selectedPlan, form.billingCycle);
-  const saving = getSaving(selectedPlan, form.billingCycle);
+  const isPointMode = form.planMode === "point";
+  const selectedSubPlan = SUB_PLANS.find((p) => p.id === form.plan) ?? SUB_PLANS[0];
+  const isSubPaid = !isPointMode && !selectedSubPlan.contactOnly;
+  const totalSteps = isPointMode ? 3 : 4;
+  const monthlyEq = getMonthlyEquivalent(selectedSubPlan, form.billingCycle);
+  const totalPrice = getTotalPrice(selectedSubPlan, form.billingCycle);
+  const saving = getSaving(selectedSubPlan, form.billingCycle);
 
-  const stepLabels = isPaidPlan
-    ? ["플랜 선택", "사업자 정보", "계정 생성", "결제"]
-    : ["플랜 선택", "사업자 정보", "계정 생성"];
+  const stepLabels = isPointMode
+    ? ["플랜 선택", "사업자 정보", "계정 생성"]
+    : ["플랜 선택", "사업자 정보", "계정 생성", "결제"];
 
   /* ── 회원가입 처리 (Step 3 완료 후) ── */
   const doSignup = async (): Promise<boolean> => {
@@ -295,6 +312,9 @@ function SignupContent() {
           bankAccount: form.bankAccount.trim() || undefined,
           bankHolder: form.bankHolder.trim() || undefined,
           plan: form.plan,
+          planMode: form.planMode,
+          billingCycle: form.billingCycle,
+          pointBalance: isPointMode ? POINT_PRICES.signup_bonus : 0,
         }),
       });
 
@@ -338,14 +358,19 @@ function SignupContent() {
     if (!form.identityVerified) { updateForm({ error: "본인인증을 완료해주세요." }); return; }
 
     // 유효성 통과
-    if (!isPaidPlan) {
-      // Free 플랜 → 결제 없이 바로 가입 완료
+    if (isPointMode) {
+      // 충전형 → 결제 없이 바로 가입 완료 (10,000P 지급)
       updateForm({ isLoading: true, error: null });
       const ok = await doSignup();
       if (ok) window.location.replace("/portal/settings?tab=seal&welcome=1");
-    } else {
-      // 유료 플랜 → Step 4 결제로 이동
+    } else if (isSubPaid) {
+      // 구독형 유료 → Step 4 결제로 이동
       updateForm({ step: 4, error: null });
+    } else {
+      // Enterprise (문의) — 여기까지 올 수 없지만 안전장치
+      updateForm({ isLoading: true, error: null });
+      const ok = await doSignup();
+      if (ok) window.location.replace("/portal/settings?tab=seal&welcome=1");
     }
   };
 
@@ -479,165 +504,241 @@ function SignupContent() {
           {stepLabels[(form.step - 1)] ?? ""}
         </div>
 
-        {/* ═══════════ Step 1: 플랜 & 결제주기 ═══════════ */}
+        {/* ═══════════ Step 1: 플랜 선택 (포인트 / 구독) ═══════════ */}
         {form.step === 1 && (
           <div>
-            <div className="flex items-center justify-center gap-2 mb-6 flex-wrap">
-              {CYCLE_OPTIONS.map((opt) => {
-                const isActive = form.billingCycle === opt.value;
-                return (
-                  <button key={opt.value} type="button" onClick={() => updateForm({ billingCycle: opt.value })}
-                    className={`relative px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                      isActive ? "bg-power-gradient text-white shadow-md" : "bg-surface-container-lowest text-on-surface-variant border border-outline-variant/15 hover:border-primary/30"
-                    }`}>
-                    {opt.label}
-                    {opt.badge && (
-                      <span className={`ml-1.5 text-[10px] font-bold ${isActive ? "text-blue-200" : "text-tertiary"}`}>{opt.badge}</span>
-                    )}
-                  </button>
-                );
-              })}
+            {/* 모드 탭: 충전형 vs 구독형 */}
+            <div className="flex items-center justify-center gap-1 mb-6 p-1 bg-surface-container-high rounded-2xl max-w-xs mx-auto">
+              <button type="button" onClick={() => updateForm({ planMode: "point", plan: "point" })}
+                className={`flex-1 h-10 rounded-xl text-sm font-semibold transition-all ${
+                  isPointMode ? "bg-white text-primary shadow-md" : "text-on-surface-variant hover:text-on-surface"
+                }`}>
+                충전형 (포인트)
+              </button>
+              <button type="button" onClick={() => updateForm({ planMode: "subscription", plan: "basic" })}
+                className={`flex-1 h-10 rounded-xl text-sm font-semibold transition-all ${
+                  !isPointMode ? "bg-white text-primary shadow-md" : "text-on-surface-variant hover:text-on-surface"
+                }`}>
+                구독형 (정액제)
+              </button>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-              {PLANS.map((plan) => {
-                const isSelected = form.plan === plan.id;
-                const mEq = getMonthlyEquivalent(plan, form.billingCycle);
-                const discount = getDiscountRate(plan, form.billingCycle);
-                const total = getTotalPrice(plan, form.billingCycle);
-                const sv = getSaving(plan, form.billingCycle);
-                const isFree = plan.pricing?.monthly === 0;
-                const isEnt = !plan.pricing;
-
-                return (
-                  <button key={plan.id} type="button"
-                    onClick={() => !plan.contactOnly && updateForm({ plan: plan.id })}
-                    className={`relative bg-surface-container-lowest rounded-2xl p-4 text-left transition-all flex flex-col ${
-                      isSelected ? "shadow-float ring-2 ring-primary" : "shadow-card hover:shadow-ambient"
-                    } ${plan.contactOnly ? "cursor-default" : ""}`}>
-                    {plan.popular && (
-                      <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-power-gradient text-white text-[10px] font-bold">추천</span>
-                    )}
-                    {/* 플랜명 — 고정 높이 */}
-                    <h3 className="font-headline text-sm font-bold text-on-surface h-6 flex items-center">{plan.name}</h3>
-
-                    {/* 가격 — 고정 높이 */}
-                    <div className="h-14 flex flex-col justify-center">
-                      {isEnt ? (
-                        <p className="font-data text-lg font-bold text-on-surface-variant">별도 문의</p>
-                      ) : isFree ? (
-                        <>
-                          <p className="font-data text-lg font-bold text-primary">₩0</p>
-                          <p className="text-[10px] text-on-surface-variant">영구 무료</p>
-                        </>
-                      ) : (
-                        <>
-                          <div className="flex items-baseline gap-1">
-                            <span className="font-data text-lg font-bold text-primary">₩{formatPrice(mEq)}</span>
-                            <span className="text-[10px] text-on-surface-variant">/월</span>
-                          </div>
-                          {discount > 0 && (
-                            <p className="text-[10px] text-on-surface-variant">
-                              <span className="line-through mr-1">₩{formatPrice(plan.pricing!.monthly)}</span>
-                              <span className="text-tertiary font-bold">-{discount}%</span>
-                            </p>
-                          )}
-                        </>
-                      )}
+            {/* ── 충전형 (포인트) ── */}
+            {isPointMode && (
+              <div className="space-y-5">
+                {/* 포인트 카드 */}
+                <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
+                      <span className="text-white text-lg font-bold">P</span>
                     </div>
-
-                    {/* 일시불 정보 — 고정 높이 */}
-                    <div className="h-10 flex items-center">
-                      {!isFree && !isEnt && form.billingCycle !== "monthly" ? (
-                        <div className="w-full p-1.5 rounded-lg bg-primary/[0.04] border border-primary/10">
-                          <p className="text-[10px] text-on-surface font-medium font-data">총 ₩{formatPrice(total)}</p>
-                          {sv > 0 && <p className="text-[9px] text-tertiary font-bold">₩{formatPrice(sv)} 절약</p>}
-                        </div>
-                      ) : null}
+                    <div>
+                      <h3 className="font-headline text-base font-bold text-on-surface">충전형 플랜</h3>
+                      <p className="text-xs text-on-surface-variant font-korean">쓴 만큼만 결제, 가입 즉시 10,000P 지급</p>
                     </div>
-
-                    {/* 기사 수 — 고정 높이 */}
-                    <p className="text-[11px] text-on-surface-variant font-data h-5 flex items-center">
-                      {plan.maxDrivers ? `최대 ${plan.maxDrivers}명` : isEnt ? '150명 이상' : ''}
-                    </p>
-
-                    {/* 기능 목록 — 나머지 공간 */}
-                    <ul className="mt-2 space-y-1 flex-1">
-                      {plan.features.map((f) => (
-                        <li key={f} className="text-xs text-on-surface-variant flex items-start gap-1.5">
-                          <span className="text-tertiary mt-0.5 shrink-0">✓</span>
-                          <span className="font-korean">{f}</span>
-                        </li>
-                      ))}
-                      {plan.disabled.map((f) => (
-                        <li key={f} className="text-xs text-on-surface-variant/40 flex items-start gap-1.5 line-through">
-                          <span className="mt-0.5 shrink-0">—</span>
-                          <span className="font-korean">{f}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    {plan.contactOnly && (
-                      <a href="mailto:contact@logissign.com" onClick={(e) => e.stopPropagation()}
-                        className="mt-4 block w-full h-9 rounded-xl bg-surface-container-high text-on-surface-variant font-label text-xs font-medium text-center leading-9 hover:bg-surface-container-highest transition-colors font-korean">
-                        상담 문의
-                      </a>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* 선택 요약 */}
-            {selectedPlan.pricing && selectedPlan.pricing.monthly > 0 && (
-              <div className="mt-6 p-4 rounded-2xl bg-surface-container-lowest shadow-card">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div>
-                    <span className="text-sm font-bold text-on-surface">{selectedPlan.name}</span>
-                    <span className="text-on-surface-variant text-sm ml-2">· {CYCLE_LABEL[form.billingCycle]}</span>
                   </div>
-                  <div className="text-right">
-                    <span className="text-lg font-bold text-primary font-data">₩{formatPrice(monthlyEq)}</span>
-                    <span className="text-sm text-on-surface-variant"> /월</span>
+
+                  <div className="bg-primary/[0.04] rounded-xl p-4 mb-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-bold text-on-surface font-korean">가입 시 무료 지급</span>
+                      <span className="text-xl font-extrabold text-primary font-data">10,000P</span>
+                    </div>
+                    <p className="text-[11px] text-on-surface-variant font-korean leading-relaxed">
+                      기사 등록 6명 + 계약서 2건 발송 가능한 포인트입니다. 소진 후 추가 충전하여 사용하세요.
+                    </p>
+                  </div>
+
+                  {/* 과금 단가표 */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-on-surface-variant font-korean">포인트 차감 기준</p>
+                    <div className="grid grid-cols-1 gap-2">
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-surface-container-low">
+                        <div>
+                          <p className="text-sm font-medium text-on-surface font-korean">기사 등록</p>
+                          <p className="text-[11px] text-on-surface-variant font-korean">기사 1명 등록 시</p>
+                        </div>
+                        <span className="text-sm font-bold text-primary font-data">{formatPrice(POINT_PRICES.driver_register)}P</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-surface-container-low">
+                        <div>
+                          <p className="text-sm font-medium text-on-surface font-korean">계약서 전송</p>
+                          <p className="text-[11px] text-on-surface-variant font-korean">1건당 (본인인증 포함)</p>
+                        </div>
+                        <span className="text-sm font-bold text-primary font-data">{formatPrice(POINT_PRICES.contract_send)}P</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-surface-container-low">
+                        <div>
+                          <p className="text-sm font-medium text-on-surface font-korean">정산서 전송</p>
+                          <p className="text-[11px] text-on-surface-variant font-korean">매월 무제한</p>
+                        </div>
+                        <span className="text-sm font-bold text-tertiary font-data">무료</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 구독 전환 유도 */}
+                  <div className="mt-4 p-3 rounded-xl border border-outline-variant/15 bg-surface-container-low/50">
+                    <p className="text-[11px] text-on-surface-variant font-korean leading-relaxed">
+                      기사 15명 이상이라면 <button type="button" onClick={() => updateForm({ planMode: "subscription", plan: "basic" })} className="text-primary font-bold underline">구독형 플랜</button>이 더 경제적입니다.
+                      구독 시 기사 등록·계약서·정산서 모두 무제한!
+                    </p>
                   </div>
                 </div>
-                {form.billingCycle !== "monthly" && (
-                  <div className="mt-2 pt-2 border-t border-outline-variant/10 flex items-center justify-between text-xs text-on-surface-variant">
-                    <span>일시불 결제 금액</span>
-                    <span className="font-data font-bold text-on-surface">₩{formatPrice(totalPrice)}</span>
-                  </div>
-                )}
-                {saving > 0 && (
-                  <div className="flex items-center justify-between text-xs mt-1">
-                    <span className="text-on-surface-variant">월결제 대비 절약</span>
-                    <span className="font-data font-bold text-tertiary">₩{formatPrice(saving)}</span>
-                  </div>
-                )}
-                <div className="mt-3 pt-3 border-t border-outline-variant/10">
-                  <p className="text-[11px] text-on-surface-variant mb-2 font-medium">결제주기별 비교</p>
-                  <div className="grid grid-cols-4 gap-2">
-                    {CYCLE_OPTIONS.map((opt) => {
-                      const mE = getMonthlyEquivalent(selectedPlan, opt.value);
-                      const d = getDiscountRate(selectedPlan, opt.value);
-                      const isThis = form.billingCycle === opt.value;
-                      return (
-                        <button key={opt.value} type="button" onClick={() => updateForm({ billingCycle: opt.value })}
-                          className={`p-2 rounded-lg text-center transition-all ${
-                            isThis ? "bg-primary/10 border border-primary/20" : "bg-surface-container-low border border-transparent hover:border-outline-variant/20"
-                          }`}>
-                          <p className={`text-[10px] font-bold ${isThis ? "text-primary" : "text-on-surface-variant"}`}>{opt.label}</p>
-                          <p className={`text-xs font-bold font-data mt-0.5 ${isThis ? "text-primary" : "text-on-surface"}`}>₩{formatPrice(mE)}</p>
-                          <p className="text-[10px] text-on-surface-variant">/월</p>
-                          {d > 0 && <p className="text-[10px] font-bold text-tertiary mt-0.5">-{d}%</p>}
-                        </button>
-                      );
-                    })}
+
+                {/* 포인트 충전 패키지 미리보기 */}
+                <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6">
+                  <p className="text-xs font-semibold text-on-surface-variant mb-3 font-korean">추가 충전 패키지 (가입 후 충전 가능)</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {POINT_PACKAGES.map((pkg) => (
+                      <div key={pkg.amount} className="p-3 rounded-xl bg-surface-container-low text-center">
+                        <p className="text-sm font-bold text-on-surface font-data">₩{formatPrice(pkg.price)}</p>
+                        <p className="text-xs text-primary font-bold font-data mt-0.5">{formatPrice(pkg.amount + pkg.bonus)}P</p>
+                        {pkg.bonus > 0 && (
+                          <p className="text-[10px] text-tertiary font-bold mt-0.5">+{formatPrice(pkg.bonus)}P 보너스</p>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
             )}
 
-            <button type="button" onClick={() => updateForm({ step: 2 })}
-              disabled={PLANS.find((p) => p.id === form.plan)?.contactOnly}
+            {/* ── 구독형 (정액제) ── */}
+            {!isPointMode && (
+              <div className="space-y-5">
+                {/* 결제주기 선택 */}
+                <div className="flex items-center justify-center gap-2 flex-wrap">
+                  {CYCLE_OPTIONS.map((opt) => {
+                    const isActive = form.billingCycle === opt.value;
+                    return (
+                      <button key={opt.value} type="button" onClick={() => updateForm({ billingCycle: opt.value })}
+                        className={`relative px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                          isActive ? "bg-power-gradient text-white shadow-md" : "bg-surface-container-lowest text-on-surface-variant border border-outline-variant/15 hover:border-primary/30"
+                        }`}>
+                        {opt.label}
+                        {opt.badge && (
+                          <span className={`ml-1.5 text-[10px] font-bold ${isActive ? "text-blue-200" : "text-tertiary"}`}>{opt.badge}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* 플랜 카드 */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  {SUB_PLANS.map((plan) => {
+                    const isSelected = form.plan === plan.id;
+                    const mEq = getMonthlyEquivalent(plan, form.billingCycle);
+                    const discount = getDiscountRate(plan, form.billingCycle);
+                    const total = getTotalPrice(plan, form.billingCycle);
+                    const sv = getSaving(plan, form.billingCycle);
+                    const isEnt = plan.contactOnly;
+
+                    return (
+                      <button key={plan.id} type="button"
+                        onClick={() => !plan.contactOnly && updateForm({ plan: plan.id })}
+                        className={`relative bg-surface-container-lowest rounded-2xl p-4 text-left transition-all flex flex-col ${
+                          isSelected ? "shadow-float ring-2 ring-primary" : "shadow-card hover:shadow-ambient"
+                        } ${plan.contactOnly ? "cursor-default" : ""}`}>
+                        {plan.popular && (
+                          <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-power-gradient text-white text-[10px] font-bold">추천</span>
+                        )}
+                        <h3 className="font-headline text-sm font-bold text-on-surface h-6 flex items-center">{plan.name}</h3>
+
+                        <div className="h-14 flex flex-col justify-center">
+                          {isEnt ? (
+                            <p className="font-data text-lg font-bold text-on-surface-variant">별도 문의</p>
+                          ) : (
+                            <>
+                              <div className="flex items-baseline gap-1">
+                                <span className="font-data text-lg font-bold text-primary">₩{formatPrice(mEq)}</span>
+                                <span className="text-[10px] text-on-surface-variant">/월</span>
+                              </div>
+                              {discount > 0 && (
+                                <p className="text-[10px] text-on-surface-variant">
+                                  <span className="line-through mr-1">₩{formatPrice(plan.monthly)}</span>
+                                  <span className="text-tertiary font-bold">-{discount}%</span>
+                                </p>
+                              )}
+                            </>
+                          )}
+                        </div>
+
+                        <div className="h-10 flex items-center">
+                          {!isEnt && form.billingCycle !== "monthly" ? (
+                            <div className="w-full p-1.5 rounded-lg bg-primary/[0.04] border border-primary/10">
+                              <p className="text-[10px] text-on-surface font-medium font-data">총 ₩{formatPrice(total)}</p>
+                              {sv > 0 && <p className="text-[9px] text-tertiary font-bold">₩{formatPrice(sv)} 절약</p>}
+                            </div>
+                          ) : null}
+                        </div>
+
+                        <p className="text-[11px] text-on-surface-variant font-data h-5 flex items-center">
+                          {plan.maxDrivers ? `최대 ${plan.maxDrivers}명` : isEnt ? '200명 이상' : ''}
+                        </p>
+
+                        <ul className="mt-2 space-y-1 flex-1">
+                          {plan.features.map((f) => (
+                            <li key={f} className="text-xs text-on-surface-variant flex items-start gap-1.5">
+                              <span className="text-tertiary mt-0.5 shrink-0">✓</span>
+                              <span className="font-korean">{f}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        {plan.contactOnly && (
+                          <a href="mailto:contact@logissign.com" onClick={(e) => e.stopPropagation()}
+                            className="mt-4 block w-full h-9 rounded-xl bg-surface-container-high text-on-surface-variant font-label text-xs font-medium text-center leading-9 hover:bg-surface-container-highest transition-colors font-korean">
+                            상담 문의
+                          </a>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* 구독 요약 */}
+                {isSubPaid && (
+                  <div className="p-4 rounded-2xl bg-surface-container-lowest shadow-card">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div>
+                        <span className="text-sm font-bold text-on-surface">{selectedSubPlan.name}</span>
+                        <span className="text-on-surface-variant text-sm ml-2">· {CYCLE_LABEL[form.billingCycle]}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-lg font-bold text-primary font-data">₩{formatPrice(monthlyEq)}</span>
+                        <span className="text-sm text-on-surface-variant"> /월</span>
+                      </div>
+                    </div>
+                    {form.billingCycle !== "monthly" && (
+                      <div className="mt-2 pt-2 border-t border-outline-variant/10 flex items-center justify-between text-xs text-on-surface-variant">
+                        <span>일시불 결제 금액</span>
+                        <span className="font-data font-bold text-on-surface">₩{formatPrice(totalPrice)}</span>
+                      </div>
+                    )}
+                    {saving > 0 && (
+                      <div className="flex items-center justify-between text-xs mt-1">
+                        <span className="text-on-surface-variant">월결제 대비 절약</span>
+                        <span className="font-data font-bold text-tertiary">₩{formatPrice(saving)}</span>
+                      </div>
+                    )}
+                    <div className="mt-3 pt-3 border-t border-outline-variant/10">
+                      <p className="text-[11px] text-on-surface-variant font-korean mb-1">기사 등록·계약서·정산서 <strong className="text-primary">전부 무제한</strong></p>
+                    </div>
+                  </div>
+                )}
+
+                {/* 충전형 유도 */}
+                <div className="p-3 rounded-xl border border-outline-variant/15 bg-surface-container-low/50 text-center">
+                  <p className="text-[11px] text-on-surface-variant font-korean">
+                    소규모 대리점이라면 <button type="button" onClick={() => updateForm({ planMode: "point", plan: "point" })} className="text-primary font-bold underline">충전형 플랜</button>으로 부담 없이 시작하세요!
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <button type="button"
+              onClick={() => updateForm({ step: 2 })}
+              disabled={!isPointMode && selectedSubPlan.contactOnly}
               className="w-full h-11 mt-6 rounded-xl bg-power-gradient text-white font-medium text-sm shadow-ambient hover:shadow-float transition-all disabled:opacity-40 disabled:cursor-not-allowed">
               다음
             </button>
@@ -752,24 +853,28 @@ function SignupContent() {
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-on-surface-variant">선택 플랜</span>
                   <span className="text-sm font-bold text-primary font-data">
-                    {selectedPlan.name} — {isPaidPlan ? `₩${formatPrice(monthlyEq)}/월` : "무료"}
+                    {isPointMode
+                      ? "충전형 — 가입 시 10,000P 지급"
+                      : `${selectedSubPlan.name} — ₩${formatPrice(monthlyEq)}/월`}
                   </span>
                 </div>
-                {isPaidPlan && (
+                {isSubPaid && (
                   <div className="flex items-center justify-between mt-1">
                     <span className="text-xs text-on-surface-variant">결제주기</span>
                     <span className="text-xs font-medium text-on-surface">
                       {CYCLE_LABEL[form.billingCycle]}
-                      {getDiscountRate(selectedPlan, form.billingCycle) > 0 && (
-                        <span className="text-tertiary ml-1">(-{getDiscountRate(selectedPlan, form.billingCycle)}%)</span>
+                      {getDiscountRate(selectedSubPlan, form.billingCycle) > 0 && (
+                        <span className="text-tertiary ml-1">(-{getDiscountRate(selectedSubPlan, form.billingCycle)}%)</span>
                       )}
                     </span>
                   </div>
                 )}
                 <div className="flex items-center justify-between mt-1">
-                  <span className="text-xs text-on-surface-variant">기사 제한</span>
+                  <span className="text-xs text-on-surface-variant">{isPointMode ? "포인트 단가" : "기사 제한"}</span>
                   <span className="text-xs font-medium text-on-surface font-data">
-                    {selectedPlan.maxDrivers ? `최대 ${selectedPlan.maxDrivers}명` : "무제한"}
+                    {isPointMode
+                      ? "기사등록 1,500P · 계약서 500P/건"
+                      : selectedSubPlan.maxDrivers ? `최대 ${selectedSubPlan.maxDrivers}명` : "무제한"}
                   </span>
                 </div>
               </div>
@@ -874,14 +979,14 @@ function SignupContent() {
                 className="flex-1 h-11 rounded-xl bg-surface-container-high text-on-surface-variant font-medium text-sm hover:bg-surface-container-highest transition-colors">이전</button>
               <button type="button" onClick={handleStep3Next} disabled={form.isLoading}
                 className="flex-[2] h-11 rounded-xl bg-power-gradient text-white font-medium text-sm shadow-ambient hover:shadow-float transition-all disabled:opacity-60">
-                {form.isLoading ? "처리 중..." : isPaidPlan ? "다음 — 결제" : "가입 완료"}
+                {form.isLoading ? "처리 중..." : isSubPaid ? "다음 — 결제" : "가입 완료"}
               </button>
             </div>
           </div>
         )}
 
-        {/* ═══════════ Step 4: 결제 (유료 플랜만) ═══════════ */}
-        {form.step === 4 && isPaidPlan && (
+        {/* ═══════════ Step 4: 결제 (구독 유료 플랜만) ═══════════ */}
+        {form.step === 4 && isSubPaid && (
           <div className="max-w-[520px] mx-auto">
             {/* 주문 요약 */}
             <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 mb-5">
@@ -889,7 +994,7 @@ function SignupContent() {
               <div className="space-y-2.5">
                 <div className="flex justify-between text-sm">
                   <span className="text-on-surface-variant">플랜</span>
-                  <span className="font-bold text-on-surface">{selectedPlan.name}</span>
+                  <span className="font-bold text-on-surface">{selectedSubPlan.name}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-on-surface-variant">결제주기</span>
@@ -898,12 +1003,12 @@ function SignupContent() {
                 <div className="flex justify-between text-sm">
                   <span className="text-on-surface-variant">정가</span>
                   <span className="text-on-surface-variant font-data">
-                    ₩{formatPrice(selectedPlan.pricing!.monthly)} × {getMonths(form.billingCycle)}개월 = ₩{formatPrice(selectedPlan.pricing!.monthly * getMonths(form.billingCycle))}
+                    ₩{formatPrice(selectedSubPlan.monthly)} × {getMonths(form.billingCycle)}개월 = ₩{formatPrice(selectedSubPlan.monthly * getMonths(form.billingCycle))}
                   </span>
                 </div>
                 {saving > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-on-surface-variant">할인 ({getDiscountRate(selectedPlan, form.billingCycle)}%)</span>
+                    <span className="text-on-surface-variant">할인 ({getDiscountRate(selectedSubPlan, form.billingCycle)}%)</span>
                     <span className="text-tertiary font-bold font-data">-₩{formatPrice(saving)}</span>
                   </div>
                 )}
@@ -925,7 +1030,7 @@ function SignupContent() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-on-surface-variant">기사 제한</span>
-                  <span className="font-medium text-on-surface font-data">최대 {selectedPlan.maxDrivers}명</span>
+                  <span className="font-medium text-on-surface font-data">최대 {selectedSubPlan.maxDrivers}명</span>
                 </div>
               </div>
             </div>
@@ -948,7 +1053,7 @@ function SignupContent() {
                     </div>
                     <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
                       카드 등록 없이 14일간 Free 플랜(기본 정산 관리, 기사 10명)으로 서비스를 체험해보세요.
-                      체험 기간 중 유료 결제하시면 즉시 {selectedPlan.name} 플랜으로 업그레이드됩니다.
+                      체험 기간 중 유료 결제하시면 즉시 {selectedSubPlan.name} 플랜으로 업그레이드됩니다.
                     </p>
                   </div>
                 </label>
@@ -1048,7 +1153,7 @@ function SignupContent() {
                         <li>신용카드 등록 없이 바로 시작할 수 있습니다</li>
                         <li>14일간 <strong className="text-on-surface">Free 플랜</strong>으로 기본 기능 체험 (기사 10명, 기본 정산)</li>
                         <li>기사 앱, 전자계약서, 세금계산서 등 유료 기능은 결제 후 이용 가능</li>
-                        <li>체험 중 언제든 결제하면 즉시 <strong className="text-primary">{selectedPlan.name}</strong> 플랜으로 업그레이드</li>
+                        <li>체험 중 언제든 결제하면 즉시 <strong className="text-primary">{selectedSubPlan.name}</strong> 플랜으로 업그레이드</li>
                         <li>체험 종료 3일 전 이메일로 알림을 보내드립니다</li>
                         <li>14일 후 결제하지 않으면 Free 플랜으로 계속 이용 가능</li>
                       </ul>

@@ -9,6 +9,7 @@ const PUBLIC_ROUTES = [
   "/",              // 메인 랜딩 페이지
   "/coming-soon",   // 레거시 (리디렉트 호환)
   "/about",         // 서비스 소개 페이지
+  "/pricing",       // 요금제 비교 페이지
   "/terms",         // 이용약관
   "/privacy",       // 개인정보처리방침
   "/admin/login",   // 슈퍼관리자 로그인

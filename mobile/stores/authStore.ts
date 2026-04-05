@@ -94,11 +94,11 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (driverData.agency_id) {
         const { data: agencyData } = await supabase
           .from('agencies')
-          .select('name, logo_url')
+          .select('name')
           .eq('id', driverData.agency_id)
           .single();
         agencyName = agencyData?.name ?? null;
-        agencyLogoUrl = (agencyData as Record<string, unknown>)?.logo_url as string | null ?? null;
+        agencyLogoUrl = null;
       }
 
       set({
