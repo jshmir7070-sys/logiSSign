@@ -2,6 +2,7 @@
 
 import Sidebar from '@/components/portal/Sidebar';
 import UserMenu from '@/components/shared/UserMenu';
+import TopStatusBar from '@/components/portal/TopStatusBar';
 import { ToastContainer } from '@/components/shared/Toast';
 import { PlanProvider, usePlan } from '@/contexts/PlanContext';
 import { useEffect, useState } from 'react';
@@ -38,7 +39,13 @@ function PortalDashboardInner({ children }: { children: React.ReactNode }) {
 
       {/* TopBar — Glass */}
       <header className="fixed top-0 left-[240px] right-0 h-16 bg-white/80 backdrop-blur-[20px] z-30 flex items-center justify-between px-8">
-        <div />
+        {/* 좌측: 상태 표시 (플랜/발송량/기사/포인트) */}
+        <TopStatusBar
+          pointBalance={pointBalance}
+          onPointBalanceChange={setPointBalance}
+        />
+
+        {/* 우측: 알림 + 유저 메뉴 */}
         <div className="flex items-center gap-4">
           <button className="relative text-on-surface-variant hover:text-on-surface transition-colors">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
