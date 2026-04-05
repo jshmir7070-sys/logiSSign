@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
         changed_by: auth.userId,
         change_type: 'self_upgrade',
         reason: `셀프 업그레이드 (${billing})`,
-      }).catch(err => console.error('[Payment] Plan change log failed:', err))
+      })
 
       return NextResponse.json({ paymentId: result.paymentId, amount: result.amount })
     }

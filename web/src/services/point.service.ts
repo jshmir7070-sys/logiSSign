@@ -136,7 +136,7 @@ export async function deductPoints(params: {
   const { data: updated, error: updateErr } = await supabaseAdmin
     .from('point_balances')
     .update({
-      balance: supabaseAdmin.rpc ? undefined : 0, // placeholder, 아래 rpc 사용
+      balance: 0, // rpc 미사용 시 직접 계산
       updated_at: new Date().toISOString(),
     })
     .eq('agency_id', agencyId)

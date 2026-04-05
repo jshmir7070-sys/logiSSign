@@ -102,7 +102,7 @@ export default function DriversPage() {
     if (!confirm(`선택한 ${selectedIds.size}명의 기사를 "${label}" 상태로 변경하시겠습니까?`)) return;
     setBulkProcessing(true);
     let successCount = 0;
-    for (const driverId of selectedIds) {
+    for (const driverId of Array.from(selectedIds)) {
       try {
         const body: Record<string, unknown> = { driverId, status: newStatus };
         if (newStatus === 'inactive') body.resigned_at = new Date().toISOString();

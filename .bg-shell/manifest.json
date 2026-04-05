@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "id": "5fa95845",
+    "label": "next-dev",
+    "command": "cd web && npm run dev 2>&1",
+    "cwd": "C:\\Users\\jshmi\\Downloads\\logiSSign",
+    "ownerSessionFile": "C:\\Users\\jshmi\\.gsd\\sessions\\--C--Users-jshmi-Downloads-logiSSign--\\2026-04-04T03-49-56-853Z_35c1ef4e-732c-4601-a0bc-2660ee4cfa30.jsonl",
+    "persistAcrossSessions": false,
+    "startedAt": 1775391978924,
+    "processType": "server",
+    "group": null,
+    "readyPattern": null,
+    "readyPort": 3000,
+    "pid": 49932
+  }
+]
