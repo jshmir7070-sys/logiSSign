@@ -436,10 +436,10 @@ export default function ContractTemplatesPage() {
                   {new Date(tmpl.created_at).toLocaleDateString('ko-KR')}
                 </span>
                 <div className="flex gap-2">
-                  {!isSystem && (
+                  {tmpl.is_active && (
                     <a href={`/portal/contracts/field-editor?templateId=${tmpl.id}`}
                       className="h-8 px-3 rounded-lg bg-amber-50 text-amber-700 font-label text-xs font-semibold hover:bg-amber-100 transition-colors font-korean flex items-center gap-1">
-                      {(tmpl as unknown as Record<string, unknown>).template_type === 'pdf' ? '필드 편집' : 'PDF 전환'}
+                      {(tmpl as unknown as Record<string, unknown>).template_type === 'pdf' ? '필드 편집' : '문서 가져오기'}
                     </a>
                   )}
                   <button
