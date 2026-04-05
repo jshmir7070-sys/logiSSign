@@ -129,9 +129,21 @@ export default function RegisterScreen() {
       }
 
       setIsSubmitting(false);
+
+      // 퇴사 후 재가입/이직 케이스 구분
+      let message = `${result.agencyName} 소속으로 가입되었습니다.\n로그인해주세요.`;
+      let title = '가입 완료';
+      if (result.reinstated) {
+        title = '복직 완료';
+        message = `${result.agencyName} 소속으로 복직되었습니다.\n새 비밀번호로 로그인해주세요.`;
+      } else if (result.transferred) {
+        title = '이직 가입 완료';
+        message = `${result.agencyName} 소속으로 등록되었습니다.\n새 비밀번호로 로그인해주세요.`;
+      }
+
       Alert.alert(
-        '가입 완료',
-        `${result.agencyName} 소속으로 가입되었습니다.\n로그인해주세요.`,
+        title,
+        message,
         [{ text: '로그인하기', onPress: () => router.replace('/(auth)/login') }]
       );
     } catch (err) {
