@@ -41,18 +41,11 @@ export default function PortalLoginPage() {
     digits: ["", "", "", "", "", ""],
     error: null,
     isVerifying: false,
-    resendCooldown: 30,
+    resendCooldown: 0,
     expireTimer: 180,
   });
 
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  // OTP 재발송 카운트다운
-  useEffect(() => {
-    if (!otp.show || otp.resendCooldown <= 0) return;
-    const t = setTimeout(() => setOtp((p) => ({ ...p, resendCooldown: p.resendCooldown - 1 })), 1000);
-    return () => clearTimeout(t);
-  }, [otp.show, otp.resendCooldown]);
 
   // OTP 만료 타이머 (3분)
   useEffect(() => {
@@ -114,7 +107,7 @@ export default function PortalLoginPage() {
           digits: ["", "", "", "", "", ""],
           error: null,
           isVerifying: false,
-          resendCooldown: 30,
+          resendCooldown: 0,
           expireTimer: 180,
         });
       } catch {
@@ -191,8 +184,7 @@ export default function PortalLoginPage() {
 
   // ── OTP 재발송 ──
   const handleResend = async () => {
-    if (otp.resendCooldown > 0) return;
-    setOtp((p) => ({ ...p, resendCooldown: 30, expireTimer: 180, error: null }));
+    setOtp((p) => ({ ...p, expireTimer: 180, error: null }));
     try {
       const res = await fetch("/api/auth/send-login-otp", {
         method: "POST",
@@ -375,8 +367,8 @@ export default function PortalLoginPage() {
             </button>
 
             <div className="mt-3 text-center">
-              <button type="button" onClick={handleResend} disabled={otp.resendCooldown > 0} className="text-xs text-on-surface-variant hover:text-primary transition-colors disabled:opacity-40 font-korean">
-                {otp.resendCooldown > 0 ? `인증번호 재발송 (${otp.resendCooldown}초)` : "인증번호 재발송"}
+              <button type="button" onClick={handleResend} className="text-xs text-primary font-semibold hover:underline transition-colors font-korean">
+                인증번호 재전송
               </button>
             </div>
           </div>

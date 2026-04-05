@@ -16,7 +16,7 @@ export const MFA_COOKIE = '__logissign_mfa'
 export const OTP_TTL_MS = 5 * 60 * 1000        // OTP 유효기간: 5분
 export const OTP_MAX_ATTEMPTS = 5               // OTP 최대 시도 횟수
 export const MFA_TOKEN_TTL_MS = 24 * 60 * 60 * 1000 // MFA 토큰 최대 유효기간: 24시간
-export const OTP_RESEND_COOLDOWN_MS = 30 * 1000 // 재발송 쿨다운: 30초
+export const OTP_RESEND_COOLDOWN_MS = 0 // 쿨다운 없음 — 재전송 버튼 즉시 사용 가능
 
 // ── HMAC-SHA256 서명 (Edge + Node.js 호환) ──
 async function hmacSign(data: string, secret: string): Promise<string> {

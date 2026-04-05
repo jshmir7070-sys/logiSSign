@@ -31,15 +31,9 @@ export default function AdminLoginPage() {
   });
   const [otp, setOtp] = useState<OtpState>({
     show: false, userId: "", maskedPhone: "", digits: ["", "", "", "", "", ""],
-    error: null, isVerifying: false, resendCooldown: 30, expireTimer: 180,
+    error: null, isVerifying: false, resendCooldown: 0, expireTimer: 180,
   });
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  useEffect(() => {
-    if (!otp.show || otp.resendCooldown <= 0) return;
-    const t = setTimeout(() => setOtp((p) => ({ ...p, resendCooldown: p.resendCooldown - 1 })), 1000);
-    return () => clearTimeout(t);
-  }, [otp.show, otp.resendCooldown]);
 
   useEffect(() => {
     if (!otp.show || otp.expireTimer <= 0) return;
@@ -72,7 +66,7 @@ export default function AdminLoginPage() {
         const otpData = await otpRes.json();
         if (otpData.skip) { router.push("/admin/dashboard"); return; }
         setForm((prev) => ({ ...prev, isLoading: false }));
-        setOtp({ show: true, userId, maskedPhone: otpData.maskedPhone || "", digits: ["", "", "", "", "", ""], error: null, isVerifying: false, resendCooldown: 30, expireTimer: 180 });
+        setOtp({ show: true, userId, maskedPhone: otpData.maskedPhone || "", digits: ["", "", "", "", "", ""], error: null, isVerifying: false, resendCooldown: 0, expireTimer: 180 });
       } catch { router.push("/admin/dashboard"); }
     } catch {
       setForm((prev) => ({ ...prev, isLoading: false, error: "로그인 중 오류가 발생했습니다." }));
@@ -110,8 +104,7 @@ export default function AdminLoginPage() {
   };
 
   const handleResend = async () => {
-    if (otp.resendCooldown > 0) return;
-    setOtp((p) => ({ ...p, resendCooldown: 30, expireTimer: 180, error: null }));
+    setOtp((p) => ({ ...p, expireTimer: 180, error: null }));
     try {
       const res = await fetch("/api/auth/send-login-otp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: otp.userId }) });
       const data = await res.json();
@@ -215,8 +208,8 @@ export default function AdminLoginPage() {
             </button>
 
             <div className="mt-3 text-center">
-              <button type="button" onClick={handleResend} disabled={otp.resendCooldown > 0} className="text-xs text-on-surface-variant hover:text-primary transition-colors disabled:opacity-40 font-korean">
-                {otp.resendCooldown > 0 ? `인증번호 재발송 (${otp.resendCooldown}초)` : "인증번호 재발송"}
+              <button type="button" onClick={handleResend} className="text-xs text-primary font-semibold hover:underline transition-colors font-korean">
+                인증번호 재전송
               </button>
             </div>
           </div>
