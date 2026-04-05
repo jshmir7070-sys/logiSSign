@@ -4,7 +4,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import { POINT_COSTS, type PointAction } from '@/lib/plan-limits'
+import { POINT_COSTS, WELCOME_BONUS_POINTS, type PointAction } from '@/lib/plan-limits'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -49,12 +49,29 @@ export async function getPointBalance(agencyId: string): Promise<PointBalance> {
     }
   }
 
-  // 레코드 없으면 생성
+  // 레코드 없으면 생성 + 웰컴 보너스 10,000P 지급
+  const welcome = WELCOME_BONUS_POINTS
   await supabaseAdmin
     .from('point_balances')
-    .insert({ agency_id: agencyId, balance: 0, total_charged: 0, total_used: 0 })
+    .insert({
+      agency_id: agencyId,
+      balance: welcome,
+      total_charged: welcome,
+      total_used: 0,
+    })
 
-  return { balance: 0, totalCharged: 0, totalUsed: 0 }
+  // 웰컴 보너스 거래 내역 기록
+  await supabaseAdmin
+    .from('point_transactions')
+    .insert({
+      agency_id: agencyId,
+      type: 'bonus',
+      amount: welcome,
+      balance_after: welcome,
+      description: `🎉 가입 축하 웰컴 보너스 ${welcome.toLocaleString()}P`,
+    })
+
+  return { balance: welcome, totalCharged: welcome, totalUsed: 0 }
 }
 
 /* ══════════════════════ 포인트 차감 ══════════════════════ */

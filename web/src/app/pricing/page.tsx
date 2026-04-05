@@ -71,16 +71,16 @@ const COMPETITORS = [
 /* ── Feature comparison rows ── */
 const FEATURE_ROWS = [
   { label: '기사 수', free: '10명', point: '무제한', basic: '30명', standard: '80명', pro: '150명', enterprise: '무제한' },
-  { label: '전자계약서', free: '-', point: '1,500P/건', basic: '무제한', standard: '무제한', pro: '무제한', enterprise: '무제한' },
-  { label: '정산서 생성', free: '��본만', point: '800P/건', basic: '무제한', standard: '무제한', pro: '무제한', enterprise: '무제한' },
+  { label: '전자계약서', free: '-', point: '1,200P/건', basic: '무제한', standard: '무제한', pro: '무제한', enterprise: '무제한' },
+  { label: '정산서 생성', free: '��본만', point: '700P/건', basic: '무제한', standard: '무제한', pro: '무제한', enterprise: '무제한' },
   { label: '정산서 빌더', free: '-', point: '포함', basic: '포함', standard: '포함', pro: '포함', enterprise: '포함' },
-  { label: '엑셀 업로드 정산', free: '-', point: '3,000P/회', basic: '무제한', standard: '무제한', pro: '무제한', enterprise: '무제한' },
-  { label: 'SMS 발송', free: '-', point: '300P/건', basic: '무제한', standard: '무제한', pro: '무제한', enterprise: '무제한' },
-  { label: '세금계산서', free: '-', point: '1,500P/건', basic: '포함', standard: '포함', pro: '포함', enterprise: '포함' },
-  { label: '매출 리포트', free: '-', point: '800P/건', basic: '-', standard: '포함', pro: '포함', enterprise: '포함' },
+  { label: '엑셀 업로드 정산', free: '-', point: '2,500P/회', basic: '무제한', standard: '무제한', pro: '무제한', enterprise: '무제한' },
+  { label: 'SMS 발송', free: '-', point: '200P/건', basic: '무제한', standard: '무제한', pro: '무제한', enterprise: '무제한' },
+  { label: '세금계산서', free: '-', point: '1,200P/건', basic: '포함', standard: '포함', pro: '포함', enterprise: '포함' },
+  { label: '매출 리포트', free: '-', point: '700P/건', basic: '-', standard: '포함', pro: '포함', enterprise: '포함' },
   { label: '기사 전용 앱', free: '포함', point: '포함', basic: '포함', standard: '포함', pro: '포함', enterprise: '포함' },
   { label: '관리자 계정', free: '1��', point: '3명', basic: '3명', standard: '6명', pro: '11명', enterprise: '100명' },
-  { label: 'PDF 계약서 필드배치', free: '-', point: '500P/건', basic: '포함', standard: '포함', pro: '포함', enterprise: '포함' },
+  { label: 'PDF 계약서 필드배치', free: '-', point: '무료', basic: '포함', standard: '포함', pro: '포함', enterprise: '포함' },
 ];
 
 export default function PricingPage() {
@@ -109,7 +109,7 @@ export default function PricingPage() {
           </h1>
           <p className="text-lg text-on-surface-variant font-korean max-w-2xl mx-auto">
             구독형은 월정액으로 모든 기능 무제한 사용.<br/>
-            포인트형은 사용한 만큼만 결제. 소량 사용에 유리합니다.
+            포인트형은 사용한 만큼만 결제. 소량 사용에 유리합니다.<br/><strong className="text-primary">🎉 가입만 해도 10,000P 무료 지급!</strong>
           </p>
         </div>
 
@@ -156,7 +156,7 @@ export default function PricingPage() {
           <div className="text-center mb-8">
             <span className="px-3 py-1 rounded-full bg-tertiary/10 text-tertiary text-xs font-bold font-korean">포인트 충전형</span>
             <h2 className="text-2xl font-headline font-bold text-on-surface mt-3 font-korean">사용한 만큼만 결제</h2>
-            <p className="text-sm text-on-surface-variant mt-2 font-korean">월정액 없이 포인트를 충전하고, 기능 사용 시 차감됩니다.</p>
+            <p className="text-sm text-on-surface-variant mt-2 font-korean">월정액 없이 포인트를 충전하고, 기능 사용 시 차감됩니다. 가입 즉시 10,000P 무료!</p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -176,7 +176,7 @@ export default function PricingPage() {
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] text-on-surface-variant/50 mt-3 font-korean">1P = 1원. 충전 시 보너스 포인트 추가 지급.</p>
+              <p className="text-[11px] text-on-surface-variant/50 mt-3 font-korean">1P = ₩1. 가입 시 10,000P 무료 지급. 충전 시 보너스 추가.</p>
             </div>
 
             {/* 충전 패키지 + 예상 비용 */}
@@ -232,7 +232,7 @@ export default function PricingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-primary/5 rounded-2xl border-2 border-primary/30 p-6 relative">
-              <span className="absolute -top-3 left-4 px-3 py-1 rounded-full bg-primary text-white text-xs font-bold">기사 25명 이상이면 구독형!</span>
+              <span className="absolute -top-3 left-4 px-3 py-1 rounded-full bg-primary text-white text-xs font-bold">기사 28명 이상이면 구독형!</span>
               <h3 className="text-lg font-bold text-on-surface font-korean mt-2">구독형</h3>
               <p className="text-3xl font-data font-bold text-primary mt-2">{formatKRW(49900)}<span className="text-sm font-normal text-on-surface-variant">/월</span></p>
               <ul className="mt-4 space-y-2 text-sm text-on-surface-variant font-korean">
@@ -364,7 +364,7 @@ export default function PricingPage() {
         <section className="text-center pb-8">
           <div className="bg-primary/5 rounded-3xl p-12 border border-primary/20">
             <h2 className="text-2xl font-headline font-bold text-on-surface font-korean">지금 무료로 시작하세요</h2>
-            <p className="text-sm text-on-surface-variant mt-2 font-korean">기사 10명까지 무료. 신용카드 등록 없이 바로 시작.</p>
+            <p className="text-sm text-on-surface-variant mt-2 font-korean">기사 10명까지 무료 + 가입 즉시 10,000P 지급. 신용카드 등록 없이 바로 시작.</p>
             <div className="flex items-center justify-center gap-3 mt-6">
               <Link href="/auth/signup" className="h-12 px-8 rounded-xl bg-primary text-white font-semibold font-korean flex items-center">
                 무료 시작하기

@@ -176,8 +176,8 @@ export const PLAN_DISCOUNTS: Record<string, number> = {
 
 /** 플랜별 주요 기능 요약 (UI 표시용) */
 export const PLAN_HIGHLIGHTS: Record<PlanType, string[]> = {
-  free: ['기사 10명', '기본 정산', '공지 관리'],
-  point: ['기사 무제한', '전 기능 사용', '사용한 만큼만 결제', '소량 사용에 유리'],
+  free: ['기사 10명', '기본 정산', '공지 관리', '가입 시 10,000P 지급'],
+  point: ['기사 무제한', '전 기능 사용', '사용한 만큼만 결제', '가입 시 10,000P 지급'],
   basic: ['기사 30명', '전자계약서', '정산서 빌더', '세금계산서', '엑셀 업로드'],
   standard: ['기사 80명', 'Basic 전체', '매출 리포트', '푸시 알림'],
   pro: ['기사 150명', 'Standard 전체', 'API 연동', '대용량 처리'],
@@ -256,19 +256,27 @@ export type PointAction =
   | 'report_generate'      // 리포트 생성 (건당)
   | 'template_upload'      // 템플릿 업로드 (건당)
 
-/** 항목별 포인트 차감 단가 (기사 25명 이상이면 구독형이 유리하도록 설계) */
+/**
+ * 항목별 포인트 차감 단가
+ * - 기사 ~28명 이상이면 구독형 Basic(₩49,900)이 유리
+ * - 기사 ~20명 이하면 포인트형이 유리
+ * - 시장 비교: 모두싸인 1,330~1,900원/건, 이폼사인 600원/건, 싸인투게더 500원/건
+ */
 export const POINT_COSTS: Record<PointAction, { cost: number; label: string; desc: string }> = {
-  contract_send:       { cost: 1500, label: '계약서 전송',      desc: '기사 1명에게 계약서 1건 전송' },
-  settlement_generate: { cost: 800,  label: '정산서 생성',      desc: '기사 1명 월 정산서 생성' },
-  settlement_pdf:      { cost: 500,  label: '정산서 PDF',       desc: '정산서 PDF 다운로드' },
-  sms_send:            { cost: 300,  label: 'SMS 발송',         desc: '문자 메시지 1건 발송' },
+  contract_send:       { cost: 1200, label: '계약서 전송',      desc: '기사 1명에게 계약서 1건 전송' },
+  settlement_generate: { cost: 700,  label: '정산서 생성',      desc: '기사 1명 월 정산서 생성' },
+  settlement_pdf:      { cost: 450,  label: '정산서 PDF',       desc: '정산서 PDF 다운로드' },
+  sms_send:            { cost: 200,  label: 'SMS 발송',         desc: '문자 메시지 1건 발송' },
   push_send:           { cost: 0,    label: '푸시 알림',        desc: '앱 푸시 알림 (무료)' },
   driver_register:     { cost: 0,    label: '기사 등록',        desc: '기사 신규 등록 (무료)' },
-  excel_upload:        { cost: 3000, label: '엑셀 업로드 정산', desc: '엑셀 파일 1회 업로드 처리' },
-  tax_invoice:         { cost: 1500, label: '세금계산서 발행',  desc: '세금계산서 1건 발행' },
-  report_generate:     { cost: 800,  label: '리포트 생성',      desc: '매출/정산 리포트 1건' },
-  template_upload:     { cost: 500,  label: '템플릿 업로드',    desc: 'PDF 템플릿 1건 업로드' },
+  excel_upload:        { cost: 2500, label: '엑셀 업로드 정산', desc: '엑셀 파일 1회 업로드 처리' },
+  tax_invoice:         { cost: 1200, label: '세금계산서 발행',  desc: '세금계산서 1건 발행' },
+  report_generate:     { cost: 700,  label: '리포트 생성',      desc: '매출/정산 리포트 1건' },
+  template_upload:     { cost: 0,    label: '템플릿 업로드',    desc: 'PDF 템플릿 업로드 (무료)' },
 }
+
+/** 신규 가입 시 웰컴 보너스 포인트 */
+export const WELCOME_BONUS_POINTS = 10000;
 
 /** 포인트 충전 패키지 (클라이언트 표시용 — DB에도 동일 시드 있음) */
 export const POINT_PACKAGES = [
