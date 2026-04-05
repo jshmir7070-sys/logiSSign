@@ -1,4 +1,12 @@
-import { useState } from 'react';
+/**
+ * 계약서 서명 화면 (기사 앱)
+ *
+ * 두 가지 모드:
+ * 1. text 모드: 기존 동의 체크 + 서명패드 + 본인인증
+ * 2. pdf 모드: PDF 미리보기 + sign_fields 오버레이 (외부문서 서명과 동일)
+ */
+
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +16,9 @@ import {
   useWindowDimensions,
   TouchableOpacity,
   Platform,
+  ActivityIndicator,
+  Modal,
+  Image,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -16,7 +27,7 @@ import Header from '../../../components/common/Header';
 import Button from '../../../components/common/Button';
 import SignaturePad from '../../../components/common/SignaturePad';
 import { useAuthStore } from '../../../stores/authStore';
-import { signContract } from '../../../services/contract.service';
+import { getContractDetail, signContract } from '../../../services/contract.service';
 import {
   requestIdentityVerification,
   IDENTITY_PROVIDERS,
@@ -24,6 +35,40 @@ import {
   type VerificationResult,
 } from '../../../services/identity.service';
 import { colors, spacing, typography, borderRadius, shadows } from '../../../constants/theme';
+import { supabase } from '../../../lib/supabase';
+
+/* ══════════════════════ PDF 필드 타입 ══════════════════════ */
+
+type FieldType = 'checkbox' | 'signature' | 'seal' | 'date' | 'text';
+
+interface SignField {
+  id: string;
+  field_type: FieldType;
+  page_number: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  label: string | null;
+  required: boolean;
+  sort_order: number;
+  binding_variable?: string;
+}
+
+interface FieldResponse {
+  value?: string;
+  imageData?: string;
+}
+
+const FIELD_COLORS: Record<FieldType, string> = {
+  checkbox: '#2563EB',
+  signature: '#7C3AED',
+  seal: '#DC2626',
+  date: '#059669',
+  text: '#D97706',
+};
+
+/* ══════════════════════ 동의 항목 (text 모드) ══════════════════════ */
 
 interface ConsentItem {
   key: string;
@@ -65,20 +110,98 @@ const CONSENT_ITEMS: ConsentItem[] = [
   },
 ];
 
+/* ══════════════════════ 메인 컴포넌트 ══════════════════════ */
+
 export default function ContractSignScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const driver = useAuthStore((s) => s.driver);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const [signatureData, setSignatureData] = useState<string | null>(null);
-  const [consents, setConsents] = useState<Record<string, boolean>>({});
+
+  // 공통 상태
+  const [loading, setLoading] = useState(true);
   const [signing, setSigning] = useState(false);
   const [identityResult, setIdentityResult] = useState<VerificationResult | null>(null);
   const [verifying, setVerifying] = useState(false);
+  const [contractTitle, setContractTitle] = useState('');
+
+  // 모드 분기
+  const [templateType, setTemplateType] = useState<'text' | 'pdf'>('text');
+
+  // text 모드 상태
+  const [signatureData, setSignatureData] = useState<string | null>(null);
+  const [consents, setConsents] = useState<Record<string, boolean>>({});
+
+  // pdf 모드 상태
+  const [pdfUrl, setPdfUrl] = useState('');
+  const [signFields, setSignFields] = useState<SignField[]>([]);
+  const [fieldResponses, setFieldResponses] = useState<Record<string, FieldResponse>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sigModalField, setSigModalField] = useState<string | null>(null);
 
   const padWidth = width - spacing.lg * 2;
   const padHeight = 200;
+
+  // ── 데이터 로드 ──
+  useEffect(() => {
+    if (!id || !driver?.id) return;
+    (async () => {
+      const { data: contract, error } = await getContractDetail(id, driver.id);
+      if (error || !contract) {
+        Alert.alert('오류', error ?? '계약서를 찾을 수 없습니다');
+        setLoading(false);
+        return;
+      }
+
+      setContractTitle(contract.title ?? '');
+
+      const type = (contract as Record<string, unknown>).template_type as string;
+      if (type === 'pdf') {
+        setTemplateType('pdf');
+        setPdfUrl((contract as Record<string, unknown>).template_pdf_url as string ?? '');
+        const fields = (contract as Record<string, unknown>).sign_fields;
+        if (Array.isArray(fields)) {
+          setSignFields(fields as SignField[]);
+          // 바인딩 변수 자동 채움
+          const autoResponses: Record<string, FieldResponse> = {};
+          for (const f of fields as SignField[]) {
+            if (f.binding_variable && f.field_type === 'text') {
+              const val = resolveBindingVariable(f.binding_variable, driver);
+              if (val) autoResponses[f.id] = { value: val };
+            }
+          }
+          setFieldResponses(autoResponses);
+        }
+      } else {
+        setTemplateType('text');
+      }
+
+      // 열람 상태 업데이트
+      if (contract.status === 'sent') {
+        await supabase
+          .from('contracts')
+          .update({ status: 'viewed' })
+          .eq('id', id)
+          .eq('driver_id', driver.id);
+      }
+
+      setLoading(false);
+    })();
+  }, [id, driver?.id]);
+
+  // ── 바인딩 변수 → 실제값 ──
+  function resolveBindingVariable(variable: string, driverData: Record<string, unknown> | null): string | null {
+    if (!driverData) return null;
+    const map: Record<string, string | null> = {
+      '{{기사명}}': (driverData.name as string) ?? null,
+      '{{연락처}}': (driverData.phone as string) ?? null,
+      '{{오늘날짜}}': new Date().toLocaleDateString('ko-KR'),
+    };
+    return map[variable] ?? null;
+  }
+
+  // ════════════════ TEXT 모드 핸들러 ════════════════
 
   const toggleConsent = (key: string) => {
     setConsents((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -101,7 +224,101 @@ export default function ContractSignScreen() {
   const allChecked = CONSENT_ITEMS.every((item) => consents[item.key]);
   const checkedCount = CONSENT_ITEMS.filter((item) => consents[item.key]).length;
 
-  const canSubmit = allRequiredChecked && !!signatureData && !!identityResult?.verified;
+  const canSubmitText = allRequiredChecked && !!signatureData && !!identityResult?.verified;
+
+  // ════════════════ PDF 모드 핸들러 ════════════════
+
+  const toggleCheckbox = useCallback((fieldId: string) => {
+    setFieldResponses(prev => {
+      const cur = prev[fieldId]?.value === 'true';
+      return { ...prev, [fieldId]: { value: cur ? 'false' : 'true' } };
+    });
+  }, []);
+
+  const applySeal = useCallback(async (fieldId: string) => {
+    const userId = driver?.id;
+    if (!userId) return;
+    const { data: seal } = await supabase
+      .from('seals')
+      .select('seal_data_uri')
+      .eq('owner_id', userId)
+      .eq('is_default', true)
+      .limit(1)
+      .single();
+
+    if (seal?.seal_data_uri) {
+      setFieldResponses(prev => ({
+        ...prev,
+        [fieldId]: { imageData: seal.seal_data_uri ?? undefined, value: 'sealed' },
+      }));
+    } else {
+      Alert.alert('도장 없음', '등록된 도장이 없습니다. 설정에서 도장을 먼저 등록해주세요.');
+    }
+  }, [driver?.id]);
+
+  const handlePdfSignatureComplete = useCallback((base64: string | null) => {
+    if (!sigModalField || !base64) {
+      setSigModalField(null);
+      return;
+    }
+    setFieldResponses(prev => ({
+      ...prev,
+      [sigModalField]: { imageData: base64, value: 'signed' },
+    }));
+    setSigModalField(null);
+  }, [sigModalField]);
+
+  const applyDate = useCallback((fieldId: string) => {
+    const today = new Date().toLocaleDateString('ko-KR', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+    });
+    setFieldResponses(prev => ({ ...prev, [fieldId]: { value: today } }));
+  }, []);
+
+  const handleFieldTap = useCallback((field: SignField) => {
+    switch (field.field_type) {
+      case 'checkbox':
+        toggleCheckbox(field.id);
+        break;
+      case 'seal':
+        applySeal(field.id);
+        break;
+      case 'signature':
+        setSigModalField(field.id);
+        break;
+      case 'date':
+        applyDate(field.id);
+        break;
+      case 'text':
+        if (typeof Alert.prompt === 'function') {
+          Alert.prompt('텍스트 입력', field.label ?? '내용을 입력하세요', (text: string) => {
+            if (text) setFieldResponses(prev => ({ ...prev, [field.id]: { value: text } }));
+          });
+        } else {
+          Alert.alert('안내', '텍스트 입력은 추후 지원됩니다');
+        }
+        break;
+    }
+  }, [toggleCheckbox, applySeal, applyDate]);
+
+  // PDF 필드 완료 상태
+  const pageFields = signFields.filter(f => f.page_number === currentPage);
+  const totalPages = Math.max(1, ...signFields.map(f => f.page_number));
+  const totalRequired = signFields.filter(f => f.required).length;
+  const completedRequired = signFields.filter(f => {
+    if (!f.required) return false;
+    const r = fieldResponses[f.id];
+    return r && (r.value || r.imageData);
+  }).length;
+
+  // PDF 모드에서도 서명 필드가 하나 이상 있어야 canSubmit
+  const canSubmitPdf = completedRequired >= totalRequired && !!identityResult?.verified;
+
+  // PDF 프리뷰 크기
+  const previewW = width - 32;
+  const previewH = previewW * (841 / 595);
+
+  // ════════════════ 본인인증 (공통) ════════════════
 
   const handleVerify = async (provider: IdentityProvider) => {
     if (!driver?.name || !driver?.phone) return;
@@ -119,12 +336,39 @@ export default function ContractSignScreen() {
     }
   };
 
+  // ════════════════ 서명 제출 ════════════════
+
   const handleSign = async () => {
-    if (!id || !driver?.id || !signatureData || !allRequiredChecked) return;
+    if (!id || !driver?.id) return;
+
+    // text 모드: 기존 서명 데이터
+    // pdf 모드: 모든 필드 응답을 signatureBase64에 JSON으로 담기
+    let signaturePayload: string;
+    let consentPayload = undefined;
+
+    if (templateType === 'text') {
+      if (!signatureData || !allRequiredChecked) return;
+      signaturePayload = signatureData;
+      consentPayload = {
+        consent_contract: consents['contract'] ?? false,
+        consent_privacy_collect: consents['privacy_collect'] ?? false,
+        consent_privacy_id: consents['privacy_id'] ?? false,
+        consent_privacy_3rd: consents['privacy_3rd'] ?? false,
+        consent_privacy_3rd_id: consents['privacy_3rd_id'] ?? false,
+      };
+    } else {
+      // PDF 모드: 필드 응답을 JSON으로 직렬화
+      signaturePayload = JSON.stringify({
+        type: 'pdf_fields',
+        responses: fieldResponses,
+      });
+    }
 
     Alert.alert(
       '서명 확인',
-      `계약서 및 ${checkedCount}건의 동의 항목에 전자서명합니다.\n서명 후에는 취소할 수 없습니다.`,
+      templateType === 'text'
+        ? `계약서 및 ${checkedCount}건의 동의 항목에 전자서명합니다.\n서명 후에는 취소할 수 없습니다.`
+        : `${completedRequired}/${totalRequired} 항목이 완료되었습니다.\n서명 후에는 취소할 수 없습니다.`,
       [
         { text: '취소', style: 'cancel' },
         {
@@ -135,16 +379,10 @@ export default function ContractSignScreen() {
             const { error } = await signContract(
               id,
               driver.id,
-              signatureData,
+              signaturePayload,
               '0.0.0.0',
               'logiSSign-Mobile-App',
-              {
-                consent_contract: consents['contract'] ?? false,
-                consent_privacy_collect: consents['privacy_collect'] ?? false,
-                consent_privacy_id: consents['privacy_id'] ?? false,
-                consent_privacy_3rd: consents['privacy_3rd'] ?? false,
-                consent_privacy_3rd_id: consents['privacy_3rd_id'] ?? false,
-              },
+              consentPayload,
               identityResult?.certId,
             );
             setSigning(false);
@@ -152,7 +390,7 @@ export default function ContractSignScreen() {
             if (error) {
               Alert.alert('서명 실패', error);
             } else {
-              Alert.alert('서명 완료', '계약서 및 동의서에 서명이 완료되었습니다.', [
+              Alert.alert('서명 완료', '계약서에 서명이 완료되었습니다.', [
                 { text: '확인', onPress: () => router.back() },
               ]);
             }
@@ -161,6 +399,239 @@ export default function ContractSignScreen() {
       ]
     );
   };
+
+  // ════════════════ 로딩 ════════════════
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <Header title="전자서명" showBack />
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>계약서 로딩 중...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ════════════════ 본인인증 섹션 (공통) ════════════════
+
+  const renderIdentitySection = () => (
+    <View style={styles.consentSection}>
+      <View style={styles.consentHeader}>
+        <Text style={styles.consentHeaderTitle}>본인인증</Text>
+        {identityResult?.verified && (
+          <View style={styles.verifiedBadge}>
+            <MaterialIcons name="verified" size={14} color={colors.tertiary} />
+            <Text style={styles.verifiedText}>인증완료</Text>
+          </View>
+        )}
+      </View>
+
+      {identityResult?.verified ? (
+        <View style={styles.verifiedCard}>
+          <MaterialIcons name="check-circle" size={24} color={colors.tertiary} />
+          <View style={styles.verifiedInfo}>
+            <Text style={styles.verifiedName}>{identityResult.name} 본인 확인됨</Text>
+            <Text style={styles.verifiedMeta}>
+              {identityResult.provider === 'pass' ? 'PASS 인증' : '카카오 인증'} · {new Date(identityResult.verifiedAt).toLocaleTimeString('ko-KR')}
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <>
+          <Text style={styles.verifyDesc}>
+            전자서명의 법적 효력을 위해 본인인증이 필요합니다.
+          </Text>
+          <View style={styles.providerRow}>
+            {IDENTITY_PROVIDERS.map((p) => (
+              <TouchableOpacity
+                key={p.id}
+                style={[styles.providerBtn, p.recommended && styles.providerBtnRecommended]}
+                onPress={() => handleVerify(p.id)}
+                disabled={verifying}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.providerIcon}>{p.icon}</Text>
+                <Text style={styles.providerName}>{p.name}</Text>
+                <Text style={styles.providerDesc}>{p.description}</Text>
+                {p.recommended && (
+                  <View style={styles.recommendBadge}>
+                    <Text style={styles.recommendText}>추천</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+          {verifying && (
+            <Text style={styles.verifyingText}>본인인증 진행 중...</Text>
+          )}
+        </>
+      )}
+    </View>
+  );
+
+  // ════════════════ PDF 모드 렌더링 ════════════════
+
+  if (templateType === 'pdf') {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <Header title={contractTitle || '계약서 서명'} showBack />
+
+        {/* 진행률 바 */}
+        <View style={styles.progressBar}>
+          <View style={[styles.progressFill, { width: `${totalRequired > 0 ? (completedRequired / totalRequired) * 100 : 0}%` }]} />
+        </View>
+        <Text style={styles.progressText}>
+          {completedRequired}/{totalRequired} 항목 완료
+        </Text>
+
+        <ScrollView contentContainerStyle={styles.pdfScrollContent}>
+          {/* PDF + 필드 오버레이 */}
+          <View style={[styles.pdfContainer, { width: previewW, height: previewH }]}>
+            {pdfUrl ? (
+              <View style={StyleSheet.absoluteFill}>
+                <Image
+                  source={{ uri: pdfUrl }}
+                  style={StyleSheet.absoluteFill}
+                  resizeMode="contain"
+                />
+              </View>
+            ) : (
+              <View style={StyleSheet.absoluteFill}>
+                <Text style={styles.pdfPlaceholder}>PDF 미리보기</Text>
+              </View>
+            )}
+
+            {/* 필드 오버레이 */}
+            {pageFields.map(field => {
+              const resp = fieldResponses[field.id];
+              const isCompleted = resp && (resp.value || resp.imageData);
+              const fieldColor = FIELD_COLORS[field.field_type];
+
+              return (
+                <TouchableOpacity
+                  key={field.id}
+                  activeOpacity={0.7}
+                  onPress={() => handleFieldTap(field)}
+                  style={[
+                    styles.fieldOverlay,
+                    {
+                      left: `${field.x}%`,
+                      top: `${field.y}%`,
+                      width: `${field.width}%`,
+                      height: `${field.height}%`,
+                      borderColor: isCompleted ? '#22C55E' : fieldColor,
+                      backgroundColor: isCompleted ? '#22C55E18' : `${fieldColor}18`,
+                    },
+                  ]}
+                >
+                  {field.field_type === 'checkbox' && (
+                    <MaterialIcons
+                      name={resp?.value === 'true' ? 'check-box' : 'check-box-outline-blank'}
+                      size={Math.min(previewW * field.width / 100, previewH * field.height / 100) * 0.7}
+                      color={resp?.value === 'true' ? '#22C55E' : fieldColor}
+                    />
+                  )}
+
+                  {(field.field_type === 'signature' || field.field_type === 'seal') && resp?.imageData && (
+                    <Image
+                      source={{ uri: resp.imageData }}
+                      style={styles.fieldImage}
+                      resizeMode="contain"
+                    />
+                  )}
+
+                  {(field.field_type === 'signature' || field.field_type === 'seal') && !resp?.imageData && (
+                    <Text style={[styles.fieldLabel, { color: fieldColor }]}>
+                      {field.field_type === 'signature' ? '터치하여 서명' : '터치하여 날인'}
+                    </Text>
+                  )}
+
+                  {field.field_type === 'date' && (
+                    <Text style={[styles.fieldDateText, { color: resp?.value ? '#059669' : '#9CA3AF' }]}>
+                      {resp?.value || '터치하여 날짜'}
+                    </Text>
+                  )}
+
+                  {field.field_type === 'text' && (
+                    <Text style={[styles.fieldDateText, { color: resp?.value ? '#D97706' : '#9CA3AF' }]} numberOfLines={1}>
+                      {resp?.value || field.label || '터치하여 입력'}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* 페이지 네비게이션 */}
+          {totalPages > 1 && (
+            <View style={styles.pageNav}>
+              <TouchableOpacity
+                onPress={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+                style={[styles.pageBtn, currentPage <= 1 && styles.pageBtnDisabled]}
+              >
+                <MaterialIcons name="chevron-left" size={24} color={currentPage <= 1 ? '#D1D5DB' : colors.primary} />
+              </TouchableOpacity>
+              <Text style={styles.pageText}>{currentPage} / {totalPages}</Text>
+              <TouchableOpacity
+                onPress={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                style={[styles.pageBtn, currentPage >= totalPages && styles.pageBtnDisabled]}
+              >
+                <MaterialIcons name="chevron-right" size={24} color={currentPage >= totalPages ? '#D1D5DB' : colors.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* 본인인증 섹션 */}
+          <View style={styles.pdfIdentitySection}>
+            {renderIdentitySection()}
+          </View>
+        </ScrollView>
+
+        {/* 하단 버튼 */}
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 0) + spacing.lg }]}>
+          <Button
+            title={signing ? '서명 처리 중...' : `서명 제출 (${completedRequired}/${totalRequired})`}
+            onPress={handleSign}
+            disabled={!canSubmitPdf || signing}
+            loading={signing}
+            fullWidth
+            size="lg"
+          />
+        </View>
+
+        {/* 서명패드 모달 */}
+        <Modal visible={!!sigModalField} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>자필 서명</Text>
+              <Text style={styles.modalDesc}>아래 영역에 서명해 주세요</Text>
+
+              <SignaturePad
+                width={width - 64}
+                height={200}
+                onSignatureChange={handlePdfSignatureComplete}
+              />
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  onPress={() => setSigModalField(null)}
+                  style={styles.modalCancel}
+                >
+                  <Text style={styles.modalCancelText}>취소</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </SafeAreaView>
+    );
+  }
+
+  // ════════════════ TEXT 모드 렌더링 (기존) ════════════════
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -237,58 +708,7 @@ export default function ContractSignScreen() {
         </View>
 
         {/* Identity Verification */}
-        <View style={styles.consentSection}>
-          <View style={styles.consentHeader}>
-            <Text style={styles.consentHeaderTitle}>본인인증</Text>
-            {identityResult?.verified && (
-              <View style={styles.verifiedBadge}>
-                <MaterialIcons name="verified" size={14} color={colors.tertiary} />
-                <Text style={styles.verifiedText}>인증완료</Text>
-              </View>
-            )}
-          </View>
-
-          {identityResult?.verified ? (
-            <View style={styles.verifiedCard}>
-              <MaterialIcons name="check-circle" size={24} color={colors.tertiary} />
-              <View style={styles.verifiedInfo}>
-                <Text style={styles.verifiedName}>{identityResult.name} 본인 확인됨</Text>
-                <Text style={styles.verifiedMeta}>
-                  {identityResult.provider === 'pass' ? 'PASS 인증' : '카카오 인증'} · {new Date(identityResult.verifiedAt).toLocaleTimeString('ko-KR')}
-                </Text>
-              </View>
-            </View>
-          ) : (
-            <>
-              <Text style={styles.verifyDesc}>
-                전자서명의 법적 효력을 위해 본인인증이 필요합니다.
-              </Text>
-              <View style={styles.providerRow}>
-                {IDENTITY_PROVIDERS.map((p) => (
-                  <TouchableOpacity
-                    key={p.id}
-                    style={[styles.providerBtn, p.recommended && styles.providerBtnRecommended]}
-                    onPress={() => handleVerify(p.id)}
-                    disabled={verifying}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.providerIcon}>{p.icon}</Text>
-                    <Text style={styles.providerName}>{p.name}</Text>
-                    <Text style={styles.providerDesc}>{p.description}</Text>
-                    {p.recommended && (
-                      <View style={styles.recommendBadge}>
-                        <Text style={styles.recommendText}>추천</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-              {verifying && (
-                <Text style={styles.verifyingText}>본인인증 진행 중...</Text>
-              )}
-            </>
-          )}
-        </View>
+        {renderIdentitySection()}
 
         {/* Signature Pad */}
         <View style={styles.padSection}>
@@ -307,7 +727,7 @@ export default function ContractSignScreen() {
         <Button
           title={signing ? '서명 처리 중...' : `동의 및 서명 완료 (${checkedCount}/${CONSENT_ITEMS.length})`}
           onPress={handleSign}
-          disabled={!canSubmit || signing}
+          disabled={!canSubmitText || signing}
           loading={signing}
           fullWidth
           size="lg"
@@ -317,9 +737,13 @@ export default function ContractSignScreen() {
   );
 }
 
+/* ══════════════════════ 스타일 ══════════════════════ */
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
   content: { padding: spacing.lg, paddingBottom: spacing.xl, gap: spacing.lg },
+  loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  loadingText: { fontSize: 14, color: colors.onSurfaceVariant },
   infoCard: {
     backgroundColor: colors.primaryFixed + '30',
     borderRadius: borderRadius.lg,
@@ -510,7 +934,6 @@ const styles = StyleSheet.create({
   /* Signature */
   padSection: { gap: spacing.sm },
   padLabel: { ...typography.labelLarge, color: colors.onSurface },
-  padHint: { ...typography.labelSmall, color: colors.onSurfaceVariant, textAlign: 'center' },
   footer: {
     padding: spacing.lg,
     paddingBottom: spacing.lg,
@@ -518,4 +941,100 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.outlineVariant + '20',
   },
+
+  /* PDF mode */
+  progressBar: {
+    height: 3,
+    backgroundColor: colors.outlineVariant + '30',
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 2 },
+  progressText: {
+    ...typography.labelSmall,
+    color: colors.onSurfaceVariant,
+    textAlign: 'right',
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+  pdfScrollContent: { alignItems: 'center', paddingVertical: 16 },
+  pdfContainer: {
+    backgroundColor: '#FFF',
+    borderRadius: 4,
+    overflow: 'hidden',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    position: 'relative',
+  },
+  pdfPlaceholder: {
+    flex: 1,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    color: '#D1D5DB',
+    fontSize: 16,
+  },
+  fieldOverlay: {
+    position: 'absolute',
+    borderWidth: 2,
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderStyle: 'dashed',
+  },
+  fieldImage: { width: '90%', height: '90%' },
+  fieldLabel: { fontSize: 9, textAlign: 'center' },
+  fieldDateText: { fontSize: 10, textAlign: 'center' },
+  pageNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.lg,
+    marginTop: spacing.md,
+  },
+  pageBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceContainerLowest,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadows.sm,
+  },
+  pageBtnDisabled: { opacity: 0.4 },
+  pageText: { ...typography.labelLarge, color: colors.onSurface },
+  pdfIdentitySection: {
+    width: '100%',
+    paddingHorizontal: 16,
+    marginTop: spacing.lg,
+  },
+
+  /* Modal */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#111', marginBottom: 4 },
+  modalDesc: { fontSize: 13, color: '#6B7280', marginBottom: 16 },
+  modalButtons: { flexDirection: 'row', justifyContent: 'center', marginTop: 16 },
+  modalCancel: {
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+  },
+  modalCancelText: { fontSize: 14, color: '#6B7280' },
 });

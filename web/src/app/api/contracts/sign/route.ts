@@ -158,10 +158,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '서명 기록 저장 실패' }, { status: 500 })
     }
 
-    // 8. 계약서 상태 업데이트
+    // 8. PDF 필드 응답 파싱 (pdf 모드일 경우)
+    let signFieldResponses = null
+    try {
+      const parsed = JSON.parse(signatureBase64)
+      if (parsed?.type === 'pdf_fields' && parsed.responses) {
+        signFieldResponses = parsed.responses
+      }
+    } catch {
+      // text 모드: signatureBase64는 일반 base64 문자열
+    }
+
+    // 9. 계약서 상태 업데이트
+    const updateData: Record<string, unknown> = {
+      status: 'signed',
+      signed_at: now,
+    }
+    if (signFieldResponses) {
+      updateData.sign_field_responses = signFieldResponses
+    }
     const { error: updateError } = await supabaseAdmin
       .from('contracts')
-      .update({ status: 'signed', signed_at: now })
+      .update(updateData)
       .eq('id', contractId)
 
     if (updateError) {

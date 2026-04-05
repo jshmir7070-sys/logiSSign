@@ -10,6 +10,7 @@ import {
   isGovernmentFormTemplate,
   generateGovernmentFormPdf,
 } from './government-form-pdf.service'
+import { generateSignedDocumentPdf, type SignField, type SignResponse } from './document-sign-field.service'
 import type { ContractBindingData } from './contract.service'
 
 /**
@@ -32,11 +33,18 @@ export async function generateSignedPdf(contractId: string): Promise<{
     // 1. 계약서 + 서명 데이터 조회
     const { data: contract, error: contractErr } = await supabase
       .from('contracts')
-      .select('id, template_id, title, content, content_hash, binding_data, signed_at, drivers(name, phone, employee_code)')
+      .select('id, template_id, title, content, content_hash, binding_data, signed_at, template_type, template_pdf_url, sign_fields, sign_field_responses, drivers(name, phone, employee_code)')
       .eq('id', contractId)
       .single()
 
     if (contractErr || !contract) throw new Error('계약서를 찾을 수 없습니다')
+
+    const contractRec = contract as Record<string, unknown>
+
+    // PDF 타입 계약서인 경우 → 원본 PDF + sign_fields 오버레이
+    if (contractRec.template_type === 'pdf' && contractRec.template_pdf_url) {
+      return generatePdfTypeSignedContract(contractId, contractRec, supabase)
+    }
 
     // 관공서 서류인 경우 원본 PDF 기반 생성
     const contractData = contract as unknown as {
@@ -465,6 +473,197 @@ function estimateTextWidth(text: string, fontSize: number): number {
     }
   }
   return width
+}
+
+/* ══════════════════════════════════════════════
+   관공서 서류 전용 서명 PDF 생성
+   ── 원본 PDF 레이아웃 유지 + 서명 이미지 별도 페이지
+   ══════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════
+   PDF 타입 계약서 서명 완료 PDF 생성
+   ── 원본 PDF + sign_fields 오버레이 + 인증 정보
+   ══════════════════════════════════════════════ */
+
+async function generatePdfTypeSignedContract(
+  contractId: string,
+  contractRec: Record<string, unknown>,
+  supabase: ReturnType<typeof createAdminSupabaseClient>
+): Promise<{ url: string | null; error: string | null }> {
+  try {
+    const templatePdfUrl = contractRec.template_pdf_url as string
+    const signFields = (contractRec.sign_fields ?? []) as SignField[]
+    const fieldResponses = (contractRec.sign_field_responses ?? {}) as Record<string, { value?: string; imageData?: string }>
+    const contentHash = (contractRec.content_hash as string) ?? ''
+
+    // 1. 원본 PDF 다운로드
+    const pdfRes = await fetch(templatePdfUrl)
+    if (!pdfRes.ok) throw new Error('템플릿 PDF 다운로드 실패')
+    const originalPdfBytes = new Uint8Array(await pdfRes.arrayBuffer())
+
+    // 2. 응답을 SignResponse 형식으로 변환
+    const responses: SignResponse[] = signFields
+      .filter(f => fieldResponses[f.id])
+      .map(f => ({
+        id: f.id,
+        delivery_id: contractId,
+        field_id: f.id,
+        driver_id: '',
+        value: fieldResponses[f.id]?.value ?? null,
+        image_data: fieldResponses[f.id]?.imageData ?? null,
+        signed_at: (contractRec.signed_at as string) ?? new Date().toISOString(),
+      }))
+
+    // 3. 원본 PDF에 필드 오버레이 (document-sign-field.service의 함수 재사용)
+    const signedPdfBytes = await generateSignedDocumentPdf(originalPdfBytes, signFields, responses)
+
+    // 4. 인증 정보 페이지 추가
+    const pdfDoc = await PDFDocument.load(signedPdfBytes)
+    pdfDoc.registerFontkit(fontkit)
+    const { regular: font, bold: boldFont } = await loadKoreanFonts(pdfDoc)
+
+    const pageWidth = 595
+    const pageHeight = 841
+    const margin = 50
+
+    // 서명 데이터 조회
+    const { data: signature } = await supabase
+      .from('contract_signatures')
+      .select('signed_at, signer_ip')
+      .eq('contract_id', contractId)
+      .order('signed_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    const signedAt = (signature as Record<string, string> | null)?.signed_at ?? new Date().toISOString()
+    const signerIp = (signature as Record<string, string> | null)?.signer_ip ?? '-'
+
+    // 진위확인 데이터 생성
+    const tempBytes = await pdfDoc.save()
+    const { data: verification } = await finalizeContractVerification(
+      contractId,
+      contentHash,
+      tempBytes,
+      signedAt
+    )
+
+    // 인증 정보 페이지
+    const certPage = pdfDoc.addPage([pageWidth, pageHeight])
+    let certY = pageHeight - margin
+
+    certPage.drawText('─'.repeat(60), {
+      x: margin, y: certY, size: 8, font, color: rgb(0.7, 0.7, 0.7),
+    })
+    certY -= 20
+
+    certPage.drawText('DOCUMENT VERIFICATION / 문서 인증 정보', {
+      x: margin, y: certY, size: 12, font: boldFont, color: rgb(0.15, 0.15, 0.15),
+    })
+    certY -= 25
+
+    // QR 코드
+    if (verification?.qrCodeUrl) {
+      try {
+        const qrRes = await fetch(verification.qrCodeUrl)
+        if (qrRes.ok) {
+          const qrBytes = new Uint8Array(await qrRes.arrayBuffer())
+          const qrImg = await pdfDoc.embedPng(qrBytes)
+          certPage.drawImage(qrImg, {
+            x: pageWidth - margin - 100,
+            y: certY - 80,
+            width: 100,
+            height: 100,
+          })
+        }
+      } catch { /* QR 로드 실패 무시 */ }
+    }
+
+    const certLines: [string, string][] = [
+      ['문서번호', verification?.documentNumber ?? '-'],
+      ['인증코드', verification?.verificationCode ?? '-'],
+      ['서명일시', new Date(signedAt).toLocaleString('ko-KR')],
+      ['서명자 IP', signerIp],
+      ['', ''],
+      ['진위확인 URL', verification?.verificationUrl ?? '-'],
+    ]
+
+    for (const item of certLines) {
+      if (item[0] === '' && item[1] === '') { certY -= 8; continue }
+      if (item[0] && item[1]) {
+        certPage.drawText(`${item[0]}:`, { x: margin, y: certY, size: 8, font: boldFont, color: rgb(0.35, 0.35, 0.35) })
+        certPage.drawText(item[1], { x: margin + 160, y: certY, size: 8, font, color: rgb(0.2, 0.2, 0.2) })
+        certY -= 14
+      }
+    }
+
+    certY -= 20
+    certPage.drawText('─'.repeat(60), { x: margin, y: certY, size: 8, font, color: rgb(0.7, 0.7, 0.7) })
+    certY -= 16
+
+    const legalLines = [
+      '이 문서는 전자서명법 제3조 및 전자문서 및 전자거래 기본법 제4조에 의거한',
+      '법적 효력을 가진 전자서명 원본입니다.',
+    ]
+    for (const ll of legalLines) {
+      certPage.drawText(ll, { x: margin, y: certY, size: 7, font, color: rgb(0.5, 0.5, 0.5) })
+      certY -= 11
+    }
+
+    certY -= 15
+    certPage.drawText(`logiSSign 전자계약 시스템  |  발급: ${new Date().toLocaleString('ko-KR')}`, {
+      x: margin, y: certY, size: 7, font, color: rgb(0.6, 0.6, 0.6),
+    })
+
+    // 워터마크
+    const watermarkText = verification?.documentNumber ?? 'logiSSign'
+    for (const pg of pdfDoc.getPages()) {
+      const { width: pgW, height: pgH } = pg.getSize()
+      pg.drawText('ORIGINAL', {
+        x: pgW * 0.15, y: pgH * 0.45, size: 60, font,
+        color: rgb(0.92, 0.92, 0.92),
+        rotate: { type: 'degrees', angle: 45 } as never,
+        opacity: 0.15,
+      })
+      pg.drawText(`${watermarkText}  |  logiSSign`, {
+        x: margin, y: 20, size: 6, font, color: rgb(0.8, 0.8, 0.8), opacity: 0.5,
+      })
+    }
+
+    // 5. 최종 PDF 저장 및 업로드
+    const finalPdfBytes = await pdfDoc.save()
+    const fileName = `signed/${contractId}_${Date.now()}.pdf`
+
+    const { error: uploadErr } = await supabase.storage
+      .from('contracts')
+      .upload(fileName, finalPdfBytes, { contentType: 'application/pdf', upsert: true })
+
+    if (uploadErr) throw new Error('PDF 업로드 실패: ' + uploadErr.message)
+
+    const { data: urlData } = await supabase.storage.from('contracts').createSignedUrl(fileName, 60 * 60 * 24 * 365)
+    const pdfUrl = urlData?.signedUrl ?? null
+
+    if (pdfUrl) {
+      const pdfHashBuffer = await crypto.subtle.digest('SHA-256', (finalPdfBytes as Uint8Array).buffer as ArrayBuffer)
+      const pdfHash = Array.from(new Uint8Array(pdfHashBuffer))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('')
+
+      await supabase.from('contracts').update({
+        signed_pdf_url: pdfUrl,
+        signed_pdf_hash: pdfHash,
+      } as never).eq('id', contractId)
+
+      await supabase.from('contract_signatures')
+        .update({ signed_pdf_hash: pdfHash } as never)
+        .eq('contract_id', contractId)
+    }
+
+    try { await generateAuditCertificatePdf(contractId) } catch { /* 비치명적 */ }
+
+    return { url: pdfUrl, error: null }
+  } catch (err) {
+    return { url: null, error: err instanceof Error ? err.message : 'PDF 타입 계약서 PDF 생성 실패' }
+  }
 }
 
 /* ══════════════════════════════════════════════
