@@ -85,7 +85,7 @@ export default function NewContractPage() {
       }
     });
 
-    // 외부문서 조회
+    // 문서함 조회
     supabase
       .from('document_files')
       .select('id, title')
@@ -203,7 +203,7 @@ export default function NewContractPage() {
       }
     }
 
-    // 외부문서 전송 — 푸시만 (SMS 없음)
+    // 문서함 전송 — 푸시만 (SMS 없음)
     if (selectedDocIds.size > 0) {
       const { sendDocuments } = await import('@/services/document-send.service');
       for (const docId of Array.from(selectedDocIds)) {
@@ -385,17 +385,17 @@ export default function NewContractPage() {
         </section>
       )}
 
-      {/* 4. 외부문서 선택 (선택사항) */}
+      {/* 4. 문서함 선택 (선택사항) */}
       {principalId && documents.length > 0 && (
         <section className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-headline font-semibold text-on-surface font-korean">
-              4. 외부문서 선택 <span className="text-xs text-on-surface-variant font-normal">(선택사항)</span>
+              4. 문서함 선택 <span className="text-xs text-on-surface-variant font-normal">(선택사항)</span>
             </h2>
             <span className="text-xs text-on-surface-variant font-korean">{selectedDocIds.size}개 선택</span>
           </div>
           <p className="text-xs text-on-surface-variant font-korean -mt-2">
-            업로드한 외부문서(PDF)를 함께 발송합니다. 기사가 설정된 위치에 서명/입력합니다.
+            업로드한 문서함(PDF)를 함께 발송합니다. 기사가 설정된 위치에 서명/입력합니다.
           </p>
           <div className="space-y-2">
             {documents.map((doc) => {
@@ -425,7 +425,7 @@ export default function NewContractPage() {
                       서명 필드 {doc.field_count}개 배치됨
                     </p>
                   </div>
-                  <Badge label="외부문서" variant="warning" />
+                  <Badge label="문서함" variant="warning" />
                 </label>
               );
             })}
@@ -463,12 +463,12 @@ export default function NewContractPage() {
               <span className="text-on-surface-variant">계약서: <strong className="text-on-surface">{selectedTemplateIds.size}건</strong></span>
             )}
             {selectedDocIds.size > 0 && (
-              <span className="text-on-surface-variant">외부문서: <strong className="text-tertiary">{selectedDocIds.size}건</strong></span>
+              <span className="text-on-surface-variant">문서함: <strong className="text-tertiary">{selectedDocIds.size}건</strong></span>
             )}
             <span className="text-on-surface-variant">총: <strong className="text-primary">{selectedDriverIds.size * (selectedTemplateIds.size + selectedDocIds.size)}건 발송</strong></span>
           </div>
           <p className="text-xs text-on-surface-variant font-korean">
-            계약서는 기사 정보가 자동 입력되어 전송됩니다. 외부문서는 설정된 서명/입력 필드 그대로 전송됩니다.
+            계약서는 기사 정보가 자동 입력되어 전송됩니다. 문서함은 설정된 서명/입력 필드 그대로 전송됩니다.
           </p>
           <button
             onClick={handleSend}

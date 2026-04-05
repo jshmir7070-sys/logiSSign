@@ -35,7 +35,7 @@ export default function DocumentLibraryPage() {
     const tplResult = await getContractTemplates(aid);
     if (tplResult.data) setTemplates(tplResult.data);
 
-    // 외부문서
+    // 문서함
     const { data: docs } = await supabase
       .from('document_files')
       .select('id, title, status, created_at')
@@ -55,7 +55,7 @@ export default function DocumentLibraryPage() {
   const activeSystemCount = systemTemplates.filter(t => t.is_active).length;
 
   const totalUsed = activeSystemCount + userTemplates.length + uploadedDocs.length;
-  const totalLimit = limits.maxDefaultTemplates + limits.maxUploadTemplates * 2; // 업로드 양식 + 외부문서 각각
+  const totalLimit = limits.maxDefaultTemplates + limits.maxUploadTemplates * 2; // 업로드 양식 + 문서함 각각
 
   if (loading) {
     return <div className="flex items-center justify-center h-48 text-sm text-on-surface-variant font-korean">불러오는 중...</div>;
@@ -68,7 +68,7 @@ export default function DocumentLibraryPage() {
         <div>
           <h1 className="text-2xl font-headline font-bold text-on-surface font-korean">내 문서함</h1>
           <p className="mt-1 text-sm text-on-surface-variant font-korean">
-            계약서 양식과 외부문서를 한눈에 관리합니다
+            계약서 양식과 문서함을 한눈에 관리합니다
           </p>
         </div>
       </div>
@@ -91,7 +91,7 @@ export default function DocumentLibraryPage() {
             <p className="text-[10px] text-on-surface-variant mt-1 font-korean">직접 작성한 계약서</p>
           </div>
           <div className="bg-surface-container-low rounded-xl p-4 text-center">
-            <p className="text-xs text-on-surface-variant mb-1 font-korean">외부문서 (PDF)</p>
+            <p className="text-xs text-on-surface-variant mb-1 font-korean">문서함 (PDF)</p>
             <p className="text-xl font-bold text-emerald-600">{uploadedDocs.length}<span className="text-sm text-on-surface-variant font-normal">/{limits.maxUploadTemplates}</span></p>
             <p className="text-[10px] text-on-surface-variant mt-1 font-korean">PDF 업로드 + 서명필드</p>
           </div>
@@ -138,14 +138,14 @@ export default function DocumentLibraryPage() {
         )}
       </div>
 
-      {/* 외부문서 */}
+      {/* 문서함 */}
       <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-bold text-on-surface font-korean">📄 외부문서 PDF ({uploadedDocs.length}/{limits.maxUploadTemplates})</h2>
+          <h2 className="text-sm font-bold text-on-surface font-korean">📄 문서함 PDF ({uploadedDocs.length}/{limits.maxUploadTemplates})</h2>
           <Link href="/portal/documents" className="text-xs text-primary hover:underline font-korean">관리 →</Link>
         </div>
         {uploadedDocs.length === 0 ? (
-          <p className="text-sm text-on-surface-variant font-korean">업로드한 외부문서가 없습니다</p>
+          <p className="text-sm text-on-surface-variant font-korean">업로드한 문서함이 없습니다</p>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {uploadedDocs.map(d => (

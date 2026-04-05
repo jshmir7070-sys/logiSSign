@@ -127,7 +127,7 @@ export default function DocumentsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-headline font-bold text-on-surface font-korean">외부 문서 관리</h1>
+          <h1 className="text-2xl font-headline font-bold text-on-surface font-korean">문서함 관리</h1>
           <p className="mt-1 text-sm text-on-surface-variant font-korean">
             PDF 문서를 업로드하고, 서명/체크 필드를 배치한 뒤 기사에게 전송합니다
           </p>
@@ -140,7 +140,7 @@ export default function DocumentsPage() {
           if (!paid) {
             return (
               <button
-                onClick={() => alert('외부문서 기능은 유료 플랜(Basic 이상)에서 사용할 수 있습니다.\n\n설정 → 구독/결제에서 플랜을 변경하세요.')}
+                onClick={() => alert('문서함 기능은 유료 플랜(Basic 이상)에서 사용할 수 있습니다.\n\n설정 → 구독/결제에서 플랜을 변경하세요.')}
                 className="h-10 px-5 rounded-xl border border-amber-400/50 bg-amber-50 text-amber-700 font-label text-sm font-semibold hover:bg-amber-100 transition-all flex items-center gap-2 font-korean"
               >
                 ⬆ 플랜 업그레이드
@@ -150,7 +150,7 @@ export default function DocumentsPage() {
           if (!canUpload) {
             return (
               <button
-                onClick={() => alert(`현재 ${PLAN_LABELS[userPlan as PlanType]} 플랜의 외부문서 한도(${limits.maxUploadTemplates}개)를 초과했습니다.\n\n더 많은 문서를 업로드하려면 상위 플랜으로 업그레이드하세요.\n\n설정 → 구독/결제에서 플랜을 변경할 수 있습니다.`)}
+                onClick={() => alert(`현재 ${PLAN_LABELS[userPlan as PlanType]} 플랜의 문서함 한도(${limits.maxUploadTemplates}개)를 초과했습니다.\n\n더 많은 문서를 업로드하려면 상위 플랜으로 업그레이드하세요.\n\n설정 → 구독/결제에서 플랜을 변경할 수 있습니다.`)}
                 className="h-10 px-5 rounded-xl border border-amber-400/50 bg-amber-50 text-amber-700 font-label text-sm font-semibold hover:bg-amber-100 transition-all flex items-center gap-2 font-korean"
               >
                 ⬆ 플랜 업그레이드 ({documents.length}/{limits.maxUploadTemplates})

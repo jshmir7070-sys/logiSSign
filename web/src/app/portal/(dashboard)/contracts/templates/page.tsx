@@ -13,6 +13,7 @@ import {
 } from '@/services/contract.service';
 import { getPrincipals, type Principal } from '@/services/principal.service';
 import { getPlanLimits, isPaidPlan, PLAN_LABELS, type PlanType } from '@/lib/plan-limits';
+import { useRouter } from 'next/navigation';
 
 /** 시스템 기본 양식 ID — 삭제 불가 */
 const SYSTEM_TEMPLATE_IDS = new Set([
@@ -29,6 +30,7 @@ const SYSTEM_TEMPLATE_IDS = new Set([
 ]);
 
 export default function ContractTemplatesPage() {
+  const router = useRouter();
   const [templates, setTemplates] = useState<ContractTemplate[]>([]);
   const [principals, setPrincipals] = useState<Principal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +42,7 @@ export default function ContractTemplatesPage() {
   const [showPlanGuide, setShowPlanGuide] = useState(false);
   const [templatesLocked, setTemplatesLocked] = useState(false);
   const [userRole, setUserRole] = useState<string>('agency_admin');
+  const [creatingPdf, setCreatingPdf] = useState(false);
 
   /* ── Form state ── */
   const [formTitle, setFormTitle] = useState('');
@@ -172,6 +175,23 @@ export default function ContractTemplatesPage() {
   }
   const canUploadMore = userTemplates.length < limits.maxUploadTemplates;
 
+  /** "문서 업로드" → 새 PDF 템플릿 생성 후 필드 에디터로 바로 이동 */
+  async function handleCreatePdfTemplate() {
+    if (!agencyId) return;
+    setCreatingPdf(true);
+    const result = await createContractTemplate({
+      agency_id: agencyId,
+      title: `PDF 템플릿 ${new Date().toLocaleDateString('ko-KR')}`,
+      content: '(PDF 문서)',
+    });
+    if (result.data) {
+      router.push(`/portal/contracts/field-editor?templateId=${result.data.id}`);
+    } else {
+      alert('템플릿 생성 실패');
+      setCreatingPdf(false);
+    }
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -195,8 +215,9 @@ export default function ContractTemplatesPage() {
               텍스트 템플릿
             </button>
             <button
-              onClick={() => setShowForm(true)}
-              className="h-10 px-5 rounded-xl bg-surface-container-high text-on-surface font-label text-sm font-semibold hover:bg-surface-container-highest transition-all flex items-center gap-2 font-korean"
+              onClick={handleCreatePdfTemplate}
+              disabled={creatingPdf}
+              className="h-10 px-5 rounded-xl bg-surface-container-high text-on-surface font-label text-sm font-semibold hover:bg-surface-container-highest transition-all flex items-center gap-2 font-korean disabled:opacity-50"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
               문서 업로드
@@ -415,10 +436,12 @@ export default function ContractTemplatesPage() {
                   {new Date(tmpl.created_at).toLocaleDateString('ko-KR')}
                 </span>
                 <div className="flex gap-2">
-                  <a href={`/portal/contracts/field-editor?templateId=${tmpl.id}`}
-                    className="h-8 px-3 rounded-lg bg-amber-50 text-amber-700 font-label text-xs font-semibold hover:bg-amber-100 transition-colors font-korean flex items-center gap-1">
-                    {(tmpl as unknown as Record<string, unknown>).template_type === 'pdf' ? '필드 편집' : '템플릿 만들기'}
-                  </a>
+                  {!isSystem && (
+                    <a href={`/portal/contracts/field-editor?templateId=${tmpl.id}`}
+                      className="h-8 px-3 rounded-lg bg-amber-50 text-amber-700 font-label text-xs font-semibold hover:bg-amber-100 transition-colors font-korean flex items-center gap-1">
+                      {(tmpl as unknown as Record<string, unknown>).template_type === 'pdf' ? '필드 편집' : 'PDF 전환'}
+                    </a>
+                  )}
                   <button
                     onClick={() => setPreviewTemplate(tmpl)}
                     className="h-8 px-3 rounded-lg bg-primary/10 text-primary font-label text-xs font-semibold hover:bg-primary/20 transition-colors font-korean"

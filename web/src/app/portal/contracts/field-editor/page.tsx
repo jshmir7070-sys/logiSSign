@@ -143,6 +143,11 @@ function ContractFieldEditorPage() {
   const [agencySeals, setAgencySeals] = useState<SealRecord[]>([])
   const [showSealPicker, setShowSealPicker] = useState(false)
 
+  // 내 문서함
+  const [showDocBox, setShowDocBox] = useState(false)
+  const [docBoxItems, setDocBoxItems] = useState<{ name: string; path: string; url: string }[]>([])
+  const [loadingDocBox, setLoadingDocBox] = useState(false)
+
   const containerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -236,6 +241,70 @@ function ContractFieldEditorPage() {
       const { data: signed } = await supabase.storage.from('contracts').createSignedUrl(path, 3600)
       setPdfUrl(signed?.signedUrl ?? '')
     } catch { alert('업로드 중 오류가 발생했습니다') }
+    setUploading(false)
+  }, [templateId])
+
+  // ── 내 문서함 로드 ──
+  const handleOpenDocBox = useCallback(async () => {
+    setShowDocBox(true)
+    setLoadingDocBox(true)
+    try {
+      const supabase = createBrowserSupabaseClient()
+      // 1) contracts 버킷의 templates 폴더에서 기존 PDF 조회
+      const { data: storageFiles } = await supabase.storage.from('contracts').list('templates', { limit: 50, sortBy: { column: 'created_at', order: 'desc' } })
+      // 2) documents 버킷에서도 기존 업로드 문서 조회
+      const { data: { user } } = await supabase.auth.getUser()
+      const aid = user?.app_metadata?.agency_id as string
+      const { data: docFiles } = aid
+        ? await supabase.from('document_files').select('id, title, file_url').eq('agency_id', aid).order('created_at', { ascending: false }).limit(20)
+        : { data: null }
+
+      const items: { name: string; path: string; url: string }[] = []
+
+      // Storage 파일들
+      if (storageFiles) {
+        for (const f of storageFiles) {
+          if (f.name.endsWith('.pdf')) {
+            const { data: signed } = await supabase.storage.from('contracts').createSignedUrl(`templates/${f.name}`, 3600)
+            if (signed?.signedUrl) items.push({ name: f.name, path: `templates/${f.name}`, url: signed.signedUrl })
+          }
+        }
+      }
+      // 문서함 파일들
+      if (docFiles) {
+        for (const doc of docFiles as { id: string; title: string; file_url: string }[]) {
+          if (doc.file_url) {
+            const storagePath = doc.file_url.startsWith('http') ? doc.file_url.split('/documents/')[1] : doc.file_url
+            if (storagePath) {
+              const { data: signed } = await supabase.storage.from('documents').createSignedUrl(decodeURIComponent(storagePath), 3600)
+              if (signed?.signedUrl) items.push({ name: doc.title, path: doc.file_url, url: signed.signedUrl })
+            }
+          }
+        }
+      }
+      setDocBoxItems(items)
+    } catch (err) {
+      console.error('문서함 로드 실패:', err)
+    }
+    setLoadingDocBox(false)
+  }, [])
+
+  // 내 문서함에서 선택 → 해당 PDF를 현재 템플릿에 적용
+  const handleSelectDocBoxItem = useCallback(async (item: { name: string; path: string; url: string }) => {
+    if (!templateId) return
+    setUploading(true)
+    setShowDocBox(false)
+    try {
+      // 선택한 PDF를 다운로드 후 contracts 버킷에 복사
+      const res = await fetch(item.url)
+      const blob = await res.blob()
+      const supabase = createBrowserSupabaseClient()
+      const path = `templates/${templateId}.pdf`
+      await supabase.storage.from('contracts').upload(path, blob, { upsert: true, contentType: 'application/pdf' })
+      await supabase.from('contract_templates').update({ template_pdf_url: path, template_type: 'pdf' }).eq('id', templateId)
+      const { data: signed } = await supabase.storage.from('contracts').createSignedUrl(path, 3600)
+      setPdfUrl(signed?.signedUrl ?? '')
+    } catch { alert('문서 불러오기 실패') }
     setUploading(false)
   }, [templateId])
 
@@ -375,7 +444,7 @@ function ContractFieldEditorPage() {
                   <p className="text-xs text-neutral-400 font-korean mt-1">PDF, 워드, 이미지</p>
                 </div>
               </button>
-              <button onClick={() => alert('문서함 연동 기능은 준비 중입니다.\n내 컴퓨터에서 파일을 업로드해주세요.')}
+              <button onClick={handleOpenDocBox}
                 className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-white border-2 border-transparent hover:border-purple-400 shadow-sm hover:shadow-xl transition-all group">
                 <div className="w-14 h-14 rounded-xl bg-purple-50 group-hover:bg-purple-100 flex items-center justify-center transition-colors">
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2">
@@ -401,6 +470,52 @@ function ContractFieldEditorPage() {
               onChange={(e) => { const file = e.target.files?.[0]; if (file) handleUploadFile(file) }} />
           </div>
         </div>
+
+        {/* ── 내 문서함 모달 ── */}
+        {showDocBox && (
+          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowDocBox(false)}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[70vh] flex flex-col" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
+                <h3 className="text-base font-bold text-neutral-800 font-korean">내 문서함</h3>
+                <button onClick={() => setShowDocBox(false)} className="text-neutral-400 hover:text-neutral-700">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4">
+                {loadingDocBox ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                    <span className="ml-2 text-sm text-neutral-500 font-korean">문서 목록 불러오는 중...</span>
+                  </div>
+                ) : docBoxItems.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-3xl mb-3">📁</div>
+                    <p className="text-sm text-neutral-500 font-korean">업로드된 문서가 없습니다</p>
+                    <p className="text-xs text-neutral-400 font-korean mt-1">&quot;내 컴퓨터&quot;에서 파일을 먼저 업로드하세요</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {docBoxItems.map((item, idx) => (
+                      <button key={idx} onClick={() => handleSelectDocBoxItem(item)}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-purple-50 transition-colors text-left group">
+                        <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                          </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-neutral-700 font-korean truncate">{item.name}</p>
+                          <p className="text-[11px] text-neutral-400 font-korean">PDF 문서</p>
+                        </div>
+                        <span className="text-xs text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity font-korean">선택</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
