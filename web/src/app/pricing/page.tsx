@@ -4,84 +4,76 @@ import {
   PLAN_HIGHLIGHTS,
   PLAN_LABELS,
   POINT_COSTS,
+  POINT_PACKAGES,
+  EXTRA_DRIVER_MONTHLY_POINTS,
+  FREE_PLAN_FREE_DRIVERS,
+  WELCOME_BONUS_POINTS,
   type PlanType,
   type PointAction,
 } from '@/lib/plan-limits';
 
 export const metadata = {
-  title: 'logiSSign 요금제 — 구독형 vs 포인트형 vs 타사 비교',
-  description: '택배 대리점 정산·전자계약 자동화 플랫폼 logiSSign의 합리적인 요금제를 확인하세요.',
+  title: 'logiSSign 요금제 — 무료 시작 · 구독형 · 포인트형',
+  description: '택배 대리점 정산·전자계약 자동화 플랫폼. 가입 즉시 5,000P 지급. 기사 5명까지 완전 무료.',
 };
 
-function formatKRW(n: number): string {
-  return `₩${n.toLocaleString('ko-KR')}`;
+function fmt(n: number): string { return n.toLocaleString('ko-KR'); }
+function fmtKRW(n: number): string { return `₩${fmt(n)}`; }
+
+/* ── 유료 / 무료 포인트 항목 분리 ── */
+const PAID_ACTIONS = (Object.entries(POINT_COSTS) as [PointAction, typeof POINT_COSTS[PointAction]][])
+  .filter(([, info]) => info.cost > 0);
+const FREE_ACTIONS = (Object.entries(POINT_COSTS) as [PointAction, typeof POINT_COSTS[PointAction]][])
+  .filter(([, info]) => info.cost === 0 && !info.desc.includes('개발중') && !info.desc.includes('구독형 전용'));
+
+/* ── 기사 30명 기준 월 예상 (정산서: 5명 1세트) ── */
+const EST_DRIVERS = 30;
+const EST_EXTRA_DRIVERS = EST_DRIVERS - FREE_PLAN_FREE_DRIVERS; // 25명 초과
+const EST_DRIVER_FEE = EST_EXTRA_DRIVERS * EXTRA_DRIVER_MONTHLY_POINTS; // 37,500P
+const EST = { contract_send: 6, settlement_sets: 6, excel_upload: 1 }; // 30명 ÷ 5명 = 6세트
+const estPointTotal = EST.contract_send * POINT_COSTS.contract_send.cost
+  + EST.settlement_sets * POINT_COSTS.settlement_generate.cost
+  + EST.excel_upload * POINT_COSTS.excel_upload.cost;
+const estFreeTotal = EST_DRIVER_FEE + estPointTotal; // 무료플랜 총비용 (기사비 + 포인트)
+
+/* ── 타사 비교 (직접 사명 사용 금지) ── */
+const COMPETITORS = [
+  { name: 'A사', type: '구독+건당', perDoc: '1,330~1,900원/건', settlement: '미제공', app: '미제공', note: '전자계약 전문 서비스' },
+  { name: 'B사', type: '구독+충전형', perDoc: '600원/건', settlement: '미제공', app: '미제공', note: '전자문서 관리 서비스' },
+  { name: 'C사', type: '건당 충전', perDoc: '500원/건', settlement: '미제공', app: '미제공', note: '전자서명 서비스' },
+  { name: 'D사', type: '구독형', perDoc: '플랜 내 포함', settlement: '미제공', app: '미제공', note: '글로벌 전자서명 서비스' },
+  { name: '엑셀 수동', type: '인건비', perDoc: '-', settlement: '수동 계산', app: '없음', note: '오류 리스크, 인수인계 어려움' },
+  { name: '사내 그룹웨어', type: '월 구독', perDoc: '-', settlement: '별도 구축', app: '웹 전용', note: '급여명세·공지 전용, 계약·정산 미제공' },
+];
+
+/* ── 기능별 상세 비교 ── */
+const FEATURE_ROWS = [
+  { label: '기사 수', free: `${FREE_PLAN_FREE_DRIVERS}명 무료`, point: `${FREE_PLAN_FREE_DRIVERS}명 무료`, basic: '30명', standard: '80명', pro: '150명', enterprise: '무제한' },
+  { label: '초과 기사 비용', free: `${fmt(EXTRA_DRIVER_MONTHLY_POINTS)}P/명/월`, point: `${fmt(EXTRA_DRIVER_MONTHLY_POINTS)}P/명/월`, basic: '포함', standard: '포함', pro: '포함', enterprise: '포함' },
+  { label: '전자계약서', free: '포인트 차감', point: `${fmt(POINT_COSTS.contract_send.cost)}P/건`, basic: '무제한', standard: '무제한', pro: '무제한', enterprise: '무제한' },
+  { label: '정산서 생성', free: '포인트 차감', point: `${fmt(POINT_COSTS.settlement_generate.cost)}P/5명`, basic: '무제한', standard: '무제한', pro: '무제한', enterprise: '무제한' },
+  { label: '정산서 전송', free: '무료', point: '무료', basic: '무제한', standard: '무제한', pro: '무제한', enterprise: '무제한' },
+  { label: '정산서 PDF', free: '무료', point: '무료', basic: '무제한', standard: '무제한', pro: '무제한', enterprise: '무제한' },
+  { label: '정산서 빌더', free: '-', point: '포함', basic: '포함', standard: '포함', pro: '포함', enterprise: '포함' },
+  { label: '엑셀 업로드 정산', free: '포인트 차감', point: `${fmt(POINT_COSTS.excel_upload.cost)}P/회`, basic: '무제한', standard: '무제한', pro: '무제한', enterprise: '무제한' },
+  { label: '알림톡 발송', free: '포함', point: '포함', basic: '포함', standard: '포함', pro: '포함', enterprise: '포함' },
+  { label: '세금계산서', free: '-', point: '개발중', basic: '개발중', standard: '개발중', pro: '개발중', enterprise: '개발중' },
+  { label: '매출 리포트', free: '-', point: '-', basic: '-', standard: '포함', pro: '포함', enterprise: '포함' },
+  { label: '기사 전용 앱', free: '포함', point: '포함', basic: '포함', standard: '포함', pro: '포함', enterprise: '포함' },
+  { label: '관리자 계정', free: '1명', point: '3명', basic: '3명', standard: '6명', pro: '11명', enterprise: '100명' },
+  { label: 'PDF 필드배치', free: '-', point: '무료', basic: '포함', standard: '포함', pro: '포함', enterprise: '포함' },
+  { label: '가입 보너스', free: `${fmt(WELCOME_BONUS_POINTS)}P`, point: `${fmt(WELCOME_BONUS_POINTS)}P`, basic: '-', standard: '-', pro: '-', enterprise: '-' },
+];
+
+function Check() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-tertiary shrink-0 mt-0.5">
+      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+    </svg>
+  );
 }
 
-const SUB_PLANS: PlanType[] = ['free', 'basic', 'standard', 'pro', 'enterprise'];
-
-/** 기사 30명 기준 월 예상 사용량 */
-const MONTHLY_USAGE = {
-  contract_send: 6,
-  settlement_generate: 30,
-  settlement_pdf: 30,
-  sms_send: 36,
-  push_send: 30,
-  driver_register: 2,
-  excel_upload: 1,
-  tax_invoice: 1,
-  report_generate: 1,
-  template_upload: 0,
-} satisfies Record<PointAction, number>;
-
-const pointMonthlyTotal = (Object.entries(MONTHLY_USAGE) as [PointAction, number][]).reduce(
-  (sum, [action, count]) => sum + (POINT_COSTS[action]?.cost ?? 0) * count, 0
-);
-
-/** 타사 비교 (공개 정보 기준) */
-const COMPETITORS = [
-  {
-    name: '모두싸인',
-    type: '건당 과금',
-    monthly: '~₩50,000+',
-    contracts: '월 10건 (스타터)',
-    settlement: '미제공',
-    driverApp: '미제공',
-    note: '전자계약 전문. 정산·기사앱 없음',
-  },
-  {
-    name: '도큐사인',
-    type: '구독형',
-    monthly: '~₩40,000+',
-    contracts: '월 5건 (Personal)',
-    settlement: '미제공',
-    driverApp: '미제공',
-    note: '글로벌 전자서명. 한국 물류 특화 없음',
-  },
-  {
-    name: '엑셀 수동관리',
-    type: '인건비',
-    monthly: '₩0 (SW)',
-    contracts: '수동 작성',
-    settlement: '���동 계산',
-    driverApp: '없음',
-    note: '오류 리스크, 담당자 퇴사 시 인수인계 어려움',
-  },
-];
-
-/* ── Feature comparison rows ── */
-const FEATURE_ROWS = [
-  { label: '기사 수', free: '10명', point: '무제한', basic: '30명', standard: '80명', pro: '150명', enterprise: '무제한' },
-  { label: '전자계약서', free: '-', point: '1,200P/건', basic: '무제한', standard: '무제한', pro: '무제한', enterprise: '무제한' },
-  { label: '정산서 생성', free: '��본만', point: '700P/건', basic: '무제한', standard: '무제한', pro: '무제한', enterprise: '무제한' },
-  { label: '정산서 빌더', free: '-', point: '포함', basic: '포함', standard: '포함', pro: '포함', enterprise: '포함' },
-  { label: '엑셀 업로드 정산', free: '-', point: '2,500P/회', basic: '무제한', standard: '무제한', pro: '무제한', enterprise: '무제한' },
-  { label: 'SMS 발송', free: '-', point: '200P/건', basic: '무제한', standard: '무제한', pro: '무제한', enterprise: '무제한' },
-  { label: '세금계산서', free: '-', point: '1,200P/건', basic: '포함', standard: '포함', pro: '포함', enterprise: '포함' },
-  { label: '매출 리포트', free: '-', point: '700P/건', basic: '-', standard: '포함', pro: '포함', enterprise: '포함' },
-  { label: '기사 전용 앱', free: '포함', point: '포함', basic: '포함', standard: '포함', pro: '포함', enterprise: '포함' },
-  { label: '관리자 계정', free: '1��', point: '3명', basic: '3명', standard: '6명', pro: '11명', enterprise: '100명' },
-  { label: 'PDF 계약서 필드배치', free: '-', point: '무료', basic: '포함', standard: '포함', pro: '포함', enterprise: '포함' },
-];
+/* ═══════════════════════════════════════════════════════════════ */
 
 export default function PricingPage() {
   return (
@@ -94,163 +86,348 @@ export default function PricingPage() {
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/about" className="text-sm text-on-surface-variant hover:text-on-surface font-korean">서비스 소개</Link>
-            <Link href="/auth/login" className="h-9 px-5 rounded-xl bg-primary text-white text-sm font-semibold font-korean flex items-center">
+            <Link href="/portal/login" className="h-9 px-5 rounded-xl bg-primary text-white text-sm font-semibold font-korean flex items-center">
               로그인
             </Link>
           </div>
         </div>
       </nav>
 
-      <main className="max-w-6xl mx-auto px-4 py-16 space-y-20">
-        {/* Hero */}
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl font-headline font-bold text-on-surface font-korean">
+      <main className="max-w-6xl mx-auto px-4 py-16 space-y-24">
+
+        {/* ══════ Hero ══════ */}
+        <div className="text-center space-y-5">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-tertiary/10 border border-tertiary/20">
+            <span className="text-xl">🎁</span>
+            <span className="text-sm font-bold text-tertiary font-korean">
+              첫 가입 시 {fmt(WELCOME_BONUS_POINTS)}P 무료 지급!
+            </span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-headline font-bold text-on-surface font-korean">
             합리적인 요금제
           </h1>
-          <p className="text-lg text-on-surface-variant font-korean max-w-2xl mx-auto">
-            구독형은 월정액으로 모든 기능 무제한 사용.<br/>
-            포인트형은 사용한 만큼만 결제. 소량 사용에 유리합니다.<br/><strong className="text-primary">🎉 가입만 해도 10,000P 무료 지급!</strong>
+          <p className="text-lg text-on-surface-variant font-korean max-w-2xl mx-auto leading-relaxed">
+            기사 {FREE_PLAN_FREE_DRIVERS}명까지 <strong className="text-on-surface">완전 무료</strong>.<br/>
+            그 이상은 <strong className="text-primary">구독형</strong>(월정액 무제한) 또는{' '}
+            <strong className="text-tertiary">포인트형</strong>(쓴 만큼만) 선택하세요.
           </p>
         </div>
 
-        {/* ══════ Section 1: 구독형 플랜 ══════ */}
+        {/* ══════ Section 0: 무료 플랜 상세 설명 ══════ */}
         <section>
-          <div className="text-center mb-8">
-            <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold font-korean">구독형 (월정액)</span>
-            <h2 className="text-2xl font-headline font-bold text-on-surface mt-3 font-korean">월 고정 비용, 무제한 사용</h2>
-          </div>
+          <div className="bg-gradient-to-br from-primary/5 via-tertiary/5 to-primary/5 rounded-3xl border border-primary/15 p-8 md:p-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+              {/* 왼쪽: 무료플랜 설명 */}
+              <div className="space-y-5">
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold font-korean">FREE</span>
+                  <span className="text-2xl font-data font-bold text-primary">₩0</span>
+                  <span className="text-sm text-on-surface-variant font-korean">/ 영구 무료</span>
+                </div>
+                <h2 className="text-2xl font-headline font-bold text-on-surface font-korean">
+                  가입만 하면 바로 시작
+                </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {SUB_PLANS.map((id) => (
-              <div key={id} className={`rounded-2xl border-2 p-6 transition-all ${
-                id === 'standard' ? 'border-primary bg-primary/5 shadow-lg scale-[1.02]' : 'border-outline-variant/15'
-              }`}>
-                {id === 'standard' && (
-                  <span className="inline-block px-2 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold mb-2">추천</span>
-                )}
-                <h3 className="text-sm font-bold text-on-surface font-korean">{PLAN_LABELS[id]}</h3>
-                <p className="text-2xl font-data font-bold text-primary mt-2">
-                  {PLAN_PRICES[id] === 0 ? '무료' : formatKRW(PLAN_PRICES[id])}
-                  {PLAN_PRICES[id] > 0 && <span className="text-xs text-on-surface-variant font-normal">/월</span>}
-                </p>
-                <ul className="mt-4 space-y-1.5">
-                  {PLAN_HIGHLIGHTS[id].map((h) => (
-                    <li key={h} className="flex items-start gap-1.5 text-xs text-on-surface-variant font-korean">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-tertiary shrink-0 mt-0.5">
-                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                      </svg>
-                      {h}
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-3 text-sm text-on-surface-variant font-korean leading-relaxed">
+                  <p>
+                    <strong className="text-on-surface">1. 기사 {FREE_PLAN_FREE_DRIVERS}명까지 완전 무료</strong><br/>
+                    신용카드 등록 없이, 가입 즉시 기사 {FREE_PLAN_FREE_DRIVERS}명을 등록하고 관리할 수 있습니다.
+                    기사 전용 앱, 기본 정산, 공지사항, 알림톡 발송 모두 포함됩니다.
+                  </p>
+                  <p>
+                    <strong className="text-on-surface">2. 가입 즉시 {fmt(WELCOME_BONUS_POINTS)}P 무료 지급</strong><br/>
+                    포인트로 전자계약서 전송({fmt(POINT_COSTS.contract_send.cost)}P/건),
+                    정산서 생성({fmt(POINT_COSTS.settlement_generate.cost)}P/5명 1세트, 전송 무료),
+                    엑셀 업로드 정산({fmt(POINT_COSTS.excel_upload.cost)}P/회) 등 유료 기능을 바로 체험할 수 있습니다.
+                    <strong className="text-error/70">※ 해당 기능은 포인트가 차감됩니다.</strong>
+                  </p>
+                  <p>
+                    <strong className="text-on-surface">3. 포인트 소진 후에도 무료 기능 유지</strong><br/>
+                    포인트가 모두 소진되어도 기사 관리, 기본 정산, 공지사항 등 무료 기능은 계속 사용 가능합니다.
+                    추가 유료 기능이 필요하면 포인트를 충전하거나 구독형으로 전환하세요.
+                  </p>
+                  <p>
+                    <strong className="text-on-surface">4. 기사 {FREE_PLAN_FREE_DRIVERS}명 초과 시</strong><br/>
+                    추가 기사 1명당 월 <strong className="text-primary">{fmt(EXTRA_DRIVER_MONTHLY_POINTS)}P</strong>만 내면 됩니다.
+                    구독형 플랜으로 업그레이드하면 기사 추가 비용이 없습니다.
+                  </p>
+                </div>
+
+                <Link href="/portal/signup"
+                  className="inline-flex h-11 px-6 rounded-xl bg-primary text-white text-sm font-semibold font-korean items-center hover:bg-primary/90 transition-colors">
+                  무료로 시작하기
+                </Link>
               </div>
-            ))}
+
+              {/* 오른쪽: 포인트 작동 방식 */}
+              <div className="space-y-4">
+                <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
+                  <h3 className="text-sm font-bold text-on-surface font-korean mb-4">포인트는 이렇게 작동합니다</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <span className="w-7 h-7 rounded-full bg-tertiary/10 text-tertiary flex items-center justify-center text-xs font-bold shrink-0">1</span>
+                      <div>
+                        <p className="text-sm font-semibold text-on-surface font-korean">가입 시 {fmt(WELCOME_BONUS_POINTS)}P 자동 지급</p>
+                        <p className="text-xs text-on-surface-variant font-korean">별도 신청 없이 즉시 사용 가능</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="w-7 h-7 rounded-full bg-tertiary/10 text-tertiary flex items-center justify-center text-xs font-bold shrink-0">2</span>
+                      <div>
+                        <p className="text-sm font-semibold text-on-surface font-korean">유료 기능 사용 시 포인트 차감</p>
+                        <p className="text-xs text-on-surface-variant font-korean">
+                          계약서 전송 {fmt(POINT_COSTS.contract_send.cost)}P/건 · 정산서 생성 {fmt(POINT_COSTS.settlement_generate.cost)}P/5명 · 엑셀 업로드 {fmt(POINT_COSTS.excel_upload.cost)}P
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="w-7 h-7 rounded-full bg-tertiary/10 text-tertiary flex items-center justify-center text-xs font-bold shrink-0">3</span>
+                      <div>
+                        <p className="text-sm font-semibold text-on-surface font-korean">포인트 소진 시</p>
+                        <p className="text-xs text-on-surface-variant font-korean">
+                          포인트 추가 충전 또는 구독형으로 전환하여 무제한 사용
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-ambient">
+                  <h3 className="text-sm font-bold text-on-surface font-korean mb-3">
+                    {fmt(WELCOME_BONUS_POINTS)}P로 할 수 있는 것
+                  </h3>
+                  <div className="space-y-2 text-xs text-on-surface-variant font-korean">
+                    <div className="flex justify-between p-2 rounded-lg bg-surface-container-low/50">
+                      <span>계약서 전송</span>
+                      <span className="font-data font-semibold text-on-surface">{Math.floor(WELCOME_BONUS_POINTS / POINT_COSTS.contract_send.cost)}건</span>
+                    </div>
+                    <div className="flex justify-between p-2 rounded-lg bg-surface-container-low/50">
+                      <span>정산서 생성 (5명 1세트)</span>
+                      <span className="font-data font-semibold text-on-surface">{Math.floor(WELCOME_BONUS_POINTS / POINT_COSTS.settlement_generate.cost)}세트</span>
+                    </div>
+                    <div className="flex justify-between p-2 rounded-lg bg-surface-container-low/50">
+                      <span>엑셀 업로드 정산</span>
+                      <span className="font-data font-semibold text-on-surface">{Math.floor(WELCOME_BONUS_POINTS / POINT_COSTS.excel_upload.cost)}회</span>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-on-surface-variant/50 mt-2 font-korean">
+                    정산서 PDF · 기사 등록 · 템플릿 업로드 · 알림톡은 무료이므로 포인트 차감 없음
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-          <p className="text-xs text-on-surface-variant/50 text-center mt-4 font-korean">
-            연간 결제 시 20~40% 할인. Enterprise 플랜은 별도 문의.
-          </p>
         </section>
 
-        {/* ══════ Section 2: 포인트 충전형 ══════ */}
+        {/* ══════ Section 1: 구독형 + 포인트형 ══════ */}
         <section>
-          <div className="text-center mb-8">
-            <span className="px-3 py-1 rounded-full bg-tertiary/10 text-tertiary text-xs font-bold font-korean">포인트 충전형</span>
-            <h2 className="text-2xl font-headline font-bold text-on-surface mt-3 font-korean">사용한 만큼만 결제</h2>
-            <p className="text-sm text-on-surface-variant mt-2 font-korean">월정액 없이 포인트를 충전하고, 기능 사용 시 차감됩니다. 가입 즉시 10,000P 무료!</p>
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-headline font-bold text-on-surface font-korean">더 많은 기능이 필요하다면?</h2>
+            <p className="text-sm text-on-surface-variant mt-3 font-korean">구독형 또는 포인트 충전형 중 선택하세요. 언제든 변경 가능합니다.</p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* 항목별 단가 */}
-            <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6">
-              <h3 className="text-sm font-bold text-on-surface font-korean mb-4">항목별 포인트 단가</h3>
-              <div className="space-y-2">
-                {(Object.entries(POINT_COSTS) as [PointAction, typeof POINT_COSTS[PointAction]][]).map(([, info]) => (
-                  <div key={info.label} className="flex items-center justify-between p-3 rounded-xl bg-surface-container-low/50">
-                    <div>
-                      <p className="text-sm font-semibold text-on-surface font-korean">{info.label}</p>
-                      <p className="text-[11px] text-on-surface-variant font-korean">{info.desc}</p>
-                    </div>
-                    <span className={`text-sm font-data font-bold ${info.cost === 0 ? 'text-tertiary' : 'text-primary'}`}>
-                      {info.cost === 0 ? '무료' : `${info.cost}P`}
-                    </span>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* 구독형 */}
+            <div className="space-y-6">
+              <div className="flex items-center gap-3">
+                <span className="px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-bold font-korean">구독형 (월정액)</span>
+              </div>
+              <p className="text-sm text-on-surface-variant font-korean">
+                월 고정 비용으로 계약서·정산서·엑셀 업로드 등 <strong className="text-on-surface">모든 유료 기능을 무제한</strong> 사용.
+                기사 추가 비용 없음. 포인트 차감 없음. 기사 50명 이상이면 구독형이 유리합니다.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {(['basic', 'standard', 'pro', 'enterprise'] as PlanType[]).map((id) => (
+                  <div key={id} className={`rounded-2xl border-2 p-5 transition-all ${
+                    id === 'standard' ? 'border-primary bg-primary/5 shadow-lg' : 'border-outline-variant/15'
+                  }`}>
+                    {id === 'standard' && (
+                      <span className="inline-block px-2 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold mb-2">추천</span>
+                    )}
+                    <h3 className="text-sm font-bold text-on-surface font-korean">{PLAN_LABELS[id]}</h3>
+                    <p className="text-xl font-data font-bold text-primary mt-1">
+                      {id === 'enterprise' ? '별도 문의' : fmtKRW(PLAN_PRICES[id])}
+                      {id !== 'enterprise' && <span className="text-xs text-on-surface-variant font-normal">/월</span>}
+                    </p>
+                    <ul className="mt-3 space-y-1">
+                      {PLAN_HIGHLIGHTS[id].map((h) => (
+                        <li key={h} className="flex items-start gap-1.5 text-xs text-on-surface-variant font-korean"><Check />{h}</li>
+                      ))}
+                      <li className="flex items-start gap-1.5 text-xs text-on-surface-variant font-korean"><Check />포인트 차감 없음 (무제한)</li>
+                      <li className="flex items-start gap-1.5 text-xs text-on-surface-variant font-korean"><Check />기사 추가 비용 없음</li>
+                    </ul>
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] text-on-surface-variant/50 mt-3 font-korean">1P = ₩1. 가입 시 10,000P 무료 지급. 충전 시 보너스 추가.</p>
+              <p className="text-xs text-on-surface-variant/50 font-korean">연간 결제 시 20~40% 할인. Enterprise는 별도 문의.</p>
             </div>
 
-            {/* 충전 패키지 + 예상 비용 */}
+            {/* 포인트형 */}
             <div className="space-y-6">
-              <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6">
-                <h3 className="text-sm font-bold text-on-surface font-korean mb-4">충전 패키지</h3>
+              <div className="flex items-center gap-3">
+                <span className="px-3 py-1.5 rounded-full bg-tertiary/10 text-tertiary text-sm font-bold font-korean">포인트 충전형</span>
+              </div>
+              <p className="text-sm text-on-surface-variant font-korean">
+                월정액 없이 <strong className="text-on-surface">사용할 때만 포인트가 차감</strong>됩니다.
+                기사 {FREE_PLAN_FREE_DRIVERS}명까지 무료, 초과 시 기사당 <strong className="text-on-surface">{fmt(EXTRA_DRIVER_MONTHLY_POINTS)}P/월</strong>.
+                포인트가 부족하면 충전하고, 소진되어도 무료 기능은 유지됩니다.
+              </p>
+
+              {/* 유료 항목 */}
+              <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-5">
+                <h4 className="text-sm font-bold text-on-surface font-korean mb-3">포인트 차감 항목 (유료)</h4>
                 <div className="space-y-2">
-                  {[
-                    { name: '5,000P', price: 5000, bonus: 0 },
-                    { name: '10,000P', price: 10000, bonus: 500 },
-                    { name: '30,000P', price: 30000, bonus: 2000 },
-                    { name: '50,000P', price: 50000, bonus: 5000 },
-                    { name: '100,000P', price: 100000, bonus: 15000 },
-                  ].map((pkg) => (
-                    <div key={pkg.name} className="flex items-center justify-between p-3 rounded-xl bg-surface-container-low/50">
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-data font-bold text-on-surface">{pkg.name}</span>
-                        {pkg.bonus > 0 && (
-                          <span className="px-2 py-0.5 rounded-full bg-tertiary/10 text-tertiary text-[10px] font-bold">
-                            +{pkg.bonus.toLocaleString()}P 보너스
-                          </span>
-                        )}
+                  {PAID_ACTIONS.map(([, info]) => (
+                    <div key={info.label} className="flex items-center justify-between p-3 rounded-xl bg-surface-container-low/50">
+                      <div>
+                        <p className="text-sm font-semibold text-on-surface font-korean">{info.label}</p>
+                        <p className="text-[11px] text-on-surface-variant font-korean">{info.desc}</p>
                       </div>
-                      <span className="text-sm font-data text-primary">{formatKRW(pkg.price)}</span>
+                      <span className="text-sm font-data font-bold text-primary">{fmt(info.cost)}P</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6">
-                <h3 className="text-sm font-bold text-on-surface font-korean mb-3">기사 30명 월 예상 비용</h3>
-                <div className="space-y-1 text-xs text-on-surface-variant font-korean">
-                  <div className="flex justify-between"><span>계약서 전송 {MONTHLY_USAGE.contract_send}건</span><span className="font-data">{MONTHLY_USAGE.contract_send * POINT_COSTS.contract_send.cost}P</span></div>
-                  <div className="flex justify-between"><span>정산서 생성 {MONTHLY_USAGE.settlement_generate}건</span><span className="font-data">{MONTHLY_USAGE.settlement_generate * POINT_COSTS.settlement_generate.cost}P</span></div>
-                  <div className="flex justify-between"><span>정산서 PDF {MONTHLY_USAGE.settlement_pdf}건</span><span className="font-data">{MONTHLY_USAGE.settlement_pdf * POINT_COSTS.settlement_pdf.cost}P</span></div>
-                  <div className="flex justify-between"><span>SMS {MONTHLY_USAGE.sms_send}건</span><span className="font-data">{MONTHLY_USAGE.sms_send * POINT_COSTS.sms_send.cost}P</span></div>
-                  <div className="flex justify-between"><span>엑셀 업로드 {MONTHLY_USAGE.excel_upload}회</span><span className="font-data">{MONTHLY_USAGE.excel_upload * POINT_COSTS.excel_upload.cost}P</span></div>
+              {/* 무료 항목 */}
+              <div className="bg-tertiary/5 rounded-2xl p-5 border border-tertiary/15">
+                <h4 className="text-sm font-bold text-tertiary font-korean mb-2">포인트 차감 없이 무료</h4>
+                <div className="flex flex-wrap gap-2">
+                  {FREE_ACTIONS.map(([, info]) => (
+                    <span key={info.label} className="px-3 py-1 rounded-full bg-white border border-tertiary/20 text-xs text-on-surface font-korean">
+                      {info.label}
+                    </span>
+                  ))}
+                  <span className="px-3 py-1 rounded-full bg-white border border-tertiary/20 text-xs text-on-surface font-korean">알림톡 발송</span>
+                  <span className="px-3 py-1 rounded-full bg-white border border-tertiary/20 text-xs text-on-surface font-korean">기사 전용 앱</span>
+                </div>
+              </div>
+
+              {/* 월 예상 비용 — 기사 30명 기준 */}
+              <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-5">
+                <h4 className="text-sm font-bold text-on-surface font-korean mb-1">기사 {EST_DRIVERS}명 월 예상 비용</h4>
+                <p className="text-[11px] text-on-surface-variant font-korean mb-3">
+                  기사 {FREE_PLAN_FREE_DRIVERS}명 무료, 초과 {EST_EXTRA_DRIVERS}명 × {fmt(EXTRA_DRIVER_MONTHLY_POINTS)}P/월 포함
+                </p>
+                <div className="space-y-1.5 text-xs font-korean">
+                  <div className="flex justify-between text-error/80 font-semibold">
+                    <span>초과 기사 {EST_EXTRA_DRIVERS}명 × {fmt(EXTRA_DRIVER_MONTHLY_POINTS)}P</span>
+                    <span className="font-data">{fmt(EST_DRIVER_FEE) + "P"}/월</span>
+                  </div>
+                  <div className="flex justify-between text-on-surface-variant">
+                    <span>계약서 전송 {EST.contract_send}건</span>
+                    <span className="font-data">{fmt(EST.contract_send * POINT_COSTS.contract_send.cost)}P</span>
+                  </div>
+                  <div className="flex justify-between text-on-surface-variant">
+                    <span>정산서 생성 {EST.settlement_sets}세트 ({EST_DRIVERS}명÷5명)</span>
+                    <span className="font-data">{fmt(EST.settlement_sets * POINT_COSTS.settlement_generate.cost)}P</span>
+                  </div>
+                  <div className="flex justify-between text-on-surface-variant">
+                    <span>엑셀 업로드 {EST.excel_upload}회</span>
+                    <span className="font-data">{fmt(EST.excel_upload * POINT_COSTS.excel_upload.cost)}P</span>
+                  </div>
+                  <div className="flex justify-between text-tertiary">
+                    <span>정산전송 · PDF · 기사등록 · 알림톡</span>
+                    <span className="font-data font-semibold">무료</span>
+                  </div>
                   <div className="flex justify-between border-t border-outline-variant/20 pt-2 mt-2 text-sm font-bold text-on-surface">
-                    <span>합계</span>
-                    <span className="font-data text-primary">{pointMonthlyTotal.toLocaleString()}P ({formatKRW(pointMonthlyTotal)})</span>
+                    <span>월 총비용</span>
+                    <span className="font-data text-primary">{fmt(estFreeTotal)}P</span>
+                  </div>
+                  <div className="text-[10px] text-on-surface-variant/60 mt-1">
+                    (기사비 {fmt(EST_DRIVER_FEE) + "P"} + 포인트 {fmt(estPointTotal)}P)
                   </div>
                 </div>
+              </div>
+
+              {/* 포인트형 vs 구독형 비교 */}
+              <div className="bg-primary/5 rounded-2xl border border-primary/15 p-5">
+                <h4 className="text-sm font-bold text-on-surface font-korean mb-3">기사 {EST_DRIVERS}명 — 어디가 유리?</h4>
+                <div className="space-y-2 text-xs font-korean">
+                  <div className="flex justify-between p-2 rounded-lg bg-white/60">
+                    <span className="text-on-surface-variant">포인트형 (기사비 + 포인트)</span>
+                    <span className="font-data font-bold text-tertiary">{fmt(estFreeTotal)}P/월</span>
+                  </div>
+                  <div className="flex justify-between p-2 rounded-lg bg-white/60">
+                    <span className="text-on-surface-variant">구독 Basic (기사 30명·무제한)</span>
+                    <span className="font-data font-bold text-primary">{fmtKRW(49900)}/월</span>
+                  </div>
+                </div>
+                <p className="text-[10px] text-on-surface-variant/60 mt-2 font-korean">
+                  무료·포인트형 모두 기사 {FREE_PLAN_FREE_DRIVERS}명 초과 시 {fmt(EXTRA_DRIVER_MONTHLY_POINTS)}P/명/월 포인트 차감. 포인트 소진 시 충전 또는 플랜 변경 알림.
+                  구독형은 플랜 내 기사 수까지 추가 비용 없음.
+                </p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ══════ Section 3: 구독형 vs 포인트형 한눈에 비교 ══════ */}
+        {/* ══════ Section 2: 충전 패키지 ══════ */}
+        <section>
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-headline font-bold text-on-surface font-korean">포인트 충전 패키지</h2>
+            <p className="text-sm text-on-surface-variant mt-2 font-korean">많이 충전할수록 보너스 포인트가 더 많아집니다.</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            {POINT_PACKAGES.map((pkg) => (
+              <div key={pkg.points} className={`relative rounded-2xl border-2 p-5 text-center transition-all hover:shadow-md ${
+                pkg.bonus > 0 ? 'border-tertiary/30 bg-tertiary/[0.03]' : 'border-outline-variant/15'
+              }`}>
+                {pkg.bonus > 0 && (
+                  <span className="absolute -top-2.5 right-2 px-2.5 py-0.5 rounded-full bg-tertiary text-white text-[10px] font-bold">+{fmt(pkg.bonus)}P</span>
+                )}
+                <p className="text-lg font-data font-bold text-on-surface">{fmt(pkg.points)}P</p>
+                <p className="text-sm font-data text-primary mt-1">{fmtKRW(pkg.price)}</p>
+                {pkg.bonus > 0 && (
+                  <p className="text-[10px] text-tertiary font-korean mt-1">실수령 {fmt(pkg.points + pkg.bonus)}P</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ══════ Section 3: 어떤 요금제? ══════ */}
         <section>
           <div className="text-center mb-8">
             <h2 className="text-2xl font-headline font-bold text-on-surface font-korean">어떤 요금제가 유리할까요?</h2>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-primary/5 rounded-2xl border-2 border-primary/30 p-6 relative">
-              <span className="absolute -top-3 left-4 px-3 py-1 rounded-full bg-primary text-white text-xs font-bold">기사 28명 이상이면 구독형!</span>
-              <h3 className="text-lg font-bold text-on-surface font-korean mt-2">구독형</h3>
-              <p className="text-3xl font-data font-bold text-primary mt-2">{formatKRW(49900)}<span className="text-sm font-normal text-on-surface-variant">/월</span></p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="rounded-2xl border-2 border-outline-variant/20 p-6 relative">
+              <span className="absolute -top-3 left-4 px-3 py-1 rounded-full bg-on-surface text-surface text-xs font-bold">기사 5명 이하</span>
+              <h3 className="text-lg font-bold text-on-surface font-korean mt-3">무료 플랜</h3>
+              <p className="text-2xl font-data font-bold text-on-surface mt-2">₩0</p>
               <ul className="mt-4 space-y-2 text-sm text-on-surface-variant font-korean">
-                <li>+ 기능 무제한 사용, 추가 비용 없음</li>
-                <li>+ 기사 수 늘어도 비용 동일</li>
-                <li>+ 예산 예측 쉬움 (고정비)</li>
-                <li className="text-on-surface-variant/50">- 소량 사용 시 비효율</li>
+                <li className="flex items-start gap-1.5"><Check />기사 {FREE_PLAN_FREE_DRIVERS}명 완전 무료</li>
+                <li className="flex items-start gap-1.5"><Check />{fmt(WELCOME_BONUS_POINTS)}P 지급 (유료기능 체험용)</li>
+                <li className="flex items-start gap-1.5 text-xs text-on-surface-variant/70">
+                  ※ 계약서 전송·정산서 생성·엑셀 업로드는 포인트 차감
+                </li>
+                <li className="flex items-start gap-1.5"><Check />포인트 소진 후에도 기본기능 유지</li>
+                <li className="flex items-start gap-1.5"><Check />초과 시 기사당 {fmt(EXTRA_DRIVER_MONTHLY_POINTS)}P/월</li>
               </ul>
             </div>
-            <div className="bg-surface-container-lowest rounded-2xl border-2 border-outline-variant/20 p-6 relative">
-              <span className="absolute -top-3 left-4 px-3 py-1 rounded-full bg-tertiary text-white text-xs font-bold">기사 20명 이하면 포인트형!</span>
-              <h3 className="text-lg font-bold text-on-surface font-korean mt-2">포인트 충전형</h3>
-              <p className="text-3xl font-data font-bold text-on-surface mt-2">사용량에 따라<span className="text-sm font-normal text-on-surface-variant"> 변동</span></p>
+            <div className="rounded-2xl border-2 border-tertiary/30 bg-tertiary/[0.02] p-6 relative">
+              <span className="absolute -top-3 left-4 px-3 py-1 rounded-full bg-tertiary text-white text-xs font-bold">기사 6~50명</span>
+              <h3 className="text-lg font-bold text-on-surface font-korean mt-3">포인트 충전형</h3>
+              <p className="text-2xl font-data font-bold text-tertiary mt-2">사용한 만큼</p>
               <ul className="mt-4 space-y-2 text-sm text-on-surface-variant font-korean">
-                <li>+ 사용한 만큼만 결제</li>
-                <li>+ 초기 비용 부담 없음</li>
-                <li>+ 비정기 사용 시 유리</li>
-                <li className="text-on-surface-variant/50">- 기사 많으면 구독보다 비쌈</li>
+                <li className="flex items-start gap-1.5"><Check />기사 {FREE_PLAN_FREE_DRIVERS}명 무료, 초과 시 {fmt(EXTRA_DRIVER_MONTHLY_POINTS)}P/명/월</li>
+                <li className="flex items-start gap-1.5"><Check />계약서 전송 {fmt(POINT_COSTS.contract_send.cost)}P/건</li>
+                <li className="flex items-start gap-1.5"><Check />정산서 생성 {fmt(POINT_COSTS.settlement_generate.cost)}P/5명 (전송 무료)</li>
+                <li className="flex items-start gap-1.5"><Check />엑셀 업로드 정산 {fmt(POINT_COSTS.excel_upload.cost)}P/회</li>
+                <li className="flex items-start gap-1.5"><Check />PDF·알림톡·기사등록·정산전송 무료</li>
+              </ul>
+            </div>
+            <div className="rounded-2xl border-2 border-primary/30 bg-primary/5 p-6 relative shadow-lg">
+              <span className="absolute -top-3 left-4 px-3 py-1 rounded-full bg-primary text-white text-xs font-bold">기사 50명 이상</span>
+              <h3 className="text-lg font-bold text-on-surface font-korean mt-3">구독형</h3>
+              <p className="text-2xl font-data font-bold text-primary mt-2">{fmtKRW(49900)}~</p>
+              <ul className="mt-4 space-y-2 text-sm text-on-surface-variant font-korean">
+                <li className="flex items-start gap-1.5"><Check />모든 기능 무제한 (포인트 차감 없음)</li>
+                <li className="flex items-start gap-1.5"><Check />기사 추가 비용 없음</li>
+                <li className="flex items-start gap-1.5"><Check />���용 예측 쉬움 (고정비)</li>
+                <li className="flex items-start gap-1.5"><Check />연간 결제 시 최대 40% 할인</li>
               </ul>
             </div>
           </div>
@@ -261,7 +438,6 @@ export default function PricingPage() {
           <div className="text-center mb-8">
             <h2 className="text-2xl font-headline font-bold text-on-surface font-korean">기능별 상세 비교</h2>
           </div>
-
           <div className="bg-surface-container-lowest rounded-2xl shadow-ambient overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -277,25 +453,24 @@ export default function PricingPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-outline-variant/10">
-                  {/* 가격 행 */}
                   <tr className="bg-surface-container-low/30">
                     <td className="p-4 font-korean font-bold text-on-surface">월 요금</td>
                     <td className="p-4 text-center font-data font-bold text-on-surface">무료</td>
                     <td className="p-4 text-center font-data font-bold text-tertiary bg-tertiary/5">충전식</td>
-                    <td className="p-4 text-center font-data font-bold text-on-surface">{formatKRW(49900)}</td>
-                    <td className="p-4 text-center font-data font-bold text-primary bg-primary/5">{formatKRW(99000)}</td>
-                    <td className="p-4 text-center font-data font-bold text-on-surface">{formatKRW(149000)}</td>
+                    <td className="p-4 text-center font-data font-bold text-on-surface">{fmtKRW(49900)}</td>
+                    <td className="p-4 text-center font-data font-bold text-primary bg-primary/5">{fmtKRW(99000)}</td>
+                    <td className="p-4 text-center font-data font-bold text-on-surface">{fmtKRW(149000)}</td>
                     <td className="p-4 text-center font-data font-bold text-on-surface">별도 문의</td>
                   </tr>
                   {FEATURE_ROWS.map((row) => (
                     <tr key={row.label}>
                       <td className="p-4 font-korean text-on-surface">{row.label}</td>
-                      <td className="p-4 text-center font-korean text-on-surface-variant">{row.free}</td>
-                      <td className="p-4 text-center font-korean text-tertiary bg-tertiary/5">{row.point}</td>
-                      <td className="p-4 text-center font-korean text-on-surface-variant">{row.basic}</td>
-                      <td className="p-4 text-center font-korean text-primary bg-primary/5">{row.standard}</td>
-                      <td className="p-4 text-center font-korean text-on-surface-variant">{row.pro}</td>
-                      <td className="p-4 text-center font-korean text-on-surface-variant">{row.enterprise}</td>
+                      <td className="p-4 text-center font-korean text-on-surface-variant text-xs">{row.free}</td>
+                      <td className="p-4 text-center font-korean text-tertiary bg-tertiary/5 text-xs">{row.point}</td>
+                      <td className="p-4 text-center font-korean text-on-surface-variant text-xs">{row.basic}</td>
+                      <td className="p-4 text-center font-korean text-primary bg-primary/5 text-xs">{row.standard}</td>
+                      <td className="p-4 text-center font-korean text-on-surface-variant text-xs">{row.pro}</td>
+                      <td className="p-4 text-center font-korean text-on-surface-variant text-xs">{row.enterprise}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -304,20 +479,21 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* ══════ Section 5: 타사 비교 ══════ */}
+        {/* ══════ Section 5: 타사 비교 (사명 비노출) ══════ */}
         <section>
           <div className="text-center mb-8">
             <h2 className="text-2xl font-headline font-bold text-on-surface font-korean">타 서비스 비교</h2>
-            <p className="text-sm text-on-surface-variant mt-2 font-korean">logiSSign은 정산 + 전자계약 + 기사앱을 하나로 통합한 유일한 플랫폼입니다.</p>
+            <p className="text-sm text-on-surface-variant mt-2 font-korean">
+              logiSSign은 <strong>정산 + 전자계약 + 기사앱</strong>을 하나로 통합한 유일한 플랫폼입니다.
+            </p>
           </div>
-
           <div className="bg-surface-container-lowest rounded-2xl shadow-ambient overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-surface-container-low/60">
                     <th className="text-left p-4 font-korean font-semibold text-on-surface-variant">항목</th>
-                    <th className="p-4 font-korean font-semibold text-primary text-center bg-primary/5">logiSSign Basic</th>
+                    <th className="p-4 font-korean font-semibold text-primary text-center bg-primary/5">logiSSign</th>
                     {COMPETITORS.map((c) => (
                       <th key={c.name} className="p-4 font-korean font-semibold text-on-surface-variant text-center">{c.name}</th>
                     ))}
@@ -325,33 +501,28 @@ export default function PricingPage() {
                 </thead>
                 <tbody className="divide-y divide-outline-variant/10">
                   <tr>
-                    <td className="p-4 font-korean text-on-surface">��금 방식</td>
-                    <td className="p-4 text-center font-korean text-primary bg-primary/5 font-semibold">월정액 (기사 30명)</td>
-                    {COMPETITORS.map((c) => <td key={c.name} className="p-4 text-center font-korean text-on-surface-variant">{c.type}</td>)}
+                    <td className="p-4 font-korean text-on-surface">요금 방식</td>
+                    <td className="p-4 text-center font-korean text-primary bg-primary/5 font-semibold text-xs">무료 + 구독 + 포인트</td>
+                    {COMPETITORS.map((c) => <td key={c.name} className="p-4 text-center font-korean text-on-surface-variant text-xs">{c.type}</td>)}
                   </tr>
                   <tr>
-                    <td className="p-4 font-korean text-on-surface">월 비용</td>
-                    <td className="p-4 text-center font-data font-bold text-primary bg-primary/5">{formatKRW(49900)}</td>
-                    {COMPETITORS.map((c) => <td key={c.name} className="p-4 text-center font-data text-on-surface-variant">{c.monthly}</td>)}
-                  </tr>
-                  <tr>
-                    <td className="p-4 font-korean text-on-surface">전자계약서</td>
-                    <td className="p-4 text-center font-korean text-primary bg-primary/5 font-semibold">무제한</td>
-                    {COMPETITORS.map((c) => <td key={c.name} className="p-4 text-center font-korean text-on-surface-variant">{c.contracts}</td>)}
+                    <td className="p-4 font-korean text-on-surface">계약서 건당</td>
+                    <td className="p-4 text-center font-data font-bold text-primary bg-primary/5">{fmt(POINT_COSTS.contract_send.cost)}원</td>
+                    {COMPETITORS.map((c) => <td key={c.name} className="p-4 text-center font-data text-on-surface-variant text-xs">{c.perDoc}</td>)}
                   </tr>
                   <tr>
                     <td className="p-4 font-korean text-on-surface">정산 기능</td>
-                    <td className="p-4 text-center font-korean text-primary bg-primary/5 font-semibold">엑셀업로드 + 자동정산</td>
-                    {COMPETITORS.map((c) => <td key={c.name} className="p-4 text-center font-korean text-on-surface-variant">{c.settlement}</td>)}
+                    <td className="p-4 text-center font-korean text-primary bg-primary/5 font-semibold text-xs">자동정산 + 빌더 + 엑셀</td>
+                    {COMPETITORS.map((c) => <td key={c.name} className="p-4 text-center font-korean text-on-surface-variant text-xs">{c.settlement}</td>)}
                   </tr>
                   <tr>
                     <td className="p-4 font-korean text-on-surface">기사 전용 앱</td>
-                    <td className="p-4 text-center font-korean text-primary bg-primary/5 font-semibold">iOS + Android</td>
-                    {COMPETITORS.map((c) => <td key={c.name} className="p-4 text-center font-korean text-on-surface-variant">{c.driverApp}</td>)}
+                    <td className="p-4 text-center font-korean text-primary bg-primary/5 font-semibold text-xs">iOS + Android</td>
+                    {COMPETITORS.map((c) => <td key={c.name} className="p-4 text-center font-korean text-on-surface-variant text-xs">{c.app}</td>)}
                   </tr>
                   <tr className="bg-surface-container-low/30">
                     <td className="p-4 font-korean text-on-surface font-semibold">비고</td>
-                    <td className="p-4 text-center font-korean text-primary bg-primary/5 text-xs">정산·계약·기사앱 올인원</td>
+                    <td className="p-4 text-center font-korean text-primary bg-primary/5 text-xs font-semibold">정산·계약·기사앱 올인원</td>
                     {COMPETITORS.map((c) => <td key={c.name} className="p-4 text-center font-korean text-on-surface-variant/60 text-xs">{c.note}</td>)}
                   </tr>
                 </tbody>
@@ -360,16 +531,23 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* CTA */}
+        {/* ══════ CTA ══════ */}
         <section className="text-center pb-8">
-          <div className="bg-primary/5 rounded-3xl p-12 border border-primary/20">
-            <h2 className="text-2xl font-headline font-bold text-on-surface font-korean">지금 무료로 시작하세요</h2>
-            <p className="text-sm text-on-surface-variant mt-2 font-korean">기사 10명까지 무료 + 가입 즉시 10,000P 지급. 신용카드 등록 없이 바로 시작.</p>
+          <div className="bg-gradient-to-br from-primary/10 to-tertiary/10 rounded-3xl p-12 border border-primary/15">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/60 border border-tertiary/20 mb-4">
+              <span className="text-xl">🎁</span>
+              <span className="text-sm font-bold text-tertiary font-korean">첫 가입 {fmt(WELCOME_BONUS_POINTS)}P 무료</span>
+            </div>
+            <h2 className="text-3xl font-headline font-bold text-on-surface font-korean">지금 무료로 시작하세요</h2>
+            <p className="text-sm text-on-surface-variant mt-3 font-korean max-w-md mx-auto">
+              기사 {FREE_PLAN_FREE_DRIVERS}명까지 완전 무료. 카드 등록 없이 바로 시작.<br/>
+              {fmt(WELCOME_BONUS_POINTS)}P 지급으로 유료 기능도 바로 체험하세요.
+            </p>
             <div className="flex items-center justify-center gap-3 mt-6">
-              <Link href="/auth/signup" className="h-12 px-8 rounded-xl bg-primary text-white font-semibold font-korean flex items-center">
+              <Link href="/portal/signup" className="h-12 px-8 rounded-xl bg-primary text-white font-semibold font-korean flex items-center hover:bg-primary/90 transition-colors">
                 무료 시작하기
               </Link>
-              <Link href="/" className="h-12 px-8 rounded-xl bg-surface-container-low text-on-surface-variant font-semibold font-korean flex items-center hover:bg-surface-container-high transition-colors">
+              <Link href="/about" className="h-12 px-8 rounded-xl bg-white/60 border border-outline-variant/20 text-on-surface-variant font-semibold font-korean flex items-center hover:bg-white transition-colors">
                 서비스 소개
               </Link>
             </div>
@@ -377,11 +555,8 @@ export default function PricingPage() {
         </section>
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-outline-variant/10 py-8 text-center">
-        <p className="text-xs text-on-surface-variant font-korean">
-          &copy; 2026 logiSSign(로지사인). All rights reserved.
-        </p>
+        <p className="text-xs text-on-surface-variant font-korean">&copy; 2026 logiSSign(로지사인). All rights reserved.</p>
       </footer>
     </div>
   );

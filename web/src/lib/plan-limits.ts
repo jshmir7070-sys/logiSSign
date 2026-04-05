@@ -87,7 +87,7 @@ const ALL_FEATURES: Record<PlanFeature, boolean> = {
   settings: true,
 };
 
-/** 포인트 플랜: 모든 기능 사용 가능하지만 건별 포인트 차감 */
+/** 포인트 플랜: 건별 포인트 차감. 리포트는 구독형 전용 */
 const POINT_FEATURES: Record<PlanFeature, boolean> = {
   dashboard: true,
   drivers: true,
@@ -97,21 +97,21 @@ const POINT_FEATURES: Record<PlanFeature, boolean> = {
   'settlements.builder': true,
   'settlements.tax': true,
   'settlements.upload': true,
-  reports: true,
+  reports: false,           // 구독형 Standard 이상 전용
   notices: true,
   settings: true,
 };
 
 export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
   free: {
-    maxDrivers: 10,
+    maxDrivers: 5,            // 무료 5명, 초과 시 계정당 ₩1,500/월
     maxAdminAccounts: 0,
     maxDefaultTemplates: 0,
     maxUploadTemplates: 0,
     features: FREE_FEATURES,
   },
   point: {
-    maxDrivers: null,  // 무제한 (포인트로 제한)
+    maxDrivers: null,  // 무제한 (5명 초과 시 ₩1,500/명/월)
     maxAdminAccounts: 2,
     maxDefaultTemplates: 5,
     maxUploadTemplates: 5,
@@ -176,8 +176,8 @@ export const PLAN_DISCOUNTS: Record<string, number> = {
 
 /** 플랜별 주요 기능 요약 (UI 표시용) */
 export const PLAN_HIGHLIGHTS: Record<PlanType, string[]> = {
-  free: ['기사 10명', '기본 정산', '공지 관리', '가입 시 10,000P 지급'],
-  point: ['기사 무제한', '전 기능 사용', '사용한 만큼만 결제', '가입 시 10,000P 지급'],
+  free: ['기사 5명 무료', '초과 시 1,500P/명/월 차감', '기본 정산', '가입 시 5,000P 지급'],
+  point: ['기사 5명 무료', '초과 시 1,500P/명/월 차감', '사용한 만큼만 결제', '가입 시 5,000P 지급'],
   basic: ['기사 30명', '전자계약서', '정산서 빌더', '세금계산서', '엑셀 업로드'],
   standard: ['기사 80명', 'Basic 전체', '매출 리포트', '푸시 알림'],
   pro: ['기사 150명', 'Standard 전체', 'API 연동', '대용량 처리'],
@@ -246,11 +246,10 @@ export function isPlanAtLeast(current: string | undefined, required: PlanType): 
 /** 포인트 차감 항목 키 */
 export type PointAction =
   | 'contract_send'        // 계약서 전송 (건당)
-  | 'settlement_generate'  // 정산서 생성 (건당)
+  | 'settlement_generate'  // 정산서 생성 (5명 1세트)
   | 'settlement_pdf'       // 정산서 PDF 다운로드 (건당)
-  | 'sms_send'             // SMS 발송 (건당)
-  | 'push_send'            // 푸시 알림 (건당)
   | 'driver_register'      // 기사 등록 (건당)
+  | 'driver_extra'         // 플랜 초과 기사 (명당/월)
   | 'excel_upload'         // 엑셀 업로드 정산 (회당)
   | 'tax_invoice'          // 세금계산서 발행 (건당)
   | 'report_generate'      // 리포트 생성 (건당)
@@ -258,25 +257,39 @@ export type PointAction =
 
 /**
  * 항목별 포인트 차감 단가
- * - 기사 ~28명 이상이면 구독형 Basic(₩49,900)이 유리
- * - 기사 ~20명 이하면 포인트형이 유리
- * - 시장 비교: 모두싸인 1,330~1,900원/건, 이폼사인 600원/건, 싸인투게더 500원/건
+ * ── 유료 항목 (4개) ──
+ *   계약서 전송 1,200P · 정산서 생성 700P/5명 · 엑셀 업로드 2,500P · 플랜 초과 기사 1,500P/명/월
+ * ── 무료 항목 ──
+ *   정산서 PDF · 정산서 전송 · 기사 등록 · 템플릿 업로드
+ * ── 별도 ──
+ *   세금계산서 (개발중) · 리포트 (구독 전용)
+ * ── 알림 ──
+ *   알림톡(카카오)으로만 운영. SMS 별도 과금 없음.
+ * ── 플랜 초과 기사 ──
+ *   무료·포인트형: 기사 5명 초과 시 1,500P/명/월 자동 차감
+ *   구독형: 플랜 내 기사 수까지 무료 (초과 불가, 플랜 업그레이드 필요)
+ *   포인트 부족 시 → 플랜 변경 또는 포인트 충전 알림
  */
 export const POINT_COSTS: Record<PointAction, { cost: number; label: string; desc: string }> = {
-  contract_send:       { cost: 1200, label: '계약서 전송',      desc: '기사 1명에게 계약서 1건 전송' },
-  settlement_generate: { cost: 700,  label: '정산서 생성',      desc: '기사 1명 월 정산서 생성' },
-  settlement_pdf:      { cost: 450,  label: '정산서 PDF',       desc: '정산서 PDF 다운로드' },
-  sms_send:            { cost: 200,  label: 'SMS 발송',         desc: '문자 메시지 1건 발송' },
-  push_send:           { cost: 0,    label: '푸시 알림',        desc: '앱 푸시 알림 (무료)' },
-  driver_register:     { cost: 0,    label: '기사 등록',        desc: '기사 신규 등록 (무료)' },
-  excel_upload:        { cost: 2500, label: '엑셀 업로드 정산', desc: '엑셀 파일 1회 업로드 처리' },
-  tax_invoice:         { cost: 1200, label: '세금계산서 발행',  desc: '세금계산서 1건 발행' },
-  report_generate:     { cost: 700,  label: '리포트 생성',      desc: '매출/정산 리포트 1건' },
-  template_upload:     { cost: 0,    label: '템플릿 업로드',    desc: 'PDF 템플릿 업로드 (무료)' },
+  contract_send:       { cost: 1200, label: '계약서 전송',       desc: '기사 1명에게 계약서 1건 전송' },
+  settlement_generate: { cost: 700,  label: '정산서 생성',       desc: '기사 5명 1세트 정산서 생성 (전송 무료)' },
+  settlement_pdf:      { cost: 0,    label: '정산서 PDF',        desc: '정산서 PDF 다운로드 (무료)' },
+  driver_register:     { cost: 0,    label: '기사 등록',         desc: '기사 신규 등록 (무료)' },
+  driver_extra:        { cost: 1500, label: '플랜 초과 기사',    desc: '플랜 기사 수 초과 시 명당 월 자동 차감' },
+  excel_upload:        { cost: 2500, label: '엑셀 업로드 정산',  desc: '엑셀 파일 1회 업로드 처리' },
+  tax_invoice:         { cost: 0,    label: '세금계산서 발행',   desc: '서비스 개발중 (오픈 미정)' },
+  report_generate:     { cost: 0,    label: '리포트 생성',       desc: '구독형 전용 (Standard 이상)' },
+  template_upload:     { cost: 0,    label: '템플릿 업로드',     desc: 'PDF 템플릿 업로드 (무료)' },
 }
 
 /** 신규 가입 시 웰컴 보너스 포인트 */
-export const WELCOME_BONUS_POINTS = 10000;
+export const WELCOME_BONUS_POINTS = 5000;
+
+/** 플랜 기사 초과 시 계정당 월 포인트 차감 (1P = ₩1) */
+export const EXTRA_DRIVER_MONTHLY_POINTS = 1500;
+
+/** 무료플랜 무료 기사 수 */
+export const FREE_PLAN_FREE_DRIVERS = 5;
 
 /** 포인트 충전 패키지 (클라이언트 표시용 — DB에도 동일 시드 있음) */
 export const POINT_PACKAGES = [
