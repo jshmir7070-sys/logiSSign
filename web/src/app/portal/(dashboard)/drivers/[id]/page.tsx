@@ -342,9 +342,97 @@ export default function DriverDetailPage() {
     );
   }
 
+  /* ── 퇴사 / 복직 처리 ── */
+  const [statusChanging, setStatusChanging] = useState(false);
+
+  async function handleResign() {
+    if (!id || !driver) return;
+    if (!confirm(`${driver.name} 기사를 퇴사 처리하시겠습니까?\n\n퇴사 처리하면 기사 목록에서 '퇴사' 상태로 표시되며,\n계약서 발송 등 일부 기능이 제한됩니다.`)) return;
+    setStatusChanging(true);
+    setError('');
+    try {
+      const res = await fetch('/api/drivers/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          driverId: id,
+          status: 'inactive',
+          resigned_at: new Date().toISOString(),
+        }),
+      });
+      if (res.ok) {
+        setSuccess('퇴사 처리가 완료되었습니다');
+        await loadData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setError(err.error || '퇴사 처리 실패');
+      }
+    } catch { setError('퇴사 처리 중 오류'); }
+    setStatusChanging(false);
+  }
+
+  async function handleReinstate() {
+    if (!id || !driver) return;
+    if (!confirm(`${driver.name} 기사를 복직 처리하시겠습니까?`)) return;
+    setStatusChanging(true);
+    setError('');
+    try {
+      const res = await fetch('/api/drivers/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          driverId: id,
+          status: 'active',
+          resigned_at: null,
+        }),
+      });
+      if (res.ok) {
+        setSuccess('복직 처리가 완료되었습니다');
+        await loadData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setError(err.error || '복직 처리 실패');
+      }
+    } catch { setError('복직 처리 중 오류'); }
+    setStatusChanging(false);
+  }
+
+  async function handleSetResting() {
+    if (!id || !driver) return;
+    if (!confirm(`${driver.name} 기사를 휴식 상태로 변경하시겠습니까?`)) return;
+    setStatusChanging(true);
+    setError('');
+    try {
+      const res = await fetch('/api/drivers/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driverId: id, status: 'resting' }),
+      });
+      if (res.ok) {
+        setSuccess('휴식 상태로 변경되었습니다');
+        await loadData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setError(err.error || '상태 변경 실패');
+      }
+    } catch { setError('상태 변경 중 오류'); }
+    setStatusChanging(false);
+  }
+
   if (!driver) {
     return <div className="text-center text-on-surface-variant py-12 font-korean">기사를 찾을 수 없습니다</div>;
   }
+
+  const statusColors: Record<string, string> = {
+    active: 'bg-emerald-100 text-emerald-700',
+    resting: 'bg-amber-100 text-amber-700',
+    inactive: 'bg-red-100 text-red-700',
+  };
+  const statusTexts: Record<string, string> = {
+    active: '활동중',
+    resting: '휴식중',
+    inactive: '퇴사',
+  };
 
   return (
     <div className="space-y-8">
@@ -352,12 +440,66 @@ export default function DriverDetailPage() {
       <div className="flex items-center justify-between">
         <div>
           <button onClick={() => router.back()} className="text-sm text-primary hover:underline mb-2 font-korean">&larr; 기사 목록</button>
-          <h1 className="text-2xl font-headline font-bold text-on-surface font-korean">{driver.name}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-headline font-bold text-on-surface font-korean">{driver.name}</h1>
+            <span className={`px-2.5 py-1 rounded-full text-xs font-bold font-korean ${statusColors[driver.status] ?? 'bg-gray-100 text-gray-600'}`}>
+              {statusTexts[driver.status] ?? driver.status}
+            </span>
+          </div>
           <div className="flex items-center gap-4 mt-1 text-sm text-on-surface-variant">
             <span className="font-data">{driver.employee_code ?? '사번 미설정'}</span>
             <span className="font-korean">{driver.principals?.name ?? '카테고리 없음'}</span>
             <span className="font-korean">{driver.delivery_area ?? ''}</span>
           </div>
+        </div>
+
+        {/* 상태 변경 버튼 */}
+        <div className="flex items-center gap-2">
+          {driver.status === 'active' && (
+            <>
+              <button
+                onClick={handleSetResting}
+                disabled={statusChanging}
+                className="h-9 px-4 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 font-label text-xs font-medium hover:bg-amber-100 transition-colors font-korean disabled:opacity-50"
+              >
+                휴식 처리
+              </button>
+              <button
+                onClick={handleResign}
+                disabled={statusChanging}
+                className="h-9 px-4 rounded-xl bg-red-50 text-red-600 border border-red-200 font-label text-xs font-medium hover:bg-red-100 transition-colors font-korean disabled:opacity-50"
+              >
+                퇴사 처리
+              </button>
+            </>
+          )}
+          {driver.status === 'resting' && (
+            <>
+              <button
+                onClick={handleReinstate}
+                disabled={statusChanging}
+                className="h-9 px-4 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-label text-xs font-medium hover:bg-emerald-100 transition-colors font-korean disabled:opacity-50"
+              >
+                활동 복귀
+              </button>
+              <button
+                onClick={handleResign}
+                disabled={statusChanging}
+                className="h-9 px-4 rounded-xl bg-red-50 text-red-600 border border-red-200 font-label text-xs font-medium hover:bg-red-100 transition-colors font-korean disabled:opacity-50"
+              >
+                퇴사 처리
+              </button>
+            </>
+          )}
+          {driver.status === 'inactive' && (
+            <button
+              onClick={handleReinstate}
+              disabled={statusChanging}
+              className="h-9 px-4 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-label text-xs font-medium hover:bg-emerald-100 transition-colors font-korean disabled:opacity-50"
+            >
+              복직 처리
+            </button>
+          )}
         </div>
       </div>
 

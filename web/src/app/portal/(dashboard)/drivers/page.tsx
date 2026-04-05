@@ -29,7 +29,9 @@ export default function DriversPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [agencyId, setAgencyId] = useState<string | null>(null);
-  const [sendingInvite, setSendingInvite] = useState<string | null>(null); // driver id being sent
+  const [sendingInvite, setSendingInvite] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   const handleResendInvite = async (driverId: string, driverName: string, driverPhone: string) => {
     if (!agencyId || !driverPhone) { alert('전화번호가 없습니다'); return; }
@@ -92,6 +94,52 @@ export default function DriversPage() {
       setLoading(false);
     });
   }, [selectedPrincipal, agencyId]);
+
+  // 일괄 상태 변경
+  const handleBulkStatusChange = async (newStatus: string) => {
+    if (selectedIds.size === 0) return;
+    const label = newStatus === 'inactive' ? '퇴사' : newStatus === 'active' ? '활동' : '휴식';
+    if (!confirm(`선택한 ${selectedIds.size}명의 기사를 "${label}" 상태로 변경하시겠습니까?`)) return;
+    setBulkProcessing(true);
+    let successCount = 0;
+    for (const driverId of selectedIds) {
+      try {
+        const body: Record<string, unknown> = { driverId, status: newStatus };
+        if (newStatus === 'inactive') body.resigned_at = new Date().toISOString();
+        if (newStatus === 'active') body.resigned_at = null;
+        const res = await fetch('/api/drivers/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (res.ok) successCount++;
+      } catch { /* skip */ }
+    }
+    alert(`${successCount}명 ${label} 처리 완료`);
+    setSelectedIds(new Set());
+    // 목록 새로고침
+    if (agencyId) {
+      const result = await getDrivers(agencyId, selectedPrincipal);
+      if (result.data) setDrivers(result.data);
+    }
+    setBulkProcessing(false);
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(d => d.id)));
+    }
+  };
 
   const filtered = drivers.filter((d) => {
     const matchesSearch =
@@ -181,12 +229,56 @@ export default function DriversPage() {
         </select>
       </div>
 
+      {/* 일괄 작업 바 */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-5 py-3">
+          <span className="text-sm font-bold text-primary font-korean">{selectedIds.size}명 선택</span>
+          <div className="flex items-center gap-2 ml-auto">
+            <button
+              onClick={() => handleBulkStatusChange('active')}
+              disabled={bulkProcessing}
+              className="h-8 px-4 rounded-lg bg-emerald-500 text-white text-xs font-bold font-korean hover:bg-emerald-600 transition-colors disabled:opacity-50"
+            >
+              활동 처리
+            </button>
+            <button
+              onClick={() => handleBulkStatusChange('resting')}
+              disabled={bulkProcessing}
+              className="h-8 px-4 rounded-lg bg-amber-500 text-white text-xs font-bold font-korean hover:bg-amber-600 transition-colors disabled:opacity-50"
+            >
+              휴식 처리
+            </button>
+            <button
+              onClick={() => handleBulkStatusChange('inactive')}
+              disabled={bulkProcessing}
+              className="h-8 px-4 rounded-lg bg-red-500 text-white text-xs font-bold font-korean hover:bg-red-600 transition-colors disabled:opacity-50"
+            >
+              퇴사 처리
+            </button>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="h-8 px-3 rounded-lg bg-surface-container-high text-on-surface-variant text-xs font-korean hover:bg-surface-container-highest transition-colors"
+            >
+              선택 해제
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-surface-container-lowest rounded-2xl shadow-ambient">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-surface-container-low">
+                <th className="px-3 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                    onChange={toggleSelectAll}
+                    className="w-4 h-4 rounded border-outline-variant accent-primary cursor-pointer"
+                  />
+                </th>
                 <th className="px-6 py-3 text-xs font-label font-semibold text-on-surface-variant uppercase tracking-wider font-korean">
                   이름
                 </th>
@@ -216,13 +308,13 @@ export default function DriversPage() {
             <tbody className="divide-y divide-outline-variant/30">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-sm text-on-surface-variant font-korean">
+                  <td colSpan={9} className="px-6 py-8 text-center text-sm text-on-surface-variant font-korean">
                     데이터를 불러오는 중...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-sm text-on-surface-variant font-korean">
+                  <td colSpan={9} className="px-6 py-8 text-center text-sm text-on-surface-variant font-korean">
                     {search || statusFilter !== 'all' ? '검색 결과가 없습니다' : '등록된 기사가 없습니다'}
                   </td>
                 </tr>
@@ -230,9 +322,19 @@ export default function DriversPage() {
                 filtered.map((driver) => (
                   <tr
                     key={driver.id}
-                    className="hover:bg-surface-container-low/50 transition-colors cursor-pointer"
+                    className={`hover:bg-surface-container-low/50 transition-colors cursor-pointer ${
+                      driver.status === 'inactive' ? 'opacity-60' : ''
+                    }`}
                     onClick={() => window.location.href = `/portal/drivers/${driver.id}`}
                   >
+                    <td className="px-3 py-4" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(driver.id)}
+                        onChange={() => toggleSelect(driver.id)}
+                        className="w-4 h-4 rounded border-outline-variant accent-primary cursor-pointer"
+                      />
+                    </td>
                     <td className="px-6 py-4 text-sm font-body text-on-surface font-korean">
                       <span className="text-primary hover:underline">{driver.name}</span>
                     </td>

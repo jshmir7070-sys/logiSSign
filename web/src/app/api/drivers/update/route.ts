@@ -47,7 +47,12 @@ export async function POST(request: NextRequest) {
       'vehicle_mileage', 'vehicle_owner', 'vehicle_rent_monthly', 'vehicle_deposit',
       'vehicle_insurance_by', 'bank_name', 'bank_account', 'bank_holder',
       'custom_values', 'birth_date',
+      'status', 'resigned_at',  // 퇴사 처리
     ]
+    // status 값 검증
+    if (fields.status && !['active', 'resting', 'inactive'].includes(fields.status)) {
+      return NextResponse.json({ error: '잘못된 상태 값입니다' }, { status: 400 })
+    }
     const safeFields: Record<string, unknown> = {}
     for (const key of allowed) {
       if (key in fields) safeFields[key] = fields[key]
