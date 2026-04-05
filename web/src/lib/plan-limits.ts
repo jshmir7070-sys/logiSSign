@@ -106,43 +106,43 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
   free: {
     maxDrivers: 5,            // 무료 5명, 초과 시 계정당 ₩1,500/월
     maxAdminAccounts: 0,
-    maxDefaultTemplates: 0,
-    maxUploadTemplates: 0,
+    maxDefaultTemplates: 999,   // 무제한
+    maxUploadTemplates: 999,    // 무제한
     features: FREE_FEATURES,
   },
   point: {
     maxDrivers: null,  // 무제한 (5명 초과 시 ₩1,500/명/월)
     maxAdminAccounts: 2,
-    maxDefaultTemplates: 5,
-    maxUploadTemplates: 5,
+    maxDefaultTemplates: 999,   // 무제한
+    maxUploadTemplates: 999,    // 무제한
     features: POINT_FEATURES,
   },
   basic: {
     maxDrivers: 30,
     maxAdminAccounts: 2,
-    maxDefaultTemplates: 3,
-    maxUploadTemplates: 3,
+    maxDefaultTemplates: 999,   // 무제한
+    maxUploadTemplates: 999,    // 무제한
     features: BASIC_FEATURES,
   },
   standard: {
     maxDrivers: 80,
     maxAdminAccounts: 5,
-    maxDefaultTemplates: 6,
-    maxUploadTemplates: 6,
+    maxDefaultTemplates: 999,   // 무제한
+    maxUploadTemplates: 999,    // 무제한
     features: STANDARD_FEATURES,
   },
   pro: {
     maxDrivers: 150,
     maxAdminAccounts: 10,
-    maxDefaultTemplates: 10,
-    maxUploadTemplates: 10,
+    maxDefaultTemplates: 999,   // 무제한
+    maxUploadTemplates: 999,    // 무제한
     features: ALL_FEATURES,
   },
   enterprise: {
     maxDrivers: null,
     maxAdminAccounts: 99,
-    maxDefaultTemplates: 99,
-    maxUploadTemplates: 99,
+    maxDefaultTemplates: 999,   // 무제한
+    maxUploadTemplates: 999,    // 무제한
     features: ALL_FEATURES,
   },
 };

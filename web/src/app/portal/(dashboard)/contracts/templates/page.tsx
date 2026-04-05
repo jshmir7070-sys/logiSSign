@@ -200,7 +200,7 @@ export default function ContractTemplatesPage() {
           <p className="mt-1 text-sm text-on-surface-variant font-korean">계약서 양식을 관리하고 기사 등록 시 자동 전송합니다</p>
           {paid && (
             <p className="mt-0.5 text-xs text-on-surface-variant/60 font-korean">
-              {PLAN_LABELS[userPlan as PlanType]} 플랜: 기본 템플릿 {activeDefaultCount}/{limits.maxDefaultTemplates}개 · 업로드 {userTemplates.length}/{limits.maxUploadTemplates}개
+              {PLAN_LABELS[userPlan as PlanType]} 플랜: 기본 템플릿 {activeDefaultCount}개 · 업로드 {userTemplates.length}개
               {templatesLocked && <span className="text-error ml-2">🔒 확정됨</span>}
             </p>
           )}
@@ -347,7 +347,7 @@ export default function ContractTemplatesPage() {
             <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-xl shrink-0">⚠️</div>
             <div>
               <p className="text-sm font-semibold text-on-surface font-korean">
-                기본 템플릿 {activeDefaultCount}/{limits.maxDefaultTemplates}개 선택 완료
+                기본 템플릿 {activeDefaultCount}개 선택 완료
               </p>
               <p className="text-xs text-on-surface-variant font-korean mt-0.5">
                 확정 후에는 템플릿을 변경할 수 없습니다. 신중하게 선택해주세요.
@@ -544,11 +544,11 @@ export default function ContractTemplatesPage() {
               {/* 할당량 카드 */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-primary/[0.06] rounded-xl p-4 text-center">
-                  <p className="text-2xl font-extrabold text-primary">{limits.maxDefaultTemplates}개</p>
+                  <p className="text-2xl font-extrabold text-primary">무제한</p>
                   <p className="text-xs text-on-surface-variant mt-1 font-medium">기본 템플릿 선택</p>
                 </div>
                 <div className="bg-tertiary/[0.06] rounded-xl p-4 text-center">
-                  <p className="text-2xl font-extrabold text-tertiary">{limits.maxUploadTemplates}개</p>
+                  <p className="text-2xl font-extrabold text-tertiary">무제한</p>
                   <p className="text-xs text-on-surface-variant mt-1 font-medium">업로드 계약서</p>
                 </div>
               </div>
@@ -557,11 +557,11 @@ export default function ContractTemplatesPage() {
               <div className="space-y-3 text-sm text-on-surface-variant">
                 <div className="flex items-start gap-3">
                   <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">1</span>
-                  <p><span className="font-semibold text-on-surface">기본 템플릿</span>은 시스템에서 제공하는 표준 양식입니다. 플랜에 따라 {limits.maxDefaultTemplates}개까지 활성화할 수 있습니다.</p>
+                  <p><span className="font-semibold text-on-surface">기본 템플릿</span>은 시스템에서 제공하는 표준 양식입니다. 제한 없이 활성화할 수 있습니다.</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <span className="w-6 h-6 rounded-full bg-tertiary/10 text-tertiary flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">2</span>
-                  <p><span className="font-semibold text-on-surface">업로드 계약서</span>는 직접 작성하여 등록하는 양식입니다. 최대 {limits.maxUploadTemplates}개까지 등록 가능합니다.</p>
+                  <p><span className="font-semibold text-on-surface">업로드 계약서</span>는 직접 작성하여 등록하는 양식입니다. 제한 없이 등록 가능합니다.</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <span className="w-6 h-6 rounded-full bg-error/10 text-error flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">!</span>

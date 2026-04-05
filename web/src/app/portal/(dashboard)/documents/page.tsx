@@ -153,7 +153,7 @@ export default function DocumentsPage() {
                 onClick={() => alert(`현재 ${PLAN_LABELS[userPlan as PlanType]} 플랜의 문서함 한도(${limits.maxUploadTemplates}개)를 초과했습니다.\n\n더 많은 문서를 업로드하려면 상위 플랜으로 업그레이드하세요.\n\n설정 → 구독/결제에서 플랜을 변경할 수 있습니다.`)}
                 className="h-10 px-5 rounded-xl border border-amber-400/50 bg-amber-50 text-amber-700 font-label text-sm font-semibold hover:bg-amber-100 transition-all flex items-center gap-2 font-korean"
               >
-                ⬆ 플랜 업그레이드 ({documents.length}/{limits.maxUploadTemplates})
+                ⬆ 플랜 업그레이드
               </button>
             );
           }
@@ -165,7 +165,7 @@ export default function DocumentsPage() {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
               </svg>
-              문서 업로드 ({documents.length}/{limits.maxUploadTemplates})
+              문서 업로드 ({documents.length}개)
             </button>
           );
         })()}
