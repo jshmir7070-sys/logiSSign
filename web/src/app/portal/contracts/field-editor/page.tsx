@@ -31,9 +31,9 @@ import { createBrowserSupabaseClient } from '@/lib/supabase'
 import { type SignFieldType, FIELD_TYPE_META } from '@/services/document-sign-field.service'
 import * as pdfjsLib from 'pdfjs-dist'
 
-// PDF.js worker 설정
+// PDF.js worker 설정 (로컬 파일 — CSP 차단 방지)
 if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
 }
 
 /* ── 타입 ── */
@@ -181,12 +181,19 @@ function ContractFieldEditorPage() {
     if (!pdfUrl) return
     ;(async () => {
       try {
-        const doc = await pdfjsLib.getDocument(pdfUrl).promise
+        const loadingTask = pdfjsLib.getDocument({
+          url: pdfUrl,
+          cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/cmaps/',
+          cMapPacked: true,
+          withCredentials: false,
+        })
+        const doc = await loadingTask.promise
         pdfDocRef.current = doc
         setTotalPages(doc.numPages)
         renderPdfPage(currentPage)
       } catch (err) {
         console.error('PDF 로드 실패:', err)
+        alert('PDF 로드에 실패했습니다. 문서를 다시 업로드해주세요.')
       }
     })()
   }, [pdfUrl]) // eslint-disable-line react-hooks/exhaustive-deps
