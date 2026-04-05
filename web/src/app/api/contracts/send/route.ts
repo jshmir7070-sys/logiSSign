@@ -43,6 +43,19 @@ function bindVariables(content: string, data: Record<string, string>): string {
   return result
 }
 
+/** KST 기준 이번 달 1일 00:00:00 (UTC ISO string 반환) */
+function getKSTMonthStart(): string {
+  const now = new Date()
+  // KST = UTC + 9시간
+  const kstOffset = 9 * 60 * 60 * 1000
+  const kstNow = new Date(now.getTime() + kstOffset)
+  const kstYear = kstNow.getUTCFullYear()
+  const kstMonth = kstNow.getUTCMonth()
+  // KST 기준 1일 00:00:00 → UTC로 변환
+  const kstMonthStart = new Date(Date.UTC(kstYear, kstMonth, 1, 0, 0, 0) - kstOffset)
+  return kstMonthStart.toISOString()
+}
+
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
   const limited = rateLimitAuth(ip, '/api/contracts/send')
@@ -79,20 +92,18 @@ export async function POST(request: NextRequest) {
       .single()
     const agencyPlan = (agency?.plan ?? 'free') as PlanType
 
-    // 월 무료 발송 건수 체크
+    // 월 무료 발송 건수 체크 (KST 기준)
     const planLimits = getPlanLimits(agencyPlan)
     const totalContracts = driverIds.length * templateIds.length
     const monthlyFreeLimit = planLimits.monthlyFreeContracts // null = 무제한
 
-    // 이번 달 발송 건수 조회
-    const startOfMonth = new Date()
-    startOfMonth.setDate(1)
-    startOfMonth.setHours(0, 0, 0, 0)
+    // 이번 달 발송 건수 조회 (KST 기준)
+    const monthStartISO = getKSTMonthStart()
     const { count: monthlyUsed } = await supabaseAdmin
       .from('contracts')
       .select('id', { count: 'exact', head: true })
       .eq('agency_id', agencyId)
-      .gte('created_at', startOfMonth.toISOString())
+      .gte('created_at', monthStartISO)
 
     const usedThisMonth = monthlyUsed ?? 0
     const remainingFree = monthlyFreeLimit === null ? totalContracts : Math.max(0, monthlyFreeLimit - usedThisMonth)
@@ -101,12 +112,38 @@ export async function POST(request: NextRequest) {
     // 구독형 여부 (point 제외한 유료 플랜은 구독형)
     const isSubscription = isPaidPlan(agencyPlan) && agencyPlan !== 'point'
 
-    // 포인트 차감 대상: 무료 한도 초과분에 대해서만
+    // 구독형 플랜: 월 한도 초과 시 차단 (Pro/Enterprise는 무제한이므로 해당 없음)
+    if (isSubscription && monthlyFreeLimit !== null && chargeableContracts > 0) {
+      return NextResponse.json({
+        error: `${planLimits.monthlyFreeContracts}건 월 한도를 초과합니다 (이번 달 ${usedThisMonth}건 사용). 상위 플랜으로 업그레이드하세요.`,
+      }, { status: 402 })
+    }
+
+    // 포인트형/무료 플랜: 무료 한도 초과분 포인트 차감 (계약서 생성 전에 먼저 차감)
+    let pointDeducted = 0
     if (chargeableContracts > 0 && !isSubscription) {
+      // 잔액 확인
       const check = await hasEnoughPoints(agencyId, 'contract_send', chargeableContracts)
       if (!check.enough) {
         return NextResponse.json({
           error: `월 무료 ${monthlyFreeLimit}건 중 ${usedThisMonth}건 사용 완료. 추가 ${chargeableContracts}건 발송에 포인트 부족 (필요: ${check.required.toLocaleString()}P, 잔액: ${check.balance.toLocaleString()}P)`,
+        }, { status: 402 })
+      }
+
+      // ⚡ 먼저 포인트 차감 (원자적) — 실패 시 계약서 생성 안 함
+      try {
+        const result = await deductPoints({
+          agencyId,
+          action: 'contract_send',
+          count: chargeableContracts,
+          referenceType: 'contract',
+          userId: auth!.userId,
+        })
+        pointDeducted = result.deducted
+      } catch (pointErr) {
+        console.error('[ContractSend] Point deduction failed:', pointErr)
+        return NextResponse.json({
+          error: '포인트 차감에 실패했습니다. 잠시 후 다시 시도해주세요.',
         }, { status: 402 })
       }
     }
@@ -282,33 +319,18 @@ export async function POST(request: NextRequest) {
 
     if (insertErr) {
       console.error('[ContractSend] Insert error:', insertErr)
-      return NextResponse.json({ error: '계약서 생성 실패: ' + insertErr.message }, { status: 500 })
-    }
-
-    // 포인트 차감 (INSERT 성공 후 — 무료 한도 초과분만)
-    const actualCreated = inserted?.length ?? 0
-    // 실제 생성 수가 예상보다 적을 수 있으므로 과금 건수 재계산
-    const actualChargeable = Math.min(chargeableContracts, actualCreated)
-    if (!isSubscription && actualChargeable > 0) {
-      try {
-        await deductPoints({
-          agencyId,
-          action: 'contract_send',
-          count: actualChargeable,
-          referenceType: 'contract',
-          userId: auth!.userId,
-        })
-      } catch (pointErr) {
-        console.error('[ContractSend] Point deduction failed:', pointErr)
-        // 계약서는 이미 생성됨 — 포인트 차감 실패를 로그로 남기고 계속 진행
+      // 포인트 이미 차감된 경우 로그 남김 (관리자 확인용)
+      if (pointDeducted > 0) {
+        console.error(`[ContractSend] ⚠️ 포인트 ${pointDeducted}P 차감됨, 계약서 생성 실패 — 수동 환불 필요. agency=${agencyId}`)
       }
+      return NextResponse.json({ error: '계약서 생성 실패: ' + insertErr.message }, { status: 500 })
     }
 
     // 푸시 알림 일괄 발송 (SMS 대신 푸시)
     if (pushTokens.length > 0) {
       const pushMessages = pushTokens.map(token => ({
         to: token,
-        title: '📝 계약서 도착',
+        title: '계약서 도착',
         body: `${templates.length}건의 계약서가 도착했습니다. 확인 후 서명해주세요.`,
         sound: 'default' as const,
         data: { type: 'contract' },
@@ -328,7 +350,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ created: inserted?.length ?? 0 })
+    return NextResponse.json({
+      created: inserted?.length ?? 0,
+      pointDeducted,
+      freeUsed: Math.min(totalContracts, remainingFree),
+    })
   } catch (err) {
     console.error('[ContractSend] Unexpected error:', err)
     return apiError('계약서 전송 중 오류가 발생했습니다', 500)

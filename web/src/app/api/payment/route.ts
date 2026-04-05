@@ -84,6 +84,22 @@ export async function POST(request: NextRequest) {
       const { plan, billing } = body
       const billingKey = 'billingKey' in body ? body.billingKey : undefined
 
+      // 현재 플랜 조회 (다운그레이드 방지 + 감사 로그용)
+      const { data: currentAgency } = await supabaseAdmin
+        .from('agencies')
+        .select('plan')
+        .eq('id', auth.agencyId)
+        .single()
+      const currentPlan = (currentAgency?.plan ?? 'free') as string
+
+      // 서버사이드 다운그레이드 차단
+      const { isPlanAtLeast } = await import('@/lib/plan-limits')
+      if (isPlanAtLeast(currentPlan, plan) && currentPlan !== 'free' && currentPlan !== 'point') {
+        return NextResponse.json({
+          error: `현재 ${currentPlan} 플랜에서 ${plan}으로 다운그레이드할 수 없습니다. 고객센터에 문의하세요.`,
+        }, { status: 400 })
+      }
+
       // 구독 정보 조회
       const { data: sub } = await supabaseAdmin
         .from('subscriptions')
@@ -102,7 +118,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Free 플랜은 결제가 필요 없습니다' }, { status: 400 })
       }
 
-      const paymentId = `sub_${auth.agencyId}_${Date.now()}`
+      const paymentId = `sub_${auth.agencyId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
       const result = await payWithBillingKey({
         billingKey: key,
         paymentId,
@@ -116,15 +132,24 @@ export async function POST(request: NextRequest) {
       }
 
       // 플랜 업데이트 (agencies + subscriptions + app_metadata 3곳 동기화)
-      await supabaseAdmin
+      const { error: agencyErr } = await supabaseAdmin
         .from('agencies')
-        .update({ plan, monthly_fee: amount })
+        .update({ plan, billing_cycle: billing, monthly_fee: amount })
         .eq('id', auth.agencyId)
 
-      await supabaseAdmin
+      if (agencyErr) {
+        console.error('[Payment] Agency plan update failed:', agencyErr)
+        console.error(`[Payment] ⚠️ 결제 성공(${paymentId}) but plan update failed — 수동 처리 필요. agency=${auth.agencyId}`)
+      }
+
+      const { error: subErr } = await supabaseAdmin
         .from('subscriptions')
-        .update({ plan, updated_at: new Date().toISOString() })
+        .update({ plan, billing_cycle: billing, updated_at: new Date().toISOString() })
         .eq('agency_id', auth.agencyId)
+
+      if (subErr) {
+        console.error('[Payment] Subscription update failed:', subErr)
+      }
 
       // 해당 대리점 소속 모든 유저의 app_metadata.plan 동기화
       const { data: allUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
@@ -137,15 +162,15 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // 감사 로그
+      // 감사 로그 (old_plan 기록)
       await supabaseAdmin.from('plan_change_log').insert({
         agency_id: auth.agencyId,
-        old_plan: null,
+        old_plan: currentPlan,
         new_plan: plan,
         changed_by: auth.userId,
         change_type: 'self_upgrade',
         reason: `셀프 업그레이드 (${billing})`,
-      })
+      }).catch(err => console.error('[Payment] Plan change log failed:', err))
 
       return NextResponse.json({ paymentId: result.paymentId, amount: result.amount })
     }

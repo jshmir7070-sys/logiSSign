@@ -15,9 +15,9 @@ type BillingCycle = "monthly" | "1year" | "2year";
 
 /* ── 포인트 과금 단가 ── */
 const POINT_PRICES = {
-  signup_bonus: 10000,          // 가입 시 무료 지급
-  driver_register: 1500,        // 기사 등록 1명당
-  contract_send: 500,           // 계약서 전송 1건당 (본인인증 포함)
+  signup_bonus: 5000,           // 가입 시 무료 지급 (WELCOME_BONUS_POINTS와 동일)
+  driver_register: 0,           // 기사 등록 무료
+  contract_send: 1200,          // 계약서 전송 1건당 (POINT_COSTS.contract_send.cost와 동일)
   settlement_send: 0,           // 정산서 전송 무료
 } as const;
 

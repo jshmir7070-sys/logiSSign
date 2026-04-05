@@ -68,7 +68,8 @@ export async function POST(request: NextRequest) {
     const agencyPlan = (agency?.plan ?? 'free') as PlanType
     const isSubscription = isPaidPlan(agencyPlan) && agencyPlan !== 'point'
 
-    // 포인트 잔액 확인 (무료/포인트 플랜만)
+    // 포인트 차감 (무료/포인트 플랜만) — 먼저 차감 후 상태 변경
+    let pointDeducted = 0
     if (!isSubscription && setCount > 0) {
       const check = await hasEnoughPoints(agencyId, 'settlement_generate', setCount)
       if (!check.enough) {
@@ -76,29 +77,37 @@ export async function POST(request: NextRequest) {
           error: `포인트 잔액 부족 (필요: ${check.required.toLocaleString()}P, 잔액: ${check.balance.toLocaleString()}P). 포인트를 충전하거나 구독 플랜으로 변경해주세요.`,
         }, { status: 402 })
       }
-    }
 
-    // 상태 업데이트: draft → sent
-    const { error: updateErr } = await supabaseAdmin
-      .from('settlements')
-      .update({ status: 'sent', sent_at: new Date().toISOString() })
-      .in('id', validIds)
-
-    if (updateErr) throw updateErr
-
-    // 포인트 차감 (업데이트 성공 후)
-    if (!isSubscription && setCount > 0) {
+      // ⚡ 먼저 포인트 차감 (원자적) — 실패 시 발송 안 함
       try {
-        await deductPoints({
+        const result = await deductPoints({
           agencyId,
           action: 'settlement_generate',
           count: setCount,
           referenceType: 'settlement',
           userId: auth!.userId,
         })
+        pointDeducted = result.deducted
       } catch (pointErr) {
         console.error('[SettlementSend] Point deduction failed:', pointErr)
+        return NextResponse.json({
+          error: '포인트 차감에 실패했습니다. 잠시 후 다시 시도해주세요.',
+        }, { status: 402 })
       }
+    }
+
+    // 상태 업데이트: draft → sent (포인트 차감 성공 후)
+    const { error: updateErr } = await supabaseAdmin
+      .from('settlements')
+      .update({ status: 'sent', sent_at: new Date().toISOString() })
+      .in('id', validIds)
+
+    if (updateErr) {
+      console.error('[SettlementSend] Update error:', updateErr)
+      if (pointDeducted > 0) {
+        console.error(`[SettlementSend] ⚠️ 포인트 ${pointDeducted}P 차감됨, 상태 변경 실패 — 수동 환불 필요. agency=${agencyId}`)
+      }
+      throw updateErr
     }
 
     // 기사 푸시 알림 발송

@@ -38,22 +38,26 @@ export default function TopStatusBar({ pointBalance, onPointBalanceChange }: Top
     if (!agencyId) return;
     const supabase = createBrowserSupabaseClient();
 
-    // 이번 달 발송 건수
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
+    // 이번 달 발송 건수 (KST 기준)
+    const now = new Date();
+    const kstOffset = 9 * 60 * 60 * 1000;
+    const kstNow = new Date(now.getTime() + kstOffset);
+    const kstMonthStart = new Date(Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), 1) - kstOffset);
     const { count: contractCount } = await supabase
       .from('contracts')
       .select('id', { count: 'exact', head: true })
       .eq('agency_id', agencyId)
-      .gte('created_at', startOfMonth.toISOString());
+      .gte('created_at', kstMonthStart.toISOString());
     setMonthlyUsed(contractCount ?? 0);
 
-    // 등록 기사 수
-    const { count: drivers } = await supabase
+    // 등록 기사 수 (활성 기사만)
+    let driverQuery = supabase
       .from('drivers')
       .select('id', { count: 'exact', head: true })
       .eq('agency_id', agencyId);
+    // status 컬럼이 있으면 활성만 카운트 (없으면 전체)
+    driverQuery = driverQuery.neq('status', 'deleted');
+    const { count: drivers } = await driverQuery;
     setDriverCount(drivers ?? 0);
 
     // 포인트 잔액 (prop이 없으면 직접 조회)
@@ -108,8 +112,11 @@ export default function TopStatusBar({ pointBalance, onPointBalanceChange }: Top
           title="플랜 관리"
         >
           <span>{planLabel}</span>
-          {(plan === 'free' || plan === 'point') && (
+          {plan === 'free' && (
             <span className="text-[10px] font-normal text-on-surface-variant/60">(무료)</span>
+          )}
+          {plan === 'point' && (
+            <span className="text-[10px] font-normal text-amber-600/60">(충전형)</span>
           )}
         </button>
 
