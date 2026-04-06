@@ -112,7 +112,24 @@ export default function DocumentSignScreen() {
         .eq('id', delivery.document_file_id)
         .single();
 
-      if (docFile?.file_url) setPdfUrl(docFile.file_url);
+      if (docFile?.file_url) {
+        let nextPdfUrl = docFile.file_url;
+
+        if (!nextPdfUrl.startsWith('http')) {
+          const { data: signedData, error: signedError } = await supabase.storage
+            .from('documents')
+            .createSignedUrl(nextPdfUrl, 3600);
+
+          if (signedError || !signedData?.signedUrl) {
+            Alert.alert('오류', '문서 URL을 생성하지 못했습니다.');
+            return;
+          }
+
+          nextPdfUrl = signedData.signedUrl;
+        }
+
+        setPdfUrl(nextPdfUrl);
+      }
 
       // 서명 필드 목록
       const { data: signFields } = await supabase

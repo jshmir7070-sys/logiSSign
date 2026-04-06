@@ -132,7 +132,23 @@ export default function DocumentsScreen() {
 
       if (data) {
         const fileInfo = data as DocumentFileInfo;
-        await Linking.openURL(fileInfo.file_url);
+        let openUrl = fileInfo.file_url;
+
+        if (openUrl && !openUrl.startsWith('http')) {
+          const { data: signedData, error: signedError } = await supabase.storage
+            .from('documents')
+            .createSignedUrl(openUrl, 3600);
+
+          if (signedError || !signedData?.signedUrl) {
+            return;
+          }
+
+          openUrl = signedData.signedUrl;
+        }
+
+        if (openUrl) {
+          await Linking.openURL(openUrl);
+        }
       }
     }
   };

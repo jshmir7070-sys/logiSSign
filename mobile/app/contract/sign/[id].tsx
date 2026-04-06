@@ -28,7 +28,7 @@ import Header from '../../../components/common/Header';
 import Button from '../../../components/common/Button';
 import SignaturePad from '../../../components/common/SignaturePad';
 import { useAuthStore } from '../../../stores/authStore';
-import { getContractDetail, signContract } from '../../../services/contract.service';
+import { fetchContractFileUrl, getContractDetail, signContract } from '../../../services/contract.service';
 import {
   requestIdentityVerification,
   IDENTITY_PROVIDERS,
@@ -169,15 +169,8 @@ export default function ContractSignScreen() {
       const type = (contract as Record<string, unknown>).template_type as string;
       if (type === 'pdf') {
         setTemplateType('pdf');
-        const rawPdfUrl = ((contract as Record<string, unknown>).template_pdf_url as string) ?? '';
-        if (rawPdfUrl.startsWith('http')) {
-          setPdfUrl(rawPdfUrl);
-        } else if (rawPdfUrl) {
-          const { data: signed } = await supabase.storage.from('contracts').createSignedUrl(rawPdfUrl, 3600);
-          setPdfUrl(signed?.signedUrl ?? '');
-        } else {
-          setPdfUrl('');
-        }
+        const fileResult = await fetchContractFileUrl(id, 'template_pdf');
+        setPdfUrl(fileResult.url ?? '');
         const fields = (contract as Record<string, unknown>).sign_fields;
         if (Array.isArray(fields)) {
           const sortedFields = [...(fields as SignField[])].sort(compareSignFieldOrder);

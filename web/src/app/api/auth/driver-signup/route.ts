@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getClientIp } from '@/lib/get-ip'
 import { rateLimitPublic } from '@/lib/rate-limit'
+import { encryptPii } from '@/services/pii.service'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,22 +10,8 @@ const supabaseAdmin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
-/**
- * POST /api/auth/driver-signup
- * 기사 가입 — 모바일 앱에서 호출
- * service_role로 Auth 계정 생성 + driver row 연결까지 원자적으로 처리
- *
- * ✅ 보안:
- *  - 초대코드 검증 포함 (별도 API 불필요)
- *  - rate limit 적용
- *  - driver row 연결은 서버에서만 수행
- *  - app_metadata 설정도 서버에서만 수행
- *
- * ✅ 퇴사 후 다른 업체 재가입 지원:
- *  - 기존 Auth 계정이 있는 이메일로 새 초대코드 가입 시
- *  - 이전 업체 driver 상태가 inactive(퇴사)이면
- *  - agency_id를 새 업체로 전환 + 새 driver 레코드 생성
- */
+type ExistingUser = Awaited<ReturnType<typeof supabaseAdmin.auth.admin.listUsers>>['data']['users'][0]
+
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
   const limited = rateLimitPublic(ip, '/api/auth/driver-signup')
@@ -33,215 +20,238 @@ export async function POST(request: NextRequest) {
   try {
     const { inviteCode, name, phone, email, password, birthDate, validateOnly } = await request.json()
 
-    // 1. 입력 검증
     if (!inviteCode) {
-      return NextResponse.json({ error: '초대코드를 입력하세요' }, { status: 400 })
+      return NextResponse.json({ error: '초대코드를 입력해 주세요.' }, { status: 400 })
     }
 
-    // 2. 초대코드 검증 — service_role로 agencies 조회
-    const { data: agency, error: agencyErr } = await supabaseAdmin
+    const normalizedInviteCode = String(inviteCode).trim().toUpperCase()
+    const { data: agency, error: agencyError } = await supabaseAdmin
       .from('agencies')
       .select('id, name')
-      .eq('invite_code', inviteCode.trim().toUpperCase())
+      .eq('invite_code', normalizedInviteCode)
       .single()
 
-    if (agencyErr || !agency) {
-      return NextResponse.json({ error: '유효하지 않은 초대코드입니다' }, { status: 404 })
+    if (agencyError || !agency) {
+      return NextResponse.json({ error: '유효하지 않은 초대코드입니다.' }, { status: 404 })
     }
 
-    // validateOnly 모드: 초대코드 검증만 하고 반환 (agency id는 노출하지 않음)
     if (validateOnly) {
       return NextResponse.json({ valid: true, agencyName: agency.name })
     }
 
     if (!name || !phone || !email || !password) {
-      return NextResponse.json({ error: '필수 항목을 모두 입력하세요' }, { status: 400 })
-    }
-    if (password.length < 8) {
-      return NextResponse.json({ error: '비밀번호는 8자 이상이어야 합니다' }, { status: 400 })
+      return NextResponse.json({ error: '필수 항목을 모두 입력해 주세요.' }, { status: 400 })
     }
 
-    const trimmedEmail = email.trim().toLowerCase()
-    const normalizedPhone = phone.trim().replace(/[^0-9]/g, '')
-
-    // 3. 기존 Auth 계정 존재 여부 확인 (이메일 기준)
-    // listUsers로 이메일 검색
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1 })
-    // listUsers는 전체를 반환하므로, 이메일로 직접 조회
-    let existingAuthUser = null
-    try {
-      // getUserByEmail은 없으므로 listUsers + filter 대신, createUser 시도 후 에러 처리
-      // 먼저 createUser 시도
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email: trimmedEmail,
-        password,
-        email_confirm: true,
-        user_metadata: { name: name.trim(), role: 'driver' },
-        app_metadata: { role: 'driver', agency_id: agency.id },
-      })
-
-      if (!authError && authData.user) {
-        // 신규 계정 생성 성공 — 정상 플로우
-        const userId = authData.user.id
-
-        // driver row 연결/생성
-        const newDriverId = await linkOrCreateDriver({
-          userId,
-          agencyId: agency.id,
-          name: name.trim(),
-          phone: phone.trim(),
-          normalizedPhone,
-          email: trimmedEmail,
-          birthDate,
-        })
-
-        if (!newDriverId) {
-          // driver 생성 실패 — Auth 롤백
-          await supabaseAdmin.auth.admin.deleteUser(userId)
-          return NextResponse.json({ error: '기사 등록 실패' }, { status: 500 })
-        }
-
-        return NextResponse.json({
-          success: true,
-          userId,
-          agencyName: agency.name,
-        })
-      }
-
-      // createUser 실패 — 이미 존재하는 이메일인지 확인
-      if (authError && (authError.message?.includes('already') || authError.message?.includes('exists') || authError.message?.includes('unique'))) {
-        existingAuthUser = 'email_exists'
-      } else if (authError) {
-        return NextResponse.json({ error: authError.message }, { status: 400 })
-      }
-    } catch {
-      return NextResponse.json({ error: '계정 생성 중 오류' }, { status: 500 })
+    if (String(password).length < 8) {
+      return NextResponse.json({ error: '비밀번호는 8자 이상이어야 합니다.' }, { status: 400 })
     }
 
-    // 4. 기존 이메일 → 퇴사 후 다른 업체 재가입 처리
-    if (existingAuthUser === 'email_exists') {
-      // ✅ 성능: 전체 listUsers 대신 페이지네이션으로 이메일 검색
-      let foundUser = null as Awaited<ReturnType<typeof supabaseAdmin.auth.admin.listUsers>>['data']['users'][0] | null
-      let searchPage = 1
-      while (!foundUser) {
-        const { data: userPage } = await supabaseAdmin.auth.admin.listUsers({ page: searchPage, perPage: 100 })
-        const users = userPage?.users ?? []
-        foundUser = users.find(u => u.email?.toLowerCase() === trimmedEmail) ?? null
-        if (users.length < 100) break
-        searchPage++
-      }
+    const trimmedName = String(name).trim()
+    const trimmedEmail = String(email).trim().toLowerCase()
+    const trimmedPhone = String(phone).trim()
+    const normalizedPhone = trimmedPhone.replace(/[^0-9]/g, '')
 
-      if (!foundUser) {
-        return NextResponse.json({ error: '이미 등록된 이메일이지만 사용자를 찾을 수 없습니다. 고객센터에 문의하세요.' }, { status: 409 })
-      }
+    const createResult = await supabaseAdmin.auth.admin.createUser({
+      email: trimmedEmail,
+      password,
+      email_confirm: true,
+      user_metadata: { name: trimmedName, role: 'driver' },
+      app_metadata: { role: 'driver', agency_id: agency.id },
+    })
 
-      // 기존 업체 확인
-      const oldAgencyId = foundUser.app_metadata?.agency_id as string | undefined
-      const userRole = foundUser.app_metadata?.role as string | undefined
-
-      // 기사가 아닌 계정이면 거부
-      if (userRole !== 'driver') {
-        return NextResponse.json({ error: '이미 등록된 이메일입니다 (기사 계정이 아님)' }, { status: 409 })
-      }
-
-      // 같은 업체에 다시 가입하려는 경우
-      if (oldAgencyId === agency.id) {
-        // 퇴사 상태인지 확인
-        const { data: existingDriver } = await supabaseAdmin
-          .from('drivers')
-          .select('id, status')
-          .eq('user_id', foundUser.id)
-          .eq('agency_id', agency.id)
-          .maybeSingle()
-
-        if (existingDriver?.status === 'inactive') {
-          // 같은 업체 복직 — driver 상태만 active로 변경
-          await supabaseAdmin.from('drivers').update({
-            status: 'active',
-            resigned_at: null,
-          }).eq('id', existingDriver.id)
-
-          // 비밀번호 업데이트
-          await supabaseAdmin.auth.admin.updateUserById(foundUser.id, { password })
-
-          return NextResponse.json({
-            success: true,
-            userId: foundUser.id,
-            agencyName: agency.name,
-            reinstated: true,
-          })
-        }
-
-        return NextResponse.json({ error: '이미 이 업체에 등록된 계정입니다. 로그인해주세요.' }, { status: 409 })
-      }
-
-      // 다른 업체로 이직 — 이전 업체 기사가 퇴사(inactive) 상태인지 확인
-      if (oldAgencyId) {
-        const { data: oldDriver } = await supabaseAdmin
-          .from('drivers')
-          .select('id, status')
-          .eq('user_id', foundUser.id)
-          .eq('agency_id', oldAgencyId)
-          .maybeSingle()
-
-        // 이전 업체에서 활동중인데 다른 업체 가입 시도 → 거부
-        if (oldDriver && oldDriver.status !== 'inactive') {
-          return NextResponse.json({
-            error: '현재 다른 업체에 소속 중입니다. 기존 업체에서 퇴사 처리 후 재가입하세요.',
-          }, { status: 409 })
-        }
-      }
-
-      // ✅ 이전 업체 퇴사 확인됨 — 새 업체로 이직 처리
-      const userId = foundUser.id
-
-      // Auth 계정의 agency_id를 새 업체로 전환 + 비밀번호 업데이트
-      await supabaseAdmin.auth.admin.updateUserById(userId, {
-        password,
-        user_metadata: { ...foundUser.user_metadata, name: name.trim() },
-        app_metadata: { ...foundUser.app_metadata, agency_id: agency.id, previous_agency_id: oldAgencyId },
-      })
-
-      // 새 업체에 driver row 생성 (이전 업체 driver는 그대로 보존)
-      const newDriverId = await linkOrCreateDriver({
+    if (!createResult.error && createResult.data.user) {
+      const userId = createResult.data.user.id
+      const driverId = await linkOrCreateDriver({
         userId,
         agencyId: agency.id,
-        name: name.trim(),
-        phone: phone.trim(),
+        name: trimmedName,
+        phone: trimmedPhone,
         normalizedPhone,
         email: trimmedEmail,
         birthDate,
       })
 
-      if (!newDriverId) {
-        // 롤백: agency_id를 원래대로
-        await supabaseAdmin.auth.admin.updateUserById(userId, {
-          app_metadata: { ...foundUser.app_metadata },
-        })
-        return NextResponse.json({ error: '새 업체 기사 등록 실패' }, { status: 500 })
+      if (!driverId) {
+        await supabaseAdmin.auth.admin.deleteUser(userId)
+        return NextResponse.json({ error: '기사 등록에 실패했습니다.' }, { status: 500 })
       }
+
+      await supabaseAdmin.auth.admin.updateUserById(userId, {
+        app_metadata: { role: 'driver', agency_id: agency.id, driver_id: driverId },
+      })
 
       return NextResponse.json({
         success: true,
         userId,
+        driverId,
         agencyName: agency.name,
-        transferred: true,
       })
     }
 
-    return NextResponse.json({ error: '계정 생성 실패' }, { status: 500 })
-  } catch (err) {
+    const createMessage = createResult.error?.message ?? ''
+    const isExistingEmailError =
+      createMessage.includes('already') ||
+      createMessage.includes('exists') ||
+      createMessage.includes('unique')
+
+    if (!isExistingEmailError) {
+      return NextResponse.json({ error: createMessage || '계정 생성에 실패했습니다.' }, { status: 400 })
+    }
+
+    const foundUser = await findUserByEmail(trimmedEmail)
+    if (!foundUser) {
+      return NextResponse.json(
+        { error: '이미 등록된 이메일이지만 사용자 계정을 찾지 못했습니다. 고객센터에 문의해 주세요.' },
+        { status: 409 }
+      )
+    }
+
+    const userRole = foundUser.app_metadata?.role as string | undefined
+    const oldAgencyId = foundUser.app_metadata?.agency_id as string | undefined
+
+    if (userRole !== 'driver') {
+      return NextResponse.json(
+        { error: '이미 등록된 이메일입니다. 기사 계정이 아닌 다른 계정으로 사용 중입니다.' },
+        { status: 409 }
+      )
+    }
+
+    if (oldAgencyId === agency.id) {
+      const { data: existingDriver } = await supabaseAdmin
+        .from('drivers')
+        .select('id, status')
+        .eq('user_id', foundUser.id)
+        .eq('agency_id', agency.id)
+        .maybeSingle()
+
+      if (existingDriver?.status === 'inactive') {
+        const { error: reinstateError } = await supabaseAdmin
+          .from('drivers')
+          .update({
+            status: 'active',
+            resigned_at: null,
+          })
+          .eq('id', existingDriver.id)
+
+        if (reinstateError) {
+          return NextResponse.json(
+            { error: '기사 상태 복구 실패: ' + reinstateError.message },
+            { status: 500 }
+          )
+        }
+
+        await supabaseAdmin.auth.admin.updateUserById(foundUser.id, {
+          password,
+          app_metadata: {
+            ...foundUser.app_metadata,
+            agency_id: agency.id,
+            driver_id: existingDriver.id,
+          },
+          user_metadata: {
+            ...foundUser.user_metadata,
+            name: trimmedName,
+          },
+        })
+
+        return NextResponse.json({
+          success: true,
+          userId: foundUser.id,
+          driverId: existingDriver.id,
+          agencyName: agency.name,
+          reinstated: true,
+        })
+      }
+
+      return NextResponse.json(
+        { error: '이미 같은 대리점에 등록된 기사 계정입니다. 로그인해 주세요.' },
+        { status: 409 }
+      )
+    }
+
+    if (oldAgencyId) {
+      const { data: oldDriver } = await supabaseAdmin
+        .from('drivers')
+        .select('id, status')
+        .eq('user_id', foundUser.id)
+        .eq('agency_id', oldAgencyId)
+        .maybeSingle()
+
+      if (oldDriver && oldDriver.status !== 'inactive') {
+        return NextResponse.json(
+          { error: '현재 다른 대리점에 재직 중입니다. 기존 대리점에서 퇴사 처리 후 다시 가입해 주세요.' },
+          { status: 409 }
+        )
+      }
+    }
+
+    await supabaseAdmin.auth.admin.updateUserById(foundUser.id, {
+      password,
+      user_metadata: {
+        ...foundUser.user_metadata,
+        name: trimmedName,
+      },
+      app_metadata: {
+        ...foundUser.app_metadata,
+        agency_id: agency.id,
+        previous_agency_id: oldAgencyId,
+      },
+    })
+
+    const linkedDriverId = await linkOrCreateDriver({
+      userId: foundUser.id,
+      agencyId: agency.id,
+      name: trimmedName,
+      phone: trimmedPhone,
+      normalizedPhone,
+      email: trimmedEmail,
+      birthDate,
+    })
+
+    if (!linkedDriverId) {
+      await supabaseAdmin.auth.admin.updateUserById(foundUser.id, {
+        app_metadata: { ...foundUser.app_metadata },
+      })
+      return NextResponse.json({ error: '새 대리점 기사 등록에 실패했습니다.' }, { status: 500 })
+    }
+
+    await supabaseAdmin.auth.admin.updateUserById(foundUser.id, {
+      app_metadata: {
+        ...foundUser.app_metadata,
+        agency_id: agency.id,
+        previous_agency_id: oldAgencyId,
+        driver_id: linkedDriverId,
+      },
+    })
+
+    return NextResponse.json({
+      success: true,
+      userId: foundUser.id,
+      driverId: linkedDriverId,
+      agencyName: agency.name,
+      transferred: true,
+    })
+  } catch (error) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : '가입 처리 실패' },
+      { error: error instanceof Error ? error.message : '가입 처리에 실패했습니다.' },
       { status: 500 }
     )
   }
 }
 
-/**
- * 기존 driver row 연결 또는 신규 생성
- * 대리점에서 미리 등록한 driver가 있으면 연결, 없으면 신규 생성
- */
+async function findUserByEmail(email: string): Promise<ExistingUser | null> {
+  let page = 1
+
+  while (true) {
+    const { data } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 100 })
+    const users = data?.users ?? []
+    const foundUser = users.find((user) => user.email?.toLowerCase() === email) ?? null
+    if (foundUser) return foundUser
+    if (users.length < 100) return null
+    page += 1
+  }
+}
+
 async function linkOrCreateDriver(params: {
   userId: string
   agencyId: string
@@ -252,9 +262,8 @@ async function linkOrCreateDriver(params: {
   birthDate?: string
 }): Promise<string | null> {
   const { userId, agencyId, name, phone, normalizedPhone, email, birthDate } = params
+  const encryptedBirthDate = birthDate ? await encryptPii(birthDate) : null
 
-  // 기존 driver row 조회 (대리점에서 미리 등록한 경우 — user_id 없는 레코드)
-  // ✅ 보안: .or() 내 사용자 입력 직접 삽입 대신 안전한 .in() 쿼리 사용 (PostgREST 인젝션 방지)
   const phoneCandidates = Array.from(new Set([normalizedPhone, phone].filter(Boolean)))
   const { data: existingDriver } = await supabaseAdmin
     .from('drivers')
@@ -266,28 +275,33 @@ async function linkOrCreateDriver(params: {
     .maybeSingle()
 
   if (existingDriver) {
-    // 기존 row에 user_id 연결 + 활성화
-    const { error } = await supabaseAdmin.from('drivers').update({
-      user_id: userId,
-      email,
-      birth_date: birthDate || null,
-      status: 'active',
-      resigned_at: null,
-    }).eq('id', existingDriver.id)
+    const { error } = await supabaseAdmin
+      .from('drivers')
+      .update({
+        user_id: userId,
+        email,
+        birth_date: encryptedBirthDate,
+        status: 'active',
+        resigned_at: null,
+      })
+      .eq('id', existingDriver.id)
 
     return error ? null : existingDriver.id
   }
 
-  // 신규 생성
-  const { data: newDriver, error: driverErr } = await supabaseAdmin.from('drivers').insert({
-    user_id: userId,
-    agency_id: agencyId,
-    name,
-    phone,
-    email,
-    birth_date: birthDate || null,
-    status: 'active',
-  }).select('id').single()
+  const { data: newDriver, error } = await supabaseAdmin
+    .from('drivers')
+    .insert({
+      user_id: userId,
+      agency_id: agencyId,
+      name,
+      phone,
+      email,
+      birth_date: encryptedBirthDate,
+      status: 'active',
+    })
+    .select('id')
+    .single()
 
-  return driverErr ? null : newDriver.id
+  return error ? null : newDriver.id
 }

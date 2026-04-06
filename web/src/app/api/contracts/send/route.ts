@@ -7,6 +7,7 @@ import { sendContractSchema, validateInput } from '@/lib/api-schemas'
 import { rateLimitAuth } from '@/lib/rate-limit'
 import { isPaidPlan, getPlanLimits, type PlanType } from '@/lib/plan-limits'
 import { deductPoints, hasEnoughPoints } from '@/services/point.service'
+import { decryptAgencyPii, decryptDriverPii } from '@/services/pii.service'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -193,9 +194,11 @@ export async function POST(request: NextRequest) {
             supabaseAdmin.from('driver_deductions').select('name, amount, deduction_type').eq('driver_id', did).eq('is_active', true),
           ])
           const agencyRes = await supabaseAdmin.from('agencies').select('*').eq('id', agencyId).single()
-          const d = driverRes.data as Record<string, unknown> | null
-          const a = agencyRes.data as Record<string, unknown> | null
-          if (d && a) {
+          const rawDriver = driverRes.data as Record<string, unknown> | null
+          const rawAgency = agencyRes.data as Record<string, unknown> | null
+          if (rawDriver && rawAgency) {
+            const d = await decryptDriverPii(rawDriver)
+            const a = await decryptAgencyPii(rawAgency)
             const rateMap: Record<string, number> = {}
             ;(ratesRes.data || []).forEach((r: { package_type: string; unit_price: number }) => { rateMap[r.package_type] = r.unit_price })
             const routeText = (routeRes.data || []).map((r: { route_code: string; delivery_rate: number; return_rate: number }) =>

@@ -45,9 +45,16 @@ export default function EditProfileScreen() {
   useEffect(() => {
     if (!driver?.id) return;
     (async () => {
-      const { data } = await supabase.from('drivers').select('*').eq('id', driver.id).single();
-      if (data) {
-        const d = data as Record<string, unknown>;
+      const APP_URL = process.env.EXPO_PUBLIC_APP_URL || 'https://logissign.com';
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(`${APP_URL}/api/drivers/me`, {
+        headers: {
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
+      });
+      const result = await response.json().catch(() => ({}));
+      if (response.ok && result.data) {
+        const d = result.data as Record<string, unknown>;
         const values: Record<string, string> = {};
         FIELDS.forEach(f => { values[f.key] = d[f.key] != null ? String(d[f.key]) : ''; });
         setForm(values);

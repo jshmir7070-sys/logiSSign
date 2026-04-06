@@ -1281,20 +1281,37 @@ export async function getDocumentFiles(agencyId: string): Promise<DocumentFile[]
     .select('*')
     .eq('agency_id', agencyId)
     .order('created_at', { ascending: false })
-  return (data ?? []) as DocumentFile[]
+  const docs = (data ?? []) as DocumentFile[]
+
+  return Promise.all(
+    docs.map(async (doc) => {
+      if (!doc.file_url || doc.file_url.startsWith('http')) {
+        return doc
+      }
+
+      const { data: signedData } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(doc.file_url, 3600)
+
+      return {
+        ...doc,
+        file_url: signedData?.signedUrl ?? doc.file_url,
+      }
+    })
+  )
 }
 
 /** 문서파일 스토리지 업로드 */
 export async function uploadDocumentFile(
   agencyId: string,
   file: File
-): Promise<{ url: string | null; error: string | null }> {
+): Promise<{ path: string | null; error: string | null }> {
   const supabase = createBrowserSupabaseClient()
-  const path = `documents/${agencyId}/${Date.now()}_${file.name}`
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+  const path = `${agencyId}/${Date.now()}_${safeName}`
   const { error } = await supabase.storage.from('documents').upload(path, file)
-  if (error) return { url: null, error: error.message }
-  const { data: urlData } = await supabase.storage.from('documents').createSignedUrl(path, 60 * 60 * 24 * 365)
-  return { url: urlData?.signedUrl ?? null, error: null }
+  if (error) return { path: null, error: error.message }
+  return { path, error: null }
 }
 
 /** 문서파일 레코드 저장 */

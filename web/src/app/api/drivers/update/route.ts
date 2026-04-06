@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { authenticateRequest } from '@/lib/api-auth'
 import { rateLimitAuth } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/get-ip'
+import { encryptDriverPii } from '@/services/pii.service'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -65,9 +66,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (Object.keys(safeFields).length > 0) {
+      const encryptedFields = await encryptDriverPii(safeFields)
       const { error: updateErr } = await supabaseAdmin
         .from('drivers')
-        .update(safeFields)
+        .update(encryptedFields)
         .eq('id', driverId)
       if (updateErr) {
         console.error('[drivers/update] driver update error:', updateErr.message)

@@ -101,22 +101,12 @@ export default function DriverDetailPage() {
     if (!id) return;
     const supabase = createBrowserSupabaseClient();
 
-    const { data: driverData } = await supabase
-      .from('drivers')
-      .select(`
-        id, name, phone, employee_code, delivery_area, camp_name, address, email, status,
-        is_business_owner, vat_included, fresh_incentive_pct, extra_incentive_pct, tax_type,
-        business_reg_number, representative_name, business_address, business_type, business_category,
-        vehicle_number, vehicle_type, vehicle_year, vehicle_vin, vehicle_mileage,
-        vehicle_owner, vehicle_rent_monthly, vehicle_deposit, vehicle_insurance_by,
-        bank_name, bank_account, bank_holder,
-        rate_mode, flat_rate, rate_percentage, custom_values
-      `)
-      .eq('id', id)
-      .single();
+    const detailResponse = await fetch(`/api/drivers/detail?driverId=${id}`, { cache: 'no-store' });
+    const detailResult = await detailResponse.json().catch(() => ({}));
+    const driverData = detailResult?.data as DriverDetail | undefined;
 
-    if (driverData) {
-      const d = driverData as unknown as DriverDetail;
+    if (detailResponse.ok && driverData) {
+      const d = driverData;
       setDriver(d);
       setBizSettings({
         is_business_owner: d.is_business_owner,
@@ -162,7 +152,25 @@ export default function DriverDetailPage() {
       .select('type, title, file_url, uploaded_at')
       .eq('driver_id', id)
       .order('uploaded_at', { ascending: false });
-    if (docs) setDriverDocs(docs as { type: string; title: string | null; file_url: string; uploaded_at: string }[]);
+    if (docs) {
+      const signedDocs = await Promise.all(
+        (docs as { type: string; title: string | null; file_url: string; uploaded_at: string }[]).map(async (doc) => {
+          if (!doc.file_url || doc.file_url.startsWith('http')) {
+            return doc;
+          }
+
+          const { data: signedData } = await supabase.storage
+            .from('documents')
+            .createSignedUrl(doc.file_url, 3600);
+
+          return {
+            ...doc,
+            file_url: signedData?.signedUrl ?? doc.file_url,
+          };
+        })
+      );
+      setDriverDocs(signedDocs);
+    }
 
     setLoading(false);
   }, [id]);

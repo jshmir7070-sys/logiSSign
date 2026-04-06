@@ -49,7 +49,15 @@ export default function DocumentsPage() {
           status = 'ready';
           await supabase.from('document_files').update({ status: 'ready' }).eq('id', doc.id);
         }
-        docs.push({ ...doc, field_count: fieldCount, status } as DocumentFile);
+        let viewUrl = (doc as Record<string, unknown>).file_url as string;
+        if (viewUrl && !viewUrl.startsWith('http')) {
+          const { data: signedData } = await supabase.storage
+            .from('documents')
+            .createSignedUrl(viewUrl, 3600);
+          viewUrl = signedData?.signedUrl ?? viewUrl;
+        }
+
+        docs.push({ ...doc, file_url: viewUrl, field_count: fieldCount, status } as DocumentFile);
       }
       setDocuments(docs);
     }

@@ -347,7 +347,20 @@ export async function finalizeDocumentSigning(
 
     if (!docFile?.file_url) throw new Error('원본 파일 URL이 없습니다')
 
-    const pdfResponse = await fetch(docFile.file_url)
+    let sourceUrl = docFile.file_url
+    if (!sourceUrl.startsWith('http')) {
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(sourceUrl, 3600)
+
+      if (signedError || !signedData?.signedUrl) {
+        throw new Error(signedError?.message ?? 'signed URL ?앹꽦 ?ㅽ뙣')
+      }
+
+      sourceUrl = signedData.signedUrl
+    }
+
+    const pdfResponse = await fetch(sourceUrl)
     if (!pdfResponse.ok) throw new Error('PDF 다운로드 실패')
     const originalPdfBytes = new Uint8Array(await pdfResponse.arrayBuffer())
 

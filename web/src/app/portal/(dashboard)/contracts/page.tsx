@@ -39,32 +39,66 @@ export default function ContractsPage() {
     async function load() {
       const supabase = createBrowserSupabaseClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
       const agencyId = user.app_metadata?.agency_id as string | undefined;
-      if (!agencyId) { setLoading(false); return; }
+      if (!agencyId) {
+        setLoading(false);
+        return;
+      }
 
       const result = await getContracts(agencyId);
       if (result.data) setContracts(result.data);
       setLoading(false);
     }
+
     load();
   }, []);
 
+  async function reloadContracts() {
+    const supabase = createBrowserSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const agencyId = user?.app_metadata?.agency_id as string | undefined;
+    if (!agencyId) return;
+
+    const result = await getContracts(agencyId);
+    if (result.data) setContracts(result.data);
+  }
+
+  async function openSignedPdf(contractId: string) {
+    const response = await fetch('/api/contracts/file-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contractId, fileType: 'signed_pdf' }),
+    });
+    const result = await response.json();
+
+    if (!response.ok || result.error) {
+      toastError(result.error || 'PDF를 열 수 없습니다.');
+      return;
+    }
+
+    if (result.url) {
+      window.open(result.url, '_blank', 'noopener,noreferrer');
+    }
+  }
+
   const filtered = activeTab === 'all'
     ? contracts
-    : contracts.filter((c) => c.status === activeTab);
+    : contracts.filter((contract) => contract.status === activeTab);
 
   return (
     <div className="space-y-8">
-      {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-headline font-bold text-on-surface">
             <span className="font-korean">계약서 관리</span>
           </h1>
           <p className="mt-1 text-sm text-on-surface-variant font-korean">
-            기사 계약서 현황을 관리하고 발송하세요
+            기사 계약서를 관리하고 발송하세요.
           </p>
         </div>
         <Link
@@ -78,7 +112,6 @@ export default function ContractsPage() {
         </Link>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-2">
         {tabs.map((tab) => (
           <button
@@ -95,7 +128,6 @@ export default function ContractsPage() {
         ))}
       </div>
 
-      {/* Table */}
       <div className="bg-surface-container-lowest rounded-2xl shadow-ambient">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -108,7 +140,7 @@ export default function ContractsPage() {
                   계약서명
                 </th>
                 <th className="px-6 py-3 text-xs font-label font-semibold text-on-surface-variant uppercase tracking-wider font-korean">
-                  서명상태
+                  상태
                 </th>
                 <th className="px-6 py-3 text-xs font-label font-semibold text-on-surface-variant uppercase tracking-wider font-korean">
                   발송일
@@ -125,19 +157,19 @@ export default function ContractsPage() {
               {loading ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-8 text-center text-sm text-on-surface-variant font-korean">
-                    데이터를 불러오는 중...
+                    데이터를 불러오는 중입니다.
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center">
                     <div className="space-y-2">
-                      <p className="text-2xl">📋</p>
+                      <p className="text-2xl">📄</p>
                       <p className="text-sm text-on-surface-variant font-korean">
-                        {activeTab === 'all' ? '발송된 계약서가 없습니다' : '해당 상태의 계약서가 없습니다'}
+                        {activeTab === 'all' ? '발송된 계약서가 없습니다.' : '해당 상태의 계약서가 없습니다.'}
                       </p>
                       <p className="text-xs text-on-surface-variant/60 font-korean">
-                        우측 상단 &quot;새 계약서 발송&quot; 버튼으로 기사에게 계약서를 발송하세요
+                        오른쪽 상단의 &quot;새 계약서 발송&quot; 버튼으로 기사에게 계약서를 보낼 수 있습니다.
                       </p>
                     </div>
                   </td>
@@ -166,33 +198,29 @@ export default function ContractsPage() {
                     <td className="px-6 py-4">
                       {contract.status === 'signed' && (
                         contract.signed_pdf_url ? (
-                          <a
-                            href={contract.signed_pdf_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            onClick={() => openSignedPdf(contract.id)}
                             className="text-xs text-primary hover:underline font-label font-semibold font-korean"
                           >
                             PDF 다운로드
-                          </a>
+                          </button>
                         ) : (
                           <button
                             onClick={async () => {
-                              const res = await fetch('/api/contracts/signed-pdf', {
+                              const response = await fetch('/api/contracts/signed-pdf', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ contractId: contract.id }),
                               });
-                              const { url, error } = await res.json();
-                              if (error) { toastError('PDF 생성 실패: ' + error); return; }
-                              if (url) { window.open(url, '_blank'); }
-                              // Reload list
-                              const supabase = createBrowserSupabaseClient();
-                              const { data: { user } } = await supabase.auth.getUser();
-                              const agencyId = user?.app_metadata?.agency_id as string;
-                              if (agencyId) {
-                                const res = await getContracts(agencyId);
-                                if (res.data) setContracts(res.data);
+                              const result = await response.json();
+                              if (result.error) {
+                                toastError(`PDF 생성 실패: ${result.error}`);
+                                return;
                               }
+                              if (result.url) {
+                                window.open(result.url, '_blank', 'noopener,noreferrer');
+                              }
+                              await reloadContracts();
                             }}
                             className="text-xs text-tertiary hover:underline font-label font-semibold font-korean"
                           >
@@ -211,4 +239,3 @@ export default function ContractsPage() {
     </div>
   );
 }
-                

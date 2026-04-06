@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, useWindowDimensions, TouchableOpacity, Linking, Platform, LayoutAnimation, UIManager } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, useWindowDimensions, TouchableOpacity, Linking, Platform, LayoutAnimation, UIManager, Alert } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import Badge from '../../components/common/Badge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import {
   getContractDetail,
+  fetchContractFileUrl,
   contractStatusLabel,
   contractStatusVariant,
 } from '../../services/contract.service';
@@ -189,9 +190,13 @@ export default function ContractDetailScreen() {
           {contract.status === 'signed' && (contract as unknown as { signed_pdf_url: string | null }).signed_pdf_url && (
             <TouchableOpacity
               style={styles.pdfButton}
-              onPress={() => {
-                const pdfUrl = (contract as unknown as { signed_pdf_url: string }).signed_pdf_url;
-                if (pdfUrl) Linking.openURL(pdfUrl);
+              onPress={async () => {
+                const result = await fetchContractFileUrl(contract.id, 'signed_pdf');
+                if (result.error || !result.url) {
+                  Alert.alert('오류', result.error || 'PDF를 열 수 없습니다.');
+                  return;
+                }
+                await Linking.openURL(result.url);
               }}
               activeOpacity={0.7}
             >

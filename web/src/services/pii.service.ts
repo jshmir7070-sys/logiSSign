@@ -10,10 +10,10 @@ import { encryptPii, decryptPii, encryptPiiFields, decryptPiiFields } from '@/li
 // ── 암호화 대상 PII 필드 정의 ──
 
 /** drivers 테이블 암호화 대상 */
-export const DRIVER_PII_FIELDS = ['phone', 'bank_account', 'birth_date'] as const
+export const DRIVER_PII_FIELDS = ['bank_account', 'birth_date'] as const
 
 /** agencies 테이블 암호화 대상 */
-export const AGENCY_PII_FIELDS = ['phone', 'bank_account'] as const
+export const AGENCY_PII_FIELDS = ['bank_account', 'owner_birth_date'] as const
 
 // ── Driver PII ──
 

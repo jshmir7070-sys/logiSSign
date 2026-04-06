@@ -177,6 +177,15 @@ export async function saveVerificationToSignature(
 ): Promise<void> {
   if (!result.verified || !result.data) return
 
+  const sanitizedVerificationData = {
+    name: result.data.name,
+    phone: result.data.phone,
+    birthDate: result.data.birthDate,
+    provider: result.data.provider,
+    certId: result.data.certId,
+    verifiedAt: result.data.verifiedAt,
+  }
+
   const supabase = await createServerSupabaseClient()
   const { data: signature } = await supabase
     .from('contract_signatures')
@@ -190,7 +199,7 @@ export async function saveVerificationToSignature(
     .from('contract_signatures')
     .update({
       verified_at: new Date().toISOString(),
-      verification_data: result.data,
+      verification_data: sanitizedVerificationData,
     })
     .eq('id', signature.id)
 }

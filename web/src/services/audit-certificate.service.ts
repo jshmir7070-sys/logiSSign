@@ -1,22 +1,9 @@
-/**
- * 감사추적인증서 (Audit Trail Certificate) PDF 생성
- *
- * 계약서 서명 완료 후 생성되는 별도 문서로,
- * "누가, 언제, 어디서, 어떤 기기로, 어떤 과정을 거쳐 서명했는지"를
- * 기록하고 해시로 무결성을 보장합니다.
- */
-
 import { PDFDocument, rgb } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
 import { loadKoreanFonts } from '@/lib/pdf-fonts'
 import { createAdminSupabaseClient } from '@/lib/supabase'
+import { createSignedStorageUrl } from '@/lib/storage-reference'
 import { getAuditCertificateData, type AuditCertificateData } from './verification.service'
-
-
-
-/* ══════════════════════════════════════════════
-   감사추적인증서 PDF 생성
-   ══════════════════════════════════════════════ */
 
 export async function generateAuditCertificatePdf(
   contractId: string
@@ -24,290 +11,368 @@ export async function generateAuditCertificatePdf(
   const supabase = createAdminSupabaseClient()
 
   try {
-    const { data, error: dataErr } = await getAuditCertificateData(contractId)
-    if (dataErr || !data) throw new Error(dataErr ?? '감사추적 데이터 조회 실패')
+    const { data, error } = await getAuditCertificateData(contractId)
+    if (error || !data) {
+      throw new Error(error ?? '감사증명서 데이터를 불러올 수 없습니다')
+    }
 
     const pdfBytes = await buildAuditPdf(data)
-
-    // Storage 업로드
     const fileName = `audit/${contractId}_audit_${Date.now()}.pdf`
-    const { error: uploadErr } = await supabase.storage
+
+    const { error: uploadError } = await supabase.storage
       .from('contracts')
       .upload(fileName, pdfBytes, { contentType: 'application/pdf', upsert: true })
 
-    if (uploadErr) throw new Error('감사추적인증서 업로드 실패')
-
-    const { data: urlData } = await supabase.storage.from('contracts').createSignedUrl(fileName, 60 * 60 * 24 * 365)
-    const pdfUrl = urlData?.signedUrl ?? null
-
-    // contract_signatures에 감사인증서 URL 저장
-    if (pdfUrl) {
-      await supabase
-        .from('contract_signatures')
-        .update({ audit_certificate_url: pdfUrl })
-        .eq('contract_id', contractId)
+    if (uploadError) {
+      throw new Error(`감사증명서 업로드 실패: ${uploadError.message}`)
     }
 
-    return { url: pdfUrl, error: null }
-  } catch (err) {
-    return { url: null, error: err instanceof Error ? err.message : '감사추적인증서 생성 실패' }
+    const { url } = await createSignedStorageUrl(supabase, 'contracts', fileName, 60 * 60)
+
+    await supabase
+      .from('contract_signatures')
+      .update({ audit_certificate_url: fileName })
+      .eq('contract_id', contractId)
+
+    return { url, error: null }
+  } catch (error) {
+    return {
+      url: null,
+      error: error instanceof Error ? error.message : '감사증명서 생성 실패',
+    }
   }
 }
-
-/* ══════════════════════════════════════════════
-   PDF 빌드 (pdf-lib)
-   ══════════════════════════════════════════════ */
 
 async function buildAuditPdf(data: AuditCertificateData): Promise<Uint8Array> {
   const doc = await PDFDocument.create()
   doc.registerFontkit(fontkit)
+
   const { regular: font, bold } = await loadKoreanFonts(doc)
-  const mono = font // NotoSansKR로 통일 (Courier는 한글 불가)
+  const mono = font
 
-  const W = 595 // A4
-  const H = 841
-  const M = 50
-  const _maxW = W - M * 2
+  const pageWidth = 595
+  const pageHeight = 842
+  const margin = 48
+  const contentWidth = pageWidth - margin * 2
+  const lineGap = 4
 
-  let page = doc.addPage([W, H])
-  let y = H - M
+  let page = doc.addPage([pageWidth, pageHeight])
+  let y = pageHeight - margin
 
-  // ── Helper functions ──
   const addPage = () => {
-    page = doc.addPage([W, H])
-    y = H - M
+    page = doc.addPage([pageWidth, pageHeight])
+    y = pageHeight - margin
   }
 
-  const checkY = (needed: number) => {
-    if (y - needed < M) addPage()
+  const ensureSpace = (height: number) => {
+    if (y - height < margin) addPage()
   }
 
-  const drawText = (text: string, opts: {
-    size?: number; f?: typeof font; color?: [number, number, number]; x?: number
-  } = {}) => {
-    const { size = 9, f = font, color = [0.2, 0.2, 0.2], x = M } = opts
-    checkY(size + 4)
-    page.drawText(text, {
-      x, y, size, font: f,
-      color: rgb(color[0], color[1], color[2]),
-    })
-    y -= size + 4
+  const wrapText = (text: string, size: number, activeFont = font, width = contentWidth) => {
+    const words = (text || '-').split(' ')
+    const lines: string[] = []
+    let current = ''
+
+    for (const word of words) {
+      const next = current ? `${current} ${word}` : word
+      const nextWidth = activeFont.widthOfTextAtSize(next, size)
+      if (nextWidth <= width) {
+        current = next
+        continue
+      }
+
+      if (current) lines.push(current)
+      current = word
+
+      if (activeFont.widthOfTextAtSize(current, size) <= width) continue
+
+      let fragment = ''
+      for (const char of current) {
+        const candidate = fragment + char
+        if (activeFont.widthOfTextAtSize(candidate, size) <= width) {
+          fragment = candidate
+          continue
+        }
+        if (fragment) lines.push(fragment)
+        fragment = char
+      }
+      current = fragment
+    }
+
+    if (current) lines.push(current)
+    return lines.length > 0 ? lines : ['-']
   }
 
-  const drawLine = () => {
-    checkY(10)
+  const drawParagraph = (
+    text: string,
+    opts: {
+      size?: number
+      activeFont?: typeof font
+      color?: [number, number, number]
+      x?: number
+      width?: number
+    } = {}
+  ) => {
+    const {
+      size = 9,
+      activeFont = font,
+      color = [0.2, 0.2, 0.2],
+      x = margin,
+      width = contentWidth,
+    } = opts
+
+    const lines = wrapText(text, size, activeFont, width)
+    ensureSpace(lines.length * (size + lineGap))
+    for (const line of lines) {
+      page.drawText(line, {
+        x,
+        y,
+        size,
+        font: activeFont,
+        color: rgb(color[0], color[1], color[2]),
+      })
+      y -= size + lineGap
+    }
+  }
+
+  const drawDivider = () => {
+    ensureSpace(12)
     page.drawLine({
-      start: { x: M, y },
-      end: { x: W - M, y },
-      thickness: 0.5,
-      color: rgb(0.75, 0.75, 0.75),
+      start: { x: margin, y },
+      end: { x: pageWidth - margin, y },
+      thickness: 0.7,
+      color: rgb(0.82, 0.82, 0.82),
     })
-    y -= 10
+    y -= 12
+  }
+
+  const drawHeading = (title: string) => {
+    drawParagraph(title, { size: 11, activeFont: bold, color: [0.12, 0.12, 0.12] })
+    y -= 2
   }
 
   const drawKV = (label: string, value: string, monoValue = false) => {
-    checkY(14)
-    page.drawText(label, { x: M, y, size: 8, font: bold, color: rgb(0.4, 0.4, 0.4) })
-    page.drawText(value, {
-      x: M + 140, y, size: 8,
-      font: monoValue ? mono : font,
-      color: rgb(0.15, 0.15, 0.15),
+    const valueFont = monoValue ? mono : font
+    const labelX = margin
+    const valueX = margin + 150
+    const valueWidth = pageWidth - margin - valueX
+    const valueLines = wrapText(value || '-', 8, valueFont, valueWidth)
+
+    ensureSpace(Math.max(14, valueLines.length * 12))
+    page.drawText(label, {
+      x: labelX,
+      y,
+      size: 8,
+      font: bold,
+      color: rgb(0.4, 0.4, 0.4),
     })
-    y -= 14
+
+    let valueY = y
+    for (const line of valueLines) {
+      page.drawText(line, {
+        x: valueX,
+        y: valueY,
+        size: 8,
+        font: valueFont,
+        color: rgb(0.16, 0.16, 0.16),
+      })
+      valueY -= 12
+    }
+
+    y = valueY - 2
   }
 
-  // ── QR 코드 이미지 로드 ──
-  let qrImage: Awaited<ReturnType<typeof doc.embedJpg>> | null = null
+  let qrImage: Awaited<ReturnType<typeof doc.embedPng>> | null = null
   try {
-    const qrRes = await fetch(data.qrCodeUrl)
-    if (qrRes.ok) {
-      const qrBytes = new Uint8Array(await qrRes.arrayBuffer())
-      // Google Charts returns PNG
-      qrImage = await doc.embedPng(qrBytes)
+    const response = await fetch(data.qrCodeUrl)
+    if (response.ok) {
+      const bytes = new Uint8Array(await response.arrayBuffer())
+      qrImage = await doc.embedPng(bytes)
     }
-  } catch { /* QR 로드 실패 시 무시 */ }
+  } catch {
+    qrImage = null
+  }
 
-  // ═══════════════════════════════════════════
-  // 페이지 1: 인증서 헤더 + 문서 정보
-  // ═══════════════════════════════════════════
+  drawParagraph('AUDIT TRAIL CERTIFICATE', {
+    size: 18,
+    activeFont: bold,
+    color: [0.1, 0.1, 0.1],
+  })
+  drawParagraph('감사추적 인증서', {
+    size: 12,
+    activeFont: bold,
+    color: [0.32, 0.32, 0.32],
+  })
+  y -= 6
+  drawDivider()
 
-  // 타이틀
-  drawText('AUDIT TRAIL CERTIFICATE', { size: 18, f: bold, color: [0.1, 0.1, 0.1] })
-  drawText('감사추적인증서', { size: 12, f: bold, color: [0.3, 0.3, 0.3] })
-  y -= 10
-  drawLine()
-  y -= 5
-
-  // QR + 문서 정보 나란히
   if (qrImage) {
     const qrSize = 80
-    page.drawImage(qrImage, { x: W - M - qrSize, y: y - qrSize + 10, width: qrSize, height: qrSize })
+    ensureSpace(qrSize + 8)
+    page.drawImage(qrImage, {
+      x: pageWidth - margin - qrSize,
+      y: y - qrSize + 10,
+      width: qrSize,
+      height: qrSize,
+    })
   }
 
-  drawText('문서 정보', { size: 11, f: bold, color: [0.1, 0.1, 0.1] })
-  y -= 6
-  drawKV('문서번호:', data.documentNumber, true)
-  drawKV('인증코드:', data.verificationCode, true)
-  drawKV('계약서명:', data.title)
-  drawKV('대리점:', data.agencyName)
-  drawKV('진위확인 URL:', data.verificationUrl, true)
+  drawHeading('인증 정보')
+  drawKV('문서번호', data.documentNumber, true)
+  drawKV('검증코드', data.verificationCode, true)
+  drawKV('문서명', data.title)
+  drawKV('대리점', data.agencyName)
+  drawKV('검증 URL', data.verificationUrl, true)
 
-  y -= 10
-  drawLine()
-  y -= 5
+  y -= 4
+  drawDivider()
+  drawHeading('서명자 정보')
+  drawKV('이름', data.signerName)
+  drawKV('전화번호', maskPhone(data.signerPhone))
+  drawKV(
+    '본인확인',
+    data.identityProvider
+      ? `${data.identityProvider.toUpperCase()} (${formatDateTime(data.identityVerifiedAt)})`
+      : '미실시'
+  )
+  drawKV('서명일시', formatDateTime(data.signedAt))
+  drawKV('서명 IP', data.signerIp || '-')
+  drawKV('브라우저', truncate(data.signerUserAgent, 80))
 
-  // 서명자 정보
-  drawText('서명자 정보', { size: 11, f: bold, color: [0.1, 0.1, 0.1] })
-  y -= 6
-  drawKV('성명:', data.signerName)
-  drawKV('연락처:', maskPhone(data.signerPhone))
-  drawKV('본인인증:', data.identityProvider
-    ? `${data.identityProvider.toUpperCase()} (${data.identityVerifiedAt ? new Date(data.identityVerifiedAt).toLocaleString('ko-KR') : '-'})`
-    : '미인증')
-  drawKV('서명일시:', data.signedAt ? new Date(data.signedAt).toLocaleString('ko-KR') : '-')
-  drawKV('서명자 IP:', data.signerIp)
-  drawKV('서명 환경:', truncate(data.signerUserAgent, 60))
-
-  y -= 10
-  drawLine()
-  y -= 5
-
-  // 동의 항목
-  drawText('동의 항목', { size: 11, f: bold, color: [0.1, 0.1, 0.1] })
-  y -= 6
-  const consentLabels = [
-    ['계약 내용 동의', data.consents.contract],
+  y -= 4
+  drawDivider()
+  drawHeading('동의 항목')
+  for (const [label, agreed] of [
+    ['계약 동의', data.consents.contract],
     ['개인정보 수집·이용 동의', data.consents.privacy_collect],
-    ['고유식별정보 수집·이용 동의', data.consents.privacy_id],
+    ['고유식별정보 처리 동의', data.consents.privacy_id],
     ['개인정보 제3자 제공 동의', data.consents.privacy_3rd],
     ['고유식별정보 제3자 제공 동의', data.consents.privacy_3rd_id],
-  ] as const
-
-  for (const [label, agreed] of consentLabels) {
-    drawKV(`[${agreed ? 'V' : ' '}] ${label}`, agreed ? '동의함' : '미동의')
+  ] as const) {
+    drawKV(label, agreed ? '동의' : '미동의')
   }
 
-  y -= 10
-  drawLine()
-  y -= 5
+  y -= 4
+  drawDivider()
+  drawHeading('무결성 검증')
+  drawKV('원본 해시 (SHA-256)', data.contentHash, true)
+  if (data.signedPdfHash) drawKV('서명 PDF 해시 (SHA-256)', data.signedPdfHash, true)
+  drawKV('타임스탬프 해시 (SHA-256)', data.timestampHash, true)
+  drawKV('감사추적 최종 해시', data.auditFinalHash, true)
 
-  // 무결성 검증
-  drawText('문서 무결성 검증', { size: 11, f: bold, color: [0.1, 0.1, 0.1] })
-  y -= 6
-  drawKV('문서 내용 해시 (SHA-256):', '', true)
-  drawText(data.contentHash, { size: 7, f: mono, color: [0.3, 0.3, 0.3], x: M + 10 })
-
-  if (data.signedPdfHash) {
-    drawKV('서명 PDF 해시 (SHA-256):', '', true)
-    drawText(data.signedPdfHash, { size: 7, f: mono, color: [0.3, 0.3, 0.3], x: M + 10 })
-  }
-
-  drawKV('타임스탬프 해시 (SHA-256):', '', true)
-  drawText(data.timestampHash, { size: 7, f: mono, color: [0.3, 0.3, 0.3], x: M + 10 })
-
-  drawKV('감사추적 최종 해시:', '', true)
-  drawText(data.auditFinalHash, { size: 7, f: mono, color: [0.3, 0.3, 0.3], x: M + 10 })
-
-  y -= 10
-  drawLine()
-  y -= 5
-
-  // ═══════════════════════════════════════════
-  // 감사추적 이력 (Audit Trail Entries)
-  // ═══════════════════════════════════════════
-
-  drawText('감사추적 이력', { size: 11, f: bold, color: [0.1, 0.1, 0.1] })
-  y -= 6
+  y -= 4
+  drawDivider()
+  drawHeading('감사추적 이력')
 
   if (data.auditEntries.length === 0) {
-    drawText('(감사추적 항목 없음)', { size: 8, color: [0.5, 0.5, 0.5] })
+    drawParagraph('기록된 감사추적 항목이 없습니다.', {
+      size: 8,
+      color: [0.5, 0.5, 0.5],
+    })
   } else {
-    // 테이블 헤더
-    checkY(16)
-    const colX = [M, M + 35, M + 175, M + 330]
-    page.drawText('#', { x: colX[0], y, size: 7, font: bold, color: rgb(0.4, 0.4, 0.4) })
-    page.drawText('일시', { x: colX[1], y, size: 7, font: bold, color: rgb(0.4, 0.4, 0.4) })
-    page.drawText('액션', { x: colX[2], y, size: 7, font: bold, color: rgb(0.4, 0.4, 0.4) })
-    page.drawText('수행자', { x: colX[3], y, size: 7, font: bold, color: rgb(0.4, 0.4, 0.4) })
+    const columns = [margin, margin + 32, margin + 170, margin + 325]
+    ensureSpace(18)
+    page.drawText('#', { x: columns[0], y, size: 7, font: bold, color: rgb(0.4, 0.4, 0.4) })
+    page.drawText('시각', { x: columns[1], y, size: 7, font: bold, color: rgb(0.4, 0.4, 0.4) })
+    page.drawText('동작', { x: columns[2], y, size: 7, font: bold, color: rgb(0.4, 0.4, 0.4) })
+    page.drawText('주체', { x: columns[3], y, size: 7, font: bold, color: rgb(0.4, 0.4, 0.4) })
     y -= 12
 
-    for (let i = 0; i < data.auditEntries.length; i++) {
-      const entry = data.auditEntries[i]
-      checkY(24)
+    for (let index = 0; index < data.auditEntries.length; index += 1) {
+      const entry = data.auditEntries[index]
+      const hashText = entry.hash ? `hash: ${entry.hash.slice(0, 32)}...` : ''
+      ensureSpace(hashText ? 20 : 10)
 
-      page.drawText(String(i + 1), { x: colX[0], y, size: 7, font, color: rgb(0.3, 0.3, 0.3) })
-      page.drawText(
-        entry.timestamp ? new Date(entry.timestamp).toLocaleString('ko-KR') : '-',
-        { x: colX[1], y, size: 7, font: mono, color: rgb(0.3, 0.3, 0.3) }
-      )
-      page.drawText(actionLabel(entry.action), { x: colX[2], y, size: 7, font, color: rgb(0.2, 0.2, 0.2) })
-      page.drawText(entry.actor ?? '-', { x: colX[3], y, size: 7, font, color: rgb(0.3, 0.3, 0.3) })
+      page.drawText(String(index + 1), {
+        x: columns[0],
+        y,
+        size: 7,
+        font,
+        color: rgb(0.3, 0.3, 0.3),
+      })
+      page.drawText(formatDateTime(entry.timestamp), {
+        x: columns[1],
+        y,
+        size: 7,
+        font: mono,
+        color: rgb(0.3, 0.3, 0.3),
+      })
+      page.drawText(actionLabel(entry.action), {
+        x: columns[2],
+        y,
+        size: 7,
+        font,
+        color: rgb(0.2, 0.2, 0.2),
+      })
+      page.drawText(entry.actor ?? '-', {
+        x: columns[3],
+        y,
+        size: 7,
+        font,
+        color: rgb(0.3, 0.3, 0.3),
+      })
       y -= 10
 
-      // 해시 (작게)
-      if (entry.hash) {
-        page.drawText(`hash: ${entry.hash.slice(0, 32)}...`, {
-          x: colX[1], y, size: 5, font: mono, color: rgb(0.6, 0.6, 0.6),
+      if (hashText) {
+        page.drawText(hashText, {
+          x: columns[1],
+          y,
+          size: 5,
+          font: mono,
+          color: rgb(0.58, 0.58, 0.58),
         })
         y -= 10
       }
     }
   }
 
-  y -= 15
-  drawLine()
-
-  // 법적 고지
-  y -= 5
-  drawText('법적 고지', { size: 9, f: bold, color: [0.3, 0.3, 0.3] })
-  y -= 4
-  const legalLines = [
-    '본 감사추적인증서는 전자서명법 제3조 및 전자문서 및 전자거래 기본법 제4조에 근거하여',
-    '전자계약서의 서명 과정을 기록한 문서입니다.',
-    '',
-    '본 인증서에 기록된 해시값은 SHA-256 알고리즘으로 생성되었으며,',
-    '해시 체인 방식으로 각 항목의 무결성이 보장됩니다.',
-    '',
-    '진위확인: 상단 QR 코드를 스캔하거나 인증코드를 입력하여 확인할 수 있습니다.',
-    `진위확인 URL: ${data.verificationUrl}`,
-  ]
-
-  for (const line of legalLines) {
-    drawText(line, { size: 7, color: [0.45, 0.45, 0.45] })
+  y -= 6
+  drawDivider()
+  drawHeading('법적 고지')
+  for (const line of [
+    '본 문서는 전자서명 및 전자문서 관련 법령에 근거하여 생성된 감사증명서입니다.',
+    '문서와 서명에 대한 해시값, 검증코드, 감사추적 이력을 함께 제공합니다.',
+    '하단 검증 URL 또는 QR 코드를 통해 진위 여부를 다시 확인할 수 있습니다.',
+    `검증 URL: ${data.verificationUrl}`,
+  ]) {
+    drawParagraph(line, { size: 7, color: [0.45, 0.45, 0.45] })
   }
 
-  y -= 20
-  drawText(`logiSSign 전자계약 시스템  |  발급일: ${new Date().toLocaleString('ko-KR')}`, {
-    size: 7, color: [0.5, 0.5, 0.5],
+  y -= 12
+  drawParagraph(`logiSSign 전자계약 시스템 | 발급: ${new Date().toLocaleString('ko-KR')}`, {
+    size: 7,
+    color: [0.5, 0.5, 0.5],
   })
 
   return doc.save()
 }
 
-/* ── Helpers ── */
-
 function maskPhone(phone: string): string {
-  if (!phone || phone.length < 8) return phone
-  return phone.slice(0, 3) + '-****-' + phone.slice(-4)
+  if (!phone || phone.length < 8) return phone || '-'
+  return `${phone.slice(0, 3)}-****-${phone.slice(-4)}`
 }
 
 function truncate(text: string, max: number): string {
-  if (!text || text.length <= max) return text || '-'
-  return text.slice(0, max) + '...'
+  if (!text) return '-'
+  return text.length <= max ? text : `${text.slice(0, max)}...`
+}
+
+function formatDateTime(value: string | null | undefined): string {
+  return value ? new Date(value).toLocaleString('ko-KR') : '-'
 }
 
 function actionLabel(action: string): string {
   const labels: Record<string, string> = {
-    contract_created: '계약서 생성',
-    contract_sent: '계약서 발송',
-    contract_viewed: '계약서 열람',
-    identity_verified: '본인인증 완료',
-    consent_agreed: '동의 항목 체크',
-    signature_drawn: '서명 작성',
-    contract_signed: '전자서명 완료',
-    pdf_generated: '서명 PDF 생성',
-    verification_assigned: '인증코드 발급',
-    audit_certificate_generated: '감사추적인증서 발급',
+    contract_created: '계약 생성',
+    contract_sent: '계약 발송',
+    contract_viewed: '계약 열람',
+    identity_verified: '본인확인 완료',
+    consent_agreed: '동의 완료',
+    signature_drawn: '서명 입력',
+    contract_signed: '계약 서명 완료',
+    pdf_generated: 'PDF 생성',
+    verification_assigned: '검증코드 발급',
+    audit_certificate_generated: '감사증명서 생성',
   }
   return labels[action] ?? action
 }

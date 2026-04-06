@@ -115,6 +115,41 @@ export async function signContract(
   }
 }
 
+export async function fetchContractFileUrl(
+  contractId: string,
+  fileType: 'signed_pdf' | 'template_pdf' | 'audit_certificate'
+): Promise<{ url: string | null; error: string | null }> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) {
+      return { url: null, error: '로그인이 필요합니다. 다시 로그인해 주세요.' };
+    }
+
+    const APP_URL = process.env.EXPO_PUBLIC_APP_URL || 'https://logissign.com';
+    const response = await fetch(`${APP_URL}/api/contracts/file-url`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ contractId, fileType }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      return { url: null, error: result.error || '파일 URL을 가져오지 못했습니다.' };
+    }
+
+    return { url: result.url ?? null, error: null };
+  } catch (err) {
+    return {
+      url: null,
+      error: err instanceof Error ? err.message : '파일 URL을 가져오지 못했습니다.',
+    };
+  }
+}
+
 export function contractStatusLabel(status: string): string {
   const map: Record<string, string> = {
     draft: '작성중',

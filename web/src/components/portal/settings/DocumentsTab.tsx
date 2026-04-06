@@ -56,14 +56,14 @@ export default function DocumentsTab({ agencyId }: { agencyId: string }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const { url, error } = await uploadDocumentFile(agencyId, file);
-    if (!error && url) {
+    const { path, error } = await uploadDocumentFile(agencyId, file);
+    if (!error && path) {
       const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
       const fileType = ext === 'pdf' ? 'pdf' : ext === 'docx' || ext === 'doc' ? 'docx' : 'image';
       await saveDocumentFile({
         agency_id: agencyId,
         title: file.name,
-        file_url: url,
+        file_url: path,
         file_type: fileType,
         file_size: file.size,
         status: 'uploaded',
