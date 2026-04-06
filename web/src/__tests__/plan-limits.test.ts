@@ -1,73 +1,88 @@
-import { describe, it, expect } from 'vitest'
-import { isPaidPlan, getPlanLimits, PLAN_LIMITS, PLAN_LABELS, type PlanType } from '@/lib/plan-limits'
+import { describe, expect, it } from 'vitest'
+
+import {
+  PLAN_LABELS,
+  PLAN_LIMITS,
+  getPlanLimits,
+  isPaidPlan,
+  type PlanType,
+} from '@/lib/plan-limits'
 
 describe('plan-limits', () => {
   describe('isPaidPlan', () => {
-    it('free → false', () => {
+    it('treats free as unpaid', () => {
       expect(isPaidPlan('free')).toBe(false)
     })
 
-    it('basic → true', () => {
+    it('treats point and subscription plans as paid', () => {
+      expect(isPaidPlan('point')).toBe(true)
       expect(isPaidPlan('basic')).toBe(true)
-    })
-
-    it('standard → true', () => {
       expect(isPaidPlan('standard')).toBe(true)
-    })
-
-    it('enterprise → true', () => {
       expect(isPaidPlan('enterprise')).toBe(true)
     })
   })
 
   describe('getPlanLimits', () => {
-    it('유효한 플랜 → 해당 제한 반환', () => {
+    it('returns the configured limits for a valid plan', () => {
       const limits = getPlanLimits('standard')
+
       expect(limits.maxDrivers).toBe(80)
       expect(limits.maxAdminAccounts).toBe(5)
-      expect(limits.maxDefaultTemplates).toBe(6)
+      expect(limits.maxDefaultTemplates).toBe(999)
+      expect(limits.maxUploadTemplates).toBe(999)
+      expect(limits.monthlyFreeContracts).toBe(300)
     })
 
-    it('undefined → free 제한 반환', () => {
+    it('falls back to free limits for undefined', () => {
       const limits = getPlanLimits(undefined)
-      expect(limits.maxDrivers).toBe(10)
-      expect(limits.maxUploadTemplates).toBe(0)
+
+      expect(limits.maxDrivers).toBe(5)
+      expect(limits.maxDefaultTemplates).toBe(999)
+      expect(limits.maxUploadTemplates).toBe(999)
+      expect(limits.monthlyFreeContracts).toBe(60)
     })
 
-    it('잘못된 값 → free 제한 반환', () => {
+    it('falls back to free limits for an invalid value', () => {
       const limits = getPlanLimits('invalid_plan')
-      expect(limits.maxDrivers).toBe(10)
+
+      expect(limits.maxDrivers).toBe(5)
+      expect(limits.maxDefaultTemplates).toBe(999)
     })
 
-    it('enterprise → maxDrivers null (무제한)', () => {
+    it('keeps enterprise unlimited where expected', () => {
       const limits = getPlanLimits('enterprise')
+
       expect(limits.maxDrivers).toBeNull()
+      expect(limits.monthlyFreeContracts).toBeNull()
     })
   })
 
-  describe('PLAN_LIMITS 구조', () => {
-    it('5개 플랜 존재', () => {
-      const plans: PlanType[] = ['free', 'basic', 'standard', 'pro', 'enterprise']
+  describe('PLAN_LIMITS shape', () => {
+    it('defines all supported plans', () => {
+      const plans: PlanType[] = ['free', 'point', 'basic', 'standard', 'pro', 'enterprise']
+
       for (const plan of plans) {
         expect(PLAN_LIMITS[plan]).toBeDefined()
         expect(PLAN_LIMITS[plan].maxAdminAccounts).toBeTypeOf('number')
       }
     })
 
-    it('free 플랜 가장 제한적', () => {
+    it('keeps free as the most restrictive driver tier', () => {
+      expect(PLAN_LIMITS.free.maxDrivers).toBe(5)
       expect(PLAN_LIMITS.free.maxDrivers).toBeLessThan(PLAN_LIMITS.basic.maxDrivers!)
-      expect(PLAN_LIMITS.free.maxDefaultTemplates).toBe(0)
-      expect(PLAN_LIMITS.free.maxUploadTemplates).toBe(0)
+      expect(PLAN_LIMITS.free.monthlyFreeContracts).toBe(60)
     })
 
-    it('enterprise 플랜 가장 관대', () => {
+    it('keeps enterprise as the most permissive driver tier', () => {
       expect(PLAN_LIMITS.enterprise.maxDrivers).toBeNull()
-      expect(PLAN_LIMITS.enterprise.maxDefaultTemplates).toBeGreaterThan(PLAN_LIMITS.standard.maxDefaultTemplates)
+      expect(PLAN_LIMITS.enterprise.maxAdminAccounts).toBeGreaterThan(
+        PLAN_LIMITS.standard.maxAdminAccounts,
+      )
     })
   })
 
   describe('PLAN_LABELS', () => {
-    it('5개 라벨 존재', () => {
+    it('includes labels for all public plans', () => {
       expect(PLAN_LABELS.free).toBe('Free')
       expect(PLAN_LABELS.basic).toBe('Basic')
       expect(PLAN_LABELS.standard).toBe('Standard')

@@ -164,6 +164,8 @@ export interface WaybillConfig {
   enabled: boolean
   return_count_price: boolean   // 반품수 × 단가
   pickup_count_price: boolean   // 집하수 × 단가
+  prepaid_price: boolean        // 선불 × 단가
+  collect_price: boolean        // 착불 × 단가
   box_type_price: boolean       // 박스별 가격 (소/중/대)
 }
 
@@ -190,9 +192,11 @@ export const CARGO_ACCIDENT_OPTIONS: { value: CargoAccidentMode; label: string; 
   { value: 'percentage', label: '비율 차감 (%)', desc: '사고 금액의 일정 비율을 차감' },
 ]
 
-export const WAYBILL_PRESET_OPTIONS: { key: keyof Pick<WaybillConfig, 'return_count_price' | 'pickup_count_price' | 'box_type_price'>; label: string; desc: string }[] = [
+export const WAYBILL_PRESET_OPTIONS: { key: keyof Pick<WaybillConfig, 'return_count_price' | 'pickup_count_price' | 'prepaid_price' | 'collect_price' | 'box_type_price'>; label: string; desc: string }[] = [
   { key: 'return_count_price', label: '반품수 × 단가', desc: '반품 건수에 운송장 단가를 곱하여 차감' },
   { key: 'pickup_count_price', label: '집하수 × 단가', desc: '집하 건수에 운송장 단가를 곱하여 차감' },
+  { key: 'prepaid_price', label: '선불 × 단가', desc: '선불 건수에 운송장 단가를 곱하여 차감' },
+  { key: 'collect_price', label: '착불 × 단가', desc: '착불 건수에 운송장 단가를 곱하여 차감' },
   { key: 'box_type_price', label: '박스별 가격', desc: '소/중/대 박스 규격별 운송장 단가 차감' },
 ]
 
@@ -201,7 +205,14 @@ export const DEFAULT_DEDUCTION_SECTION: DeductionSectionConfig = {
   industrial_insurance: { enabled: false, split_mode: 'employer_100' },
   cargo_accident: { enabled: false, mode: 'actual_cost', description: '', fixed_value: 0 },
   vehicle_rental: { enabled: false },
-  waybill: { enabled: false, return_count_price: false, pickup_count_price: false, box_type_price: false },
+  waybill: {
+    enabled: false,
+    return_count_price: false,
+    pickup_count_price: false,
+    prepaid_price: false,
+    collect_price: false,
+    box_type_price: false,
+  },
   custom_deductions: [],
 }
 
@@ -449,9 +460,33 @@ export function normalizeFieldConfig(raw: unknown): FieldConfig {
     }
   }
   if ('deduction_section' in obj && typeof obj.deduction_section === 'object') {
+    const deductionSection = obj.deduction_section as Partial<DeductionSectionConfig>
     base.deduction_section = {
       ...DEFAULT_DEDUCTION_SECTION,
-      ...(obj.deduction_section as Partial<DeductionSectionConfig>),
+      ...deductionSection,
+      employment_insurance: {
+        ...DEFAULT_DEDUCTION_SECTION.employment_insurance,
+        ...(deductionSection.employment_insurance ?? {}),
+      },
+      industrial_insurance: {
+        ...DEFAULT_DEDUCTION_SECTION.industrial_insurance,
+        ...(deductionSection.industrial_insurance ?? {}),
+      },
+      cargo_accident: {
+        ...DEFAULT_DEDUCTION_SECTION.cargo_accident,
+        ...(deductionSection.cargo_accident ?? {}),
+      },
+      vehicle_rental: {
+        ...DEFAULT_DEDUCTION_SECTION.vehicle_rental,
+        ...(deductionSection.vehicle_rental ?? {}),
+      },
+      waybill: {
+        ...DEFAULT_DEDUCTION_SECTION.waybill,
+        ...(deductionSection.waybill ?? {}),
+      },
+      custom_deductions: Array.isArray(deductionSection.custom_deductions)
+        ? deductionSection.custom_deductions
+        : DEFAULT_DEDUCTION_SECTION.custom_deductions,
     }
   }
   if ('excel_mode' in obj) {
@@ -856,11 +891,18 @@ export type ExcelType = 'generic' | 'coupang' | 'cj' | 'hanjin' | 'lotte' | 'log
 
 export interface UploadColumnMapping {
   employee_code_col: string
+  driver_name_col?: string
   delivery_count_col: string
   return_count_col: string
   collect_count_col: string
+  delivery_amount_col?: string
+  return_amount_col?: string
+  collect_amount_col?: string
   fresh_count_col: string
   etc_count_col: string
+  fresh_back_amount_col?: string
+  incentive_amount_col?: string
+  etc_income_amount_col?: string
 }
 
 export async function getUploadMapping(

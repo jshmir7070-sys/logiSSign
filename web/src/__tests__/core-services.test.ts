@@ -1,96 +1,113 @@
-import { describe, it, expect } from 'vitest'
-import { calculateTaxDeductions } from '@/services/excel-settlement.service'
+import { describe, expect, it } from 'vitest'
+
 import { getPlanLimits, isPaidPlan } from '@/lib/plan-limits'
 import { getSubscriptionAmount } from '@/services/payment.service'
+import { calculateTaxDeductions } from '@/services/excel-settlement.service'
 
-describe('정산 세금 계산', () => {
-  it('사업자 + 포함가 → VAT 10% 역산', () => {
-    const result = calculateTaxDeductions(1100000, true, true)
-    expect(result.vatAmount).toBe(100000) // 1,100,000 - 1,000,000
+describe('tax deductions', () => {
+  it('extracts VAT from VAT-inclusive business income', () => {
+    const result = calculateTaxDeductions(1_100_000, true, true)
+
+    expect(result.vatAmount).toBe(100_000)
     expect(result.withholdingAmount).toBe(0)
-    expect(result.finalAmount).toBe(1000000)
+    expect(result.finalAmount).toBe(1_000_000)
   })
 
-  it('사업자 + 별도 → 공제 없음', () => {
-    const result = calculateTaxDeductions(1000000, true, false)
+  it('leaves business income unchanged when VAT is not included', () => {
+    const result = calculateTaxDeductions(1_000_000, true, false)
+
     expect(result.vatAmount).toBe(0)
     expect(result.withholdingAmount).toBe(0)
-    expect(result.finalAmount).toBe(1000000)
+    expect(result.finalAmount).toBe(1_000_000)
   })
 
-  it('비사업자 → 3.3% 원천징수', () => {
-    const result = calculateTaxDeductions(1000000, false, false)
+  it('applies 3.3% withholding for non-business income', () => {
+    const result = calculateTaxDeductions(1_000_000, false, false)
+
     expect(result.vatAmount).toBe(0)
-    expect(result.withholdingAmount).toBe(33000)
-    expect(result.finalAmount).toBe(967000)
+    expect(result.withholdingAmount).toBe(33_000)
+    expect(result.finalAmount).toBe(967_000)
   })
 
-  it('금액 0 → 모든 공제 0', () => {
+  it('returns zero deductions for zero amount', () => {
     const result = calculateTaxDeductions(0, true, true)
+
     expect(result.vatAmount).toBe(0)
     expect(result.finalAmount).toBe(0)
   })
 })
 
-describe('플랜 제한', () => {
-  it('free 플랜 기본값', () => {
+describe('plan limits', () => {
+  it('uses the current free defaults', () => {
     const limits = getPlanLimits('free')
-    expect(limits.maxDrivers).toBe(10)
-    expect(limits.maxDefaultTemplates).toBe(0)
-    expect(limits.maxUploadTemplates).toBe(0)
+
+    expect(limits.maxDrivers).toBe(5)
+    expect(limits.maxDefaultTemplates).toBe(999)
+    expect(limits.maxUploadTemplates).toBe(999)
+    expect(limits.monthlyFreeContracts).toBe(60)
   })
 
-  it('basic 플랜', () => {
+  it('uses the current basic plan defaults', () => {
     const limits = getPlanLimits('basic')
+
     expect(limits.maxDrivers).toBe(30)
-    expect(limits.maxDefaultTemplates).toBe(3)
-    expect(limits.maxUploadTemplates).toBe(3)
+    expect(limits.maxDefaultTemplates).toBe(999)
+    expect(limits.maxUploadTemplates).toBe(999)
+    expect(limits.monthlyFreeContracts).toBe(160)
   })
 
-  it('standard 플랜', () => {
+  it('uses the current standard plan defaults', () => {
     const limits = getPlanLimits('standard')
+
     expect(limits.maxDrivers).toBe(80)
-    expect(limits.maxDefaultTemplates).toBe(6)
+    expect(limits.maxDefaultTemplates).toBe(999)
+    expect(limits.monthlyFreeContracts).toBe(300)
   })
 
-  it('enterprise 플랜 — 기사 무제한', () => {
+  it('keeps enterprise unlimited for drivers', () => {
     const limits = getPlanLimits('enterprise')
+
     expect(limits.maxDrivers).toBeNull()
   })
 
-  it('잘못된 플랜 → free 반환', () => {
+  it('falls back to free for invalid plans', () => {
     const limits = getPlanLimits('invalid')
-    expect(limits.maxDrivers).toBe(10)
+
+    expect(limits.maxDrivers).toBe(5)
+    expect(limits.monthlyFreeContracts).toBe(60)
   })
 
-  it('유료 플랜 판별', () => {
+  it('marks paid plans correctly', () => {
     expect(isPaidPlan('free')).toBe(false)
+    expect(isPaidPlan('point')).toBe(true)
     expect(isPaidPlan('basic')).toBe(true)
     expect(isPaidPlan('standard')).toBe(true)
     expect(isPaidPlan('enterprise')).toBe(true)
   })
 })
 
-describe('구독 금액 계산', () => {
-  it('free → 0원', () => {
+describe('subscription amount', () => {
+  it('returns zero for free', () => {
     expect(getSubscriptionAmount('free', 'monthly')).toBe(0)
   })
 
-  it('basic 월결제 → 49,900원', () => {
-    expect(getSubscriptionAmount('basic', 'monthly')).toBe(49900)
+  it('returns the monthly basic price', () => {
+    expect(getSubscriptionAmount('basic', 'monthly')).toBe(49_900)
   })
 
-  it('basic 1년 → 20% 할인', () => {
+  it('applies the one-year discount to basic', () => {
     const amount = getSubscriptionAmount('basic', '1year')
-    expect(amount).toBe(Math.round(49900 * 0.8 * 12))
+
+    expect(amount).toBe(Math.round(49_900 * 0.8 * 12))
   })
 
-  it('basic 3년 → 40% 할인', () => {
+  it('applies the three-year discount to basic', () => {
     const amount = getSubscriptionAmount('basic', '3year')
-    expect(amount).toBe(Math.round(49900 * 0.6 * 36))
+
+    expect(amount).toBe(Math.round(49_900 * 0.6 * 36))
   })
 
-  it('standard 월결제 → 99,000원', () => {
-    expect(getSubscriptionAmount('standard', 'monthly')).toBe(99000)
+  it('returns the monthly standard price', () => {
+    expect(getSubscriptionAmount('standard', 'monthly')).toBe(99_000)
   })
 })

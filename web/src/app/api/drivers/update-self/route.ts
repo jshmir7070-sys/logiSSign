@@ -49,6 +49,33 @@ export async function POST(request: NextRequest) {
       if (key in body) safeFields[key] = body[key]
     }
 
+    if ('notification_preferences' in body) {
+      const notificationPreferences = body.notification_preferences
+      if (
+        notificationPreferences &&
+        typeof notificationPreferences === 'object' &&
+        !Array.isArray(notificationPreferences)
+      ) {
+        const { data: existingDriver } = await supabaseAdmin
+          .from('drivers')
+          .select('custom_values')
+          .eq('id', driver.id)
+          .single()
+
+        const existingCustomValues =
+          existingDriver?.custom_values &&
+          typeof existingDriver.custom_values === 'object' &&
+          !Array.isArray(existingDriver.custom_values)
+            ? existingDriver.custom_values as Record<string, unknown>
+            : {}
+
+        safeFields.custom_values = {
+          ...existingCustomValues,
+          notification_preferences: notificationPreferences,
+        }
+      }
+    }
+
     if (Object.keys(safeFields).length === 0) {
       return NextResponse.json({ error: '수정할 항목이 없습니다.' }, { status: 400 })
     }

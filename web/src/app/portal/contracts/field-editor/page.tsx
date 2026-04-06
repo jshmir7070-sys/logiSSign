@@ -1,5 +1,7 @@
 ﻿'use client'
 
+/* eslint-disable @next/next/no-img-element */
+
 /**
  * 계약서 템플릿 필드 배치 에디터 — 모두싸인 스타일 풀스크린
  *

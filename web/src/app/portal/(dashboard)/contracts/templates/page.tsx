@@ -141,7 +141,6 @@ export default function ContractTemplatesPage() {
 
   const limits = getPlanLimits(userPlan);
   const paid = isPaidPlan(userPlan as PlanType);
-  const isProviderAdmin = userRole === 'provider_admin';
   const isAdmin = userRole === 'provider_admin' || userRole === 'agency_admin';
 
   // 시스템 템플릿 vs 사용자 업로드 템플릿 구분

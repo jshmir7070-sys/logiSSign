@@ -52,6 +52,7 @@ export default function PricingPage() {
       <nav className="sticky top-0 z-50 bg-[#0a0f1e]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="logiSSign" className="w-[120px] object-contain" />
           </Link>
           <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
@@ -304,6 +305,7 @@ export default function PricingPage() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo.png" alt="logiSSign" className="w-[100px] object-contain opacity-60" />
               <span className="text-xs text-gray-500">&copy; 2026 logiSSign. All rights reserved.</span>
             </div>

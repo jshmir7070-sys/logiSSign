@@ -10,7 +10,7 @@
  *  3. 시스템: 원본 PDF + 응답 → 서명 완료 PDF 생성
  */
 
-import { createBrowserSupabaseClient } from '@/lib/supabase'
+import { createAdminSupabaseClient, createBrowserSupabaseClient } from '@/lib/supabase'
 import { PDFDocument, rgb } from 'pdf-lib'
 
 /* ══════════════════════ Types ══════════════════════ */
@@ -56,18 +56,16 @@ export interface SignResponse {
   signed_at: string
 }
 
+type SupabaseClientLike =
+  | ReturnType<typeof createBrowserSupabaseClient>
+  | ReturnType<typeof createAdminSupabaseClient>
+
 /* ══════════════════════ 필드 배치 (대리점용) ══════════════════════ */
 
 /** 문서의 서명 필드 목록 조회 */
 export async function getSignFields(documentFileId: string): Promise<SignField[]> {
   const supabase = createBrowserSupabaseClient()
-  const { data } = await supabase
-    .from('document_sign_fields')
-    .select('*')
-    .eq('document_file_id', documentFileId)
-    .order('page_number')
-    .order('sort_order')
-  return (data ?? []) as SignField[]
+  return getSignFieldsWithClient(supabase, documentFileId)
 }
 
 /** 서명 필드 일괄 저장 (기존 삭제 후 재삽입) */
@@ -133,11 +131,7 @@ export async function removeSignField(fieldId: string): Promise<{ error: string 
 /** 기사의 서명 응답 조회 */
 export async function getSignResponses(deliveryId: string): Promise<SignResponse[]> {
   const supabase = createBrowserSupabaseClient()
-  const { data } = await supabase
-    .from('document_sign_responses')
-    .select('*')
-    .eq('delivery_id', deliveryId)
-  return (data ?? []) as SignResponse[]
+  return getSignResponsesWithClient(supabase, deliveryId)
 }
 
 /** 기사가 필드별 응답 제출 */
@@ -167,9 +161,42 @@ export async function checkAllRequiredFieldsSigned(
   deliveryId: string,
   documentFileId: string,
 ): Promise<{ complete: boolean; missing: string[] }> {
+  const supabase = createBrowserSupabaseClient()
+  return checkAllRequiredFieldsSignedWithClient(supabase, deliveryId, documentFileId)
+}
+
+async function getSignFieldsWithClient(
+  supabase: SupabaseClientLike,
+  documentFileId: string,
+): Promise<SignField[]> {
+  const { data } = await supabase
+    .from('document_sign_fields')
+    .select('*')
+    .eq('document_file_id', documentFileId)
+    .order('page_number')
+    .order('sort_order')
+  return (data ?? []) as SignField[]
+}
+
+async function getSignResponsesWithClient(
+  supabase: SupabaseClientLike,
+  deliveryId: string,
+): Promise<SignResponse[]> {
+  const { data } = await supabase
+    .from('document_sign_responses')
+    .select('*')
+    .eq('delivery_id', deliveryId)
+  return (data ?? []) as SignResponse[]
+}
+
+async function checkAllRequiredFieldsSignedWithClient(
+  supabase: SupabaseClientLike,
+  deliveryId: string,
+  documentFileId: string,
+): Promise<{ complete: boolean; missing: string[] }> {
   const [fields, responses] = await Promise.all([
-    getSignFields(documentFileId),
-    getSignResponses(deliveryId),
+    getSignFieldsWithClient(supabase, documentFileId),
+    getSignResponsesWithClient(supabase, deliveryId),
   ])
 
   const respondedFieldIds = new Set(responses.map(r => r.field_id))
@@ -318,7 +345,14 @@ export async function finalizeDocumentSigning(
   deliveryId: string,
 ): Promise<{ signedPdfUrl: string | null; error: string | null }> {
   const supabase = createBrowserSupabaseClient()
+  const result = await finalizeDocumentSigningWithClient(deliveryId, supabase)
+  return { signedPdfUrl: result.signedPdfUrl, error: result.error }
+}
 
+export async function finalizeDocumentSigningWithClient(
+  deliveryId: string,
+  supabase: SupabaseClientLike,
+): Promise<{ signedPdfPath: string | null; signedPdfUrl: string | null; error: string | null }> {
   try {
     // 1. delivery 정보 조회
     const { data: delivery } = await supabase
@@ -333,7 +367,7 @@ export async function finalizeDocumentSigning(
     if (!docFileId) throw new Error('문서 파일이 없습니다')
 
     // 2. 필수 필드 완료 확인
-    const { complete, missing } = await checkAllRequiredFieldsSigned(deliveryId, docFileId)
+    const { complete, missing } = await checkAllRequiredFieldsSignedWithClient(supabase, deliveryId, docFileId)
     if (!complete) {
       throw new Error(`미완료 필드: ${missing.join(', ')}`)
     }
@@ -366,8 +400,8 @@ export async function finalizeDocumentSigning(
 
     // 4. 필드 + 응답 조회
     const [fields, responses] = await Promise.all([
-      getSignFields(docFileId),
-      getSignResponses(deliveryId),
+      getSignFieldsWithClient(supabase, docFileId),
+      getSignResponsesWithClient(supabase, deliveryId),
     ])
 
     // 5. 서명 완료 PDF 생성
@@ -396,10 +430,10 @@ export async function finalizeDocumentSigning(
       })
       .eq('id', deliveryId)
 
-    return { signedPdfUrl, error: null }
+    return { signedPdfPath: path, signedPdfUrl, error: null }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : '서명 처리 실패'
-    return { signedPdfUrl: null, error: msg }
+    return { signedPdfPath: null, signedPdfUrl: null, error: msg }
   }
 }
 

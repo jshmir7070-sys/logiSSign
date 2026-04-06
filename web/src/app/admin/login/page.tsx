@@ -119,6 +119,7 @@ export default function AdminLoginPage() {
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] h-[480px] rounded-full bg-primary/20 blur-[120px] pointer-events-none" />
         <div className="absolute bottom-1/4 right-1/4 w-[320px] h-[320px] rounded-full bg-primary-container/15 blur-[100px] pointer-events-none" />
         <div className="relative z-10 flex flex-col items-center text-center px-12">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="logiSSign" className="w-[320px] object-contain mb-8" />
           <h1 className="font-headline text-4xl font-bold text-white tracking-tight mb-2">&nbsp;</h1>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 mb-6">
@@ -134,6 +135,7 @@ export default function AdminLoginPage() {
       <div className="flex-1 flex items-center justify-center bg-surface-container-lowest px-6 py-12">
         <div className="w-full max-w-[400px]">
           <div className="lg:hidden flex items-center gap-3 mb-8">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo-light.png" alt="logiSSign" className="w-[160px] object-contain" />
           </div>
 

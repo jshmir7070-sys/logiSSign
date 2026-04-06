@@ -5,14 +5,11 @@ import { useRouter } from 'next/navigation';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
 import { getPrincipals, type Principal, normalizeFieldConfig, type CustomIncomeItem } from '@/services/principal.service';
 import { createDriver } from '@/services/driver.service';
-import { bulkUpsertDriverRouteRates } from '@/services/driver-route-rate.service';
-import { bulkUpsertDriverDeductions } from '@/services/driver-deduction.service';
-import { bulkCreateDriverRates } from '@/services/driver-rate.service';
 import { getContractTemplates, createAndSendContracts, type ContractTemplate } from '@/services/contract.service';
 import { createContractPeriod, type RateConfig } from '@/services/contractPeriod.service';
 import AddressSearch, { type AddressValue } from '@/components/shared/AddressSearch';
 import { formatPhoneNumber, formatBusinessNumber } from '@/lib/formatters';
-import type { PackageType, RateType, DeductionType } from '@/types/database';
+import type { DeductionType } from '@/types/database';
 
 interface RouteRow { route_code: string; delivery_rate: string; return_rate: string }
 interface DeductionRow { name: string; deduction_type: DeductionType; amount: string }
@@ -20,11 +17,11 @@ interface DeductionRow { name: string; deduction_type: DeductionType; amount: st
 export default function NewDriverPage() {
   const router = useRouter();
   const [agencyId, setAgencyId] = useState<string | null>(null);
-  const [agencyName, setAgencyName] = useState('');
-  const [agencyBusinessNumber, setAgencyBusinessNumber] = useState('');
-  const [agencyAddress, setAgencyAddress] = useState('');
-  const [agencyOwnerName, setAgencyOwnerName] = useState('');
-  const [agencyPhone, setAgencyPhone] = useState('');
+  const [_agencyName, setAgencyName] = useState('');
+  const [_agencyBusinessNumber, setAgencyBusinessNumber] = useState('');
+  const [_agencyAddress, setAgencyAddress] = useState('');
+  const [_agencyOwnerName, setAgencyOwnerName] = useState('');
+  const [_agencyPhone, setAgencyPhone] = useState('');
   const [principals, setPrincipals] = useState<Principal[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -57,35 +54,12 @@ export default function NewDriverPage() {
   const [taxType, setTaxType] = useState<'none' | 'withholding_3_3' | 'vat_invoice' | 'manual_reverse'>('vat_invoice');
 
   /* ── 초대코드 SMS ── */
-  const [inviteSending, setInviteSending] = useState(false);
-  const [inviteSentResult, setInviteSentResult] = useState<'success' | 'fail' | null>(null);
+  const [inviteSentResult, setInviteSentResult] = useState<'auto' | 'success' | 'fail' | null>(null);
 
-  async function handleSendInvite() {
+  function handleSendInvite() {
     if (!agencyId || !name.trim() || !phone.trim()) return;
-    setInviteSending(true);
-    setInviteSentResult(null);
-    try {
-      const res = await fetch('/api/sms/invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          driverPhone: phone.trim(),
-          driverName: name.trim(),
-          agencyId,
-        }),
-      });
-      if (res.ok) {
-        setInviteSentResult('success');
-      } else {
-        const errData = await res.json().catch(() => ({}));
-        console.error('[초대코드 전송 실패]', res.status, errData);
-        setInviteSentResult('fail');
-      }
-    } catch (err) {
-      console.error('[초대코드 전송 에러]', err);
-      setInviteSentResult('fail');
-    }
-    setInviteSending(false);
+    setInviteSentResult('auto');
+    alert('기사 고유코드는 기사 저장 시 자동 생성됩니다. 저장을 완료하면 가입 안내 SMS가 자동으로 전송됩니다.');
   }
 
   /* ── 계약 / 단가 설정 ── */
@@ -174,6 +148,20 @@ export default function NewDriverPage() {
         if (ds.waybill.pickup_count_price) {
           prefilledDeductions.push({
             name: '운송장 (집하)',
+            deduction_type: 'per_unit' as DeductionType,
+            amount: '0',
+          });
+        }
+        if (ds.waybill.prepaid_price) {
+          prefilledDeductions.push({
+            name: '운송장 (선불)',
+            deduction_type: 'per_unit' as DeductionType,
+            amount: '0',
+          });
+        }
+        if (ds.waybill.collect_price) {
+          prefilledDeductions.push({
+            name: '운송장 (착불)',
             deduction_type: 'per_unit' as DeductionType,
             amount: '0',
           });
@@ -294,7 +282,7 @@ export default function NewDriverPage() {
   }
 
   async function handleSubmit() {
-    if (!agencyId || !name.trim() || !phone.trim() || !principalId) {
+    if (!agencyId || !name.trim() || !phone.trim() || !employeeCode.trim() || !email.trim() || !principalId) {
       setError('필수 항목을 모두 입력하세요 (카테고리, 이름, 전화번호)');
       return;
     }
@@ -313,6 +301,20 @@ export default function NewDriverPage() {
       }
     }
 
+    const normalizedEmployeeCode = employeeCode.trim();
+    const { data: duplicateDriver } = await supabaseCheck
+      .from('drivers')
+      .select('id')
+      .eq('agency_id', agencyId)
+      .ilike('employee_code', normalizedEmployeeCode)
+      .limit(1)
+      .maybeSingle();
+
+    if (duplicateDriver) {
+      setError('이미 등록된 사번입니다. 기사코드를 다시 확인해주세요.');
+      return;
+    }
+
     setSaving(true);
     setError('');
 
@@ -321,8 +323,9 @@ export default function NewDriverPage() {
       agency_id: agencyId,
       name: name.trim(),
       phone: phone.trim(),
+      employee_code: normalizedEmployeeCode,
       principalIds: [principalId],
-      sendInviteSms: false,   // SMS는 상단 버튼에서 이미 전송
+      sendInviteSms: false,
     });
 
     if (result.error || !result.data) {
@@ -332,11 +335,10 @@ export default function NewDriverPage() {
     }
 
     const driverId = result.data.id;
-    const supabase = createBrowserSupabaseClient();
 
     // 2. Update all fields — service_role API를 거쳐 RLS 우회
     const updatePayload = {
-      employee_code: employeeCode.trim() || null,
+      employee_code: normalizedEmployeeCode || null,
       address: (addressDetail ? `${address} ${addressDetail}` : address).trim() || null,
       email: email.trim() || null,
       delivery_area: deliveryArea.trim() || null,
@@ -475,10 +477,35 @@ export default function NewDriverPage() {
       if (!updateRes.ok) {
         const errData = await updateRes.json().catch(() => ({}));
         console.error('[Driver Update] API 실패:', errData);
+        setSaving(false);
+        setError('기사 상세 정보 저장에 실패했습니다. 다시 시도해 주세요.');
+        return;
       }
     } catch (err) {
       console.error('[Driver Update] 요청 에러:', err);
+      setSaving(false);
+      setError('기사 상세 정보 저장에 실패했습니다. 다시 시도해 주세요.');
+      return;
     }
+
+    let inviteSent = false;
+    if (result.data.driver_code) {
+      try {
+        const inviteRes = await fetch('/api/sms/invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            driverPhone: phone.trim(),
+            driverName: name.trim(),
+            driverCode: result.data.driver_code,
+          }),
+        });
+        inviteSent = inviteRes.ok;
+      } catch (err) {
+        console.error('[Driver Invite SMS] 요청 에러:', err);
+      }
+    }
+    setInviteSentResult(inviteSent ? 'auto' : 'fail');
 
     // 3. 선택된 계약서 자동 생성 + 전송 — bind API로 자동 바인딩
     if (selectedTemplateIds.size > 0 && agencyId) {
@@ -550,8 +577,16 @@ export default function NewDriverPage() {
 
     setSaving(false);
 
-    // ✅ 등록 완료 팝업
-    alert(`✅ ${name.trim()}님이 기사로 등록되었습니다.`);
+    const createdDriverCode = result.data.driver_code ?? '미생성';
+    const _inviteMessage = inviteSent
+      ? '가입 안내 SMS는 전송되지 않았습니다. 기사 목록에서 다시 전송해 주세요.'
+      : '가입 안내 SMS를 자동으로 전송했습니다.';
+
+    const inviteMessageText = inviteSent
+      ? '가입 안내 SMS를 자동으로 전송했습니다.'
+      : '가입 안내 SMS 전송에 실패했습니다. 기사 목록에서 다시 전송해 주세요.';
+
+    alert(`✅ ${name.trim()}님이 기사로 등록되었습니다.\n기사 고유코드: ${createdDriverCode}\n${inviteMessageText}`);
     router.push(`/portal/drivers/${driverId}`);
   }
 
@@ -731,19 +766,19 @@ export default function NewDriverPage() {
             <button
               type="button"
               onClick={handleSendInvite}
-              disabled={inviteSending || !name.trim() || !phone.trim() || !agencyId || inviteSentResult === 'success'}
+              disabled={!name.trim() || !phone.trim() || !agencyId}
               className={`h-10 px-5 rounded-xl text-sm font-label font-semibold transition-all flex items-center gap-2 shrink-0 font-korean ${
-                inviteSentResult === 'success'
+                inviteSentResult === 'auto'
                   ? 'bg-primary/10 text-primary cursor-default'
                   : 'bg-primary text-white hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed'
               }`}
             >
-              {inviteSending ? (
+              {false ? (
                 <>
                   <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25"/><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/></svg>
                   전송 중...
                 </>
-              ) : inviteSentResult === 'success' ? (
+              ) : inviteSentResult === 'auto' ? (
                 <>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
                   전송 완료
@@ -756,7 +791,7 @@ export default function NewDriverPage() {
               )}
             </button>
           </div>
-          {inviteSentResult === 'success' && (
+          {inviteSentResult === 'auto' && (
             <div className="mt-2.5 px-3 py-2 rounded-lg bg-primary/[0.06] border border-primary/15 text-xs font-korean flex items-start gap-2">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-primary shrink-0 mt-0.5"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
               <div>

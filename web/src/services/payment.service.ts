@@ -1,23 +1,6 @@
-/**
- * 포트원 V2 결제 서비스
- * - 정기결제 (빌링키 발급 → 예약 결제)
- * - 본인인증
- *
- * 포트원 V2 API 문서: https://developers.portone.io/
- */
-
-import { PLAN_PRICES, PLAN_DISCOUNTS } from '@/lib/plan-limits'
+import { PLAN_DISCOUNTS, PLAN_PRICES } from '@/lib/plan-limits'
 
 const PORTONE_API_BASE = 'https://api.portone.io'
-
-/* ══════════════════════ Types ══════════════════════ */
-
-export interface BillingKeyResult {
-  billingKey: string
-  cardName: string
-  cardNumber: string  // 마스킹
-  error: string | null
-}
 
 export interface PaymentResult {
   paymentId: string
@@ -36,49 +19,169 @@ export interface IdentityVerificationResult {
   error: string | null
 }
 
-/* ══════════════════════ 서버 전용 (API Secret 사용) ══════════════════════ */
+export interface NormalizedPortonePayment {
+  paymentId: string
+  status: 'paid' | 'pending' | 'failed' | 'cancelled'
+  statusRaw: string
+  amount: number
+  method: string | null
+  easyPayProvider: string | null
+  virtualAccountBank: string | null
+  virtualAccountNumber: string | null
+  virtualAccountHolder: string | null
+  depositExpiresAt: string | null
+  paidAt: string | null
+  payload: Record<string, unknown>
+}
 
-/** 포트원 V2 인증 토큰 발급 (캐싱) */
-let _cachedToken: { token: string; expiresAt: number } | null = null
+let cachedToken: { token: string; expiresAt: number } | null = null
+
+function getPortoneSecret(): string {
+  const secret = process.env.PORTONE_V2_SECRET ?? process.env.PORTONE_API_SECRET
+  if (!secret) {
+    throw new Error('PORTONE API secret is not configured.')
+  }
+  return secret
+}
 
 async function getPortoneToken(): Promise<string> {
-  // 캐시된 토큰이 유효하면 재사용 (만료 1분 전 갱신)
-  if (_cachedToken && Date.now() < _cachedToken.expiresAt - 60_000) {
-    return _cachedToken.token
+  if (cachedToken && Date.now() < cachedToken.expiresAt - 60_000) {
+    return cachedToken.token
   }
 
-  const secret = process.env.PORTONE_API_SECRET
-  if (!secret) throw new Error('PORTONE_API_SECRET 미설정')
-
-  const res = await fetch(`${PORTONE_API_BASE}/login/api-secret`, {
+  const response = await fetch(`${PORTONE_API_BASE}/login/api-secret`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ apiSecret: secret }),
+    body: JSON.stringify({ apiSecret: getPortoneSecret() }),
   })
 
-  if (!res.ok) throw new Error('결제 시스템 인증 실패')
-  const data = await res.json()
+  if (!response.ok) {
+    throw new Error('Failed to authenticate with PortOne.')
+  }
 
-  // 토큰 캐시 (기본 30분)
-  _cachedToken = {
+  const data = await response.json()
+  cachedToken = {
     token: data.accessToken,
     expiresAt: Date.now() + 30 * 60_000,
   }
-
   return data.accessToken
 }
 
-/** 결제 단건 조회 */
-export async function getPayment(paymentId: string): Promise<Record<string, unknown>> {
+async function portoneFetch(path: string, init?: RequestInit): Promise<Response> {
   const token = await getPortoneToken()
-  const res = await fetch(`${PORTONE_API_BASE}/payments/${encodeURIComponent(paymentId)}`, {
-    headers: { Authorization: `Bearer ${token}` },
+  return fetch(`${PORTONE_API_BASE}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      ...(init?.headers ?? {}),
+    },
   })
-  if (!res.ok) throw new Error(`결제 조회 실패: ${res.status}`)
-  return res.json()
 }
 
-/** 빌링키로 정기결제 실행 */
+function pickFirstString(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) {
+      return value
+    }
+  }
+  return null
+}
+
+function pickFirstNumber(...values: unknown[]): number {
+  for (const value of values) {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value
+    }
+  }
+  return 0
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {}
+}
+
+function resolveNormalizedStatus(payload: Record<string, unknown>): {
+  normalized: NormalizedPortonePayment['status']
+  raw: string
+} {
+  const raw = String(payload.status ?? '').toUpperCase()
+
+  if (raw === 'PAID') {
+    return { normalized: 'paid', raw }
+  }
+  if (raw.includes('CANCEL')) {
+    return { normalized: 'cancelled', raw }
+  }
+  if (raw.includes('FAIL')) {
+    return { normalized: 'failed', raw }
+  }
+  if (raw.includes('VIRTUAL_ACCOUNT') || raw === 'READY' || raw === 'PENDING') {
+    return { normalized: 'pending', raw }
+  }
+
+  return { normalized: 'pending', raw }
+}
+
+export async function getPayment(paymentId: string): Promise<Record<string, unknown>> {
+  const response = await portoneFetch(`/payments/${encodeURIComponent(paymentId)}`)
+  if (!response.ok) {
+    throw new Error(`Failed to fetch payment: ${response.status}`)
+  }
+  return response.json()
+}
+
+export function normalizePortonePayment(payload: Record<string, unknown>): NormalizedPortonePayment {
+  const method = toRecord(payload.method)
+  const amount = toRecord(payload.amount)
+  const virtualAccount = toRecord(
+    method.virtualAccount ?? payload.virtualAccount ?? payload.account
+  )
+  const { normalized, raw } = resolveNormalizedStatus(payload)
+
+  return {
+    paymentId: String(payload.paymentId ?? ''),
+    status: normalized,
+    statusRaw: raw,
+    amount: pickFirstNumber(
+      amount.total,
+      amount.paid,
+      payload.amount,
+      payload.totalAmount
+    ),
+    method: pickFirstString(
+      method.type,
+      payload.payMethod,
+      payload.method as string | undefined
+    ),
+    easyPayProvider: pickFirstString(
+      method.easyPayProvider,
+      toRecord(method.easyPay).provider,
+      toRecord(payload.easyPay).provider
+    ),
+    virtualAccountBank: pickFirstString(
+      virtualAccount.bank,
+      virtualAccount.bankCode,
+      toRecord(virtualAccount.bankInfo).bank
+    ),
+    virtualAccountNumber: pickFirstString(
+      virtualAccount.accountNumber,
+      virtualAccount.number
+    ),
+    virtualAccountHolder: pickFirstString(
+      virtualAccount.accountHolder,
+      virtualAccount.holderName
+    ),
+    depositExpiresAt: pickFirstString(
+      virtualAccount.expiresAt,
+      virtualAccount.expiryDate,
+      toRecord(virtualAccount.accountExpiry).dueDate
+    ),
+    paidAt: pickFirstString(payload.paidAt, payload.updatedAt, payload.requestedAt),
+    payload,
+  }
+}
+
 export async function payWithBillingKey(params: {
   billingKey: string
   paymentId: string
@@ -87,14 +190,8 @@ export async function payWithBillingKey(params: {
   currency?: string
   customer: { name: string; email?: string; phone?: string }
 }): Promise<PaymentResult> {
-  const token = await getPortoneToken()
-
-  const res = await fetch(`${PORTONE_API_BASE}/payments/${encodeURIComponent(params.paymentId)}/billing-key`, {
+  const response = await portoneFetch(`/payments/${encodeURIComponent(params.paymentId)}/billing-key`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
     body: JSON.stringify({
       billingKey: params.billingKey,
       orderName: params.orderName,
@@ -104,12 +201,17 @@ export async function payWithBillingKey(params: {
     }),
   })
 
-  if (!res.ok) {
-    const err = await res.text()
-    return { paymentId: params.paymentId, status: 'FAILED', amount: 0, error: `결제 실패: ${err}` }
+  if (!response.ok) {
+    const text = await response.text()
+    return {
+      paymentId: params.paymentId,
+      status: 'FAILED',
+      amount: 0,
+      error: `Billing-key payment failed: ${text}`,
+    }
   }
 
-  const data = await res.json()
+  const data = await response.json()
   return {
     paymentId: params.paymentId,
     status: data.status ?? 'PAID',
@@ -118,54 +220,52 @@ export async function payWithBillingKey(params: {
   }
 }
 
-/** 결제 취소 */
 export async function cancelPayment(paymentId: string, reason: string): Promise<{ error: string | null }> {
-  const token = await getPortoneToken()
-
-  const res = await fetch(`${PORTONE_API_BASE}/payments/${encodeURIComponent(paymentId)}/cancel`, {
+  const response = await portoneFetch(`/payments/${encodeURIComponent(paymentId)}/cancel`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
     body: JSON.stringify({ reason }),
   })
 
-  if (!res.ok) {
-    return { error: `취소 실패: ${res.status}` }
+  if (!response.ok) {
+    return { error: `Cancel failed: ${response.status}` }
   }
+
   return { error: null }
 }
 
-/** 본인인증 결과 조회 */
-export async function getIdentityVerification(identityVerificationId: string): Promise<IdentityVerificationResult> {
-  const token = await getPortoneToken()
+export async function getIdentityVerification(
+  identityVerificationId: string
+): Promise<IdentityVerificationResult> {
+  const response = await portoneFetch(
+    `/identity-verifications/${encodeURIComponent(identityVerificationId)}`
+  )
 
-  const res = await fetch(`${PORTONE_API_BASE}/identity-verifications/${encodeURIComponent(identityVerificationId)}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-
-  if (!res.ok) {
-    return { verified: false, name: '', phone: '', birthDate: '', ci: '', di: '', error: `조회 실패: ${res.status}` }
+  if (!response.ok) {
+    return {
+      verified: false,
+      name: '',
+      phone: '',
+      birthDate: '',
+      ci: '',
+      di: '',
+      error: `Verification lookup failed: ${response.status}`,
+    }
   }
 
-  const data = await res.json()
-  const info = data.verifiedCustomer ?? {}
+  const data = await response.json()
+  const customer = toRecord(data.verifiedCustomer)
 
   return {
     verified: data.status === 'VERIFIED',
-    name: info.name ?? '',
-    phone: info.phoneNumber ?? '',
-    birthDate: info.birthDate ?? '',
-    ci: info.ci ?? '',
-    di: info.di ?? '',
+    name: pickFirstString(customer.name, customer.fullName) ?? '',
+    phone: pickFirstString(customer.phoneNumber, customer.phone) ?? '',
+    birthDate: pickFirstString(customer.birthDate) ?? '',
+    ci: pickFirstString(customer.ci) ?? '',
+    di: pickFirstString(customer.di) ?? '',
     error: null,
   }
 }
 
-/* ══════════════════════ 클라이언트 헬퍼 ══════════════════════ */
-
-/** 포트원 SDK 로드 (클라이언트) */
 export function getPortoneStoreId(): string {
   return process.env.NEXT_PUBLIC_PORTONE_STORE_ID ?? ''
 }
@@ -174,58 +274,59 @@ export function getPortoneChannelKey(): string {
   return process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY ?? ''
 }
 
-/** 구독 결제 금액 계산 — plan-limits.ts 중앙 가격 참조 */
 export { getSubscriptionPrice as getSubscriptionAmount } from '@/lib/plan-limits'
 
-/**
- * 플랜 업그레이드 시 차액 정산 (프로레이션)
- * 
- * 현재 플랜의 잔여일수 크레딧을 계산하고,
- * 새 플랜의 동일 기간 비용에서 차감한 차액을 반환한다.
- */
+export function getBillingMonths(billing: string): number {
+  if (billing === '1year') return 12
+  if (billing === '2year') return 24
+  if (billing === '3year') return 36
+  return 1
+}
+
+export function getBillingDiscountRate(billing: string): number {
+  return PLAN_DISCOUNTS[billing] ?? 0
+}
+
+export function getBaseMonthlyPrice(plan: string): number {
+  return PLAN_PRICES[plan as keyof typeof PLAN_PRICES] ?? 0
+}
+
 export function calculateProration(opts: {
   currentPlan: string
   currentBilling: string
-  currentStartDate: string     // 현재 결제 시작일 (ISO)
+  currentStartDate: string
   newPlan: string
   newBilling: string
-}): {
-  credit: number               // 기존 플랜 잔여 크레딧
-  newAmount: number             // 새 플랜 잔여 기간 비용
-  chargeAmount: number          // 실제 청구 금액 (차액)
-  remainingDays: number         // 잔여 일수
-  totalDays: number             // 전체 결제 기간 일수
-} {
-  const prices = PLAN_PRICES as Record<string, number>
-  const discounts: Record<string, number> = {}
-  for (const [k, v] of Object.entries(PLAN_DISCOUNTS as Record<string, number>)) { discounts[k] = v / 100 }
-
+}) {
   const now = new Date()
   const start = new Date(opts.currentStartDate)
-  const currentMonths = opts.currentBilling === '1year' ? 12 : opts.currentBilling === '2year' ? 24 : 1
+  const currentMonths = getBillingMonths(opts.currentBilling)
   const totalDays = currentMonths * 30
-  const usedDays = Math.max(0, Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)))
+  const usedDays = Math.max(
+    0,
+    Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+  )
   const remainingDays = Math.max(0, totalDays - usedDays)
 
-  // 기존 플랜 일일 단가
-  const currentBase = prices[opts.currentPlan] ?? 0
-  const currentDiscount = discounts[opts.currentBilling] ?? 0
+  const currentBase = getBaseMonthlyPrice(opts.currentPlan)
+  const currentDiscount = getBillingDiscountRate(opts.currentBilling) / 100
   const currentTotal = currentBase * (1 - currentDiscount) * currentMonths
   const currentDailyRate = totalDays > 0 ? currentTotal / totalDays : 0
 
-  // 크레딧 = 잔여일 × 일일 단가
   const credit = Math.round(currentDailyRate * remainingDays)
 
-  // 새 플랜 잔여 기간 비용
-  const newBase = prices[opts.newPlan] ?? 0
-  const newDiscount = discounts[opts.newBilling] ?? 0
-  const newMonths = opts.newBilling === '1year' ? 12 : opts.newBilling === '2year' ? 24 : 1
-  const newTotalForPeriod = newBase * (1 - newDiscount) * newMonths
-  const newDailyRate = (newMonths * 30) > 0 ? newTotalForPeriod / (newMonths * 30) : 0
+  const newMonths = getBillingMonths(opts.newBilling)
+  const newBase = getBaseMonthlyPrice(opts.newPlan)
+  const newDiscount = getBillingDiscountRate(opts.newBilling) / 100
+  const newTotal = newBase * (1 - newDiscount) * newMonths
+  const newDailyRate = newMonths > 0 ? newTotal / (newMonths * 30) : 0
   const newAmount = Math.round(newDailyRate * remainingDays)
 
-  // 차액 (최소 0원 — 다운그레이드 시 크레딧이 더 큰 경우)
-  const chargeAmount = Math.max(0, newAmount - credit)
-
-  return { credit, newAmount, chargeAmount, remainingDays, totalDays }
+  return {
+    credit,
+    newAmount,
+    chargeAmount: Math.max(0, newAmount - credit),
+    remainingDays,
+    totalDays,
+  }
 }

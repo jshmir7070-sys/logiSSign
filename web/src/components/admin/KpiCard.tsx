@@ -35,23 +35,27 @@ export default function KpiCard({
             {icon}
           </span>
         </div>
-        <span
-          className={`
-            inline-flex items-center gap-0.5 px-2 py-1 rounded-lg font-data text-[12px] font-semibold
-            ${isPositive
-              ? 'text-tertiary bg-tertiary/[0.08]'
-              : 'text-error bg-error/[0.08]'
-            }
-          `}
-        >
+        {change ? (
           <span
-            className="material-symbols-outlined text-[14px]"
-            style={{ fontVariationSettings: "'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 14" }}
+            className={`
+              inline-flex items-center gap-0.5 px-2 py-1 rounded-lg font-data text-[12px] font-semibold
+              ${isPositive
+                ? 'text-tertiary bg-tertiary/[0.08]'
+                : 'text-error bg-error/[0.08]'
+              }
+            `}
           >
-            {isPositive ? 'arrow_upward' : 'arrow_downward'}
+            <span
+              className="material-symbols-outlined text-[14px]"
+              style={{ fontVariationSettings: "'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 14" }}
+            >
+              {isPositive ? 'arrow_upward' : 'arrow_downward'}
+            </span>
+            {change}
           </span>
-          {change}
-        </span>
+        ) : (
+          <span />
+        )}
       </div>
 
       {/* Value */}

@@ -100,7 +100,7 @@ async function requestExternalTsa(
   tsaUrl: string,
   dataHash: string,
   timestamp: string,
-  documentNumber: string
+  _documentNumber: string
 ): Promise<TimestampResult> {
   const authKey = process.env.TSA_AUTH_KEY
 

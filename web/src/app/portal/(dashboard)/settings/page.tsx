@@ -11,6 +11,7 @@ import NotificationTab from '@/components/portal/settings/NotificationTab';
 import AdminsTab from '@/components/portal/settings/AdminsTab';
 
 type SettingsTab = 'profile' | 'category' | 'seal' | 'billing' | 'notification' | 'admins';
+
 const VALID_TABS: SettingsTab[] = ['profile', 'category', 'seal', 'billing', 'notification', 'admins'];
 
 export default function PortalSettingsPage() {
@@ -18,7 +19,7 @@ export default function PortalSettingsPage() {
   const tabParam = searchParams.get('tab');
   const isWelcome = searchParams.get('welcome') === '1';
   const [activeTab, setActiveTab] = useState<SettingsTab>(
-    VALID_TABS.includes(tabParam as SettingsTab) ? (tabParam as SettingsTab) : 'profile'
+    VALID_TABS.includes(tabParam as SettingsTab) ? (tabParam as SettingsTab) : 'profile',
   );
   const [agencyId, setAgencyId] = useState<string | null>(null);
   const [userPlan, setUserPlan] = useState<string>('free');
@@ -26,57 +27,67 @@ export default function PortalSettingsPage() {
   useEffect(() => {
     async function init() {
       const supabase = createBrowserSupabaseClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (user) {
-        setAgencyId(user.app_metadata?.agency_id as string ?? null);
-        setUserPlan(user.app_metadata?.plan as string ?? 'free');
+        setAgencyId((user.app_metadata?.agency_id as string) ?? null);
+        setUserPlan((user.app_metadata?.plan as string) ?? 'free');
       }
     }
-    init();
+
+    void init();
   }, []);
 
-  const tabs = [
-    { id: 'profile' as const, label: '프로필' },
-    { id: 'admins' as const, label: '관리자 계정' },
-    { id: 'category' as const, label: '카테고리 관리' },
-    { id: 'seal' as const, label: '도장/서명' },
-    { id: 'billing' as const, label: '구독/결제' },
-    { id: 'notification' as const, label: '알림 설정' },
+  const tabs: Array<{ id: SettingsTab; label: string }> = [
+    { id: 'profile', label: '프로필' },
+    { id: 'admins', label: '관리자 계정' },
+    { id: 'category', label: '카테고리 관리' },
+    { id: 'seal', label: '도장/서명' },
+    { id: 'billing', label: '결제 관리' },
+    { id: 'notification', label: '알림 설정' },
   ];
 
   return (
     <div className="space-y-8">
-      {isWelcome && (
-        <div className="bg-primary/[0.06] border border-primary/20 rounded-2xl p-5 flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0 mt-0.5">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      {isWelcome ? (
+        <div className="flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary/[0.06] p-5">
+          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
           </div>
           <div>
-            <h2 className="text-sm font-bold text-on-surface font-korean">가입이 완료되었습니다!</h2>
-            <p className="text-xs text-on-surface-variant font-korean mt-1">
-              계약서에 사용할 도장을 지금 만들어보세요. 일반 도장, 법인 도장, 또는 실물 도장을 업로드할 수 있습니다.
+            <h2 className="font-korean text-sm font-bold text-on-surface">가입이 완료되었습니다.</h2>
+            <p className="mt-1 font-korean text-xs text-on-surface-variant">
+              계약서에 사용할 도장과 서명을 먼저 준비해 두세요. 일반 도장, 법인 도장, 직접 그린 서명까지 모두
+              등록할 수 있습니다.
             </p>
             <button
               onClick={() => setActiveTab('seal')}
-              className="mt-2 text-xs text-primary font-semibold font-korean hover:underline"
+              className="mt-2 font-korean text-xs font-semibold text-primary hover:underline"
             >
-              도장 만들기 →
+              도장 만들기
             </button>
           </div>
         </div>
-      )}
+      ) : null}
+
       <div>
-        <h1 className="text-2xl font-headline font-bold text-on-surface font-korean">설정</h1>
-        <p className="mt-1 text-sm text-on-surface-variant font-korean">대리점 정보 및 서비스 설정을 관리합니다</p>
+        <h1 className="font-headline font-korean text-2xl font-bold text-on-surface">설정</h1>
+        <p className="mt-1 font-korean text-sm text-on-surface-variant">
+          대리점 정보와 운영에 필요한 기본 설정을 관리합니다.
+        </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-xl text-sm font-label font-medium transition-colors font-korean ${
+            className={`rounded-xl px-4 py-2 font-korean text-sm font-medium transition-colors ${
               activeTab === tab.id
                 ? 'bg-primary text-white'
                 : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'
@@ -87,12 +98,12 @@ export default function PortalSettingsPage() {
         ))}
       </div>
 
-      {activeTab === 'profile' && <ProfileTab />}
-      {activeTab === 'admins' && agencyId && <AdminsTab agencyId={agencyId} plan={userPlan} />}
-      {activeTab === 'category' && agencyId && <CategoryTab agencyId={agencyId} />}
-      {activeTab === 'seal' && agencyId && <SealTab agencyId={agencyId} />}
-      {activeTab === 'billing' && <BillingTab />}
-      {activeTab === 'notification' && <NotificationTab />}
+      {activeTab === 'profile' ? <ProfileTab /> : null}
+      {activeTab === 'admins' && agencyId ? <AdminsTab agencyId={agencyId} plan={userPlan} /> : null}
+      {activeTab === 'category' && agencyId ? <CategoryTab agencyId={agencyId} /> : null}
+      {activeTab === 'seal' && agencyId ? <SealTab agencyId={agencyId} /> : null}
+      {activeTab === 'billing' ? <BillingTab /> : null}
+      {activeTab === 'notification' ? <NotificationTab /> : null}
     </div>
   );
 }

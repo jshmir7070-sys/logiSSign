@@ -58,6 +58,7 @@ export default function HomePage() {
         {/* Nav */}
         <nav className="nav fade-in">
           <div className="nav-brand">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="logiSSign" className="nav-logo" />
           </div>
           <div className="nav-links">
@@ -75,6 +76,7 @@ export default function HomePage() {
           </div>
 
           <div className="logo-section fade-in" style={{ animationDelay: '0.3s' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="logiSSign" className="hero-logo" />
           </div>
 

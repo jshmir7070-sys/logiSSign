@@ -54,12 +54,22 @@ export default function SettlementsGeneratePage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedPrincipal, setSelectedPrincipal] = useState<string>('all');
   const [actionLoading, setActionLoading] = useState(false);
+  const [sendConfirmed, setSendConfirmed] = useState(false);
   const [toast, setToast] = useState('');
 
   const now = new Date();
   const defaultYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const [yearMonth, setYearMonth] = useState(defaultYM);
   const ymOptions = getYearMonthOptions();
+  const draftSettlements = useMemo(
+    () => settlements.filter((settlement) => settlement.status === 'draft'),
+    [settlements],
+  );
+
+  const formatPhoneLastFour = (phone: string | null | undefined) => {
+    const digits = String(phone ?? '').replace(/\D/g, '');
+    return digits.length >= 4 ? digits.slice(-4) : '없음';
+  };
 
   useEffect(() => {
     async function init() {
@@ -90,6 +100,10 @@ export default function SettlementsGeneratePage() {
     }
     load();
   }, [agencyId, yearMonth, selectedPrincipal]);
+
+  useEffect(() => {
+    setSendConfirmed(false);
+  }, [yearMonth, selectedPrincipal, draftSettlements.length]);
 
   /* ── Get display config from selected principal's field_config ── */
   const displayConfig: SettlementDisplayConfig = useMemo(() => {
@@ -182,7 +196,11 @@ export default function SettlementsGeneratePage() {
 
   /* ── Send settlements (draft → sent) ── */
   async function handleSendAll() {
-    const draftIds = settlements.filter((s) => s.status === 'draft').map((s) => s.id);
+    const draftIds = draftSettlements.map((s) => s.id);
+    if (!sendConfirmed && draftIds.length > 0) {
+      showToast('발송 전에 기사고유코드, 사번, 이름, 전화번호 끝 4자리를 확인해 주세요');
+      return;
+    }
     if (draftIds.length === 0) { showToast('발송할 정산서가 없습니다'); return; }
     if (!confirm(`${draftIds.length}건의 정산서를 발송하시겠습니까?`)) return;
     setActionLoading(true);
@@ -569,6 +587,13 @@ export default function SettlementsGeneratePage() {
                   const routeDetails = row.route_details ?? [];
                   const deductionDetail = row.deduction_detail ?? {};
                   const deductionEntries = Object.entries(deductionDetail);
+                  const rowPrincipal = principals.find((principal) => principal.id === row.principal_id);
+                  const cargoAccidentDetail = rowPrincipal
+                    ? normalizeFieldConfig(rowPrincipal.field_config).deduction_section.cargo_accident.description.trim()
+                    : '';
+                  const hasCargoAccidentDeduction = deductionEntries.some(([name]) =>
+                    /화물사고|분실파손/.test(name)
+                  );
 
                   return (
                     <React.Fragment key={row.id}>
@@ -592,7 +617,8 @@ export default function SettlementsGeneratePage() {
                           )}
                         </td>
                         <td className="px-4 py-4 text-xs font-data text-on-surface-variant">
-                          {row.drivers?.employee_code ?? '-'}
+                          <div>{row.drivers?.employee_code ?? '-'}</div>
+                          <div className="mt-1 text-[10px]">{row.drivers?.driver_code ?? '-'}</div>
                         </td>
                         <td className="px-4 py-4 text-sm font-data text-on-surface text-right">
                           {row.delivery_count}건
@@ -720,6 +746,15 @@ export default function SettlementsGeneratePage() {
                                   </div>
                                 )}
 
+                                {displayConfig.cargo_accident_detail && cargoAccidentDetail && hasCargoAccidentDeduction && (
+                                  <div>
+                                    <p className="text-xs font-label font-semibold text-on-surface-variant mb-2 font-korean">화물사고 상세내역</p>
+                                    <div className="rounded-xl bg-surface-container-high px-3 py-2 text-xs text-on-surface-variant font-korean whitespace-pre-line">
+                                      {cargoAccidentDetail}
+                                    </div>
+                                  </div>
+                                )}
+
                                 {/* Rate mode info */}
                                 <div>
                                   <p className="text-xs font-label font-semibold text-on-surface-variant mb-2 font-korean">정산 설정</p>
@@ -756,6 +791,45 @@ export default function SettlementsGeneratePage() {
         </div>
       )}
 
+      {draftSettlements.length > 0 && (
+        <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 space-y-4">
+          <div>
+            <h2 className="text-base font-headline font-semibold text-on-surface font-korean">
+              발송 대상 최종 확인
+            </h2>
+            <p className="mt-1 text-xs text-on-surface-variant font-korean">
+              정산서가 정확한 기사에게 전달되도록 기사고유코드, 사번, 이름, 전화번호 끝 4자리를 확인해 주세요.
+            </p>
+          </div>
+          <div className="max-h-56 overflow-y-auto rounded-xl border border-outline-variant/15">
+            {draftSettlements.map((row) => (
+              <div
+                key={row.id}
+                className="px-4 py-3 border-b border-outline-variant/5 last:border-b-0"
+              >
+                <p className="text-sm font-semibold text-on-surface font-korean">
+                  {row.drivers?.name ?? '기사 미지정'}
+                </p>
+                <p className="text-[11px] text-on-surface-variant font-data mt-1">
+                  기사고유코드 {row.drivers?.driver_code ?? '-'} · 사번 {row.drivers?.employee_code ?? '-'} · 전화번호 끝 4자리 {formatPhoneLastFour(row.drivers?.phone)}
+                </p>
+              </div>
+            ))}
+          </div>
+          <label className="flex items-start gap-2 rounded-xl bg-primary/5 border border-primary/10 px-4 py-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={sendConfirmed}
+              onChange={(e) => setSendConfirmed(e.target.checked)}
+              className="mt-0.5 w-4 h-4 rounded accent-primary"
+            />
+            <span className="text-xs text-on-surface-variant font-korean leading-5">
+              기사고유코드, 사번, 이름, 전화번호 끝 4자리를 모두 확인했고 이 정산서들을 해당 기사에게만 발송합니다.
+            </span>
+          </label>
+        </div>
+      )}
+
       {/* Bottom Action Bar */}
       <div className="bg-surface-container-lowest rounded-2xl shadow-ambient px-6 py-4 flex items-center justify-between">
         <p className="text-sm text-on-surface-variant font-korean">
@@ -786,7 +860,7 @@ export default function SettlementsGeneratePage() {
           {settlements.some((s) => s.status === 'draft') && (
             <button
               onClick={handleSendAll}
-              disabled={actionLoading}
+              disabled={actionLoading || !sendConfirmed}
               className="bg-power-gradient text-white px-6 py-2.5 rounded-xl font-label font-semibold text-sm hover:shadow-lg transition-shadow disabled:opacity-50 font-korean"
             >
               {actionLoading ? '처리중...' : '기사 일괄 발송'}

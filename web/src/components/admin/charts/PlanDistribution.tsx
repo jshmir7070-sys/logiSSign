@@ -1,4 +1,4 @@
-'use client';
+'use client'
 
 import {
   ResponsiveContainer,
@@ -6,19 +6,22 @@ import {
   Pie,
   Cell,
   Tooltip,
-} from 'recharts';
+} from 'recharts'
 
-const data = [
-  { name: 'Free', value: 42 },
-  { name: 'Basic', value: 35 },
-  { name: 'Standard', value: 23 },
-  { name: 'Enterprise', value: 12 },
-];
+interface PlanDistributionDatum {
+  name: string
+  value: number
+}
 
-const COLORS = ['#9ca3af', '#8b5cf6', '#2563eb', '#007d55'];
-const TOTAL = data.reduce((sum, d) => sum + d.value, 0);
+interface PlanDistributionProps {
+  data: PlanDistributionDatum[]
+}
 
-export default function PlanDistribution() {
+const COLORS = ['#9ca3af', '#8b5cf6', '#2563eb', '#007d55', '#d97706', '#0ea5e9']
+
+export default function PlanDistribution({ data }: PlanDistributionProps) {
+  const total = data.reduce((sum, row) => sum + row.value, 0)
+
   return (
     <div className="h-[200px] relative">
       <ResponsiveContainer width="100%" height="100%">
@@ -34,7 +37,7 @@ export default function PlanDistribution() {
             labelLine={false}
           >
             {data.map((_, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index]} />
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
           <Tooltip
@@ -50,13 +53,12 @@ export default function PlanDistribution() {
           />
         </PieChart>
       </ResponsiveContainer>
-      {/* Center label */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="text-center">
-          <p className="text-2xl font-data font-bold text-on-surface">{TOTAL}</p>
+          <p className="text-2xl font-data font-bold text-on-surface">{total}</p>
           <p className="text-[11px] font-body text-on-surface-variant">Total</p>
         </div>
       </div>
     </div>
-  );
+  )
 }

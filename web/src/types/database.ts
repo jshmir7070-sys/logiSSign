@@ -96,6 +96,7 @@ export interface Database {
           vehicle_number: string | null;
           license_number: string | null;
           employee_code: string | null;
+          driver_code: string | null;
           delivery_area: string | null;
           is_business_owner: boolean;
           vat_included: boolean;
@@ -124,6 +125,7 @@ export interface Database {
           vehicle_number?: string | null;
           license_number?: string | null;
           employee_code?: string | null;
+          driver_code?: string | null;
           delivery_area?: string | null;
           is_business_owner?: boolean;
           vat_included?: boolean;

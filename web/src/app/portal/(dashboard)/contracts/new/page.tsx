@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Badge from '@/components/shared/Badge';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
@@ -15,6 +15,7 @@ interface DriverItem {
   name: string;
   phone: string;
   employee_code: string | null;
+  driver_code: string | null;
   address: string | null;
   business_reg_number: string | null;
   representative_name: string | null;
@@ -47,6 +48,7 @@ export default function NewContractPage() {
   const [previewTemplate, setPreviewTemplate] = useState<ContractTemplate | null>(null);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ sent: number; failed: number } | null>(null);
+  const [sendConfirmed, setSendConfirmed] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -107,7 +109,7 @@ export default function NewContractPage() {
     // 기사 조회 — 해당 카테고리 소속 기사 + 미분류 기사
     supabase
       .from('drivers')
-      .select('id, name, phone, employee_code, address, business_reg_number, representative_name, business_address, is_business_owner, vat_included, delivery_area, vehicle_number, principal_id')
+      .select('id, name, phone, employee_code, driver_code, address, business_reg_number, representative_name, business_address, is_business_owner, vat_included, delivery_area, vehicle_number, principal_id')
       .eq('agency_id', agencyId)
       .eq('status', 'active')
       .order('name')
@@ -138,8 +140,26 @@ export default function NewContractPage() {
     }
   };
 
+  useEffect(() => {
+    setSendConfirmed(false);
+  }, [selectedDriverIds, selectedTemplateIds, selectedDocIds, contractStartDate, contractEndDate]);
+
+  const selectedDrivers = useMemo(
+    () => drivers.filter((driver) => selectedDriverIds.has(driver.id)),
+    [drivers, selectedDriverIds],
+  );
+
+  const formatPhoneLastFour = (phone: string | null) => {
+    const digits = String(phone ?? '').replace(/\D/g, '');
+    return digits.length >= 4 ? digits.slice(-4) : '없음';
+  };
+
   const handleSend = async () => {
     if (!agencyId || selectedDriverIds.size === 0 || (selectedTemplateIds.size === 0 && selectedDocIds.size === 0)) return;
+    if (!sendConfirmed) {
+      alert('발송 전 기사코드, 사번, 이름, 전화번호 뒤 4자리를 확인해 주세요.');
+      return;
+    }
     setSending(true);
 
     let totalSent = 0;
@@ -315,7 +335,7 @@ export default function NewContractPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-body font-semibold text-on-surface font-korean">{d.name}</p>
                       <p className="text-xs text-on-surface-variant font-data">
-                        {d.phone} · {d.employee_code ?? '-'}
+                        {d.driver_code ?? '-'} · {d.employee_code ?? '-'} · {d.phone}
                         {!(d as unknown as { principal_id: string | null }).principal_id && (
                           <span className="text-amber-500 ml-1 font-korean">(미분류)</span>
                         )}
@@ -454,6 +474,43 @@ export default function NewContractPage() {
         </section>
       )}
 
+      {selectedDrivers.length > 0 && (selectedTemplateIds.size > 0 || selectedDocIds.size > 0) && (
+        <section className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 space-y-4">
+          <div>
+            <h2 className="text-base font-headline font-semibold text-on-surface font-korean">
+              6. 발송 대상 최종 확인
+            </h2>
+            <p className="mt-1 text-xs text-on-surface-variant font-korean">
+              기사고유코드, 사번, 이름, 전화번호 끝 4자리를 확인한 뒤 발송해 주세요.
+            </p>
+          </div>
+          <div className="max-h-64 overflow-y-auto rounded-xl border border-outline-variant/15">
+            {selectedDrivers.map((driver) => (
+              <div
+                key={driver.id}
+                className="px-4 py-3 border-b border-outline-variant/5 last:border-b-0"
+              >
+                <p className="text-sm font-semibold text-on-surface font-korean">{driver.name}</p>
+                <p className="text-[11px] text-on-surface-variant font-data mt-1">
+                  기사고유코드 {driver.driver_code ?? '-'} · 사번 {driver.employee_code ?? '-'} · 전화번호 끝 4자리 {formatPhoneLastFour(driver.phone)}
+                </p>
+              </div>
+            ))}
+          </div>
+          <label className="flex items-start gap-2 rounded-xl bg-primary/5 border border-primary/10 px-4 py-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={sendConfirmed}
+              onChange={(e) => setSendConfirmed(e.target.checked)}
+              className="mt-0.5 w-4 h-4 rounded accent-primary"
+            />
+            <span className="text-xs text-on-surface-variant font-korean leading-5">
+              선택한 기사들의 기사고유코드, 사번, 이름, 전화번호 끝 4자리를 모두 확인했고 이 대상으로만 계약/문서를 전송합니다.
+            </span>
+          </label>
+        </section>
+      )}
+
       {/* 발송 요약 + 버튼 */}
       {selectedDriverIds.size > 0 && (selectedTemplateIds.size > 0 || selectedDocIds.size > 0) && (
         <div className="bg-tertiary/5 rounded-2xl border border-tertiary/10 p-6 space-y-4">
@@ -472,7 +529,7 @@ export default function NewContractPage() {
           </p>
           <button
             onClick={handleSend}
-            disabled={sending}
+            disabled={sending || !sendConfirmed}
             className="w-full h-12 rounded-xl bg-power-gradient text-white font-label font-semibold text-sm hover:shadow-lg transition-shadow disabled:opacity-50 font-korean"
           >
             {sending ? '발송 중...' : `${selectedDriverIds.size * (selectedTemplateIds.size + selectedDocIds.size)}건 일괄 발송`}

@@ -110,6 +110,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-[420px]">
         {/* 브랜드 */}
         <div className="flex flex-col items-center mb-10">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-light.png" alt="logiSSign" className="w-[240px] object-contain mb-5" />
           <h1 className="font-headline text-xl font-bold text-on-surface">비밀번호 초기화</h1>
           <p className="font-korean text-sm text-on-surface-variant mt-1">본인 확인 후 새 비밀번호를 설정합니다</p>

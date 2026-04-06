@@ -1,668 +1,754 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import { createBrowserSupabaseClient } from '@/lib/supabase';
+import { useEffect, useMemo, useState } from 'react'
+import { createBrowserSupabaseClient } from '@/lib/supabase'
+import { type PlanType, getSubscriptionPrice } from '@/lib/plan-limits'
+import { usePlan } from '@/contexts/PlanContext'
 import {
-  type PlanType,
-  PLAN_LABELS,
-  PLAN_LIMITS,
-  PLAN_PRICES,
-  PLAN_HIGHLIGHTS,
-  isPlanAtLeast,
-  POINT_COSTS,
-  POINT_PACKAGES,
-  WELCOME_BONUS_POINTS,
-  EXTRA_DRIVER_MONTHLY_POINTS,
-  FREE_PLAN_FREE_DRIVERS,
-  type PointAction,
-} from '@/lib/plan-limits';
-import { usePlan } from '@/contexts/PlanContext';
+  EASY_PAY_PROVIDER_OPTIONS,
+  PAYMENT_METHOD_OPTIONS,
+  VIRTUAL_ACCOUNT_BANK_OPTIONS,
+  getAgencyPaymentMethodLabel,
+  getEasyPayProviderLabel,
+  type AgencyEasyPayProvider,
+  type AgencyPaymentMethod,
+} from '@/lib/payment-methods'
+import type { AdminPaymentSettings } from '@/lib/admin-settings'
+import { requestAgencyBillingKey, requestAgencyPayment } from '@/lib/portone-client'
 
-/* ── Types ── */
-interface PointBalanceData {
-  balance: number;
-  totalCharged: number;
-  totalUsed: number;
+type BillingTabMode = 'overview' | 'plan' | 'point'
+type BillingCycle = 'monthly' | '1year' | '2year'
+
+type PointBalanceData = {
+  balance: number
+  totalCharged: number
+  totalUsed: number
 }
 
-interface PointTx {
-  id: string;
-  type: string;
-  amount: number;
-  balanceAfter: number;
-  description: string;
-  createdAt: string;
+type PointTx = {
+  id: string
+  type: string
+  amount: number
+  balanceAfter: number
+  description: string
+  createdAt: string
 }
 
-interface PointPackage {
-  id: string;
-  name: string;
-  points: number;
-  price: number;
-  bonus_points: number;
+type PointPackage = {
+  id: string
+  name: string
+  points: number
+  price: number
+  bonus_points: number
 }
 
-/* ── Constants ── */
-const SUB_PLAN_ORDER: PlanType[] = ['free', 'basic', 'standard', 'pro', 'enterprise'];
+type LatestPaymentOrder = {
+  title: string
+  status: string
+  payment_method: string
+  easy_pay_provider: string | null
+  amount: number
+  created_at: string
+}
 
-const PAID_ACTIONS = (Object.entries(POINT_COSTS) as [PointAction, typeof POINT_COSTS[PointAction]][])
-  .filter(([, info]) => info.cost > 0);
+type SubscriptionSnapshot = {
+  id: string
+  plan: string
+  billing_cycle: BillingCycle
+  status: string
+  expires_at: string | null
+  billing_key: string | null
+  card_name: string | null
+  card_number_masked: string | null
+}
 
-function fmt(n: number): string { return n.toLocaleString('ko-KR'); }
-function fmtKRW(n: number): string { return `₩${fmt(n)}`; }
-function fmtP(n: number): string { return `${fmt(n)}P`; }
+const PLAN_META: Array<{
+  id: Extract<PlanType, 'basic' | 'standard' | 'pro' | 'enterprise'>
+  name: string
+  description: string
+}> = [
+  { id: 'basic', name: 'Basic', description: '기사 30명 규모에 적합한 기본 운영 플랜입니다.' },
+  { id: 'standard', name: 'Standard', description: '기사/정산/알림을 함께 운영하는 중형 플랜입니다.' },
+  { id: 'pro', name: 'Pro', description: '대량 처리와 확장 운영에 적합한 고급 플랜입니다.' },
+  { id: 'enterprise', name: 'Enterprise', description: '대규모 운영과 별도 협의가 필요한 플랜입니다.' },
+]
 
-/* ── Estimate 30 drivers monthly ── */
-// 30명 기준: 기사비(25명×₩1,500) + 계약서 6건 + 정산서 6세트(30÷5) + 엑셀 1회
-const EST_EXTRA = 25; // 30 - 5(무료)
-const EST_DRIVER_FEE = EST_EXTRA * EXTRA_DRIVER_MONTHLY_POINTS;
-const EST_POINT_TOTAL = 6 * POINT_COSTS.contract_send.cost
-  + 6 * POINT_COSTS.settlement_generate.cost
-  + 1 * POINT_COSTS.excel_upload.cost;
-const EST_TOTAL = EST_DRIVER_FEE + EST_POINT_TOTAL;
+const BILLING_CYCLE_OPTIONS: { value: BillingCycle; label: string; badge?: string }[] = [
+  { value: 'monthly', label: '월 결제' },
+  { value: '1year', label: '1년 선결제', badge: '20% 할인' },
+  { value: '2year', label: '2년 선결제', badge: '30% 할인' },
+]
 
-/* ═══════════════════════════════════════════════════════════════ */
+const ORDER_STATUS_LABELS: Record<string, string> = {
+  paid: '결제 완료',
+  pending: '입금 대기',
+  failed: '결제 실패',
+  cancelled: '결제 취소',
+}
+
+function fmt(n: number): string {
+  return n.toLocaleString('ko-KR')
+}
+
+function fmtKRW(n: number): string {
+  return `₩${fmt(n)}`
+}
+
+function fmtPoints(n: number): string {
+  return `${fmt(n)}P`
+}
+
+function formatDate(dateString: string | null | undefined) {
+  if (!dateString) return '-'
+  return new Date(dateString).toLocaleDateString('ko-KR')
+}
+
+function daysUntil(dateString: string | null | undefined) {
+  if (!dateString) return null
+  const today = new Date()
+  const target = new Date(dateString)
+  const midnightToday = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const midnightTarget = new Date(target.getFullYear(), target.getMonth(), target.getDate())
+  return Math.round((midnightTarget.getTime() - midnightToday.getTime()) / (1000 * 60 * 60 * 24))
+}
 
 export default function BillingTab() {
-  const { plan: currentPlan, refreshPlan } = usePlan();
-  const [tab, setTab] = useState<'overview' | 'subscription' | 'point'>('overview');
-  const [cardInfo, setCardInfo] = useState<{ cardName: string; cardNumber: string } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
-  const [upgrading, setUpgrading] = useState<string | null>(null);
-
-  // Point state
-  const [pointBalance, setPointBalance] = useState<PointBalanceData | null>(null);
-  const [pointTxs, setPointTxs] = useState<PointTx[]>([]);
-  const [packages, setPackages] = useState<PointPackage[]>([]);
-  const [chargingPkg, setChargingPkg] = useState<string | null>(null);
-
-  // Agency plan_type
-  const [planType, setPlanType] = useState<'subscription' | 'point'>('subscription');
+  const { plan: currentPlan, refreshPlan, agencyId, companyName, ownerName, email } = usePlan()
+  const [tab, setTab] = useState<BillingTabMode>('overview')
+  const [loading, setLoading] = useState(true)
+  const [processingKey, setProcessingKey] = useState<string | null>(null)
+  const [planType, setPlanType] = useState<'subscription' | 'point'>('subscription')
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly')
+  const [paymentMethod, setPaymentMethod] = useState<AgencyPaymentMethod>('CARD')
+  const [easyPayProvider, setEasyPayProvider] = useState<AgencyEasyPayProvider>('KAKAOPAY')
+  const [virtualAccountBank, setVirtualAccountBank] = useState('KOOKMIN_BANK')
+  const [pointBalance, setPointBalance] = useState<PointBalanceData | null>(null)
+  const [pointTransactions, setPointTransactions] = useState<PointTx[]>([])
+  const [packages, setPackages] = useState<PointPackage[]>([])
+  const [latestOrder, setLatestOrder] = useState<LatestPaymentOrder | null>(null)
+  const [subscription, setSubscription] = useState<SubscriptionSnapshot | null>(null)
+  const [paymentSettings, setPaymentSettings] = useState<AdminPaymentSettings | null>(null)
 
   useEffect(() => {
     async function load() {
-      const supabase = createBrowserSupabaseClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
-      const aid = user.app_metadata?.agency_id as string;
+      const supabase = createBrowserSupabaseClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
 
-      // 구독 정보
-      const { data: sub } = await supabase
-        .from('subscriptions')
-        .select('card_name, card_number_masked, status')
-        .eq('agency_id', aid)
-        .single();
-
-      if (sub && (sub as Record<string, unknown>).status === 'active') {
-        setCardInfo({
-          cardName: (sub as Record<string, string>).card_name ?? '',
-          cardNumber: (sub as Record<string, string>).card_number_masked ?? '',
-        });
+      if (!user || !agencyId) {
+        setLoading(false)
+        return
       }
 
-      // 대리점 plan_type
-      const { data: agency } = await supabase
-        .from('agencies')
-        .select('plan_type')
-        .eq('id', aid)
-        .single();
-      if (agency?.plan_type === 'point') {
-        setPlanType('point');
+      const [
+        { data: agency },
+        pointBalanceRes,
+        pointTxRes,
+        pointPackageRes,
+        paymentSettingsRes,
+        latestOrderRes,
+        subscriptionRes,
+      ] = await Promise.all([
+        supabase.from('agencies').select('plan_type').eq('id', agencyId).maybeSingle(),
+        fetch('/api/points?action=balance'),
+        fetch('/api/points?action=transactions&limit=10'),
+        fetch('/api/points?action=packages'),
+        fetch('/api/runtime-settings/payment'),
+        supabase
+          .from('agency_payment_orders')
+          .select('title, status, payment_method, easy_pay_provider, amount, created_at')
+          .eq('agency_id', agencyId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('subscriptions')
+          .select('id, plan, billing_cycle, status, expires_at, billing_key, card_name, card_number_masked')
+          .eq('agency_id', agencyId)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ])
+
+      setPlanType(agency?.plan_type === 'point' ? 'point' : 'subscription')
+
+      if (pointBalanceRes.ok) {
+        setPointBalance(await pointBalanceRes.json())
+      }
+      if (pointTxRes.ok) {
+        const data = await pointTxRes.json()
+        setPointTransactions(data.transactions ?? [])
+      }
+      if (pointPackageRes.ok) {
+        const data = await pointPackageRes.json()
+        setPackages(data.packages ?? [])
+      }
+      if (paymentSettingsRes.ok) {
+        setPaymentSettings((await paymentSettingsRes.json()) as AdminPaymentSettings)
+      }
+      if (latestOrderRes.data) {
+        setLatestOrder(latestOrderRes.data as LatestPaymentOrder)
+      }
+      if (subscriptionRes.data) {
+        setSubscription(subscriptionRes.data as SubscriptionSnapshot)
       }
 
-      // 포인트 잔액
-      try {
-        const balRes = await fetch('/api/points?action=balance');
-        if (balRes.ok) setPointBalance(await balRes.json());
-
-        const txRes = await fetch('/api/points?action=transactions&limit=10');
-        if (txRes.ok) {
-          const txData = await txRes.json();
-          setPointTxs(txData.transactions ?? []);
-        }
-
-        const pkgRes = await fetch('/api/points?action=packages');
-        if (pkgRes.ok) {
-          const pkgData = await pkgRes.json();
-          setPackages(pkgData.packages ?? []);
-        }
-      } catch { /* 포인트 API 실패 무시 */ }
-
-      setLoading(false);
+      setLoading(false)
     }
-    load();
-  }, []);
 
-  /* ── Card Registration ── */
-  const handleRegisterCard = async () => {
-    const storeId = process.env.NEXT_PUBLIC_PORTONE_STORE_ID;
-    const channelKey = process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY;
-    if (!storeId || !channelKey) { alert('결제 시스템이 설정되지 않았습니다.'); return; }
+    void load()
+  }, [agencyId])
 
-    setProcessing(true);
+  const activePlanMeta = useMemo(
+    () => PLAN_META.find((plan) => plan.id === currentPlan),
+    [currentPlan],
+  )
+
+  const expiryDays = useMemo(() => daysUntil(subscription?.expires_at), [subscription?.expires_at])
+  const planExpiryNoticeDays = paymentSettings?.subscriptionExpiryNoticeDays ?? [7, 3, 1]
+  const isExpiryNoticeVisible =
+    expiryDays !== null && expiryDays >= 0 && planExpiryNoticeDays.includes(expiryDays)
+
+  async function reloadBillingState() {
+    setLoading(true)
+    const supabase = createBrowserSupabaseClient()
+
+    const [latestOrderRes, subscriptionRes, pointBalanceRes] = await Promise.all([
+      supabase
+        .from('agency_payment_orders')
+        .select('title, status, payment_method, easy_pay_provider, amount, created_at')
+        .eq('agency_id', agencyId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('subscriptions')
+        .select('id, plan, billing_cycle, status, expires_at, billing_key, card_name, card_number_masked')
+        .eq('agency_id', agencyId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      fetch('/api/points?action=balance'),
+    ])
+
+    if (latestOrderRes.data) setLatestOrder(latestOrderRes.data as LatestPaymentOrder)
+    if (subscriptionRes.data) setSubscription(subscriptionRes.data as SubscriptionSnapshot)
+    if (pointBalanceRes.ok) setPointBalance(await pointBalanceRes.json())
+    await refreshPlan()
+    setLoading(false)
+  }
+
+  async function handlePlanPurchase(plan: Extract<PlanType, 'basic' | 'standard' | 'pro' | 'enterprise'>) {
+    if (!agencyId) return
+
+    if (paymentSettings?.subscriptionCardOnly && paymentMethod !== 'CARD') {
+      window.alert('구독형 플랜은 카드 결제만 사용할 수 있습니다.')
+      return
+    }
+
+    const amount = getSubscriptionPrice(plan, billingCycle)
+    const paymentId = `plan_${agencyId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+
+    setProcessingKey(`plan:${plan}`)
+
     try {
-      const PortOne = await import('@portone/browser-sdk/v2');
-      const result = await PortOne.requestIssueBillingKey({
-        storeId, channelKey,
-        billingKeyMethod: 'CARD',
-        issueId: `billing_${Date.now()}`,
-        issueName: 'logiSSign 정기결제 카드 등록',
-        customer: { customerId: 'agency' },
-      });
+      const paymentResult = await requestAgencyPayment({
+        paymentId,
+        orderName: `logiSSign ${plan.toUpperCase()} 플랜`,
+        amount,
+        method: 'CARD',
+        customer: {
+          customerId: agencyId,
+          fullName: companyName || ownerName,
+          email,
+        },
+      })
 
-      if (!result || result.code) {
-        alert('카드 등록 실패: ' + (result?.message ?? result?.code ?? '알 수 없는 오류'));
-        setProcessing(false);
-        return;
+      const response = await fetch('/api/payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'record-plan-payment',
+          paymentId: paymentResult.paymentId,
+          plan,
+          billing: billingCycle,
+          amount,
+          paymentMethod: 'CARD',
+        }),
+      })
+      const payload = await response.json()
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? '플랜 결제를 완료하지 못했습니다.')
       }
 
-      const res = await fetch('/api/payment', {
+      window.alert('플랜 결제가 완료되었습니다.')
+      await reloadBillingState()
+      setPlanType('subscription')
+      setTab('overview')
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '플랜 결제에 실패했습니다.')
+    } finally {
+      setProcessingKey(null)
+    }
+  }
+
+  async function handlePointCharge(pkg: PointPackage) {
+    if (!agencyId) return
+
+    setProcessingKey(`point:${pkg.id}`)
+    try {
+      const paymentId = `point_${agencyId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+      const paymentResult = await requestAgencyPayment({
+        paymentId,
+        orderName: pkg.name,
+        amount: pkg.price,
+        method: paymentMethod,
+        easyPayProvider: paymentMethod === 'EASY_PAY' ? easyPayProvider : undefined,
+        virtualAccountBankCode: paymentMethod === 'VIRTUAL_ACCOUNT' ? virtualAccountBank : undefined,
+        customer: {
+          customerId: agencyId,
+          fullName: companyName || ownerName,
+          email,
+        },
+      })
+
+      const response = await fetch('/api/points', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'charge',
+          packageId: pkg.id,
+          paymentId: paymentResult.paymentId,
+          paymentMethod,
+          easyPayProvider: paymentMethod === 'EASY_PAY' ? easyPayProvider : undefined,
+        }),
+      })
+      const payload = await response.json()
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? '포인트 결제를 완료하지 못했습니다.')
+      }
+
+      if (payload.status === 'pending') {
+        window.alert('가상계좌 또는 계좌이체 결제가 접수되었습니다. 입금이 확인되면 포인트가 반영됩니다.')
+      } else {
+        window.alert('포인트 충전이 완료되었습니다.')
+      }
+
+      await reloadBillingState()
+      setTab('overview')
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '포인트 충전에 실패했습니다.')
+    } finally {
+      setProcessingKey(null)
+    }
+  }
+
+  async function handleSwitchToPoint() {
+    const confirmed = window.confirm(
+      '포인트형으로 전환하면 이후 전자계약/정산 생성은 포인트 차감 방식으로만 사용합니다. 계속하시겠습니까?',
+    )
+    if (!confirmed) return
+
+    setProcessingKey('switch-to-point')
+    try {
+      const response = await fetch('/api/payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'switch-to-point' }),
+      })
+      const payload = await response.json()
+      if (!response.ok) {
+        throw new Error(payload.error ?? '포인트형 전환에 실패했습니다.')
+      }
+
+      window.alert('포인트형으로 전환되었습니다. 기존 포인트는 그대로 유지됩니다.')
+      setPlanType('point')
+      await reloadBillingState()
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '포인트형 전환에 실패했습니다.')
+    } finally {
+      setProcessingKey(null)
+    }
+  }
+
+  async function handleRegisterBillingKey() {
+    if (!agencyId || planType !== 'subscription') {
+      window.alert('구독형 플랜 이용 중일 때만 카드 등록이 가능합니다.')
+      return
+    }
+
+    setProcessingKey('billing-key')
+    try {
+      const billingResult = await requestAgencyBillingKey({
+        issueId: `billing_${agencyId}_${Date.now()}`,
+        issueName: 'logiSSign 구독 결제 카드 등록',
+        customer: {
+          customerId: agencyId,
+          fullName: companyName || ownerName,
+          email,
+        },
+      })
+
+      const response = await fetch('/api/payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'save-billing-key',
-          billingKey: result.billingKey ?? '',
-          cardName: '', cardNumber: '',
+          billingKey: billingResult.billingKey,
+          cardName: billingResult.cardName,
+          cardNumberMasked: billingResult.cardNumberMasked,
         }),
-      });
+      })
+      const payload = await response.json()
+      if (!response.ok) {
+        throw new Error(payload.error ?? '카드 등록 정보를 저장하지 못했습니다.')
+      }
 
-      if (res.ok) {
-        setCardInfo({ cardName: '신용카드', cardNumber: '등록 완료' });
-        alert('카드가 등록되었습니다.');
-      } else { alert('카드 정보 저장 실패'); }
-    } catch (err) {
-      alert('카드 등록 중 오류: ' + (err instanceof Error ? err.message : ''));
+      window.alert('구독 결제용 카드가 등록되었습니다.')
+      await reloadBillingState()
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '카드 등록에 실패했습니다.')
+    } finally {
+      setProcessingKey(null)
     }
-    setProcessing(false);
-  };
+  }
 
-  /* ── Plan Upgrade ── */
-  const handleUpgrade = async (targetPlan: PlanType) => {
-    if (!cardInfo) { alert('먼저 카드를 등록해주세요.'); return; }
-    if (!confirm(`${PLAN_LABELS[targetPlan]} 플랜으로 업그레이드하시겠습니까?`)) return;
-
-    setUpgrading(targetPlan);
-    try {
-      const res = await fetch('/api/payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'charge', plan: targetPlan, billing: 'monthly' }),
-      });
-      if (res.ok) {
-        alert(`${PLAN_LABELS[targetPlan]} 플랜으로 업그레이드되었습니다!`);
-        await refreshPlan();
-      } else {
-        const err = await res.json();
-        alert('업그레이드 실패: ' + (err.error || ''));
-      }
-    } catch { alert('오류가 발생했습니다'); }
-    setUpgrading(null);
-  };
-
-  /* ── Switch to Point Plan ── */
-  const handleSwitchToPoint = async () => {
-    if (!confirm('포인트 충전형으로 전환하시겠습니까? 기존 구독은 현 결제 기간 종료 후 해지됩니다.')) return;
-    try {
-      const res = await fetch('/api/payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'switch-to-point' }),
-      });
-      if (res.ok) {
-        setPlanType('point');
-        alert('포인트 충전형으로 전환되었습니다.');
-        await refreshPlan();
-      } else {
-        alert('전환 실패');
-      }
-    } catch { alert('오류가 발생했습니다'); }
-  };
-
-  /* ── Point Charge ── */
-  const handleChargePoints = async (pkgId: string) => {
-    if (!cardInfo) { alert('먼저 카드를 등록해주세요.'); return; }
-    const pkg = packages.find(p => p.id === pkgId);
-    if (!pkg) return;
-    if (!confirm(`${pkg.name} (${fmtKRW(pkg.price)})을 충전하시겠습니까?${pkg.bonus_points > 0 ? ` 보너스 +${fmtP(pkg.bonus_points)}` : ''}`)) return;
-
-    setChargingPkg(pkgId);
-    try {
-      const res = await fetch('/api/points', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'charge', packageId: pkgId }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setPointBalance(prev => prev ? { ...prev, balance: data.balanceAfter } : null);
-        alert(`${fmtP(data.charged)}${data.bonus > 0 ? ` + 보너스 ${fmtP(data.bonus)}` : ''} 충전 완료!`);
-        // 거래 내역 새로고침
-        const txRes = await fetch('/api/points?action=transactions&limit=10');
-        if (txRes.ok) { const txData = await txRes.json(); setPointTxs(txData.transactions ?? []); }
-      } else {
-        const err = await res.json();
-        alert('충전 실패: ' + (err.error || ''));
-      }
-    } catch { alert('오류가 발생했습니다'); }
-    setChargingPkg(null);
-  };
-
-  if (loading) return <p className="text-center text-on-surface-variant py-12 font-korean">불러오는 중...</p>;
-
-  const tabCls = (active: boolean) =>
-    `h-10 px-5 rounded-xl text-sm font-semibold font-korean transition-all ${
-      active ? 'bg-primary text-white shadow-md' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'
-    }`;
+  if (loading) {
+    return <p className="py-10 text-sm text-on-surface-variant">결제 정보를 불러오는 중입니다...</p>
+  }
 
   return (
     <div className="space-y-6">
-
-      {/* ── 탭 선택 ── */}
-      <div className="flex gap-2 flex-wrap">
-        <button onClick={() => setTab('overview')} className={tabCls(tab === 'overview')}>
-          현재 요금제
-        </button>
-        <button onClick={() => setTab('subscription')} className={tabCls(tab === 'subscription')}>
-          구독형 (월정액)
-        </button>
-        <button onClick={() => setTab('point')} className={tabCls(tab === 'point')}>
-          포인트 충전형
-        </button>
+      <div className="flex flex-wrap gap-2">
+        {[
+          { id: 'overview' as const, label: '요약' },
+          { id: 'plan' as const, label: '플랜 결제' },
+          { id: 'point' as const, label: '포인트 충전' },
+        ].map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setTab(item.id)}
+            className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+              tab === item.id
+                ? 'bg-primary text-white'
+                : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
       </div>
 
-      {/* ══════════════════ 현재 요금제 탭 ══════════════════ */}
-      {tab === 'overview' && (
-        <>
-          {/* 현재 플랜 카드 */}
-          <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-8">
-            <h2 className="text-lg font-headline font-bold text-on-surface font-korean mb-6">현재 요금제</h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* 플랜 정보 */}
-              <div className="p-5 rounded-xl bg-primary/5 border border-primary/15">
-                <p className="text-xs text-on-surface-variant font-label font-korean">현재 플랜</p>
-                <p className="text-2xl font-data font-bold text-primary mt-1">{PLAN_LABELS[currentPlan] ?? currentPlan}</p>
-                <p className="text-sm text-on-surface-variant font-data mt-1">
-                  {currentPlan === 'point' ? '포인트 충전형 (월정액 없음)'
-                    : currentPlan === 'free' ? '무료 (기사 5명)'
-                    : `${fmtKRW(PLAN_PRICES[currentPlan] ?? 0)} / 월`}
-                </p>
-                <div className="mt-3 space-y-1">
-                  {currentPlan !== 'point' && (
-                    <>
-                      <p className="text-xs text-on-surface-variant font-korean">
-                        기사: {PLAN_LIMITS[currentPlan]?.maxDrivers === null ? '무제한' : `${PLAN_LIMITS[currentPlan]?.maxDrivers}명`}
-                        {currentPlan === 'free' && ` (초과 시 기사당 ${fmtP(EXTRA_DRIVER_MONTHLY_POINTS)}/월)`}
-                      </p>
-                      <p className="text-xs text-on-surface-variant font-korean">관리자: {(PLAN_LIMITS[currentPlan]?.maxAdminAccounts ?? 0) + 1}명</p>
-                    </>
-                  )}
-                  {currentPlan === 'point' && (
-                    <p className="text-xs text-on-surface-variant font-korean">기사: 무제한 · 관리자: 3명</p>
-                  )}
-                </div>
-              </div>
-
-              {/* 포인트 잔액 */}
-              <div className="p-5 rounded-xl bg-tertiary/5 border border-tertiary/15">
-                <p className="text-xs text-on-surface-variant font-label font-korean">포인트 잔액</p>
-                <p className="text-2xl font-data font-bold text-tertiary mt-1">{fmtP(pointBalance?.balance ?? 0)}</p>
-                <div className="mt-2 flex items-center gap-4 text-xs text-on-surface-variant font-data">
-                  <span>충전 {fmtP(pointBalance?.totalCharged ?? 0)}</span>
-                  <span>사용 {fmtP(pointBalance?.totalUsed ?? 0)}</span>
-                </div>
-                <button onClick={() => setTab('point')}
-                  className="mt-3 h-8 px-4 rounded-lg bg-tertiary text-white text-xs font-semibold font-korean hover:bg-tertiary/90 transition-colors">
-                  포인트 충전하기
-                </button>
-              </div>
+      {tab === 'overview' ? (
+        <div className="space-y-6 rounded-2xl bg-surface-container-lowest p-8 shadow-ambient">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-5">
+              <p className="text-xs text-on-surface-variant">현재 이용 방식</p>
+              <p className="mt-2 text-xl font-bold text-on-surface">
+                {planType === 'subscription' ? '구독형 플랜' : '포인트형'}
+              </p>
+              <p className="mt-2 text-xs text-on-surface-variant">
+                {planType === 'subscription'
+                  ? '구독형 플랜은 포인트를 차감하지 않고 플랜 한도 안에서 사용합니다.'
+                  : '포인트형은 사용한 기능만큼 포인트가 차감됩니다.'}
+              </p>
             </div>
 
-            {/* 카드 정보 */}
-            <div className="mt-4 p-4 rounded-xl bg-surface-container-low/50 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-on-surface-variant font-korean">결제 카드</p>
-                {cardInfo ? (
-                  <p className="text-sm text-on-surface font-korean mt-0.5">{cardInfo.cardName} {cardInfo.cardNumber}</p>
-                ) : (
-                  <p className="text-sm text-on-surface-variant/50 font-korean mt-0.5">등록된 카드 없음</p>
-                )}
-              </div>
-              <button onClick={handleRegisterCard} disabled={processing}
-                className="h-9 px-4 rounded-lg bg-primary text-white text-xs font-semibold font-korean disabled:opacity-50">
-                {processing ? '처리중...' : cardInfo ? '카드 변경' : '카드 등록'}
-              </button>
+            <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-5">
+              <p className="text-xs text-on-surface-variant">현재 플랜</p>
+              <p className="mt-2 text-xl font-bold text-on-surface">
+                {activePlanMeta?.name ?? (currentPlan === 'point' ? '포인트형' : currentPlan.toUpperCase())}
+              </p>
+              <p className="mt-2 text-xs text-on-surface-variant">
+                {subscription?.expires_at
+                  ? `만료 예정일 ${formatDate(subscription.expires_at)}`
+                  : '포인트형은 별도 만료일이 없습니다.'}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-5">
+              <p className="text-xs text-on-surface-variant">포인트 잔액</p>
+              <p className="mt-2 text-xl font-bold text-on-surface">{fmtPoints(pointBalance?.balance ?? 0)}</p>
+              <p className="mt-2 text-xs text-on-surface-variant">
+                플랜 사용 중이어도 기존 포인트는 유지되며 자동 차감되지 않습니다.
+              </p>
             </div>
           </div>
 
-          {/* 요금제 전환 안내 */}
-          <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-8">
-            <h2 className="text-lg font-headline font-bold text-on-surface font-korean mb-4">요금제 변경</h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <button onClick={() => setTab('subscription')}
-                className="p-5 rounded-xl border-2 border-primary/20 hover:border-primary/40 text-left transition-all group">
-                <div className="flex items-center justify-between">
-                  <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-bold">구독형</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-on-surface-variant group-hover:text-primary transition-colors">
-                    <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/>
-                  </svg>
-                </div>
-                <p className="text-sm font-bold text-on-surface font-korean mt-2">월정액으로 무제한 사용</p>
-                <p className="text-xs text-on-surface-variant font-korean mt-1">
-                  Basic {fmtKRW(49900)}~ · 기사 50명 이상이면 유리
-                </p>
-              </button>
-
-              <button onClick={() => setTab('point')}
-                className="p-5 rounded-xl border-2 border-tertiary/20 hover:border-tertiary/40 text-left transition-all group">
-                <div className="flex items-center justify-between">
-                  <span className="px-2 py-0.5 rounded-full bg-tertiary/10 text-tertiary text-xs font-bold">포인트형</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-on-surface-variant group-hover:text-tertiary transition-colors">
-                    <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/>
-                  </svg>
-                </div>
-                <p className="text-sm font-bold text-on-surface font-korean mt-2">사용한 만큼만 결제</p>
-                <p className="text-xs text-on-surface-variant font-korean mt-1">
-                  기사 50명 이하 · 30명 기준 월 ~{fmtP(EST_TOTAL)}
-                </p>
-              </button>
+          {isExpiryNoticeVisible ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+              <p className="text-sm font-bold text-amber-800">플랜 만료 예정 안내</p>
+              <p className="mt-2 text-sm text-amber-700">
+                현재 플랜은 {expiryDays}일 뒤 만료됩니다. 만료 전에 카드 등록 상태와 다음 결제 일정을 확인해 주세요.
+              </p>
             </div>
-          </div>
+          ) : null}
 
-          {/* 포인트 단가 안내 */}
-          <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-8">
-            <h2 className="text-lg font-headline font-bold text-on-surface font-korean mb-4">포인트 단가표</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {(Object.entries(POINT_COSTS) as [PointAction, typeof POINT_COSTS[PointAction]][]).map(([, info]) => (
-                <div key={info.label} className="flex items-center justify-between p-3 rounded-xl bg-surface-container-low/50">
-                  <div>
-                    <p className="text-sm font-semibold text-on-surface font-korean">{info.label}</p>
-                    <p className="text-[11px] text-on-surface-variant font-korean">{info.desc}</p>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="rounded-2xl border border-outline-variant/15 p-5">
+              <p className="text-sm font-bold text-on-surface">최근 결제</p>
+              {latestOrder ? (
+                <div className="mt-3 space-y-2 text-sm">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-on-surface-variant">주문명</span>
+                    <span className="font-semibold text-on-surface">{latestOrder.title}</span>
                   </div>
-                  <span className={`text-sm font-data font-bold shrink-0 ${info.cost === 0 ? 'text-tertiary' : 'text-primary'}`}>
-                    {info.cost === 0 ? '무료' : fmtP(info.cost)}
-                  </span>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-on-surface-variant">결제수단</span>
+                    <span className="font-semibold text-on-surface">
+                      {getAgencyPaymentMethodLabel(latestOrder.payment_method)}
+                      {latestOrder.easy_pay_provider
+                        ? ` (${getEasyPayProviderLabel(latestOrder.easy_pay_provider)})`
+                        : ''}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-on-surface-variant">상태</span>
+                    <span className="font-semibold text-on-surface">
+                      {ORDER_STATUS_LABELS[latestOrder.status] ?? latestOrder.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-on-surface-variant">금액</span>
+                    <span className="font-semibold text-on-surface">{fmtKRW(latestOrder.amount)}</span>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* ══════════════════ 구독형 탭 ══════════════════ */}
-      {tab === 'subscription' && (
-        <>
-          <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-headline font-bold text-on-surface font-korean">구독형 플랜 비교</h2>
-              {planType === 'subscription' && (
-                <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold font-korean">현재: 구독형</span>
+              ) : (
+                <p className="mt-3 text-sm text-on-surface-variant">아직 결제 이력이 없습니다.</p>
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              {SUB_PLAN_ORDER.map((opt) => {
-                const isCurrent = currentPlan === opt;
-                const isUpgrade = !isCurrent && isPlanAtLeast(opt, currentPlan) && opt !== currentPlan;
-
-                return (
-                  <div key={opt} className={`rounded-2xl border-2 p-5 transition-all ${
-                    isCurrent ? 'border-primary bg-primary/5 shadow-lg' : opt === 'standard' ? 'border-primary/30' : 'border-outline-variant/15'
-                  }`}>
-                    {opt === 'standard' && !isCurrent && (
-                      <span className="inline-block px-2 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold mb-2">추천</span>
-                    )}
-                    <h3 className="text-sm font-bold text-on-surface font-korean">{PLAN_LABELS[opt]}</h3>
-                    <p className="text-xl font-data font-bold text-primary mt-2">
-                      {PLAN_PRICES[opt] === 0 ? '무료' : opt === 'enterprise' ? '별도 문의' : fmtKRW(PLAN_PRICES[opt])}
-                      {PLAN_PRICES[opt] > 0 && opt !== 'enterprise' && <span className="text-xs text-on-surface-variant font-normal">/월</span>}
-                    </p>
-                    <ul className="mt-3 space-y-1">
-                      {PLAN_HIGHLIGHTS[opt].map((h) => (
-                        <li key={h} className="flex items-start gap-1.5 text-xs text-on-surface-variant font-korean">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-tertiary shrink-0 mt-0.5">
-                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                          </svg>
-                          {h}
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="mt-4">
-                      {isCurrent ? (
-                        <div className="h-9 flex items-center justify-center rounded-xl bg-primary/10 text-primary text-xs font-semibold font-korean">현재 플랜</div>
-                      ) : isUpgrade && opt !== 'enterprise' ? (
-                        <button onClick={() => handleUpgrade(opt)} disabled={!!upgrading}
-                          className="w-full h-9 rounded-xl bg-primary text-white text-xs font-semibold font-korean hover:bg-primary/90 disabled:opacity-50">
-                          {upgrading === opt ? '처리중...' : '업그레이드'}
-                        </button>
-                      ) : opt === 'enterprise' ? (
-                        <div className="h-9 flex items-center justify-center rounded-xl bg-surface-container-low text-on-surface-variant text-xs font-korean">문의하기</div>
-                      ) : (
-                        <div className="h-9 flex items-center justify-center rounded-xl bg-surface-container-low text-on-surface-variant/40 text-xs font-korean">다운그레이드</div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* 카드 미등록 시 */}
-            {!cardInfo && (
-              <div className="mt-4 p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-between">
-                <p className="text-sm text-amber-800 font-korean">구독을 위해 카드를 먼저 등록해주세요.</p>
-                <button onClick={handleRegisterCard} disabled={processing}
-                  className="h-8 px-4 rounded-lg bg-primary text-white text-xs font-semibold font-korean disabled:opacity-50 shrink-0">
-                  {processing ? '처리중...' : '카드 등록'}
+            <div className="rounded-2xl border border-outline-variant/15 p-5">
+              <p className="text-sm font-bold text-on-surface">구독 카드 등록 상태</p>
+              <div className="mt-3 space-y-2 text-sm">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-on-surface-variant">등록 여부</span>
+                  <span className="font-semibold text-on-surface">{subscription?.billing_key ? '등록됨' : '미등록'}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-on-surface-variant">카드명</span>
+                  <span className="font-semibold text-on-surface">{subscription?.card_name ?? '-'}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-on-surface-variant">카드번호</span>
+                  <span className="font-semibold text-on-surface">{subscription?.card_number_masked ?? '-'}</span>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleRegisterBillingKey()}
+                  disabled={
+                    processingKey === 'billing-key' ||
+                    planType !== 'subscription' ||
+                    !paymentSettings?.allowBillingKeyManagement
+                  }
+                  className="h-10 rounded-xl bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-60"
+                >
+                  {subscription?.billing_key ? '카드 변경' : '카드 등록'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSwitchToPoint()}
+                  disabled={processingKey === 'switch-to-point'}
+                  className="h-10 rounded-xl bg-surface-container-high px-4 text-sm font-medium text-on-surface-variant transition-colors hover:bg-surface-container-highest disabled:opacity-60"
+                >
+                  포인트형 전환
                 </button>
               </div>
-            )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
-            <p className="text-xs text-on-surface-variant/50 mt-4 font-korean">
-              연간 결제 시 20~40% 할인. Enterprise는 별도 문의. 다운그레이드는 고객센터.
+      {tab === 'plan' ? (
+        <div className="space-y-6 rounded-2xl bg-surface-container-lowest p-8 shadow-ambient">
+          <div className="rounded-2xl border border-primary/10 bg-primary/5 p-5">
+            <p className="text-sm font-bold text-primary">구독형 플랜 결제 정책</p>
+            <p className="mt-2 text-sm text-on-surface-variant">
+              구독형 플랜은 카드 결제만 사용할 수 있습니다. 포인트형에서 구독형으로 변경되면 기존 포인트는 그대로
+              유지되고, 구독 사용 중에는 포인트가 자동 차감되지 않습니다.
             </p>
           </div>
 
-          {/* 포인트형 전환 안내 */}
-          {planType === 'subscription' && currentPlan !== 'free' && (
-            <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-bold text-on-surface font-korean">포인트 충전형으로 전환</p>
-                <p className="text-xs text-on-surface-variant font-korean mt-1">월정액 대신 사용한 만큼만 결제하고 싶다면</p>
-              </div>
-              <button onClick={handleSwitchToPoint}
-                className="h-9 px-5 rounded-xl bg-tertiary/10 text-tertiary text-xs font-semibold font-korean hover:bg-tertiary/20 transition-colors">
-                포인트형 전환
+          <div className="flex flex-wrap gap-2">
+            {BILLING_CYCLE_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setBillingCycle(option.value)}
+                className={`rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${
+                  billingCycle === option.value
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-outline-variant/20 bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'
+                }`}
+              >
+                {option.label}
+                {option.badge ? <span className="ml-2 text-xs">{option.badge}</span> : null}
               </button>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* ══════════════════ 포인트 충전형 탭 ══════════════════ */}
-      {tab === 'point' && (
-        <>
-          {/* 포인트 잔액 */}
-          <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-8">
-            <h2 className="text-lg font-headline font-bold text-on-surface font-korean mb-6">포인트 잔액</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-5 rounded-xl bg-primary/5 border border-primary/20 text-center">
-                <p className="text-xs text-on-surface-variant font-korean">잔여 포인트</p>
-                <p className={`text-3xl font-data font-bold mt-2 ${
-                  (pointBalance?.balance ?? 0) <= 1000 ? 'text-error' : 'text-primary'
-                }`}>
-                  {fmtP(pointBalance?.balance ?? 0)}
-                </p>
-              </div>
-              <div className="p-5 rounded-xl bg-surface-container-low text-center">
-                <p className="text-xs text-on-surface-variant font-korean">누적 충전</p>
-                <p className="text-xl font-data font-bold text-tertiary mt-2">{fmtP(pointBalance?.totalCharged ?? 0)}</p>
-              </div>
-              <div className="p-5 rounded-xl bg-surface-container-low text-center">
-                <p className="text-xs text-on-surface-variant font-korean">누적 사용</p>
-                <p className="text-xl font-data font-bold text-error mt-2">{fmtP(pointBalance?.totalUsed ?? 0)}</p>
-              </div>
-            </div>
-
-            {/* 포인트 부족 경고 */}
-            {(pointBalance?.balance ?? 0) <= 1000 && (
-              <div className="mt-4 p-4 rounded-xl bg-error/5 border border-error/20">
-                <p className="text-sm text-error font-korean font-semibold">
-                  포인트가 부족합니다! 아래에서 충전해주세요.
-                </p>
-              </div>
-            )}
-
-            {/* 카드 미등록 시 */}
-            {!cardInfo && (
-              <div className="mt-4 p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-between">
-                <p className="text-sm text-amber-800 font-korean">포인트 충전을 위해 카드를 먼저 등록해주세요.</p>
-                <button onClick={handleRegisterCard} disabled={processing}
-                  className="h-8 px-4 rounded-lg bg-primary text-white text-xs font-semibold font-korean disabled:opacity-50 shrink-0">
-                  {processing ? '처리중...' : '카드 등록'}
-                </button>
-              </div>
-            )}
+            ))}
           </div>
 
-          {/* 충전 패키지 */}
-          <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-8">
-            <h2 className="text-lg font-headline font-bold text-on-surface font-korean mb-6">포인트 충전</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-              {(packages.length > 0
-                ? packages
-                : POINT_PACKAGES.map((p, i) => ({
-                    id: `local_${i}`,
-                    name: fmtP(p.points),
-                    points: p.points,
-                    price: p.price,
-                    bonus_points: p.bonus,
-                  }))
-              ).map((pkg) => (
-                <button key={pkg.id} onClick={() => handleChargePoints(pkg.id)}
-                  disabled={!cardInfo || !!chargingPkg}
-                  className={`relative p-4 rounded-2xl border-2 transition-all text-center hover:border-primary/40 hover:shadow-md disabled:opacity-50 ${
-                    pkg.bonus_points > 0 ? 'border-tertiary/30 bg-tertiary/[0.03]' : 'border-outline-variant/15'
-                  }`}>
-                  {pkg.bonus_points > 0 && (
-                    <span className="absolute -top-2 right-2 px-2 py-0.5 rounded-full bg-tertiary text-white text-[10px] font-bold">
-                      +{fmtP(pkg.bonus_points)}
-                    </span>
-                  )}
-                  <p className="text-lg font-data font-bold text-on-surface">{pkg.name}</p>
-                  <p className="text-sm font-data text-primary mt-1">{fmtKRW(pkg.price)}</p>
-                  {pkg.bonus_points > 0 && (
-                    <p className="text-[10px] text-tertiary font-korean mt-1">실수령 {fmtP(pkg.points + pkg.bonus_points)}</p>
-                  )}
-                  {chargingPkg === pkg.id && (
-                    <p className="text-xs text-on-surface-variant mt-1 font-korean">결제 중...</p>
-                  )}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-on-surface-variant/50 mt-4 font-korean">
-              1P = ₩1. 첫 가입 시 {fmt(WELCOME_BONUS_POINTS)}P 무료 지급.
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            {PLAN_META.map((plan) => {
+              const amount = getSubscriptionPrice(plan.id, billingCycle)
+              return (
+                <div key={plan.id} className="rounded-2xl border border-outline-variant/15 p-5">
+                  <p className="text-lg font-bold text-on-surface">{plan.name}</p>
+                  <p className="mt-2 text-sm text-on-surface-variant">{plan.description}</p>
+                  <p className="mt-4 text-2xl font-bold text-primary">{fmtKRW(amount)}</p>
+                  <p className="mt-1 text-xs text-on-surface-variant">
+                    {billingCycle === 'monthly'
+                      ? '월 단위 결제'
+                      : billingCycle === '1year'
+                        ? '1년 선결제'
+                        : '2년 선결제'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void handlePlanPurchase(plan.id)}
+                    disabled={processingKey === `plan:${plan.id}`}
+                    className="mt-5 h-11 w-full rounded-xl bg-primary text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-60"
+                  >
+                    {processingKey === `plan:${plan.id}` ? '결제 진행 중...' : `${plan.name} 결제`}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {tab === 'point' ? (
+        <div className="space-y-6 rounded-2xl bg-surface-container-lowest p-8 shadow-ambient">
+          <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-5">
+            <p className="text-sm font-bold text-on-surface">포인트 충전</p>
+            <p className="mt-2 text-sm text-on-surface-variant">
+              포인트형은 계약 발송, 정산 생성 같은 유료 기능을 사용할 때만 포인트가 차감됩니다.
             </p>
           </div>
 
-          {/* 포인트 단가 */}
-          <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-8">
-            <h2 className="text-lg font-headline font-bold text-on-surface font-korean mb-4">포인트 단가표</h2>
-
-            {/* 유료 항목 */}
-            <h3 className="text-sm font-bold text-primary font-korean mb-2">유료 항목</h3>
-            <div className="space-y-2 mb-6">
-              {PAID_ACTIONS.map(([, info]) => (
-                <div key={info.label} className="flex items-center justify-between p-3 rounded-xl bg-surface-container-low/50">
-                  <div>
-                    <p className="text-sm font-semibold text-on-surface font-korean">{info.label}</p>
-                    <p className="text-[11px] text-on-surface-variant font-korean">{info.desc}</p>
-                  </div>
-                  <span className="text-sm font-data font-bold text-primary shrink-0">{fmtP(info.cost)}</span>
-                </div>
-              ))}
+          <div className="space-y-4">
+            <p className="text-sm font-semibold text-on-surface">결제 수단 선택</p>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {PAYMENT_METHOD_OPTIONS.filter((option) => paymentSettings?.enabledMethods.includes(option.value) ?? true).map(
+                (option) => (
+                  <label
+                    key={option.value}
+                    className={`rounded-xl border-2 p-4 transition-colors ${
+                      paymentMethod === option.value
+                        ? 'border-primary bg-primary/5'
+                        : 'border-outline-variant/15 hover:border-outline-variant/40'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="radio"
+                        name="point-payment-method"
+                        className="mt-1 accent-primary"
+                        checked={paymentMethod === option.value}
+                        onChange={() => setPaymentMethod(option.value)}
+                      />
+                      <div>
+                        <p className="text-sm font-bold text-on-surface">{option.label}</p>
+                        <p className="mt-1 text-xs text-on-surface-variant">{option.description}</p>
+                      </div>
+                    </div>
+                  </label>
+                ),
+              )}
             </div>
 
-            {/* 무료 항목 */}
-            <h3 className="text-sm font-bold text-tertiary font-korean mb-2">무료 항목</h3>
-            <div className="flex flex-wrap gap-2">
-              {(Object.entries(POINT_COSTS) as [PointAction, typeof POINT_COSTS[PointAction]][])
-                .filter(([, info]) => info.cost === 0)
-                .map(([, info]) => (
-                  <span key={info.label} className="px-3 py-1.5 rounded-full bg-tertiary/5 border border-tertiary/15 text-xs text-on-surface font-korean">
-                    {info.label}
-                    <span className="text-tertiary ml-1 font-data">FREE</span>
-                  </span>
+            {paymentMethod === 'EASY_PAY' ? (
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                {EASY_PAY_PROVIDER_OPTIONS.filter(
+                  (provider) => paymentSettings?.enabledEasyPayProviders.includes(provider.value) ?? true,
+                ).map((provider) => (
+                  <button
+                    key={provider.value}
+                    type="button"
+                    onClick={() => setEasyPayProvider(provider.value)}
+                    className={`h-10 rounded-xl text-sm font-semibold transition-colors ${
+                      easyPayProvider === provider.value
+                        ? 'bg-primary text-white'
+                        : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'
+                    }`}
+                  >
+                    {provider.label}
+                  </button>
                 ))}
-            </div>
-
-            {/* 월 예상 비용 */}
-            <div className="mt-6 p-4 rounded-xl bg-surface-container-low/50">
-              <p className="text-sm font-bold text-on-surface font-korean mb-2">기사 30명 월 예상 비용</p>
-              <div className="space-y-1 text-xs text-on-surface-variant font-korean">
-                <div className="flex justify-between text-error/80 font-semibold"><span>초과 기사 {EST_EXTRA}명 x {fmtP(EXTRA_DRIVER_MONTHLY_POINTS)}</span><span className="font-data">{fmtP(EST_DRIVER_FEE)}/월</span></div>
-                <div className="flex justify-between"><span>계약서 전송 6건</span><span className="font-data">{fmt(6 * POINT_COSTS.contract_send.cost)}P</span></div>
-                <div className="flex justify-between"><span>정산서 생성 6세트 (30명÷5명)</span><span className="font-data">{fmt(6 * POINT_COSTS.settlement_generate.cost)}P</span></div>
-                <div className="flex justify-between"><span>엑셀 업로드 1회</span><span className="font-data">{fmt(1 * POINT_COSTS.excel_upload.cost)}P</span></div>
-                <div className="flex justify-between text-tertiary"><span>정산전송·PDF·알림톡·기사등록</span><span className="font-data">무료</span></div>
-                <div className="flex justify-between border-t border-outline-variant/20 pt-1 mt-1 font-semibold text-on-surface">
-                  <span>월 총비용</span>
-                  <span className="font-data text-primary">{fmtP(EST_TOTAL)}</span>
-                </div>
-                <div className="text-[10px] text-on-surface-variant/60">
-                  (기사비 {fmtP(EST_DRIVER_FEE)} + 포인트 {fmtP(EST_POINT_TOTAL)})
-                </div>
               </div>
-              <p className="text-[10px] text-on-surface-variant/60 mt-2 font-korean">
-                기사 5명 무료, 초과 시 기사당 {fmtP(EXTRA_DRIVER_MONTHLY_POINTS)}/월. 구독형은 플랜 내 기사 수까지 추가 비용 없음.
-              </p>
-            </div>
+            ) : null}
+
+            {paymentMethod === 'VIRTUAL_ACCOUNT' ? (
+              <select
+                value={virtualAccountBank}
+                onChange={(event) => setVirtualAccountBank(event.target.value)}
+                className="h-11 w-full rounded-xl border border-outline-variant/20 bg-surface-container-low px-4 text-sm text-on-surface outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                {VIRTUAL_ACCOUNT_BANK_OPTIONS.filter(
+                  (bank) => paymentSettings?.enabledVirtualAccountBanks.includes(bank.value) ?? true,
+                ).map((bank) => (
+                  <option key={bank.value} value={bank.value}>
+                    {bank.label}
+                  </option>
+                ))}
+              </select>
+            ) : null}
           </div>
 
-          {/* 거래 내역 */}
-          <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-8">
-            <h2 className="text-lg font-headline font-bold text-on-surface font-korean mb-6">최근 거래 내역</h2>
-            {pointTxs.length === 0 ? (
-              <p className="text-sm text-on-surface-variant text-center py-6 font-korean">거래 내역이 없습니다.</p>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+            {packages.map((pkg) => (
+              <div key={pkg.id} className="rounded-2xl border border-outline-variant/15 p-5">
+                <p className="text-lg font-bold text-on-surface">{pkg.name}</p>
+                <p className="mt-3 text-2xl font-bold text-primary">
+                  {fmtPoints(pkg.points + (pkg.bonus_points ?? 0))}
+                </p>
+                <p className="mt-1 text-xs text-on-surface-variant">
+                  기본 {fmtPoints(pkg.points)} / 보너스 {fmtPoints(pkg.bonus_points ?? 0)}
+                </p>
+                <p className="mt-4 text-lg font-semibold text-on-surface">{fmtKRW(pkg.price)}</p>
+                <button
+                  type="button"
+                  onClick={() => void handlePointCharge(pkg)}
+                  disabled={processingKey === `point:${pkg.id}`}
+                  className="mt-5 h-11 w-full rounded-xl bg-primary text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-60"
+                >
+                  {processingKey === `point:${pkg.id}` ? '충전 진행 중...' : '포인트 충전'}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-2xl border border-outline-variant/15 p-5">
+            <p className="text-sm font-bold text-on-surface">최근 포인트 이력</p>
+            {pointTransactions.length === 0 ? (
+              <p className="mt-3 text-sm text-on-surface-variant">아직 포인트 이력이 없습니다.</p>
             ) : (
-              <div className="divide-y divide-outline-variant/15">
-                {pointTxs.map((tx) => (
-                  <div key={tx.id} className="flex items-center justify-between py-3">
+              <div className="mt-3 space-y-3">
+                {pointTransactions.slice(0, 5).map((item) => (
+                  <div key={item.id} className="flex items-center justify-between gap-4 text-sm">
                     <div>
-                      <p className="text-sm text-on-surface font-korean">{tx.description}</p>
-                      <p className="text-[11px] text-on-surface-variant font-data">
-                        {new Date(tx.createdAt).toLocaleString('ko-KR')}
+                      <p className="font-medium text-on-surface">{item.description}</p>
+                      <p className="mt-1 text-xs text-on-surface-variant">
+                        {new Date(item.createdAt).toLocaleString('ko-KR')}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className={`text-sm font-data font-bold ${tx.amount >= 0 ? 'text-tertiary' : 'text-error'}`}>
-                        {tx.amount >= 0 ? '+' : ''}{fmtP(tx.amount)}
-                      </p>
-                      <p className="text-[11px] text-on-surface-variant font-data">잔액 {fmtP(tx.balanceAfter)}</p>
+                      <p className="font-semibold text-on-surface">{fmtPoints(item.amount)}</p>
+                      <p className="mt-1 text-xs text-on-surface-variant">잔액 {fmtPoints(item.balanceAfter)}</p>
                     </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
-
-          {/* 구독형 전환 안내 */}
-          <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-bold text-on-surface font-korean">구독형으로 전환하면?</p>
-              <p className="text-xs text-on-surface-variant font-korean mt-1">
-                Basic {fmtKRW(49900)}/월로 계약서·정산서·엑셀 업로드 무제한.
-                기사 50명 이상이면 구독이 더 유리합니다.
-              </p>
-            </div>
-            <button onClick={() => setTab('subscription')}
-              className="h-9 px-5 rounded-xl bg-primary/10 text-primary text-xs font-semibold font-korean hover:bg-primary/20 transition-colors shrink-0">
-              구독형 보기
-            </button>
-          </div>
-        </>
-      )}
+        </div>
+      ) : null}
     </div>
-  );
+  )
 }

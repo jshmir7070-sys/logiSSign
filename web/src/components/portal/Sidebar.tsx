@@ -143,6 +143,7 @@ export default function Sidebar({ plan, ownerName, pointBalance }: { plan?: stri
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-[240px] bg-sidebar flex flex-col z-40">
       <div className="px-6 pt-6 pb-4">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.png" alt="logiSSign" className="w-[200px] object-contain" />
       </div>
 

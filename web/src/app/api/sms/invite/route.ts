@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { driverPhone, driverName } = body
+    const { driverPhone, driverName, driverCode } = body
     let inviteCode = body.inviteCode
     let agencyName = body.agencyName
     // ✅ 보안: 클라이언트가 보낸 agencyId 대신 인증된 사용자의 agencyId 사용
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const result = await sendInviteCodeSms(driverPhone, driverName, inviteCode, agencyName)
+    const result = await sendInviteCodeSms(driverPhone, driverName, inviteCode, agencyName, driverCode)
 
     if (!result.sent) {
       return NextResponse.json({ error: result.error }, { status: 500 })

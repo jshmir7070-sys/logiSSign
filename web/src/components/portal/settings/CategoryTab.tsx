@@ -15,7 +15,6 @@ import {
   ADDITIONAL_ITEM_LABELS,
   ADDITIONAL_ITEM_DESCS,
   DEFAULT_FIELD_CONFIG,
-  normalizeFieldConfig,
   DELIVERY_RATE_OPTIONS,
   PICKUP_RATE_OPTIONS,
   INSURANCE_SPLIT_OPTIONS,
@@ -599,9 +598,8 @@ export default function CategoryTab({ agencyId }: { agencyId: string }) {
                             </div>
                           )}
                           <div className="ml-7 mt-2">
-                            <input
-                              type="text"
-                              placeholder="비고 (예: 파손 시 실비, 분실 50% 부담 등)"
+                            <textarea
+                              placeholder="상세내역 입력 (예: 파손 시 실비 청구, 분실 50% 부담, 기사 귀책 시 본인 부담 등)"
                               value={fieldConfig.deduction_section.cargo_accident.description}
                               onChange={(e) =>
                                 setFieldConfig((fc) => ({
@@ -612,8 +610,12 @@ export default function CategoryTab({ agencyId }: { agencyId: string }) {
                                   },
                                 }))
                               }
-                              className={inputCls + ' !h-9 !text-xs'}
+                              rows={3}
+                              className={inputCls + ' !h-auto !min-h-[88px] !py-3 !text-xs resize-y'}
                             />
+                            <p className="mt-1.5 text-[11px] text-on-surface-variant font-korean">
+                              이 내용은 정산서 상세내역에서만 표시되며, 금액 셀 크기나 계산에는 영향을 주지 않습니다.
+                            </p>
                           </div>
                         </div>
                       )}
@@ -687,6 +689,9 @@ export default function CategoryTab({ agencyId }: { agencyId: string }) {
                               desc={opt.desc}
                             />
                           ))}
+                          <p className="ml-1 pt-2 text-[11px] text-on-surface-variant font-korean">
+                            선택한 항목은 기사 등록 화면의 차감 항목에도 기본 적용됩니다.
+                          </p>
                         </div>
                       )}
                     </div>

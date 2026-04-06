@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
 function AdminOtpVerifyForm() {
-  const router = useRouter();
   const params = useSearchParams();
   const redirect = params.get("redirect") || "/admin/dashboard";
   const userId = params.get("uid") || "";
@@ -102,6 +101,7 @@ function AdminOtpVerifyForm() {
       <div className="hidden lg:flex lg:w-[55%] relative bg-sidebar flex-col items-center justify-center overflow-hidden">
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] h-[480px] rounded-full bg-primary/20 blur-[120px] pointer-events-none" />
         <div className="relative z-10 flex flex-col items-center text-center px-12">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="logiSSign" className="w-[280px] object-contain mb-6" />
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 mb-4">
             <span className="w-2 h-2 rounded-full bg-emerald-400" />

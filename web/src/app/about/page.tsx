@@ -518,11 +518,13 @@ function PlanFinder() {
   );
 }
 
+void PlanFinder;
+
 /* ───────────────────────── Page ───────────────────────── */
 
 export default function LandingPage() {
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
-  const [showTech, setShowTech] = useState(false);
+  const [_billingCycle, _setBillingCycle] = useState<BillingCycle>('monthly');
+  const [_showTech, _setShowTech] = useState(false);
 
   return (
     <div className="min-h-screen">
@@ -530,6 +532,7 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-50 bg-[#0a0f1e]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="logiSSign" className="w-[120px] object-contain" />
           </Link>
           <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
@@ -856,6 +859,7 @@ export default function LandingPage() {
             {/* Brand */}
             <div>
               <div className="flex items-center gap-2.5 mb-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/logo.png" alt="logiSSign" className="h-7 object-contain" />
               </div>
               <p className="text-xs text-gray-500 leading-relaxed max-w-xs">

@@ -65,6 +65,27 @@ export async function POST(request: NextRequest) {
       if (key in fields) safeFields[key] = fields[key]
     }
 
+    const nextEmployeeCode = typeof safeFields.employee_code === 'string'
+      ? safeFields.employee_code.trim()
+      : null
+
+    if (nextEmployeeCode) {
+      const { data: duplicateDriver } = await supabaseAdmin
+        .from('drivers')
+        .select('id')
+        .eq('agency_id', auth.agencyId)
+        .ilike('employee_code', nextEmployeeCode)
+        .neq('id', driverId)
+        .limit(1)
+        .maybeSingle()
+
+      if (duplicateDriver) {
+        return NextResponse.json({ error: '이미 사용 중인 사번입니다.' }, { status: 409 })
+      }
+
+      safeFields.employee_code = nextEmployeeCode
+    }
+
     if (Object.keys(safeFields).length > 0) {
       const encryptedFields = await encryptDriverPii(safeFields)
       const { error: updateErr } = await supabaseAdmin

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   const limited = rateLimitAuth(ip, '/api/contracts/convert')
   if (limited) return limited
 
-  const { auth, error: authError } = await authenticateRequest(request)
+  const { error: authError } = await authenticateRequest(request)
   if (authError) return authError
 
   try {

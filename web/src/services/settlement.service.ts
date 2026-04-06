@@ -30,7 +30,12 @@ export interface SettlementWithDriver {
   status: string
   sent_at: string | null
   created_at: string
-  drivers: { name: string; employee_code: string | null } | null
+  drivers: {
+    name: string
+    employee_code: string | null
+    driver_code: string | null
+    phone: string | null
+  } | null
   principals: { name: string } | null
 }
 
@@ -52,7 +57,7 @@ const SETTLEMENT_SELECT = [
   'is_business_owner', 'vat_included',
   'deduction_detail', 'route_details',
   'status', 'sent_at', 'created_at',
-  'drivers(name, employee_code)',
+  'drivers(name, employee_code, driver_code, phone)',
   'principals(name)',
 ].join(', ')
 

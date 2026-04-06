@@ -3,18 +3,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { authenticateCron } from '@/lib/api-auth'
 import { todayKST, addDays } from '@/lib/date-kst'
-
-/**
- * GET /api/cron/renewal-check
- *
- * 매일 실행 (Vercel CRON 또는 외부 스케줄러):
- * 1. 만료 60일 이내 active 기간 조회
- * 2. 이미 재계약 요청(pending/approved amendment)이 없는 기사에게 알림 생성
- * 3. upcoming 기간 중 시작일이 오늘인 것 → active 전환
- *
- * Vercel cron 설정: vercel.json에 추가
- * { "crons": [{ "path": "/api/cron/renewal-check", "schedule": "0 1 * * *" }] }
- */
+import {
+  ADMIN_SETTINGS_KEYS,
+  DEFAULT_ADMIN_PAYMENT_SETTINGS,
+  buildAdminSettingsPayload,
+} from '@/lib/admin-settings'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,7 +15,6 @@ const supabaseAdmin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
-// Expo Push API
 async function sendExpoPush(tokens: string[], title: string, body: string, data?: Record<string, string>) {
   const messages = tokens.filter(Boolean).map((to) => ({
     to,
@@ -40,12 +32,70 @@ async function sendExpoPush(tokens: string[], title: string, body: string, data?
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(batch.length === 1 ? batch[0] : batch),
-    }).catch(err => console.error('Push notification failed:', err))
+    }).catch((error) => console.error('Push notification failed:', error))
   }
 }
 
+async function getPaymentSettings() {
+  const { data } = await supabaseAdmin
+    .from('admin_settings')
+    .select('value')
+    .eq('key', ADMIN_SETTINGS_KEYS.payment)
+    .maybeSingle()
+
+  return buildAdminSettingsPayload({
+    [ADMIN_SETTINGS_KEYS.payment]: data?.value,
+  }).payment
+}
+
+async function createSubscriptionExpiryNotice(params: {
+  agencyId: string
+  plan: string
+  expiresAt: string
+  daysLeft: number
+}) {
+  const title = `플랜 만료 예정 안내 (D-${params.daysLeft})`
+  const today = todayKST()
+  const noticeDateStart = `${today}T00:00:00+09:00`
+
+  const { data: existing } = await supabaseAdmin
+    .from('notices')
+    .select('id')
+    .eq('agency_id', params.agencyId)
+    .eq('title', title)
+    .gte('created_at', noticeDateStart)
+    .limit(1)
+    .maybeSingle()
+
+  if (existing?.id) {
+    return false
+  }
+
+  const expiryText = new Date(params.expiresAt).toLocaleDateString('ko-KR')
+  const content =
+    `현재 이용 중인 ${params.plan.toUpperCase()} 플랜의 만료 예정일이 ${expiryText} 입니다.\n` +
+    '설정 > 결제 관리에서 카드 등록 상태와 다음 결제 계획을 확인해 주세요.\n' +
+    '카드 등록은 구독형 플랜 이용 시에만 가능합니다.'
+
+  const { error } = await supabaseAdmin.from('notices').insert({
+    created_by_type: 'provider',
+    agency_id: params.agencyId,
+    target_type: 'agency',
+    title,
+    content,
+    category: 'notice',
+    status: 'published',
+    published_at: new Date().toISOString(),
+  })
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return true
+}
+
 export async function GET(request: NextRequest) {
-  // timing-safe 인증
   const cronError = authenticateCron(request)
   if (cronError) return cronError
 
@@ -53,11 +103,9 @@ export async function GET(request: NextRequest) {
   const sixtyDaysLater = addDays(today, 60)
   let notified = 0
   let activated = 0
+  let subscriptionExpiryNotices = 0
 
   try {
-    // ──────────────────────────────────
-    // 1. 만료 60일 이내 기간 조회 → 알림
-    // ──────────────────────────────────
     const { data: expiring } = await supabaseAdmin
       .from('driver_contract_periods')
       .select('id, driver_id, agency_id, period_end')
@@ -66,8 +114,7 @@ export async function GET(request: NextRequest) {
       .gte('period_end', today)
 
     if (expiring && expiring.length > 0) {
-      // 이미 pending 재계약 요청이 있는 기사 제외
-      const driverIds = Array.from(new Set((expiring as { driver_id: string }[]).map((p) => p.driver_id)))
+      const driverIds = Array.from(new Set((expiring as { driver_id: string }[]).map((period) => period.driver_id)))
       const { data: existingAmendments } = await supabaseAdmin
         .from('contract_amendments')
         .select('driver_id')
@@ -76,29 +123,29 @@ export async function GET(request: NextRequest) {
         .in('status', ['pending', 'approved'])
 
       const alreadyHandled = new Set(
-        (existingAmendments as { driver_id: string }[] ?? []).map((a) => a.driver_id)
+        ((existingAmendments as { driver_id: string }[] | null) ?? []).map((item) => item.driver_id)
       )
 
-      const needsNotification = (expiring as { driver_id: string; period_end: string }[])
-        .filter((p) => !alreadyHandled.has(p.driver_id))
+      const needsNotification = (expiring as { driver_id: string; period_end: string }[]).filter(
+        (period) => !alreadyHandled.has(period.driver_id)
+      )
 
       if (needsNotification.length > 0) {
-        // 기사 push_token 조회
-        const notifyDriverIds = needsNotification.map((p) => p.driver_id)
+        const notifyDriverIds = needsNotification.map((period) => period.driver_id)
         const { data: drivers } = await supabaseAdmin
           .from('drivers')
           .select('id, push_token')
           .in('id', notifyDriverIds)
 
         const tokens = (drivers ?? [])
-          .filter((d): d is { id: string; push_token: string } => !!(d as { push_token?: string }).push_token)
-          .map((d) => (d as { push_token: string }).push_token)
+          .filter((driver): driver is { id: string; push_token: string } => !!(driver as { push_token?: string }).push_token)
+          .map((driver) => (driver as { push_token: string }).push_token)
 
         if (tokens.length > 0) {
           await sendExpoPush(
             tokens,
-            '📋 계약 만료 안내',
-            '계약 만료가 60일 이내입니다. 재계약 관련 안내를 확인해주세요.',
+            '계약 만료 안내',
+            '계약 만료일이 60일 이내로 다가오고 있습니다. 갱신 관련 안내를 확인해 주세요.',
             { type: 'renewal_reminder' }
           )
           notified = tokens.length
@@ -106,9 +153,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // ──────────────────────────────────
-    // 2. upcoming → active 전환
-    // ──────────────────────────────────
     const { data: upcoming } = await supabaseAdmin
       .from('driver_contract_periods')
       .select('id, driver_id')
@@ -116,17 +160,17 @@ export async function GET(request: NextRequest) {
       .lte('period_start', today)
 
     if (upcoming && upcoming.length > 0) {
-      const upcomingIds = (upcoming as { id: string; driver_id: string }[]).map((p) => p.id)
-      const upcomingDriverIds = Array.from(new Set((upcoming as { id: string; driver_id: string }[]).map((p) => p.driver_id)))
+      const upcomingIds = (upcoming as { id: string; driver_id: string }[]).map((period) => period.id)
+      const upcomingDriverIds = Array.from(
+        new Set((upcoming as { id: string; driver_id: string }[]).map((period) => period.driver_id))
+      )
 
-      // 기존 active → expired
       await supabaseAdmin
         .from('driver_contract_periods')
         .update({ status: 'expired', updated_at: new Date().toISOString() })
         .in('driver_id', upcomingDriverIds)
         .eq('status', 'active')
 
-      // upcoming → active
       await supabaseAdmin
         .from('driver_contract_periods')
         .update({ status: 'active', updated_at: new Date().toISOString() })
@@ -135,22 +179,69 @@ export async function GET(request: NextRequest) {
       activated = upcomingIds.length
     }
 
-    // ──────────────────────────────────
-    // 3. 만료일 지난 active → expired
-    // ──────────────────────────────────
     await supabaseAdmin
       .from('driver_contract_periods')
       .update({ status: 'expired', updated_at: new Date().toISOString() })
       .eq('status', 'active')
       .lt('period_end', today)
 
+    const paymentSettings = await getPaymentSettings().catch(() => DEFAULT_ADMIN_PAYMENT_SETTINGS)
+    const noticeDays = paymentSettings.subscriptionExpiryNoticeDays.length
+      ? paymentSettings.subscriptionExpiryNoticeDays
+      : DEFAULT_ADMIN_PAYMENT_SETTINGS.subscriptionExpiryNoticeDays
+
+    const { data: subscriptions, error: subscriptionError } = await supabaseAdmin
+      .from('subscriptions')
+      .select('agency_id, plan, status, expires_at')
+      .eq('status', 'active')
+      .not('expires_at', 'is', null)
+
+    if (subscriptionError) {
+      throw subscriptionError
+    }
+
+    const activeSubscriptions =
+      (subscriptions as Array<{
+        agency_id: string
+        plan: string
+        status: string
+        expires_at: string | null
+      }> | null) ?? []
+
+    for (const subscription of activeSubscriptions) {
+      if (!subscription.expires_at || subscription.plan === 'point') continue
+
+      const expiresAt = new Date(subscription.expires_at)
+      const todayDate = new Date(`${today}T00:00:00+09:00`)
+      const expiryDate = new Date(
+        `${expiresAt.getFullYear()}-${String(expiresAt.getMonth() + 1).padStart(2, '0')}-${String(
+          expiresAt.getDate()
+        ).padStart(2, '0')}T00:00:00+09:00`
+      )
+
+      const daysLeft = Math.round((expiryDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24))
+      if (!noticeDays.includes(daysLeft)) continue
+
+      const created = await createSubscriptionExpiryNotice({
+        agencyId: subscription.agency_id,
+        plan: subscription.plan,
+        expiresAt: subscription.expires_at,
+        daysLeft,
+      })
+
+      if (created) {
+        subscriptionExpiryNotices += 1
+      }
+    }
+
     return NextResponse.json({
       success: true,
       date: today,
       notified,
       activated,
+      subscriptionExpiryNotices,
     })
-  } catch (err) {
-    return apiError(err)
+  } catch (error) {
+    return apiError(error)
   }
 }

@@ -12,6 +12,7 @@ import {
   generateGovernmentFormPdf,
 } from './government-form-pdf.service'
 import { generateSignedDocumentPdf, type SignField, type SignResponse } from './document-sign-field.service'
+import { buildContractPdfResponses } from './contract-pdf-field-response.service'
 import type { ContractBindingData } from './contract.service'
 
 /**
@@ -508,18 +509,14 @@ async function generatePdfTypeSignedContract(
     if (!pdfRes.ok) throw new Error('?쒗뵆由?PDF ?ㅼ슫濡쒕뱶 ?ㅽ뙣')
     const originalPdfBytes = new Uint8Array(await pdfRes.arrayBuffer())
 
-    // 2. ?묐떟??SignResponse ?뺤떇?쇰줈 蹂??
-    const responses: SignResponse[] = signFields
-      .filter(f => fieldResponses[f.id])
-      .map(f => ({
-        id: f.id,
-        delivery_id: contractId,
-        field_id: f.id,
-        driver_id: '',
-        value: fieldResponses[f.id]?.value ?? null,
-        image_data: fieldResponses[f.id]?.imageData ?? null,
-        signed_at: (contractRec.signed_at as string) ?? new Date().toISOString(),
-      }))
+    // 2. sender 기본 도장/서명 default_value까지 포함해 PDF 오버레이 응답 정규화
+    const responses: SignResponse[] = await buildContractPdfResponses({
+      signFields,
+      fieldResponses,
+      contractId,
+      signedAt: (contractRec.signed_at as string) ?? new Date().toISOString(),
+      supabase,
+    })
 
     // 3. ?먮낯 PDF???꾨뱶 ?ㅻ쾭?덉씠 (document-sign-field.service???⑥닔 ?ъ궗??
     const signedPdfBytes = await generateSignedDocumentPdf(originalPdfBytes, signFields, responses)

@@ -14,8 +14,7 @@ import {
 import { GradientButton } from '../../components/common/GradientView';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { supabase } from '../../lib/supabase';
-import { colors, spacing, typography, borderRadius, shadows } from '../../constants/theme';
+import { colors, spacing, typography, borderRadius } from '../../constants/theme';
 
 interface AgencyInfo {
   id: string;
@@ -25,13 +24,12 @@ interface AgencyInfo {
 export default function RegisterScreen() {
   const router = useRouter();
 
-  // Step 1: 초대코드
   const [inviteCode, setInviteCode] = useState('');
   const [agency, setAgency] = useState<AgencyInfo | null>(null);
   const [isValidating, setIsValidating] = useState(false);
 
-  // Step 2: 기본 정보 + 계정
   const [name, setName] = useState('');
+  const [driverCode, setDriverCode] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -39,54 +37,60 @@ export default function RegisterScreen() {
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Step 3: 동의 항목
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [agreePrivacy, setAgreePrivacy] = useState(false);
   const [agreeAge, setAgreeAge] = useState(false);
 
-  /** 초대코드 검증 → 서버 API로 검증 (가입 API의 사전 확인) */
   const validateInviteCode = async () => {
     if (!inviteCode.trim()) {
-      Alert.alert('입력 오류', '초대코드를 입력해주세요.');
+      Alert.alert('입력 오류', '추천코드를 입력해 주세요.');
       return;
     }
 
     setIsValidating(true);
     try {
-      // driver-signup API에 validate 모드로 호출
-      const APP_URL = process.env.EXPO_PUBLIC_APP_URL || 'https://logissign.com';
-      const res = await fetch(`${APP_URL}/api/auth/driver-signup`, {
+      const appUrl = process.env.EXPO_PUBLIC_APP_URL || 'https://logissign.com';
+      const res = await fetch(`${appUrl}/api/auth/driver-signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inviteCode: inviteCode.trim().toUpperCase(), validateOnly: true }),
+        body: JSON.stringify({
+          inviteCode: inviteCode.trim().toUpperCase(),
+          validateOnly: true,
+        }),
       });
       const data = await res.json();
-      setIsValidating(false);
 
       if (!res.ok || data.error) {
-        Alert.alert('인증 실패', data.error || '유효하지 않은 초대코드입니다.');
+        Alert.alert('인증 실패', data.error || '유효하지 않은 추천코드입니다.');
         return;
       }
-      setAgency({ id: data.agencyId ?? '', name: data.agencyName ?? '' });
+
+      setAgency({
+        id: data.agencyId ?? '',
+        name: data.agencyName ?? '',
+      });
     } catch {
+      Alert.alert('오류', '추천코드 확인 중 문제가 발생했습니다.');
+    } finally {
       setIsValidating(false);
-      Alert.alert('오류', '초대코드 검증 중 문제가 발생했습니다.');
     }
   };
 
-  /** 이메일 + 비밀번호로 가입 → drivers 레코드 생성 */
   const handleRegister = async () => {
-    // 유효성 검사
     if (!name.trim()) {
-      Alert.alert('입력 오류', '이름을 입력해주세요.');
+      Alert.alert('입력 오류', '이름을 입력해 주세요.');
+      return;
+    }
+    if (!driverCode.trim()) {
+      Alert.alert('입력 오류', '기사 고유코드를 입력해 주세요.');
       return;
     }
     if (!phone.trim()) {
-      Alert.alert('입력 오류', '전화번호를 입력해주세요.');
+      Alert.alert('입력 오류', '전화번호를 입력해 주세요.');
       return;
     }
     if (!email.trim()) {
-      Alert.alert('입력 오류', '이메일을 입력해주세요.');
+      Alert.alert('입력 오류', '이메일을 입력해 주세요.');
       return;
     }
     if (password.length < 8) {
@@ -98,21 +102,20 @@ export default function RegisterScreen() {
       return;
     }
     if (!agreeTerms || !agreePrivacy || !agreeAge) {
-      Alert.alert('동의 필요', '필수 약관에 모두 동의해주세요.');
+      Alert.alert('동의 필요', '필수 약관에 모두 동의해 주세요.');
       return;
     }
 
     setIsSubmitting(true);
-
     try {
-      // 서버 API 한 번 호출로 Auth 생성 + driver 연결 원자적 처리
-      const APP_URL = process.env.EXPO_PUBLIC_APP_URL || 'https://logissign.com';
-      const res = await fetch(`${APP_URL}/api/auth/driver-signup`, {
+      const appUrl = process.env.EXPO_PUBLIC_APP_URL || 'https://logissign.com';
+      const res = await fetch(`${appUrl}/api/auth/driver-signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           inviteCode: inviteCode.trim().toUpperCase(),
           name: name.trim(),
+          driverCode: driverCode.trim().toUpperCase(),
           phone: phone.trim(),
           email: email.trim(),
           password,
@@ -121,38 +124,37 @@ export default function RegisterScreen() {
       });
 
       const result = await res.json();
-
       if (!res.ok || !result.success) {
-        setIsSubmitting(false);
         Alert.alert('가입 실패', result.error || '회원가입에 실패했습니다.');
         return;
       }
 
-      setIsSubmitting(false);
-
-      // 퇴사 후 재가입/이직 케이스 구분
-      let message = `${result.agencyName} 소속으로 가입되었습니다.\n로그인해주세요.`;
       let title = '가입 완료';
+      let message = `${result.agencyName} 소속으로 가입되었습니다.\n로그인해 주세요.`;
+
       if (result.reinstated) {
         title = '복직 완료';
-        message = `${result.agencyName} 소속으로 복직되었습니다.\n새 비밀번호로 로그인해주세요.`;
+        message = `${result.agencyName} 소속으로 복직 처리되었습니다.\n새 비밀번호로 로그인해 주세요.`;
       } else if (result.transferred) {
-        title = '이직 가입 완료';
-        message = `${result.agencyName} 소속으로 등록되었습니다.\n새 비밀번호로 로그인해주세요.`;
+        title = '이관 가입 완료';
+        message = `${result.agencyName} 소속으로 이관되었습니다.\n새 비밀번호로 로그인해 주세요.`;
       }
 
-      Alert.alert(
-        title,
-        message,
-        [{ text: '로그인하기', onPress: () => router.replace('/(auth)/login') }]
-      );
-    } catch (err) {
-      setIsSubmitting(false);
+      Alert.alert(title, message, [
+        {
+          text: '로그인하기',
+          onPress: () => router.replace('/(auth)/login'),
+        },
+      ]);
+    } catch {
       Alert.alert('오류', '회원가입 중 문제가 발생했습니다.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const step = agency ? 2 : 1;
+  const allChecked = agreeTerms && agreePrivacy && agreeAge;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -164,13 +166,12 @@ export default function RegisterScreen() {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          {/* 헤더 */}
           <View style={styles.header}>
             <TouchableOpacity
               onPress={() => (agency ? setAgency(null) : router.back())}
               style={styles.backButton}
             >
-              <Text style={styles.backText}>{'<'} {agency ? '초대코드' : '뒤로'}</Text>
+              <Text style={styles.backText}>{'<'} {agency ? '추천코드' : '뒤로'}</Text>
             </TouchableOpacity>
             <Text style={styles.headerTitle}>회원가입</Text>
             <View style={styles.stepIndicator}>
@@ -178,19 +179,18 @@ export default function RegisterScreen() {
             </View>
           </View>
 
-          {/* Step 1: 초대코드 */}
           {!agency ? (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>초대코드 인증</Text>
+              <Text style={styles.sectionTitle}>추천코드 인증</Text>
               <Text style={styles.sectionDesc}>
-                소속 운수사에서 받은 초대코드를 입력해주세요.
+                소속 대리점에서 받은 추천코드를 입력해 주세요.
               </Text>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>초대코드</Text>
+                <Text style={styles.label}>추천코드</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="초대코드 입력"
+                  placeholder="추천코드 입력"
                   placeholderTextColor={colors.outline}
                   value={inviteCode}
                   onChangeText={setInviteCode}
@@ -214,10 +214,9 @@ export default function RegisterScreen() {
               </TouchableOpacity>
             </View>
           ) : (
-            /* Step 2: 기본 정보 + 계정 설정 */
             <View style={styles.section}>
               <View style={styles.agencyBadge}>
-                <Text style={styles.agencyBadgeLabel}>소속 운수사</Text>
+                <Text style={styles.agencyBadgeLabel}>소속 대리점</Text>
                 <Text style={styles.agencyBadgeName}>{agency.name}</Text>
               </View>
 
@@ -227,10 +226,23 @@ export default function RegisterScreen() {
                 <Text style={styles.label}>이름 *</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="실명 입력"
+                  placeholder="이름 입력"
                   placeholderTextColor={colors.outline}
                   value={name}
                   onChangeText={setName}
+                  editable={!isSubmitting}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>기사 고유코드 *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="예: DRV-000001"
+                  placeholderTextColor={colors.outline}
+                  value={driverCode}
+                  onChangeText={setDriverCode}
+                  autoCapitalize="characters"
                   editable={!isSubmitting}
                 />
               </View>
@@ -261,10 +273,12 @@ export default function RegisterScreen() {
                 />
               </View>
 
-              <Text style={[styles.sectionTitle, { marginTop: spacing.xl }]}>계정 설정</Text>
+              <Text style={[styles.sectionTitle, { marginTop: spacing.xl }]}>
+                계정 설정
+              </Text>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>이메일 (로그인용) *</Text>
+                <Text style={styles.label}>이메일 *</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="example@email.com"
@@ -295,7 +309,7 @@ export default function RegisterScreen() {
                 <Text style={styles.label}>비밀번호 확인 *</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="비밀번호 재입력"
+                  placeholder="비밀번호 다시 입력"
                   placeholderTextColor={colors.outline}
                   value={passwordConfirm}
                   onChangeText={setPasswordConfirm}
@@ -304,44 +318,75 @@ export default function RegisterScreen() {
                 />
               </View>
 
-              {/* 약관 동의 */}
               <View style={styles.consentSection}>
-                <Text style={styles.consentTitle}>약관 동의</Text>
+                <Text style={styles.consentTitle}>필수 동의</Text>
 
                 <TouchableOpacity
                   style={styles.consentRow}
                   onPress={() => {
-                    const allChecked = agreeTerms && agreePrivacy && agreeAge;
-                    setAgreeTerms(!allChecked);
-                    setAgreePrivacy(!allChecked);
-                    setAgreeAge(!allChecked);
+                    const next = !allChecked;
+                    setAgreeTerms(next);
+                    setAgreePrivacy(next);
+                    setAgreeAge(next);
                   }}
                   activeOpacity={0.7}
                 >
-                  <View style={[styles.checkbox, (agreeTerms && agreePrivacy && agreeAge) && styles.checkboxChecked]}>
-                    {(agreeTerms && agreePrivacy && agreeAge) && <Text style={styles.checkmark}>✓</Text>}
+                  <View
+                    style={[
+                      styles.checkbox,
+                      allChecked && styles.checkboxChecked,
+                    ]}
+                  >
+                    {allChecked && <Text style={styles.checkmark}>✓</Text>}
                   </View>
                   <Text style={styles.consentAllLabel}>전체 동의</Text>
                 </TouchableOpacity>
 
                 <View style={styles.consentDivider} />
 
-                <TouchableOpacity style={styles.consentRow} onPress={() => setAgreeTerms(!agreeTerms)} activeOpacity={0.7}>
-                  <View style={[styles.checkbox, agreeTerms && styles.checkboxChecked]}>
+                <TouchableOpacity
+                  style={styles.consentRow}
+                  onPress={() => setAgreeTerms(!agreeTerms)}
+                  activeOpacity={0.7}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      agreeTerms && styles.checkboxChecked,
+                    ]}
+                  >
                     {agreeTerms && <Text style={styles.checkmark}>✓</Text>}
                   </View>
                   <Text style={styles.consentLabel}>[필수] 서비스 이용약관 동의</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.consentRow} onPress={() => setAgreePrivacy(!agreePrivacy)} activeOpacity={0.7}>
-                  <View style={[styles.checkbox, agreePrivacy && styles.checkboxChecked]}>
+                <TouchableOpacity
+                  style={styles.consentRow}
+                  onPress={() => setAgreePrivacy(!agreePrivacy)}
+                  activeOpacity={0.7}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      agreePrivacy && styles.checkboxChecked,
+                    ]}
+                  >
                     {agreePrivacy && <Text style={styles.checkmark}>✓</Text>}
                   </View>
                   <Text style={styles.consentLabel}>[필수] 개인정보 수집·이용 동의</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.consentRow} onPress={() => setAgreeAge(!agreeAge)} activeOpacity={0.7}>
-                  <View style={[styles.checkbox, agreeAge && styles.checkboxChecked]}>
+                <TouchableOpacity
+                  style={styles.consentRow}
+                  onPress={() => setAgreeAge(!agreeAge)}
+                  activeOpacity={0.7}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      agreeAge && styles.checkboxChecked,
+                    ]}
+                  >
                     {agreeAge && <Text style={styles.checkmark}>✓</Text>}
                   </View>
                   <Text style={styles.consentLabel}>[필수] 만 14세 이상 확인</Text>

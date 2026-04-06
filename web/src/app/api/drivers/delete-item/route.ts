@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ deleted: true })
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: '삭제 실패' }, { status: 500 })
   }
 }

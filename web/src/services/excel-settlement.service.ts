@@ -4,6 +4,19 @@ import type { DriverRate, DriverDeduction } from './driver-rate.service'
 import type { DriverRouteRate } from './driver-route-rate.service'
 import type { FieldConfig } from './principal.service'
 
+export interface ExcelColumnMapping {
+  delivery_amount_col?: string
+  return_amount_col?: string
+  collect_amount_col?: string
+  driver_name_col?: string
+}
+
+export interface SettlementCalcResult {
+  delivery_amount: number
+  return_amount: number
+  collect_amount: number
+}
+
 /* ── Types ── */
 
 export interface ExcelColumnMapping {
@@ -23,12 +36,23 @@ export interface ParsedExcelRow {
   delivery_count: number
   return_count: number
   collect_count: number
+  delivery_amount: number
+  return_amount: number
+  collect_amount: number
   fresh_count: number
   etc_count: number
   fresh_back_amount: number   // 프레쉬백 금액
   incentive_amount: number    // 인센티브 금액
   etc_income_amount: number   // 기타수입 금액
   raw_data: Record<string, unknown>
+}
+
+export interface ExcelColumnMapping {
+  driver_name_col?: string
+}
+
+export interface ParsedExcelRow {
+  driver_name?: string
 }
 
 /** Coupang 정산총괄 시트에서 파싱한 기사별 요약 행 */
@@ -117,6 +141,162 @@ export function calculateTaxDeductions(
   return { vatAmount, withholdingAmount, finalAmount }
 }
 
+export function calculateRateAmount(
+  rateType: DriverRate['rate_type'],
+  count: number,
+  unitPrice: number,
+  grossAmount = 0
+): number {
+  if (rateType === 'percentage') {
+    if (grossAmount > 0) {
+      return Math.round(grossAmount * (1 - (unitPrice / 100)))
+    }
+
+    return count * unitPrice
+  }
+
+  return count * unitPrice
+}
+
+export function aggregateParsedRows(parsedRows: ParsedExcelRow[]): ParsedExcelRow[] {
+  const aggregated = new Map<string, ParsedExcelRow>()
+
+  for (const row of parsedRows) {
+    const existing = aggregated.get(row.employee_code)
+    if (!existing) {
+      aggregated.set(row.employee_code, { ...row })
+      continue
+    }
+
+    if (!existing.driver_name && row.driver_name) {
+      existing.driver_name = row.driver_name
+    }
+
+    existing.delivery_count += row.delivery_count
+    existing.return_count += row.return_count
+    existing.collect_count += row.collect_count
+    existing.delivery_amount += row.delivery_amount
+    existing.return_amount += row.return_amount
+    existing.collect_amount += row.collect_amount
+    existing.fresh_count += row.fresh_count
+    existing.etc_count += row.etc_count
+    existing.fresh_back_amount += row.fresh_back_amount
+    existing.incentive_amount += row.incentive_amount
+    existing.etc_income_amount += row.etc_income_amount
+    existing.raw_data = {
+      ...existing.raw_data,
+      ...row.raw_data,
+      _merged_rows: Number(existing.raw_data._merged_rows ?? 1) + 1,
+    }
+  }
+
+  return Array.from(aggregated.values())
+}
+
+export function aggregateCoupangSummaryRows(rows: CoupangSummaryRow[]): CoupangSummaryRow[] {
+  const aggregated = new Map<string, CoupangSummaryRow>()
+
+  for (const row of rows) {
+    const existing = aggregated.get(row.employee_code)
+    if (!existing) {
+      aggregated.set(row.employee_code, { ...row })
+      continue
+    }
+
+    existing.delivery_count += row.delivery_count
+    existing.return_count += row.return_count
+    existing.total_count += row.total_count
+    existing.coupang_base_amount += row.coupang_base_amount
+    existing.fresh_incentive += row.fresh_incentive
+    existing.extra_incentive += row.extra_incentive
+    existing.damage_deduction += row.damage_deduction
+    existing.coupang_total += row.coupang_total
+  }
+
+  return Array.from(aggregated.values())
+}
+
+function appendContractDeductions(
+  grossAmount: number,
+  totalCount: number,
+  deductions: DriverDeduction[],
+  deductionDetails: SettlementCalcResult['deduction_details']
+): number {
+  let totalDeduction = 0
+
+  for (const ded of deductions) {
+    let calculated = 0
+
+    if (ded.deduction_type === 'fixed') {
+      calculated = ded.amount
+    } else if (ded.deduction_type === 'percentage') {
+      calculated = Math.round(grossAmount * (ded.amount / 100))
+    } else if (ded.deduction_type === 'per_unit') {
+      calculated = totalCount * ded.amount
+    }
+
+    totalDeduction += calculated
+    deductionDetails.push({
+      name: ded.name,
+      deduction_type: ded.deduction_type,
+      amount: ded.amount,
+      calculated,
+    })
+  }
+
+  return totalDeduction
+}
+
+function appendInsuranceDeductions(
+  grossAmount: number,
+  fieldConfig: FieldConfig | undefined,
+  deductionDetails: SettlementCalcResult['deduction_details']
+): number {
+  if (!fieldConfig) return 0
+
+  let totalDeduction = 0
+  const insuranceConfig = fieldConfig.insurance_config
+  const deductionSection = fieldConfig.deduction_section
+
+  if (insuranceConfig?.employment_insurance?.enabled && deductionSection?.employment_insurance?.enabled) {
+    const rate = insuranceConfig.employment_insurance.rate
+    const splitMode = deductionSection.employment_insurance.split_mode
+    const driverShare = splitMode === 'split_50_50' ? 0.5 : 0
+    if (driverShare > 0) {
+      const calculated = Math.round(grossAmount * (rate / 100) * driverShare)
+      if (calculated > 0) {
+        totalDeduction += calculated
+        deductionDetails.push({
+          name: `고용보험 (${rate}% x ${splitMode === 'split_50_50' ? '50%' : '100%'})`,
+          deduction_type: 'percentage',
+          amount: rate,
+          calculated,
+        })
+      }
+    }
+  }
+
+  if (insuranceConfig?.industrial_insurance?.enabled && deductionSection?.industrial_insurance?.enabled) {
+    const rate = insuranceConfig.industrial_insurance.rate
+    const splitMode = deductionSection.industrial_insurance.split_mode
+    const driverShare = splitMode === 'split_50_50' ? 0.5 : 0
+    if (driverShare > 0) {
+      const calculated = Math.round(grossAmount * (rate / 100) * driverShare)
+      if (calculated > 0) {
+        totalDeduction += calculated
+        deductionDetails.push({
+          name: `산재보험 (${rate}% x ${splitMode === 'split_50_50' ? '50%' : '100%'})`,
+          deduction_type: 'percentage',
+          amount: rate,
+          calculated,
+        })
+      }
+    }
+  }
+
+  return totalDeduction
+}
+
 export interface SettlementCalcResult {
   driver_id: string
   driver_name: string
@@ -163,6 +343,18 @@ export interface UnmatchedRow {
   raw_data: Record<string, unknown>
 }
 
+export interface UnmatchedRow {
+  reason?: string
+  driver_name?: string | null
+}
+
+function normalizeMatchingText(value: string | null | undefined): string {
+  return String(value ?? '')
+    .trim()
+    .replace(/\s+/g, '')
+    .toLowerCase()
+}
+
 /* ── Default column mappings per principal ── */
 
 export const DEFAULT_COLUMN_MAPPINGS: Record<string, ExcelColumnMapping> = {
@@ -187,6 +379,7 @@ export function parseExcelData(
 ): { parsed: ParsedExcelRow[]; errors: string[] } {
   const parsed: ParsedExcelRow[] = []
   const errors: string[] = []
+  const codeToNameMap = new Map<string, string>()
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]
@@ -195,9 +388,26 @@ export function parseExcelData(
       continue // skip rows without employee code
     }
 
+    const driverName = mapping.driver_name_col
+      ? String(row[mapping.driver_name_col] ?? '').trim()
+      : ''
+
+    if (driverName) {
+      const normalizedName = normalizeMatchingText(driverName)
+      const existingName = codeToNameMap.get(code)
+      if (existingName && existingName !== normalizedName) {
+        errors.push(`${i + 1}행: 사번 "${code}" 에 서로 다른 기사명이 섞여 있습니다. 파일을 확인해주세요.`)
+        continue
+      }
+      codeToNameMap.set(code, normalizedName)
+    }
+
     const delivery = Number(row[mapping.delivery_count_col] ?? 0) || 0
     const ret = mapping.return_count_col ? (Number(row[mapping.return_count_col] ?? 0) || 0) : 0
     const collect = mapping.collect_count_col ? (Number(row[mapping.collect_count_col] ?? 0) || 0) : 0
+    const deliveryAmount = mapping.delivery_amount_col ? (Number(row[mapping.delivery_amount_col] ?? 0) || 0) : 0
+    const returnAmount = mapping.return_amount_col ? (Number(row[mapping.return_amount_col] ?? 0) || 0) : 0
+    const collectAmount = mapping.collect_amount_col ? (Number(row[mapping.collect_amount_col] ?? 0) || 0) : 0
     const fresh = mapping.fresh_count_col ? (Number(row[mapping.fresh_count_col] ?? 0) || 0) : 0
     const etc = mapping.etc_count_col ? (Number(row[mapping.etc_count_col] ?? 0) || 0) : 0
     const freshBackAmt = mapping.fresh_back_amount_col ? (Number(row[mapping.fresh_back_amount_col] ?? 0) || 0) : 0
@@ -206,9 +416,13 @@ export function parseExcelData(
 
     parsed.push({
       employee_code: code,
+      driver_name: driverName || undefined,
       delivery_count: delivery,
       return_count: ret,
       collect_count: collect,
+      delivery_amount: deliveryAmount,
+      return_amount: returnAmount,
+      collect_amount: collectAmount,
       fresh_count: fresh,
       etc_count: etc,
       fresh_back_amount: freshBackAmt,
@@ -232,11 +446,11 @@ export function detectSheetTypes(
     let detected: SheetInfo['detected'] = 'generic'
 
     // Check for 정산총괄 pattern: row 4 has headers with ID, 배송, 반품
-    if (/정산총괄/.test(name)) {
+    if (/정산총괄|summary/i.test(name)) {
       detected = 'coupang_summary'
-    } else if (/정산Raw/.test(name)) {
+    } else if (/정산Raw|raw/i.test(name)) {
       detected = 'coupang_raw'
-    } else if (/분실파손/.test(name)) {
+    } else if (/분실파손|화물사고\s*상세내역|상세내역/i.test(name)) {
       detected = 'damage_list'
     } else if (rows.length >= 5) {
       const row4 = rows[4] as string[] | undefined
@@ -338,7 +552,8 @@ export function parseCoupangRaw(
 export async function calculateCoupangRouteSettlements(
   agencyId: string,
   rawRows: CoupangRawRow[],
-  summaryRows: CoupangSummaryRow[]
+  summaryRows: CoupangSummaryRow[],
+  fieldConfig?: FieldConfig
 ): Promise<{
   results: SettlementCalcResult[]
   unmatched: UnmatchedRow[]
@@ -373,11 +588,21 @@ export async function calculateCoupangRouteSettlements(
 
   // Fetch route rates for matched drivers
   const driverIds = drivers.map((d) => d.id)
-  const { data: routeRatesData } = await supabase
-    .from('driver_route_rates')
-    .select('*')
-    .in('driver_id', driverIds)
-    .eq('is_active', true)
+  const [routeRatesRes, deductionsRes] = await Promise.all([
+    supabase
+      .from('driver_route_rates')
+      .select('*')
+      .in('driver_id', driverIds)
+      .eq('is_active', true),
+    supabase
+      .from('driver_deductions')
+      .select('*')
+      .in('driver_id', driverIds)
+      .eq('is_active', true),
+  ])
+
+  const routeRatesData = routeRatesRes.data
+  const deductionsData = deductionsRes.data
 
   // Map: driver_id -> route_code -> DriverRouteRate
   const routeRateMap = new Map<string, Map<string, DriverRouteRate>>()
@@ -391,9 +616,17 @@ export async function calculateCoupangRouteSettlements(
     driverRoutes.set(rr.route_code, rr)
   }
 
+  const deductionsByDriver = new Map<string, DriverDeduction[]>()
+  for (const deduction of (deductionsData ?? []) as DriverDeduction[]) {
+    if (!deduction.driver_id) continue
+    const list = deductionsByDriver.get(deduction.driver_id) ?? []
+    list.push(deduction)
+    deductionsByDriver.set(deduction.driver_id, list)
+  }
+
   // Build summary map for pass-through amounts
   const summaryMap = new Map<string, CoupangSummaryRow>()
-  for (const s of summaryRows) {
+  for (const s of aggregateCoupangSummaryRows(summaryRows)) {
     summaryMap.set(s.employee_code, s)
   }
 
@@ -423,6 +656,7 @@ export async function calculateCoupangRouteSettlements(
     }
 
     const driverRoutes = routeRateMap.get(driver.id) ?? new Map()
+    const deductions = deductionsByDriver.get(driver.id) ?? []
     const summary = summaryMap.get(employeeCode)
 
     // Calculate per-route
@@ -437,6 +671,8 @@ export async function calculateCoupangRouteSettlements(
     let baseAmount = 0
     let totalDelivery = 0
     let totalReturn = 0
+    let deliveryAmountTotal = 0
+    let returnAmountTotal = 0
     const routeDetails: RouteSettlementDetail[] = []
     const rateDetails: SettlementCalcResult['rate_details'] = []
 
@@ -460,6 +696,8 @@ export async function calculateCoupangRouteSettlements(
       baseAmount += routeTotal
       totalDelivery += counts.delivery
       totalReturn += counts.return
+      deliveryAmountTotal += deliveryAmount
+      returnAmountTotal += returnAmount
 
       routeDetails.push({
         route_code: routeCode,
@@ -512,8 +750,11 @@ export async function calculateCoupangRouteSettlements(
       })
     }
 
-    const totalDeduction = damageDeduction
-    const netAmount = baseAmount + freshIncentive + extraIncentive - totalDeduction
+    const grossAmount = baseAmount + freshIncentive + extraIncentive
+    const contractDeduction = appendContractDeductions(grossAmount, totalDelivery + totalReturn, deductions, deductionDetails)
+    const insuranceDeduction = appendInsuranceDeductions(grossAmount, fieldConfig, deductionDetails)
+    const totalDeduction = damageDeduction + contractDeduction + insuranceDeduction
+    const netAmount = grossAmount - totalDeduction
 
     // Tax deductions from driver settings
     const tax = calculateTaxDeductions(netAmount, driver.is_business_owner, driver.vat_included)
@@ -545,6 +786,9 @@ export async function calculateCoupangRouteSettlements(
       delivery_count: totalDelivery,
       return_count: totalReturn,
       collect_count: 0,
+      delivery_amount: deliveryAmountTotal,
+      return_amount: returnAmountTotal,
+      collect_amount: 0,
       fresh_count: 0,
       etc_count: 0,
       total_count: totalCount,
@@ -573,7 +817,8 @@ export async function calculateCoupangRouteSettlements(
 
 export async function calculateCoupangSettlements(
   agencyId: string,
-  summaryRows: CoupangSummaryRow[]
+  summaryRows: CoupangSummaryRow[],
+  fieldConfig?: FieldConfig
 ): Promise<{
   results: SettlementCalcResult[]
   unmatched: UnmatchedRow[]
@@ -641,7 +886,7 @@ export async function calculateCoupangSettlements(
   const results: SettlementCalcResult[] = []
   const unmatched: UnmatchedRow[] = []
 
-  summaryRows.forEach((row, idx) => {
+  aggregateCoupangSummaryRows(summaryRows).forEach((row, idx) => {
     const driver = driverMap.get(row.employee_code)
     if (!driver) {
       unmatched.push({
@@ -663,15 +908,20 @@ export async function calculateCoupangSettlements(
     const totalCount = row.delivery_count + row.return_count
 
     let baseAmount = 0
+    let deliveryAmount = 0
+    let returnAmount = 0
     const rateDetails: SettlementCalcResult['rate_details'] = []
 
     for (const rate of rates) {
       const count = countMap[rate.package_type] ?? 0
       if (count === 0) continue
-      const amount = rate.rate_type === 'fixed'
-        ? count * rate.unit_price
-        : count * rate.unit_price
+      const packageGrossAmount = totalCount > 0
+        ? Math.round(row.coupang_base_amount * (count / totalCount))
+        : 0
+      const amount = calculateRateAmount(rate.rate_type, count, rate.unit_price, packageGrossAmount)
       baseAmount += amount
+      if (rate.package_type === '배송') deliveryAmount += amount
+      if (rate.package_type === '반품') returnAmount += amount
       rateDetails.push({
         package_type: rate.package_type,
         count,
@@ -689,25 +939,7 @@ export async function calculateCoupangSettlements(
     const damageDeduction = row.damage_deduction // 분실파손 차감
 
     // Calculate contract-based deductions
-    let contractDeductions = 0
     const deductionDetails: SettlementCalcResult['deduction_details'] = []
-    for (const ded of deductions) {
-      let calculated = 0
-      if (ded.deduction_type === 'fixed') {
-        calculated = ded.amount
-      } else if (ded.deduction_type === 'percentage') {
-        calculated = Math.round(baseAmount * (ded.amount / 100))
-      } else if (ded.deduction_type === 'per_unit') {
-        calculated = totalCount * ded.amount
-      }
-      contractDeductions += calculated
-      deductionDetails.push({
-        name: ded.name,
-        deduction_type: ded.deduction_type,
-        amount: ded.amount,
-        calculated,
-      })
-    }
 
     // Add damage deduction from Excel as a line item
     if (damageDeduction > 0) {
@@ -719,8 +951,11 @@ export async function calculateCoupangSettlements(
       })
     }
 
-    const totalDeduction = contractDeductions + damageDeduction
-    const netAmount = baseAmount + freshIncentive + extraIncentive - totalDeduction
+    const grossAmount = baseAmount + freshIncentive + extraIncentive
+    const contractDeductions = appendContractDeductions(grossAmount, totalCount, deductions, deductionDetails)
+    const insuranceDeduction = appendInsuranceDeductions(grossAmount, fieldConfig, deductionDetails)
+    const totalDeduction = contractDeductions + insuranceDeduction + damageDeduction
+    const netAmount = grossAmount - totalDeduction
 
     // Tax deductions from driver settings
     const tax = calculateTaxDeductions(netAmount, driver.is_business_owner, driver.vat_included)
@@ -750,6 +985,9 @@ export async function calculateCoupangSettlements(
       delivery_count: row.delivery_count,
       return_count: row.return_count,
       collect_count: 0,
+      delivery_amount: deliveryAmount,
+      return_amount: returnAmount,
+      collect_amount: 0,
       fresh_count: 0,
       etc_count: 0,
       total_count: totalCount,
@@ -784,6 +1022,7 @@ export async function matchDrivers(
   unmatched: UnmatchedRow[]
 }> {
   const supabase = createBrowserSupabaseClient()
+  const aggregatedRows = aggregateParsedRows(parsedRows)
 
   interface DriverQueryRow {
     id: string
@@ -795,7 +1034,7 @@ export async function matchDrivers(
     principals: { name: string } | null
   }
 
-  const codes = parsedRows.map((r) => r.employee_code)
+  const codes = aggregatedRows.map((r) => r.employee_code)
   const { data } = await supabase
     .from('drivers')
     .select('id, name, employee_code, delivery_area, is_business_owner, vat_included, principals(name)')
@@ -805,30 +1044,69 @@ export async function matchDrivers(
   const drivers = (data ?? []) as unknown as DriverQueryRow[]
 
   const driverMap = new Map<string, DriverMatch>()
+  const duplicateCodeSet = new Set<string>()
   for (const d of drivers) {
-    if (d.employee_code) {
-      driverMap.set(d.employee_code, {
-        driver_id: d.id,
-        driver_name: d.name,
-        employee_code: d.employee_code,
-        principal_name: d.principals?.name ?? null,
-        delivery_area: d.delivery_area,
-        is_business_owner: d.is_business_owner,
-        vat_included: d.vat_included,
-      })
+    if (!d.employee_code) continue
+
+    const driverMatch: DriverMatch = {
+      driver_id: d.id,
+      driver_name: d.name,
+      employee_code: d.employee_code,
+      principal_name: d.principals?.name ?? null,
+      delivery_area: d.delivery_area,
+      is_business_owner: d.is_business_owner,
+      vat_included: d.vat_included,
     }
+
+    if (driverMap.has(d.employee_code)) {
+      duplicateCodeSet.add(d.employee_code)
+      continue
+    }
+
+    driverMap.set(d.employee_code, driverMatch)
   }
 
   const matched = new Map<string, { driver: DriverMatch; row: ParsedExcelRow }>()
   const unmatched: UnmatchedRow[] = []
 
-  parsedRows.forEach((row, idx) => {
-    const driver = driverMap.get(row.employee_code)
-    if (driver) {
-      matched.set(row.employee_code, { driver, row })
-    } else {
-      unmatched.push({ employee_code: row.employee_code, row_index: idx + 1, raw_data: row.raw_data })
+  aggregatedRows.forEach((row, idx) => {
+    if (duplicateCodeSet.has(row.employee_code)) {
+      unmatched.push({
+        employee_code: row.employee_code,
+        row_index: idx + 1,
+        raw_data: row.raw_data,
+        driver_name: row.driver_name ?? null,
+        reason: '같은 사번으로 등록된 기사가 2명 이상입니다.',
+      })
+      return
     }
+
+    const driver = driverMap.get(row.employee_code)
+    if (!driver) {
+      unmatched.push({
+        employee_code: row.employee_code,
+        row_index: idx + 1,
+        raw_data: row.raw_data,
+        driver_name: row.driver_name ?? null,
+        reason: '등록된 기사 없음',
+      })
+      return
+    }
+
+    const normalizedRowName = normalizeMatchingText(row.driver_name)
+    const normalizedDriverName = normalizeMatchingText(driver.driver_name)
+    if (normalizedRowName && normalizedDriverName && normalizedRowName !== normalizedDriverName) {
+      unmatched.push({
+        employee_code: row.employee_code,
+        row_index: idx + 1,
+        raw_data: row.raw_data,
+        driver_name: row.driver_name ?? null,
+        reason: `기사명 불일치 (엑셀: ${row.driver_name} / 등록: ${driver.driver_name})`,
+      })
+      return
+    }
+
+    matched.set(row.employee_code, { driver, row })
   })
 
   return { matched, unmatched }
@@ -884,22 +1162,31 @@ export async function calculateSettlements(
 
     // Calculate base amount from rates
     let baseAmount = 0
+    let deliveryAmount = 0
+    let returnAmount = 0
+    let collectAmount = 0
     const rateDetails: SettlementCalcResult['rate_details'] = []
+    const grossAmountMap: Record<string, number> = {
+      '배송': row.delivery_amount,
+      '반품': row.return_amount,
+      '집하': row.collect_amount,
+    }
 
     for (const rate of rates) {
       const count = countMap[rate.package_type] ?? 0
       if (count === 0) continue
 
-      let amount = 0
-      if (rate.rate_type === 'fixed') {
-        amount = count * rate.unit_price
-      } else {
-        // percentage: unit_price is the % the driver gets of base price
-        // For percentage mode, unit_price IS the per-unit amount (as entered)
-        amount = count * rate.unit_price
-      }
+      const amount = calculateRateAmount(
+        rate.rate_type,
+        count,
+        rate.unit_price,
+        grossAmountMap[rate.package_type] ?? 0
+      )
 
       baseAmount += amount
+      if (rate.package_type === '배송') deliveryAmount += amount
+      if (rate.package_type === '반품') returnAmount += amount
+      if (rate.package_type === '집하') collectAmount += amount
       rateDetails.push({
         package_type: rate.package_type,
         count,
@@ -1019,6 +1306,8 @@ export async function calculateSettlements(
       })
     }
 
+    const settlementBaseAmount = deliveryAmount + returnAmount + collectAmount
+
     results.push({
       driver_id: driver.driver_id,
       driver_name: driver.driver_name,
@@ -1027,14 +1316,17 @@ export async function calculateSettlements(
       delivery_count: row.delivery_count,
       return_count: row.return_count,
       collect_count: row.collect_count,
+      delivery_amount: deliveryAmount,
+      return_amount: returnAmount,
+      collect_amount: collectAmount,
       fresh_count: row.fresh_count,
       etc_count: row.etc_count,
       total_count: totalCount,
-      base_amount: baseAmount,
+      base_amount: settlementBaseAmount,
       total_deduction: totalDeduction + tax.vatAmount + tax.withholdingAmount,
       net_amount: netAmount,
       fresh_incentive: freshBackAmount,
-      extra_incentive: incentiveAmount,
+      extra_incentive: incentiveAmount + etcIncomeAmount,
       damage_deduction: 0,
       vat_amount: tax.vatAmount,
       withholding_amount: tax.withholdingAmount,
@@ -1062,53 +1354,103 @@ export async function saveSettlements(
   const supabase = createBrowserSupabaseClient()
 
   try {
-    // Delete existing settlements for this month/agency/principal to avoid duplicates
-    let deleteQuery = supabase
+    let existingQuery = supabase
       .from('settlements')
-      .delete()
+      .select('id, driver_id')
       .eq('agency_id', agencyId)
       .eq('year_month', yearMonth)
     if (principalId) {
-      deleteQuery = deleteQuery.eq('principal_id', principalId)
+      existingQuery = existingQuery.eq('principal_id', principalId)
     } else {
-      deleteQuery = deleteQuery.is('principal_id', null)
+      existingQuery = existingQuery.is('principal_id', null)
     }
-    await deleteQuery
 
-    const rows = results.map((r) => ({
-      agency_id: agencyId,
-      driver_id: r.driver_id,
-      principal_id: principalId,
-      year_month: yearMonth,
-      delivery_count: r.delivery_count,
-      delivery_amount: r.base_amount,
-      return_count: r.return_count,
-      return_amount: 0,
-      pickup_count: r.collect_count,
-      pickup_amount: 0,
-      base_amount: r.base_amount,
-      fresh_incentive: r.fresh_incentive ?? 0,
-      extra_incentive: r.extra_incentive ?? 0,
-      incentive_amount: (r.fresh_incentive ?? 0) + (r.extra_incentive ?? 0),
-      gross_total: r.base_amount + (r.fresh_incentive ?? 0) + (r.extra_incentive ?? 0),
-      total_amount: r.base_amount + (r.fresh_incentive ?? 0) + (r.extra_incentive ?? 0),
-      total_deduction: r.total_deduction,
-      vat_amount: r.vat_amount,
-      net_amount: r.final_amount,
-      is_business_owner: r.is_business_owner,
-      vat_included: r.vat_included,
-      deduction_detail: Object.fromEntries(
-        r.deduction_details.map((d) => [d.name, d.calculated])
-      ),
-      route_details: r.route_details.length > 0 ? r.route_details : null,
-      status: 'draft' as const,
-    }))
+    const { data: existingRows, error: existingError } = await existingQuery
+    if (existingError) {
+      console.error('Failed to load settlements:', existingError)
+      return { error: existingError.message }
+    }
 
-    const { error } = await supabase.from('settlements').insert(rows)
+    const existingByDriver = new Map<string, string[]>()
+    for (const row of (existingRows ?? []) as { id: string; driver_id: string | null }[]) {
+      if (!row.driver_id) continue
+      const list = existingByDriver.get(row.driver_id) ?? []
+      list.push(row.id)
+      existingByDriver.set(row.driver_id, list)
+    }
 
-    if (error) {
-      console.error('Failed to save settlements:', error)
-      return { error: error.message }
+    const rows = results.map((r) => {
+      const existingIds = existingByDriver.get(r.driver_id) ?? []
+      const rowId = existingIds.shift()
+      const grossTotal = r.base_amount + (r.fresh_incentive ?? 0) + (r.extra_incentive ?? 0)
+
+      return {
+        ...(rowId ? { id: rowId } : {}),
+        agency_id: agencyId,
+        driver_id: r.driver_id,
+        principal_id: principalId,
+        year_month: yearMonth,
+        delivery_count: r.delivery_count,
+        delivery_amount: r.delivery_amount,
+        return_count: r.return_count,
+        return_amount: r.return_amount,
+        pickup_count: r.collect_count,
+        pickup_amount: r.collect_amount,
+        base_amount: r.base_amount,
+        fresh_incentive: r.fresh_incentive ?? 0,
+        extra_incentive: r.extra_incentive ?? 0,
+        incentive_amount: (r.fresh_incentive ?? 0) + (r.extra_incentive ?? 0),
+        gross_total: grossTotal,
+        total_amount: grossTotal,
+        total_deduction: r.total_deduction,
+        vat_amount: r.vat_amount,
+        net_amount: r.final_amount,
+        is_business_owner: r.is_business_owner,
+        vat_included: r.vat_included,
+        deduction_detail: Object.fromEntries(
+          r.deduction_details.map((d) => [d.name, d.calculated])
+        ),
+        route_details: r.route_details.length > 0 ? r.route_details : null,
+        status: 'draft' as const,
+      }
+    })
+
+    const updateRows = rows.filter((row) => 'id' in row)
+    const insertRows = rows.filter((row) => !('id' in row))
+
+    if (updateRows.length > 0) {
+      const { error: updateError } = await supabase
+        .from('settlements')
+        .upsert(updateRows, { onConflict: 'id' })
+
+      if (updateError) {
+        console.error('Failed to update settlements:', updateError)
+        return { error: updateError.message }
+      }
+    }
+
+    if (insertRows.length > 0) {
+      const { error: insertError } = await supabase
+        .from('settlements')
+        .insert(insertRows)
+
+      if (insertError) {
+        console.error('Failed to insert settlements:', insertError)
+        return { error: insertError.message }
+      }
+    }
+
+    const staleIds = Array.from(existingByDriver.values()).flat()
+    if (staleIds.length > 0) {
+      const { error: deleteError } = await supabase
+        .from('settlements')
+        .delete()
+        .in('id', staleIds)
+
+      if (deleteError) {
+        console.error('Failed to remove stale settlements:', deleteError)
+        return { error: deleteError.message }
+      }
     }
 
     return { error: null }

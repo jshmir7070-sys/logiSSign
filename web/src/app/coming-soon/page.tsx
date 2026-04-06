@@ -23,6 +23,7 @@ export default function ComingSoonPage() {
         {/* Logo */}
         <div className="logo-section fade-in" style={{ animationDelay: '0.4s' }}>
           <div className="logo-icon">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="logiSSign" style={{ width: 400, maxWidth: "85%" }} />
           </div>
         </div>

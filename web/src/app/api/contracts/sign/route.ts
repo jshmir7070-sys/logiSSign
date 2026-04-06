@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { apiError } from '@/lib/api-error'
 import { getClientIp } from '@/lib/get-ip'
 import { rateLimitAuth } from '@/lib/rate-limit'
+import { generateSignedPdf } from '@/services/signed-pdf.service'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -194,7 +195,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '계약서 상태 업데이트 실패' }, { status: 500 })
     }
 
-    return NextResponse.json({ signed: true, identityVerified })
+    const pdfResult = await generateSignedPdf(contractId)
+
+    return NextResponse.json({
+      signed: true,
+      identityVerified,
+      signedPdfUrl: pdfResult.url,
+      pdfGenerated: !!pdfResult.url,
+      warning: pdfResult.error,
+    })
   } catch (err) {
     console.error('[ContractSign] Unexpected error:', err)
     return apiError('서명 처리 중 오류가 발생했습니다', 500)

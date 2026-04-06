@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
 
 interface UserMenuProps {
@@ -12,7 +11,6 @@ interface UserMenuProps {
 }
 
 export default function UserMenu({ initials, name, email, redirectTo }: UserMenuProps) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 

@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
 function OtpVerifyForm() {
-  const router = useRouter();
   const params = useSearchParams();
   const redirect = params.get("redirect") || "/portal/dashboard";
   const userId = params.get("uid") || "";
@@ -119,6 +118,7 @@ function OtpVerifyForm() {
       <div className="w-full max-w-[420px]">
         {/* Brand */}
         <div className="flex flex-col items-center mb-8">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-light.png" alt="logiSSign" className="w-[220px] object-contain mb-4" />
         </div>
 

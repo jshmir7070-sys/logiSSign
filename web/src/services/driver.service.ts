@@ -1,4 +1,5 @@
 import { createBrowserSupabaseClient } from '@/lib/supabase'
+import { generateUniqueDriverCode } from '@/lib/driver-code'
 import type { Database } from '@/types/database'
 
 type DriverRow = Database['public']['Tables']['drivers']['Row']
@@ -14,6 +15,7 @@ export interface DriverListItem {
   status: string
   delivery_area: string | null
   employee_code: string | null
+  driver_code: string | null
   created_at: string | null
   // 소속 원청사들 (driver_principals 조인)
   principal_names: string[]
@@ -55,7 +57,7 @@ export async function getDrivers(agencyId: string, principalId?: string | null):
 
       const { data, error } = await supabase
         .from('drivers')
-        .select('id, name, phone, status, delivery_area, employee_code, created_at')
+        .select('id, name, phone, status, delivery_area, employee_code, driver_code, created_at')
         .eq('agency_id', agencyId)
         .in('id', driverIds)
         .order('created_at', { ascending: false })
@@ -69,7 +71,7 @@ export async function getDrivers(agencyId: string, principalId?: string | null):
       // 전체 기사
       const { data, error } = await supabase
         .from('drivers')
-        .select('id, name, phone, status, delivery_area, employee_code, created_at')
+        .select('id, name, phone, status, delivery_area, employee_code, driver_code, created_at')
         .eq('agency_id', agencyId)
         .order('created_at', { ascending: false })
 
@@ -87,7 +89,7 @@ export async function getDrivers(agencyId: string, principalId?: string | null):
 /** 기사 배열에 소속 원청사명 배열을 붙여줌 */
 async function attachPrincipalNames(
   supabase: ReturnType<typeof createBrowserSupabaseClient>,
-  drivers: { id: string; name: string; phone: string | null; status: string; delivery_area: string | null; employee_code: string | null; created_at: string | null }[],
+  drivers: { id: string; name: string; phone: string | null; status: string; delivery_area: string | null; employee_code: string | null; driver_code: string | null; created_at: string | null }[],
 ): Promise<DriverListItem[]> {
   if (drivers.length === 0) return []
 
@@ -157,6 +159,7 @@ export async function createDriver(data: {
   agency_id: string
   name: string
   phone: string
+  employee_code?: string | null
   principalIds?: string[]
   sendInviteSms?: boolean     // 초대코드 SMS 자동 전송 여부
 }): Promise<{
@@ -170,9 +173,38 @@ export async function createDriver(data: {
     agency_id: data.agency_id,
     name: data.name,
     phone: data.phone,
+    employee_code: data.employee_code?.trim() || null,
   }
 
   try {
+    const { data: agencyInfo, error: agencyError } = await supabase
+      .from('agencies')
+      .select('name, invite_code')
+      .eq('id', data.agency_id)
+      .single()
+
+    if (agencyError) throw agencyError
+
+    if (insertData.employee_code) {
+      const { data: duplicateDriver } = await supabase
+        .from('drivers')
+        .select('id')
+        .eq('agency_id', data.agency_id)
+        .ilike('employee_code', insertData.employee_code)
+        .limit(1)
+        .maybeSingle()
+
+      if (duplicateDriver) {
+        return { data: null, error: '이미 등록된 사번입니다.' }
+      }
+    }
+
+    insertData.driver_code = await generateUniqueDriverCode(
+      supabase,
+      data.agency_id,
+      agencyInfo?.invite_code ?? agencyInfo?.name ?? null,
+    )
+
     const { data: driver, error } = await supabase
       .from('drivers')
       .insert(insertData)
@@ -197,13 +229,7 @@ export async function createDriver(data: {
     let inviteSent = false
     if (driver && data.sendInviteSms !== false) {
       try {
-        const { data: agency } = await supabase
-          .from('agencies')
-          .select('name, invite_code')
-          .eq('id', data.agency_id)
-          .single()
-
-        if (agency?.invite_code && data.phone) {
+        if (agencyInfo?.invite_code && data.phone) {
           // SMS API 호출 (서버사이드 route를 통해)
           const res = await fetch('/api/sms/invite', {
             method: 'POST',
@@ -211,8 +237,9 @@ export async function createDriver(data: {
             body: JSON.stringify({
               driverPhone: data.phone,
               driverName: data.name,
-              inviteCode: agency.invite_code,
-              agencyName: agency.name,
+              inviteCode: agencyInfo.invite_code,
+              agencyName: agencyInfo.name,
+              driverCode: driver.driver_code,
             }),
           })
           inviteSent = res.ok

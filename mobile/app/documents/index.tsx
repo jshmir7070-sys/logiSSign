@@ -123,6 +123,33 @@ export default function DocumentsScreen() {
     }
 
     // 3. 문서 파일인 경우 → 파일 URL로 열기
+    if (delivery.status === 'signed') {
+      const { data: signedFiles, error: signedListError } = await supabase.storage
+        .from('documents')
+        .list('signed-documents', {
+          search: `${delivery.id}_`,
+          limit: 20,
+        });
+
+      if (!signedListError && signedFiles && signedFiles.length > 0) {
+        const latestSignedFile = [...signedFiles].sort((a, b) => {
+          const aTime = a.created_at ? Date.parse(a.created_at) : 0;
+          const bTime = b.created_at ? Date.parse(b.created_at) : 0;
+          return bTime - aTime;
+        })[0];
+
+        const signedPath = `signed-documents/${latestSignedFile.name}`;
+        const { data: signedData, error: signedUrlError } = await supabase.storage
+          .from('documents')
+          .createSignedUrl(signedPath, 3600);
+
+        if (!signedUrlError && signedData?.signedUrl) {
+          await Linking.openURL(signedData.signedUrl);
+          return;
+        }
+      }
+    }
+
     if (delivery.document_file_id) {
       const { data } = await supabase
         .from('document_files')

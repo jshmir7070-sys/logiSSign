@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     .select(`
       id, user_id, name, phone, email, birth_date, address,
       vehicle_number, vehicle_type, vehicle_year, vehicle_vin,
-      bank_name, bank_account, bank_holder
+      bank_name, bank_account, bank_holder, custom_values
     `)
     .eq('user_id', auth.userId)
     .single()

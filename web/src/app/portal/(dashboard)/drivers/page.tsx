@@ -32,43 +32,60 @@ export default function DriversPage() {
   const [sendingInvite, setSendingInvite] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [principals, setPrincipals] = useState<PrincipalOption[]>([]);
+  const [selectedPrincipal, setSelectedPrincipal] = useState<string | null>(null);
 
-  const handleResendInvite = async (driverId: string, driverName: string, driverPhone: string) => {
-    if (!agencyId || !driverPhone) { alert('전화번호가 없습니다'); return; }
-    if (!confirm(`${driverName}님에게 초대코드 SMS를 전송하시겠습니까?`)) return;
+  const handleResendInvite = async (
+    driverId: string,
+    driverName: string,
+    driverPhone: string,
+    driverCode: string | null,
+  ) => {
+    if (!agencyId || !driverPhone) {
+      alert('전화번호가 없습니다');
+      return;
+    }
+
+    if (!confirm(`${driverName} 기사에게 가입 안내 SMS를 다시 전송하시겠습니까?`)) {
+      return;
+    }
+
     setSendingInvite(driverId);
     try {
       const res = await fetch('/api/sms/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ driverPhone, driverName, agencyId }),
+        body: JSON.stringify({
+          driverPhone,
+          driverName,
+          agencyId,
+          driverCode,
+        }),
       });
       const result = await res.json();
       if (res.ok && result.sent) {
-        alert(`${driverName}님에게 초대코드 SMS를 전송했습니다.`);
+        alert(`${driverName} 기사에게 가입 안내 SMS를 전송했습니다.`);
       } else {
-        alert('SMS 전송 실패: ' + (result.error ?? ''));
+        alert(`SMS 전송 실패: ${result.error ?? ''}`);
       }
-    } catch { alert('SMS 전송 중 오류'); }
+    } catch {
+      alert('SMS 전송 중 오류가 발생했습니다.');
+    }
     setSendingInvite(null);
   };
 
-  // 원청사(카테고리) 필터
-  const [principals, setPrincipals] = useState<PrincipalOption[]>([]);
-  const [selectedPrincipal, setSelectedPrincipal] = useState<string | null>(null); // null = 전체
-
-  // 초기 로드: 원청사 목록 + 기사 목록
   useEffect(() => {
     async function load() {
       const supabase = createBrowserSupabaseClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       const aid = user.app_metadata?.agency_id as string | undefined;
       if (!aid) return;
       setAgencyId(aid);
 
-      // 원청사(카테고리) 목록
       const { data: pList } = await supabase
         .from('principals')
         .select('id, name')
@@ -77,7 +94,6 @@ export default function DriversPage() {
         .order('created_at', { ascending: true });
       setPrincipals(pList ?? []);
 
-      // 기사 목록 (전체)
       const result = await getDrivers(aid);
       if (result.data) setDrivers(result.data);
       setLoading(false);
@@ -85,21 +101,24 @@ export default function DriversPage() {
     load();
   }, []);
 
-  // 원청사 탭 변경 시 기사 목록 다시 로드
   useEffect(() => {
     if (!agencyId) return;
     setLoading(true);
-    getDrivers(agencyId, selectedPrincipal).then(result => {
+    getDrivers(agencyId, selectedPrincipal).then((result) => {
       if (result.data) setDrivers(result.data);
       setLoading(false);
     });
   }, [selectedPrincipal, agencyId]);
 
-  // 일괄 상태 변경
   const handleBulkStatusChange = async (newStatus: string) => {
     if (selectedIds.size === 0) return;
-    const label = newStatus === 'inactive' ? '퇴사' : newStatus === 'active' ? '활동' : '휴식';
-    if (!confirm(`선택한 ${selectedIds.size}명의 기사를 "${label}" 상태로 변경하시겠습니까?`)) return;
+
+    const label =
+      newStatus === 'inactive' ? '퇴사' : newStatus === 'active' ? '활동' : '휴식';
+    if (!confirm(`선택한 ${selectedIds.size}명의 기사를 "${label}" 상태로 변경하시겠습니까?`)) {
+      return;
+    }
+
     setBulkProcessing(true);
     let successCount = 0;
     for (const driverId of Array.from(selectedIds)) {
@@ -113,11 +132,14 @@ export default function DriversPage() {
           body: JSON.stringify(body),
         });
         if (res.ok) successCount++;
-      } catch { /* skip */ }
+      } catch {
+        // keep going for other drivers
+      }
     }
+
     alert(`${successCount}명 ${label} 처리 완료`);
     setSelectedIds(new Set());
-    // 목록 새로고침
+
     if (agencyId) {
       const result = await getDrivers(agencyId, selectedPrincipal);
       if (result.data) setDrivers(result.data);
@@ -126,9 +148,10 @@ export default function DriversPage() {
   };
 
   const toggleSelect = (id: string) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -137,30 +160,31 @@ export default function DriversPage() {
     if (selectedIds.size === filtered.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filtered.map(d => d.id)));
+      setSelectedIds(new Set(filtered.map((driver) => driver.id)));
     }
   };
 
-  const filtered = drivers.filter((d) => {
+  const filtered = drivers.filter((driver) => {
     const matchesSearch =
       !search ||
-      d.name.includes(search) ||
-      (d.phone ?? '').includes(search) ||
-      (d.employee_code ?? '').includes(search);
-    const matchesStatus = statusFilter === 'all' || d.status === statusFilter;
+      driver.name.includes(search) ||
+      (driver.phone ?? '').includes(search) ||
+      (driver.employee_code ?? '').includes(search) ||
+      (driver.driver_code ?? '').includes(search);
+    const matchesStatus =
+      statusFilter === 'all' || driver.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-headline font-bold text-on-surface">
             <span className="font-korean">기사 관리</span>
           </h1>
           <p className="mt-1 text-sm text-on-surface-variant font-korean">
-            소속 배달 기사를 관리하고 현황을 확인하세요
+            소속 배송 기사 정보를 확인하고 초대 상태를 관리합니다.
           </p>
         </div>
         <Link
@@ -174,7 +198,6 @@ export default function DriversPage() {
         </Link>
       </div>
 
-      {/* 원청사(카테고리) 탭 */}
       {principals.length >= 1 && (
         <div className="flex items-center gap-1 bg-surface-container-low rounded-xl p-1">
           <button
@@ -187,31 +210,36 @@ export default function DriversPage() {
           >
             전체 ({drivers.length})
           </button>
-          {principals.map(p => (
+          {principals.map((principal) => (
             <button
-              key={p.id}
-              onClick={() => setSelectedPrincipal(p.id)}
+              key={principal.id}
+              onClick={() => setSelectedPrincipal(principal.id)}
               className={`px-4 py-2 rounded-lg text-sm font-korean font-medium transition-all ${
-                selectedPrincipal === p.id
+                selectedPrincipal === principal.id
                   ? 'bg-white text-on-surface shadow-sm'
                   : 'text-on-surface-variant hover:text-on-surface hover:bg-white/50'
               }`}
             >
-              {p.name}
+              {principal.name}
             </button>
           ))}
         </div>
       )}
 
-      {/* Search & Filter */}
       <div className="flex items-center gap-4">
         <div className="flex-1 relative">
-          <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <svg
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
             <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
           </svg>
           <input
             type="text"
-            placeholder="기사 이름, 연락처, 사번 검색"
+            placeholder="기사 이름, 연락처, 사번, 기사 고유코드 검색"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-surface-container-lowest shadow-ambient text-sm font-body text-on-surface placeholder:text-on-surface-variant font-korean focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -229,10 +257,11 @@ export default function DriversPage() {
         </select>
       </div>
 
-      {/* 일괄 작업 바 */}
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-5 py-3">
-          <span className="text-sm font-bold text-primary font-korean">{selectedIds.size}명 선택</span>
+          <span className="text-sm font-bold text-primary font-korean">
+            {selectedIds.size}명 선택
+          </span>
           <div className="flex items-center gap-2 ml-auto">
             <button
               onClick={() => handleBulkStatusChange('active')}
@@ -265,7 +294,6 @@ export default function DriversPage() {
         </div>
       )}
 
-      {/* Table */}
       <div className="bg-surface-container-lowest rounded-2xl shadow-ambient">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -283,7 +311,7 @@ export default function DriversPage() {
                   이름
                 </th>
                 <th className="px-6 py-3 text-xs font-label font-semibold text-on-surface-variant uppercase tracking-wider font-korean">
-                  사번
+                  기사코드 / 사번
                 </th>
                 <th className="px-6 py-3 text-xs font-label font-semibold text-on-surface-variant uppercase tracking-wider font-korean">
                   소속 카테고리
@@ -301,7 +329,7 @@ export default function DriversPage() {
                   등록일
                 </th>
                 <th className="px-6 py-3 text-xs font-label font-semibold text-on-surface-variant uppercase tracking-wider font-korean">
-                  초대
+                  가입안내
                 </th>
               </tr>
             </thead>
@@ -315,7 +343,9 @@ export default function DriversPage() {
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-6 py-8 text-center text-sm text-on-surface-variant font-korean">
-                    {search || statusFilter !== 'all' ? '검색 결과가 없습니다' : '등록된 기사가 없습니다'}
+                    {search || statusFilter !== 'all'
+                      ? '검색 결과가 없습니다'
+                      : '등록된 기사가 없습니다'}
                   </td>
                 </tr>
               ) : (
@@ -325,9 +355,11 @@ export default function DriversPage() {
                     className={`hover:bg-surface-container-low/50 transition-colors cursor-pointer ${
                       driver.status === 'inactive' ? 'opacity-60' : ''
                     }`}
-                    onClick={() => window.location.href = `/portal/drivers/${driver.id}`}
+                    onClick={() => {
+                      window.location.href = `/portal/drivers/${driver.id}`;
+                    }}
                   >
-                    <td className="px-3 py-4" onClick={e => e.stopPropagation()}>
+                    <td className="px-3 py-4" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={selectedIds.has(driver.id)}
@@ -336,22 +368,37 @@ export default function DriversPage() {
                       />
                     </td>
                     <td className="px-6 py-4 text-sm font-body text-on-surface font-korean">
-                      <span className="text-primary hover:underline">{driver.name}</span>
+                      <div className="flex flex-col">
+                        <span className="text-primary hover:underline">{driver.name}</span>
+                        {driver.driver_code && (
+                          <span className="text-[11px] text-on-surface-variant/70 font-data">
+                            {driver.driver_code}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-xs font-data text-on-surface-variant">
-                      {driver.employee_code || '-'}
+                      <div className="flex flex-col gap-0.5">
+                        <span>{driver.driver_code || '-'}</span>
+                        <span>{driver.employee_code || '-'}</span>
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       {driver.principal_names.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
-                          {driver.principal_names.map((pn, i) => (
-                            <span key={i} className="inline-block px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[11px] font-korean font-medium">
-                              {pn}
+                          {driver.principal_names.map((principalName, index) => (
+                            <span
+                              key={index}
+                              className="inline-block px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[11px] font-korean font-medium"
+                            >
+                              {principalName}
                             </span>
                           ))}
                         </div>
                       ) : (
-                        <span className="text-xs text-on-surface-variant/40 font-korean">미배정</span>
+                        <span className="text-xs text-on-surface-variant/40 font-korean">
+                          미배정
+                        </span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-xs text-on-surface-variant font-korean">
@@ -367,11 +414,20 @@ export default function DriversPage() {
                       />
                     </td>
                     <td className="px-6 py-4 text-sm font-data text-on-surface-variant">
-                      {driver.created_at ? new Date(driver.created_at).toLocaleDateString('ko-KR') : '-'}
+                      {driver.created_at
+                        ? new Date(driver.created_at).toLocaleDateString('ko-KR')
+                        : '-'}
                     </td>
-                    <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
+                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                       <button
-                        onClick={() => handleResendInvite(driver.id, driver.name, driver.phone ?? '')}
+                        onClick={() =>
+                          handleResendInvite(
+                            driver.id,
+                            driver.name,
+                            driver.phone ?? '',
+                            driver.driver_code,
+                          )
+                        }
                         disabled={sendingInvite === driver.id || !driver.phone}
                         className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-[11px] font-semibold font-korean hover:bg-primary/20 disabled:opacity-40 transition-colors"
                       >

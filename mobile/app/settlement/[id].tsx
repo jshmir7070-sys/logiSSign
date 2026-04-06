@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Linking, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Linking, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import Header from '../../components/common/Header';
@@ -17,7 +17,6 @@ import {
 import { supabase } from '../../lib/supabase';
 import { colors, spacing, typography, borderRadius } from '../../constants/theme';
 
-/* ── settlement_display 기본값 ── */
 interface DisplayConfig {
   delivery_count: boolean;
   delivery_amount: boolean;
@@ -58,58 +57,92 @@ export default function SettlementDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [display, setDisplay] = useState<DisplayConfig>(DEFAULT_DISPLAY);
+  const [openingPdf, setOpeningPdf] = useState(false);
 
   useEffect(() => {
     if (!id) return;
+
     getSettlementDetail(id).then(async (res) => {
       if (res.data) {
         setSettlement(res.data);
-        // 카테고리 설정에서 표시항목 로드
+
         if (res.data.principal_id) {
           const { data: principal } = await supabase
             .from('principals')
             .select('field_config')
             .eq('id', res.data.principal_id)
             .single() as { data: { field_config: Record<string, unknown> } | null; error: unknown };
-          if (principal?.field_config) {
-            const fc = principal.field_config;
-            if (fc.settlement_display && typeof fc.settlement_display === 'object') {
-              setDisplay({ ...DEFAULT_DISPLAY, ...(fc.settlement_display as Partial<DisplayConfig>) });
-            }
+
+          if (principal?.field_config?.settlement_display && typeof principal.field_config.settlement_display === 'object') {
+            setDisplay({
+              ...DEFAULT_DISPLAY,
+              ...(principal.field_config.settlement_display as Partial<DisplayConfig>),
+            });
           }
         }
       }
+
       if (res.error) setError(res.error);
       setLoading(false);
     });
   }, [id]);
 
+  const handleOpenPdf = async () => {
+    if (!settlement?.pdf_url || openingPdf) return;
+
+    setOpeningPdf(true);
+    try {
+      let openUrl = settlement.pdf_url;
+
+      if (!openUrl.startsWith('http')) {
+        const storagePath = openUrl.startsWith('settlements/')
+          ? openUrl.slice('settlements/'.length)
+          : openUrl;
+
+        const { data: signedData, error: signedError } = await supabase.storage
+          .from('settlements')
+          .createSignedUrl(storagePath, 3600);
+
+        if (signedError || !signedData?.signedUrl) {
+          Alert.alert('PDF 열기 실패', '정산서 PDF 링크를 생성하지 못했습니다.');
+          return;
+        }
+
+        openUrl = signedData.signedUrl;
+      }
+
+      await Linking.openURL(openUrl);
+    } catch {
+      Alert.alert('PDF 열기 실패', '정산서 PDF를 열지 못했습니다.');
+    } finally {
+      setOpeningPdf(false);
+    }
+  };
+
   if (loading) return <LoadingSpinner fullScreen />;
+
   if (error || !settlement) {
     return (
       <SafeAreaView style={styles.container}>
         <Header title="정산 상세" showBack />
         <View style={styles.errorWrap}>
-          <Text style={styles.errorText}>{error || '정산 정보를 찾을 수 없습니다'}</Text>
+          <Text style={styles.errorText}>{error || '정산 정보를 찾을 수 없습니다.'}</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   const deductions = settlement.deduction_detail ?? {};
+  const freshIncentive = Number((settlement as unknown as Record<string, unknown>).fresh_incentive ?? 0);
 
   return (
     <SafeAreaView style={styles.container}>
       <Header title="정산 상세" showBack />
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Summary Card */}
         <Card style={styles.summaryCard}>
           <View style={styles.summaryHeader}>
             <Text style={styles.yearMonth}>{settlement.year_month}</Text>
-            <Badge
-              label={statusLabel(settlement.status)}
-              variant={statusVariant(settlement.status)}
-            />
+            <Badge label={statusLabel(settlement.status)} variant={statusVariant(settlement.status)} />
           </View>
           {settlement.principals?.name && (
             <Text style={styles.principalName}>{settlement.principals.name}</Text>
@@ -118,22 +151,20 @@ export default function SettlementDetailScreen() {
           <Text style={styles.netLabel}>지급 총액</Text>
         </Card>
 
-        {/* Income Section */}
         <Card style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>수입 내역</Text>
           {display.delivery_count && (
             <Row label="배송 건수" value={`${settlement.delivery_count}건`} />
           )}
           {display.delivery_amount && (
-            <Row label="기본금액" value={formatKRW(settlement.base_amount)} />
+            <Row label="기본 금액" value={formatKRW(settlement.base_amount)} />
           )}
           {display.incentive_amount && settlement.incentive_amount > 0 && (
             <Row label="인센티브" value={formatKRW(settlement.incentive_amount)} positive />
           )}
-          {display.fresh_back && (() => {
-            const fi = Number((settlement as unknown as Record<string, unknown>).fresh_incentive ?? 0);
-            return fi > 0 ? <Row label="프레쉬백" value={formatKRW(fi)} positive /> : null;
-          })()}
+          {display.fresh_back && freshIncentive > 0 && (
+            <Row label="프레시백" value={formatKRW(freshIncentive)} positive />
+          )}
           {display.tax_amount && settlement.vat_amount > 0 && (
             <Row label="부가세" value={formatKRW(settlement.vat_amount)} />
           )}
@@ -145,7 +176,6 @@ export default function SettlementDetailScreen() {
           )}
         </Card>
 
-        {/* Deduction Section */}
         {display.deduction_detail && (
           <Card style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>차감 내역</Text>
@@ -161,7 +191,6 @@ export default function SettlementDetailScreen() {
           </Card>
         )}
 
-        {/* Final */}
         {display.payment_amount && (
           <Card style={styles.finalCard}>
             <View style={styles.finalRow}>
@@ -171,19 +200,17 @@ export default function SettlementDetailScreen() {
           </Card>
         )}
 
-        {/* PDF 다운로드/보기 */}
         {settlement.pdf_url ? (
           <Button
             title="정산서 PDF 보기"
             variant="outline"
             fullWidth
-            onPress={() => {
-              if (settlement.pdf_url) Linking.openURL(settlement.pdf_url);
-            }}
+            loading={openingPdf}
+            onPress={handleOpenPdf}
           />
         ) : (
           <View style={styles.noPdfWrap}>
-            <Text style={styles.noPdfText}>PDF 정산서가 아직 생성되지 않았습니다</Text>
+            <Text style={styles.noPdfText}>PDF 정산서가 아직 생성되지 않았습니다.</Text>
           </View>
         )}
       </ScrollView>
@@ -191,7 +218,13 @@ export default function SettlementDetailScreen() {
   );
 }
 
-function Row({ label, value, positive, negative, bold }: {
+function Row({
+  label,
+  value,
+  positive,
+  negative,
+  bold,
+}: {
   label: string;
   value: string;
   positive?: boolean;
@@ -201,12 +234,14 @@ function Row({ label, value, positive, negative, bold }: {
   return (
     <View style={rowStyles.row}>
       <Text style={[rowStyles.label, bold && rowStyles.bold]}>{label}</Text>
-      <Text style={[
-        rowStyles.value,
-        bold && rowStyles.bold,
-        positive && { color: colors.tertiary },
-        negative && { color: colors.error },
-      ]}>
+      <Text
+        style={[
+          rowStyles.value,
+          bold && rowStyles.bold,
+          positive && { color: colors.tertiary },
+          negative && { color: colors.error },
+        ]}
+      >
         {value}
       </Text>
     </View>
@@ -239,7 +274,13 @@ const styles = StyleSheet.create({
   sectionCard: {},
   sectionTitle: { ...typography.titleSmall, color: colors.onSurface, marginBottom: spacing.md },
   noData: { ...typography.bodySmall, color: colors.onSurfaceVariant },
-  finalCard: { backgroundColor: colors.primary + '08', borderWidth: 1, borderColor: colors.primary + '20', borderRadius: borderRadius.xl, padding: spacing.lg },
+  finalCard: {
+    backgroundColor: colors.primary + '08',
+    borderWidth: 1,
+    borderColor: colors.primary + '20',
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
+  },
   finalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   finalLabel: { ...typography.titleSmall, color: colors.onSurface },
   finalValue: { ...typography.titleLarge, color: colors.primary },

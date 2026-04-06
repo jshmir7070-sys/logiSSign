@@ -53,15 +53,25 @@ const nextConfig = {
       },
     ]
   },
+  webpack(config) {
+    config.infrastructureLogging = {
+      ...config.infrastructureLogging,
+      level: 'error',
+    }
+
+    return config
+  },
 }
 
 export default withSentryConfig(nextConfig, {
   // Sentry 소스맵 업로드 (SENTRY_AUTH_TOKEN 필요, 없으면 건너뜀)
   silent: true,
   // 클라이언트 번들에서 Sentry 디버그 정보 제거
-  disableLogger: true,
   // 빌드 시 소스맵 자동 업로드 비활성화 (CI에서만 활성화 권장)
   sourcemaps: {
     disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+  bundleSizeOptimizations: {
+    excludeDebugStatements: true,
   },
 })

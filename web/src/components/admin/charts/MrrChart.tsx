@@ -1,4 +1,4 @@
-'use client';
+'use client'
 
 import {
   ResponsiveContainer,
@@ -8,22 +8,15 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-} from 'recharts';
+} from 'recharts'
 
-const data = [
-  { month: '8월', mrr: 2800000 },
-  { month: '9월', mrr: 3100000 },
-  { month: '10월', mrr: 3400000 },
-  { month: '11월', mrr: 3650000 },
-  { month: '12월', mrr: 3900000 },
-  { month: '1월', mrr: 4200000 },
-  { month: '2월', mrr: 4500000 },
-  { month: '3월', mrr: 4850000 },
-];
+interface MrrChartProps {
+  data: { month: string; mrr: number }[]
+}
 
-const formatKRW = (value: number) => `\u20A9${value.toLocaleString()}`;
+const formatKRW = (value: number) => `\u20A9${value.toLocaleString()}`
 
-export default function MrrChart() {
+export default function MrrChart({ data }: MrrChartProps) {
   return (
     <div className="h-[200px]">
       <ResponsiveContainer width="100%" height="100%">
@@ -45,7 +38,7 @@ export default function MrrChart() {
             tick={{ fill: '#94a3b8', fontSize: 11, fontFamily: 'Inter, sans-serif' }}
             axisLine={false}
             tickLine={false}
-            tickFormatter={(v: number) => `${(v / 1000000).toFixed(1)}M`}
+            tickFormatter={(value: number) => `${(value / 1000000).toFixed(1)}M`}
           />
           <Tooltip
             formatter={(value) => [formatKRW(Number(value)), 'MRR']}
@@ -70,5 +63,5 @@ export default function MrrChart() {
         </AreaChart>
       </ResponsiveContainer>
     </div>
-  );
+  )
 }

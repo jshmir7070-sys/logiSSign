@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Badge from '@/components/shared/Badge';
 import { toastSuccess, toastError } from '@/components/shared/Toast';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
-import { getPrincipals, getUploadMapping, saveUploadMapping, UPLOAD_MAPPING_PRESETS, EXCEL_TYPE_LABELS, type Principal, type ExcelType } from '@/services/principal.service';
+import { getPrincipals, getUploadMapping, saveUploadMapping, normalizeFieldConfig, UPLOAD_MAPPING_PRESETS, EXCEL_TYPE_LABELS, type Principal, type ExcelType } from '@/services/principal.service';
 import {
   parseExcelData,
   matchDrivers,
@@ -13,6 +13,7 @@ import {
   parseCoupangSummary,
   parseCoupangRaw,
   calculateCoupangRouteSettlements,
+  calculateCoupangSettlements,
   detectSheetTypes,
   saveSettlements,
   DEFAULT_COLUMN_MAPPINGS,
@@ -41,6 +42,138 @@ function getYearMonthOptions(): { value: string; label: string }[] {
   }
   return options;
 }
+
+type GuidedMappingKey =
+  | 'employee_code_col'
+  | 'driver_name_col'
+  | 'delivery_count_col'
+  | 'return_count_col'
+  | 'collect_count_col'
+  | 'delivery_amount_col'
+  | 'return_amount_col'
+  | 'collect_amount_col'
+  | 'fresh_back_amount_col'
+  | 'incentive_amount_col'
+  | 'etc_income_amount_col';
+
+const REQUIRED_MAPPING_KEYS: GuidedMappingKey[] = ['employee_code_col', 'delivery_count_col'];
+
+const HEADER_FIELD_LABELS: Record<GuidedMappingKey, string> = {
+  employee_code_col: '\uC0AC\uBC88 \uC5F4',
+  driver_name_col: '\uAE30\uC0AC\uBA85 \uC5F4',
+  delivery_count_col: '\uBC30\uC1A1 \uAC74\uC218 \uC5F4',
+  return_count_col: '\uBC18\uD488 \uAC74\uC218 \uC5F4',
+  collect_count_col: '\uC9D1\uD558 \uAC74\uC218 \uC5F4',
+  delivery_amount_col: '\uBC30\uC1A1\uB9E4\uCD9C \uC5F4',
+  return_amount_col: '\uBC18\uD488\uB9E4\uCD9C \uC5F4',
+  collect_amount_col: '\uC9D1\uD558\uB9E4\uCD9C \uC5F4',
+  fresh_back_amount_col: '\uD504\uB808\uC26C\uBC31 \uAE08\uC561 \uC5F4',
+  incentive_amount_col: '\uC778\uC13C\uD2F0\uBE0C \uAE08\uC561 \uC5F4',
+  etc_income_amount_col: '\uAE30\uD0C0 \uC218\uC785 \uAE08\uC561 \uC5F4',
+};
+
+const HEADER_FIELD_EXAMPLES: Record<GuidedMappingKey, string[]> = {
+  employee_code_col: ['\uC0AC\uBC88', '\uAE30\uC0AC\uCF54\uB4DC', '\uAE30\uC0ACID'],
+  driver_name_col: ['\uAE30\uC0AC\uBA85', '\uC774\uB984', '\uC131\uBA85'],
+  delivery_count_col: ['\uBC30\uC1A1', '\uBC30\uC1A1\uAC74\uC218', '\uBC30\uC1A1\uC218\uB7C9'],
+  return_count_col: ['\uBC18\uD488', '\uBC18\uD488\uAC74\uC218'],
+  collect_count_col: ['\uC9D1\uD558', '\uC9D1\uD558\uAC74\uC218', '\uC9D1\uD654', '\uC9D1\uD654\uAC74\uC218'],
+  delivery_amount_col: ['\uBC30\uC1A1\uB9E4\uCD9C', '\uBC30\uC1A1\uAE08\uC561', '\uBC30\uC1A1\uC218\uC218\uB8CC'],
+  return_amount_col: ['\uBC18\uD488\uB9E4\uCD9C', '\uBC18\uD488\uAE08\uC561', '\uBC18\uD488\uC218\uC218\uB8CC'],
+  collect_amount_col: ['\uC9D1\uD558\uB9E4\uCD9C', '\uC9D1\uD558\uAE08\uC561', '\uC9D1\uD558\uC218\uC218\uB8CC'],
+  fresh_back_amount_col: ['\uD504\uB808\uC26C\uBC31', '\uD504\uB808\uC26C\uBC31\uAE08\uC561'],
+  incentive_amount_col: ['\uC778\uC13C\uD2F0\uBE0C', '\uC131\uACFC\uAE09', '\uCD94\uAC00\uC218\uB2F9'],
+  etc_income_amount_col: ['\uAE30\uD0C0\uC218\uC785', '\uAE30\uD0C0\uAE08\uC561', '\uAE30\uD0C0\uC815\uC0B0'],
+};
+
+function getHeaderExamples(field: GuidedMappingKey, excelType: ExcelType): string[] {
+  const examples = [...HEADER_FIELD_EXAMPLES[field]];
+  const preset = UPLOAD_MAPPING_PRESETS[excelType];
+  const presetValue = preset?.[field];
+
+  if (presetValue && !examples.includes(presetValue)) {
+    examples.unshift(presetValue);
+  }
+
+  return examples;
+}
+
+function buildHeaderMappingError(
+  headers: string[],
+  mapping: ExcelColumnMapping,
+  excelType: ExcelType
+): string | null {
+  const missingRequired = REQUIRED_MAPPING_KEYS.filter((field) => !mapping[field]);
+  const invalidSelected = (Object.entries(HEADER_FIELD_LABELS) as [GuidedMappingKey, string][])
+    .filter(([field]) => {
+      const selected = mapping[field];
+      return Boolean(selected) && !headers.includes(selected as string);
+    })
+    .map(([field]) => field);
+
+  if (missingRequired.length === 0 && invalidSelected.length === 0) {
+    return null;
+  }
+
+  const guideFields = Array.from(new Set([...missingRequired, ...invalidSelected]));
+  const lines: string[] = ['\uD5E4\uB354 \uB9E4\uD551\uC744 \uB2E4\uC2DC \uD655\uC778\uD574 \uC8FC\uC138\uC694.'];
+
+  if (missingRequired.length > 0) {
+    lines.push(
+      `\uD544\uC218 \uC120\uD0DD: ${missingRequired.map((field) => HEADER_FIELD_LABELS[field]).join(', ')}`
+    );
+  }
+
+  if (invalidSelected.length > 0) {
+    lines.push(
+      `\uD30C\uC77C\uC5D0 \uC5C6\uB294 \uD5E4\uB354 \uC120\uD0DD: ${invalidSelected
+        .map((field) => `${HEADER_FIELD_LABELS[field]} → "${mapping[field]}"`)
+        .join(', ')}`
+    );
+  }
+
+  lines.push('\uC785\uB825 \uAC00\uC774\uB4DC:');
+  guideFields.forEach((field) => {
+    lines.push(
+      `- ${HEADER_FIELD_LABELS[field]}: ${getHeaderExamples(field, excelType)
+        .map((value) => `"${value}"`)
+        .join(', ')}`
+    );
+  });
+
+  if (headers.length > 0) {
+    const visibleHeaders = headers.slice(0, 12).map((header) => `"${header}"`).join(', ');
+    lines.push(
+      `\uD604\uC7AC \uD30C\uC77C \uD5E4\uB354: ${visibleHeaders}${headers.length > 12 ? ' ...' : ''}`
+    );
+  }
+
+  return lines.join('\n');
+}
+
+const SHEET_RULE_GUIDES = [
+  {
+    title: '1시트 업로드',
+    description: '요약 시트 1개만 있으면 바로 자동 정산이 가능합니다.',
+    names: ['정산총괄'],
+  },
+  {
+    title: '2시트 업로드',
+    description: '요약 + Raw 조합이면 기사별/라우트별 검증까지 함께 진행합니다.',
+    names: ['정산총괄', '정산Raw'],
+  },
+  {
+    title: '3시트 업로드',
+    description: '사고 내역 시트를 추가로 인식해 분실파손 차감까지 같이 확인합니다.',
+    names: ['정산총괄', '정산Raw', '화물사고 상세내역 또는 분실파손'],
+  },
+];
+
+const AUTO_DEDUCTION_GUIDES = [
+  '보험료는 카테고리 설정과 기사 정보 기준으로 자동 계산됩니다.',
+  '화물사고 상세내역은 카테고리 설정의 상세 입력값을 정산 상세 화면에만 표시합니다.',
+  '운송장/선불/착불 차감은 카테고리 생성 후 기사 등록 시 기본 차감 항목으로 적용됩니다.',
+];
 
 export default function SettlementUploadPage() {
   const router = useRouter();
@@ -78,11 +211,18 @@ export default function SettlementUploadPage() {
   /* ── Column mapping ── */
   const [mapping, setMapping] = useState<ExcelColumnMapping>({
     employee_code_col: '',
+    driver_name_col: '',
     delivery_count_col: '',
     return_count_col: '',
     collect_count_col: '',
+    delivery_amount_col: '',
+    return_amount_col: '',
+    collect_amount_col: '',
     fresh_count_col: '',
     etc_count_col: '',
+    fresh_back_amount_col: '',
+    incentive_amount_col: '',
+    etc_income_amount_col: '',
   });
 
   /* ── Results ── */
@@ -108,6 +248,11 @@ export default function SettlementUploadPage() {
   }, []);
 
   const [savedExcelType, setSavedExcelType] = useState<ExcelType>('generic');
+  const selectedPrincipal = principals.find((principal) => principal.id === principalId);
+  const selectedFieldConfig = selectedPrincipal?.field_config
+    ? normalizeFieldConfig(selectedPrincipal.field_config)
+    : undefined;
+  const cargoAccidentDetail = selectedFieldConfig?.deduction_section.cargo_accident.description.trim() ?? '';
 
   /* Apply saved or default mapping when principal changes */
   useEffect(() => {
@@ -121,11 +266,18 @@ export default function SettlementUploadPage() {
         // DB에 저장된 매핑 사용
         setMapping({
           employee_code_col: savedMapping.employee_code_col,
+          driver_name_col: savedMapping.driver_name_col ?? '',
           delivery_count_col: savedMapping.delivery_count_col ?? '',
           return_count_col: savedMapping.return_count_col ?? '',
           collect_count_col: savedMapping.collect_count_col ?? '',
+          delivery_amount_col: savedMapping.delivery_amount_col ?? '',
+          return_amount_col: savedMapping.return_amount_col ?? '',
+          collect_amount_col: savedMapping.collect_amount_col ?? '',
           fresh_count_col: savedMapping.fresh_count_col ?? '',
           etc_count_col: savedMapping.etc_count_col ?? '',
+          fresh_back_amount_col: savedMapping.fresh_back_amount_col ?? '',
+          incentive_amount_col: savedMapping.incentive_amount_col ?? '',
+          etc_income_amount_col: savedMapping.etc_income_amount_col ?? '',
         });
       } else {
         // 프리셋 또는 하드코딩 기본값 fallback
@@ -137,11 +289,18 @@ export default function SettlementUploadPage() {
         if (defaults) {
           setMapping({
             employee_code_col: defaults.employee_code_col,
+            driver_name_col: defaults.driver_name_col ?? '',
             delivery_count_col: defaults.delivery_count_col ?? '',
             return_count_col: defaults.return_count_col ?? '',
             collect_count_col: defaults.collect_count_col ?? '',
+            delivery_amount_col: defaults.delivery_amount_col ?? '',
+            return_amount_col: defaults.return_amount_col ?? '',
+            collect_amount_col: defaults.collect_amount_col ?? '',
             fresh_count_col: defaults.fresh_count_col ?? '',
             etc_count_col: defaults.etc_count_col ?? '',
+            fresh_back_amount_col: defaults.fresh_back_amount_col ?? '',
+            incentive_amount_col: defaults.incentive_amount_col ?? '',
+            etc_income_amount_col: defaults.etc_income_amount_col ?? '',
           });
         }
       }
@@ -163,6 +322,7 @@ export default function SettlementUploadPage() {
     setColumnClassifications(classifications);
 
     if (!mapping.employee_code_col) {
+      const nameCol = cols.find((c) => /기사명|이름|성명/i.test(c));
       const codeCol = cols.find((c) => /사번|기사코드|코드|ID/i.test(c));
       const deliveryCol = cols.find((c) => /배송|배달|건수/i.test(c));
       const returnCol = cols.find((c) => /반품/i.test(c));
@@ -171,9 +331,20 @@ export default function SettlementUploadPage() {
       setMapping((prev) => ({
         ...prev,
         employee_code_col: codeCol ?? prev.employee_code_col ?? cols[0],
+        driver_name_col: nameCol ?? prev.driver_name_col ?? '',
         delivery_count_col: deliveryCol ?? prev.delivery_count_col ?? '',
         return_count_col: returnCol ?? prev.return_count_col ?? '',
         collect_count_col: collectCol ?? prev.collect_count_col ?? '',
+      }));
+
+      setMapping((prev) => ({
+        ...prev,
+        delivery_amount_col: prev.delivery_amount_col ?? '',
+        return_amount_col: prev.return_amount_col ?? '',
+        collect_amount_col: prev.collect_amount_col ?? '',
+        fresh_back_amount_col: prev.fresh_back_amount_col ?? '',
+        incentive_amount_col: prev.incentive_amount_col ?? '',
+        etc_income_amount_col: prev.etc_income_amount_col ?? '',
       }));
     }
   }, [mapping.employee_code_col, rawRows]);
@@ -182,6 +353,12 @@ export default function SettlementUploadPage() {
   const handleFile = useCallback(async (file: File) => {
     setError('');
     setProcessing(true);
+
+    if (false) {
+      setError('?쇱슦???④? 媛 ?몄꽕?뺤씤 湲곗궗媛 ?덉뼱 ????섏? ?딆뒿?덈떎. ?쇱슦???④?瑜?硫쇱? ?ㅼ젙?섏꽭??');
+      setProcessing(false);
+      return;
+    }
 
     try {
       const XLSX = await import('xlsx');
@@ -200,8 +377,8 @@ export default function SettlementUploadPage() {
 
       const hasCoupangSummary = infos.some((s) => s.detected === 'coupang_summary');
 
-      if (wb.SheetNames.length > 1 && hasCoupangSummary) {
-        // Multi-sheet Coupang file - go to sheet selection
+      if (hasCoupangSummary) {
+        // Coupang summary workbook (single or multi sheet)
         const summarySheet = infos.find((s) => s.detected === 'coupang_summary');
         setSelectedSheet(summarySheet?.name ?? wb.SheetNames[0]);
         setImportMode('coupang_direct');
@@ -268,16 +445,20 @@ export default function SettlementUploadPage() {
     try {
       if (!workbookRef.current || !xlsxRef.current) throw new Error('워크북을 찾을 수 없습니다');
       const XLSX = xlsxRef.current;
+      const selectedPrincipal = principals.find((principal) => principal.id === principalId);
+      const fieldConfig = selectedPrincipal?.field_config
+        ? normalizeFieldConfig(selectedPrincipal.field_config)
+        : undefined;
 
       // Parse 정산Raw sheet for route-level detail
       const rawSheetName = sheetInfos.find((s) => s.detected === 'coupang_raw')?.name;
-      if (!rawSheetName) {
+      if (!rawSheetName && !sheetInfos.some((s) => s.detected === 'coupang_summary')) {
         setError('정산Raw 시트를 찾을 수 없습니다.');
         setProcessing(false);
         return;
       }
-      const rawWs = workbookRef.current.Sheets[rawSheetName];
-      const rawArrayRows = XLSX.utils.sheet_to_json(rawWs, { header: 1 }) as unknown[][];
+      const rawWs = rawSheetName ? workbookRef.current.Sheets[rawSheetName] : null;
+      const rawArrayRows = rawWs ? (XLSX.utils.sheet_to_json(rawWs, { header: 1 }) as unknown[][]) : [];
       const { parsed: rawParsed } = parseCoupangRaw(rawArrayRows);
 
       // Parse 정산총괄 for pass-through amounts (프레쉬백, 추가인센, 분실파손)
@@ -293,6 +474,20 @@ export default function SettlementUploadPage() {
       }
       setSkippedEntries(skipped);
 
+      if (rawParsed.length === 0 && summaryParsed.length > 0) {
+        const { results, unmatched: um } = await calculateCoupangSettlements(
+          agencyId,
+          summaryParsed,
+          fieldConfig
+        );
+        setSettlements(results);
+        setUnmatched(um);
+        setUnmatchedRoutes([]);
+        setStep('preview');
+        setProcessing(false);
+        return;
+      }
+
       if (rawParsed.length === 0) {
         setError('정산Raw에 배송 데이터가 없습니다.');
         setProcessing(false);
@@ -302,7 +497,8 @@ export default function SettlementUploadPage() {
       const { results, unmatched: um, unmatchedRoutes: umr } = await calculateCoupangRouteSettlements(
         agencyId,
         rawParsed,
-        summaryParsed
+        summaryParsed,
+        fieldConfig
       );
       setSettlements(results);
       setUnmatched(um);
@@ -321,7 +517,31 @@ export default function SettlementUploadPage() {
     setError('');
 
     try {
-      const { parsed } = parseExcelData(rawRows, mapping);
+      const mappingError = buildHeaderMappingError(headers, mapping, savedExcelType);
+      if (mappingError) {
+        setError(mappingError);
+        setProcessing(false);
+        return;
+      }
+
+      const selectedPrincipal = principals.find((principal) => principal.id === principalId);
+      const fieldConfig = selectedPrincipal?.field_config
+        ? normalizeFieldConfig(selectedPrincipal.field_config)
+        : undefined;
+      const { parsed, errors } = parseExcelData(rawRows, mapping);
+      if (errors.length > 0) {
+        setError(errors.slice(0, 5).join('\n'));
+        setProcessing(false);
+        return;
+      }
+      if (parsed.length === 0) {
+        setError(
+          buildHeaderMappingError(headers, mapping, savedExcelType) ??
+            '\uB9E4\uCE6D \uAC00\uB2A5\uD55C \uD589\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. \uC0AC\uBC88 \uC5F4\uACFC \uBC30\uC1A1\uAC74\uC218 \uC5F4 \uB9E4\uD551\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694.'
+        );
+        setProcessing(false);
+        return;
+      }
       if (parsed.length === 0) {
         setError('매칭 가능한 행이 없습니다. 사번 열 매핑을 확인하세요.');
         setProcessing(false);
@@ -331,13 +551,18 @@ export default function SettlementUploadPage() {
       const { matched, unmatched: um } = await matchDrivers(agencyId, parsed);
       setUnmatched(um);
 
+      const mismatchCount = um.filter((item) => item.reason && item.reason !== '등록된 기사 없음').length;
+      if (mismatchCount > 0) {
+        toastError(`이름/사번 불일치 또는 중복 기사코드가 ${mismatchCount}건 있습니다. 미리보기의 미매칭 목록을 확인해주세요.`);
+      }
+
       if (matched.size === 0) {
         setError('매칭된 기사가 없습니다. 기사 등록 시 사번이 올바른지 확인하세요.');
         setProcessing(false);
         return;
       }
 
-      const results = await calculateSettlements(matched);
+      const results = await calculateSettlements(matched, fieldConfig);
       setSettlements(results);
       setStep('preview');
     } catch (err) {
@@ -354,6 +579,12 @@ export default function SettlementUploadPage() {
 
     // 엑셀 업로드 포인트 사전 확인
     try {
+      if (unmatchedRoutes.length > 0) {
+        setError('?쇱슦???④? 媛 ?몄꽕?뺤씤 湲곗궗媛 ?덉뼱 ????섏? ?딆뒿?덈떎. ?쇱슦???④?瑜?硫쇱? ?ㅼ젙?섏꽭??');
+        setProcessing(false);
+        return;
+      }
+
       const checkRes = await fetch('/api/settlements/excel-upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -366,6 +597,12 @@ export default function SettlementUploadPage() {
         return;
       }
     } catch { /* 확인 실패 시 일단 진행 */ }
+
+    if (unmatchedRoutes.length > 0) {
+      setError('?쇱슦???④? 媛 ?몄꽕?뺤씤 湲곗궗媛 ?덉뼱 ????섏? ?딆뒿?덈떎. ?쇱슦???④?瑜?硫쇱? ?ㅼ젙?섏꽭??');
+      setProcessing(false);
+      return;
+    }
 
     const result = await saveSettlements(agencyId, yearMonth, principalId || null, settlements);
     if (result.error) {
@@ -439,7 +676,7 @@ export default function SettlementUploadPage() {
       </div>
 
       {error && (
-        <div className="bg-error/10 text-error rounded-xl px-4 py-3 text-sm font-korean">{error}</div>
+        <div className="bg-error/10 text-error rounded-xl px-4 py-3 text-sm font-korean whitespace-pre-line">{error}</div>
       )}
 
       {/* ═══ Step 1: Upload ═══ */}
@@ -476,6 +713,30 @@ export default function SettlementUploadPage() {
             </div>
           </div>
 
+          <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 space-y-4">
+            <div>
+              <h3 className="text-sm font-headline font-semibold text-on-surface font-korean">시트 수 / 시트명 규칙</h3>
+              <p className="text-xs text-on-surface-variant mt-1 font-korean">
+                파일 구조가 아래 규칙과 맞으면 시트 자동 감지가 더 정확하게 동작합니다.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              {SHEET_RULE_GUIDES.map((guide) => (
+                <div key={guide.title} className="rounded-xl border border-outline-variant/20 bg-surface-container-low px-4 py-3">
+                  <p className="text-sm font-semibold text-on-surface font-korean">{guide.title}</p>
+                  <p className="mt-1 text-xs text-on-surface-variant font-korean">{guide.description}</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {guide.names.map((name) => (
+                      <span key={name} className="px-2 py-1 rounded-lg bg-primary/10 text-primary text-[11px] font-korean">
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div
             onDrop={handleDrop}
             onDragOver={(e) => e.preventDefault()}
@@ -504,6 +765,15 @@ export default function SettlementUploadPage() {
             {processing && (
               <p className="text-sm text-primary font-korean">파일 읽는 중...</p>
             )}
+          </div>
+
+          <div className="bg-tertiary/5 border border-tertiary/15 rounded-2xl px-5 py-4">
+            <p className="text-sm font-semibold text-tertiary font-korean">차감 항목 자동 반영 안내</p>
+            <div className="mt-2 space-y-1 text-xs text-on-surface-variant font-korean">
+              {AUTO_DEDUCTION_GUIDES.map((guide) => (
+                <p key={guide}>- {guide}</p>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -552,6 +822,15 @@ export default function SettlementUploadPage() {
                   </button>
                 );
               })}
+            </div>
+
+            <div className="rounded-xl border border-outline-variant/20 bg-surface-container-low px-4 py-3">
+              <p className="text-xs font-semibold text-on-surface font-korean mb-2">권장 시트명</p>
+              <div className="space-y-1 text-xs text-on-surface-variant font-korean">
+                <p>- 1시트: <span className="text-on-surface font-semibold">정산총괄</span></p>
+                <p>- 2시트: <span className="text-on-surface font-semibold">정산총괄</span> + <span className="text-on-surface font-semibold">정산Raw</span></p>
+                <p>- 3시트: <span className="text-on-surface font-semibold">정산총괄</span> + <span className="text-on-surface font-semibold">정산Raw</span> + <span className="text-on-surface font-semibold">화물사고 상세내역</span></p>
+              </div>
             </div>
 
             {/* Import mode selection */}
@@ -728,6 +1007,107 @@ export default function SettlementUploadPage() {
               ))}
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">
+                  기사명 열
+                </label>
+                <select
+                  value={mapping.driver_name_col ?? ''}
+                  onChange={(e) => setMapping((m) => ({ ...m, driver_name_col: e.target.value }))}
+                  className="w-full h-10 px-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30"
+                >
+                  <option value="">해당없음</option>
+                  {headers.map((h) => (
+                    <option key={h} value={h}>{h}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[11px] text-on-surface-variant font-korean">
+                  이름 열을 선택하면 사번과 기사명을 함께 검증해 오발송을 줄입니다.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                { key: 'delivery_amount_col' as const, label: '\uBC30\uC1A1 \uAE08\uC561 \uC5F4', required: false },
+                { key: 'return_amount_col' as const, label: '\uBC18\uD488 \uAE08\uC561 \uC5F4', required: false },
+                { key: 'collect_amount_col' as const, label: '\uC9D1\uD558 \uAE08\uC561 \uC5F4', required: false },
+                { key: 'fresh_back_amount_col' as const, label: '\uD504\uB808\uC26C\uBC31 \uAE08\uC561 \uC5F4', required: false },
+                { key: 'incentive_amount_col' as const, label: '\uC778\uC13C\uD2F0\uBE0C \uAE08\uC561 \uC5F4', required: false },
+                { key: 'etc_income_amount_col' as const, label: '\uAE30\uD0C0 \uC218\uC785 \uAE08\uC561 \uC5F4', required: false },
+              ].map((field) => (
+                <div key={field.key}>
+                  <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">
+                    {field.label}
+                  </label>
+                  <select
+                    value={mapping[field.key] ?? ''}
+                    onChange={(e) => setMapping((m) => ({ ...m, [field.key]: e.target.value }))}
+                    className="w-full h-10 px-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  >
+                    <option value="">{field.required ? '\uD544\uC218 \uC120\uD0DD' : '\uD574\uB2F9\uC5C6\uC74C'}</option>
+                    {headers.map((h) => (
+                      <option key={h} value={h}>{h}</option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-xl border border-tertiary/20 bg-tertiary/5 px-4 py-3">
+              <p className="text-xs font-semibold text-tertiary font-korean mb-2">
+                {'\uD5E4\uB354 \uC785\uB825 \uAC00\uC774\uB4DC'}
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-on-surface-variant font-korean">
+                {(['employee_code_col', 'driver_name_col', 'delivery_count_col', 'delivery_amount_col', 'return_count_col', 'collect_count_col'] as GuidedMappingKey[]).map((field) => (
+                  <p key={field}>
+                    <span className="font-semibold text-on-surface">{HEADER_FIELD_LABELS[field]}</span>
+                    {' : '}
+                    {getHeaderExamples(field, savedExcelType).map((value) => `"${value}"`).join(', ')}
+                  </p>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-outline-variant/20 bg-surface-container-low px-4 py-3">
+              <p className="text-xs font-semibold text-on-surface font-korean mb-2">보험료 / 차감 안내</p>
+              <div className="space-y-1 text-xs text-on-surface-variant font-korean">
+                {AUTO_DEDUCTION_GUIDES.map((guide) => (
+                  <p key={guide}>- {guide}</p>
+                ))}
+              </div>
+            </div>
+
+            {false && (null
+              /*
+              {[
+                { key: 'delivery_amount_col' as const, label: '諛곗넚 湲덉븸 ??, required: false },
+                { key: 'return_amount_col' as const, label: '諛섑뭹 湲덉븸 ??, required: false },
+                { key: 'collect_amount_col' as const, label: '吏묓븯 湲덉븸 ??, required: false },
+                { key: 'fresh_back_amount_col' as const, label: '?꾨젅?щ갚 湲덉븸 ??, required: false },
+                { key: 'incentive_amount_col' as const, label: '?몄꽱?곕툕 湲덉븸 ??, required: false },
+                { key: 'etc_income_amount_col' as const, label: '湲고??섏엯 湲덉븸 ??, required: false },
+              ].map((field) => (
+                <div key={field.key}>
+                  <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">
+                    {field.label}
+                  </label>
+                  <select
+                    value={mapping[field.key] ?? ''}
+                    onChange={(e) => setMapping((m) => ({ ...m, [field.key]: e.target.value }))}
+                    className="w-full h-10 px-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  >
+                    <option value="">{field.required ? '?꾩닔 ?좏깮' : '?대떦?놁쓬'}</option>
+                    {headers.map((h) => (
+                      <option key={h} value={h}>{h}</option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+              */
+            )}
+
             <div>
               <p className="text-xs font-label font-medium text-on-surface-variant mb-2 font-korean">데이터 미리보기 (상위 3행)</p>
               <div className="overflow-x-auto rounded-xl border border-outline-variant/20">
@@ -780,11 +1160,18 @@ export default function SettlementUploadPage() {
                   if (!principalId) return;
                   const { error: saveErr } = await saveUploadMapping(principalId, {
                     employee_code_col: mapping.employee_code_col,
+                    driver_name_col: mapping.driver_name_col ?? '',
                     delivery_count_col: mapping.delivery_count_col,
                     return_count_col: mapping.return_count_col ?? '',
                     collect_count_col: mapping.collect_count_col ?? '',
+                    delivery_amount_col: mapping.delivery_amount_col ?? '',
+                    return_amount_col: mapping.return_amount_col ?? '',
+                    collect_amount_col: mapping.collect_amount_col ?? '',
                     fresh_count_col: mapping.fresh_count_col ?? '',
                     etc_count_col: mapping.etc_count_col ?? '',
+                    fresh_back_amount_col: mapping.fresh_back_amount_col ?? '',
+                    incentive_amount_col: mapping.incentive_amount_col ?? '',
+                    etc_income_amount_col: mapping.etc_income_amount_col ?? '',
                   }, savedExcelType);
                   if (saveErr) { toastError('매핑 저장 실패: ' + saveErr); return; }
                   toastSuccess('이 원청사의 엑셀 매핑이 저장되었습니다. 다음 업로드 시 자동 적용됩니다.');
@@ -1011,6 +1398,15 @@ export default function SettlementUploadPage() {
                                   )}
                                 </div>
                               </div>
+
+                              {cargoAccidentDetail && s.deduction_details.some((detail) => /화물사고|분실파손/.test(detail.name)) && (
+                                <div className="rounded-xl bg-surface-container-high px-4 py-3">
+                                  <p className="font-label font-semibold text-on-surface-variant mb-1 font-korean">화물사고 상세내역</p>
+                                  <p className="text-sm text-on-surface-variant font-korean whitespace-pre-line">
+                                    {cargoAccidentDetail}
+                                  </p>
+                                </div>
+                              )}
 
                               {/* VAT / Business info */}
                               <div className="pt-2 border-t border-outline-variant/20 flex flex-wrap items-center gap-4">

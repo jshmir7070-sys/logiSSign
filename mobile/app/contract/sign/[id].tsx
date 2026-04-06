@@ -35,6 +35,7 @@ import {
   type IdentityProvider,
   type VerificationResult,
 } from '../../../services/identity.service';
+import { getDefaultDriverSigningAsset, type DriverSigningAssetType } from '../../../services/signing-asset.service';
 import { colors, spacing, typography, borderRadius, shadows } from '../../../constants/theme';
 import { supabase } from '../../../lib/supabase';
 
@@ -147,6 +148,7 @@ export default function ContractSignScreen() {
   const [fieldResponses, setFieldResponses] = useState<Record<string, FieldResponse>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [sigModalField, setSigModalField] = useState<string | null>(null);
+  const [assetModalField, setAssetModalField] = useState<SignField | null>(null);
   const [textModalFieldId, setTextModalFieldId] = useState<string | null>(null);
   const [textModalValue, setTextModalValue] = useState('');
 
@@ -261,25 +263,31 @@ export default function ContractSignScreen() {
     });
   }, []);
 
-  const applySeal = useCallback(async (fieldId: string) => {
+  const applyStoredAsset = useCallback(async (fieldId: string, assetType: DriverSigningAssetType) => {
     const userId = driver?.id;
     if (!userId) return;
-    const { data: seal } = await supabase
-      .from('seals')
-      .select('seal_data_uri')
-      .eq('owner_id', userId)
-      .eq('is_default', true)
-      .limit(1)
-      .single();
 
-    if (seal?.seal_data_uri) {
-      setFieldResponses(prev => ({
-        ...prev,
-        [fieldId]: { imageData: seal.seal_data_uri ?? undefined, value: 'sealed' },
-      }));
-    } else {
-      Alert.alert('도장 없음', '등록된 도장이 없습니다. 설정에서 도장을 먼저 등록해주세요.');
+    const { dataUri, error } = await getDefaultDriverSigningAsset(userId, assetType);
+    if (error) {
+      Alert.alert('오류', error);
+      return;
     }
+
+    if (!dataUri) {
+      Alert.alert(
+        assetType === 'seal' ? '도장 없음' : '서명 없음',
+        assetType === 'seal'
+          ? '등록된 기본 도장이 없습니다. 도장/서명 관리에서 먼저 저장해 주세요.'
+          : '등록된 기본 서명이 없습니다. 도장/서명 관리에서 먼저 저장해 주세요.',
+      );
+      return;
+    }
+
+    setFieldResponses((prev) => ({
+      ...prev,
+      [fieldId]: { imageData: dataUri, value: assetType === 'seal' ? 'sealed' : 'signed' },
+    }));
+    setAssetModalField(null);
   }, [driver?.id]);
 
   const handlePdfSignatureComplete = useCallback((base64: string | null) => {
@@ -351,10 +359,8 @@ export default function ContractSignScreen() {
         toggleCheckbox(field.id);
         break;
       case 'seal':
-        applySeal(field.id);
-        break;
       case 'signature':
-        setSigModalField(field.id);
+        setAssetModalField(field);
         break;
       case 'date':
         applyDate(field.id);
@@ -363,7 +369,7 @@ export default function ContractSignScreen() {
         openTextFieldModal(field);
         break;
     }
-  }, [toggleCheckbox, applySeal, applyDate, openTextFieldModal]);
+  }, [toggleCheckbox, applyDate, openTextFieldModal]);
 
   // PDF 필드 완료 상태
   const pageFields = signFields.filter(f => f.page_number === currentPage);
@@ -713,6 +719,52 @@ export default function ContractSignScreen() {
                   style={[styles.textModalButton, styles.textModalPrimaryButton]}
                 >
                   <Text style={styles.textModalPrimaryText}>{hasNextTextField ? '저장 후 다음' : '저장'}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        <Modal visible={!!assetModalField} animationType="fade" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>{assetModalField?.field_type === 'seal' ? '도장 또는 서명 선택' : '서명 또는 도장 선택'}</Text>
+              <Text style={styles.modalDesc}>저장된 자산을 바로 쓰거나, 지금 직접 그려서 입력할 수 있습니다.</Text>
+
+              <TouchableOpacity
+                onPress={() => assetModalField && applyStoredAsset(assetModalField.id, 'seal')}
+                style={styles.assetChoiceButton}
+              >
+                <MaterialIcons name="verified" size={20} color={colors.primary} />
+                <Text style={styles.assetChoiceText}>저장된 도장 사용</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => assetModalField && applyStoredAsset(assetModalField.id, 'signature')}
+                style={styles.assetChoiceButton}
+              >
+                <MaterialIcons name="draw" size={20} color={colors.tertiary} />
+                <Text style={styles.assetChoiceText}>저장된 서명 사용</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  if (!assetModalField) return;
+                  setSigModalField(assetModalField.id);
+                  setAssetModalField(null);
+                }}
+                style={styles.assetChoiceButton}
+              >
+                <MaterialIcons name="gesture" size={20} color={colors.secondary} />
+                <Text style={styles.assetChoiceText}>지금 직접 그리기</Text>
+              </TouchableOpacity>
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  onPress={() => setAssetModalField(null)}
+                  style={styles.modalCancel}
+                >
+                  <Text style={styles.modalCancelText}>취소</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1145,6 +1197,24 @@ const styles = StyleSheet.create({
   },
   modalTitle: { fontSize: 18, fontWeight: '700', color: '#111', marginBottom: 4 },
   modalDesc: { fontSize: 13, color: '#6B7280', marginBottom: 16 },
+  assetChoiceButton: {
+    width: '100%',
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant + '40',
+    backgroundColor: colors.surfaceContainerLow,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  assetChoiceText: {
+    ...typography.bodyMedium,
+    color: colors.onSurface,
+    fontWeight: '600',
+  },
   modalButtons: { flexDirection: 'row', justifyContent: 'center', marginTop: 16 },
   textModalInput: {
     minHeight: 48,

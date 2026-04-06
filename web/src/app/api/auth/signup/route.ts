@@ -1,202 +1,325 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createAdminSupabaseClient } from '@/lib/supabase'
 import { getClientIp } from '@/lib/get-ip'
 import { rateLimitPublic } from '@/lib/rate-limit'
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { z } from 'zod'
-import { validateInput } from '@/lib/api-schemas'
 import { apiError } from '@/lib/api-error'
+import { getPointBalance } from '@/services/point.service'
+import { encryptAgencyPii } from '@/services/pii.service'
+import { z } from 'zod'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-)
+const supabaseAdmin = createAdminSupabaseClient()
 
-/** 6자리 영문대문자+숫자 초대코드 생성 (예: A3X7K9) */
+type SignupPlanMode = 'point' | 'subscription'
+type SignupPlanType = 'point' | 'basic' | 'standard' | 'pro' | 'enterprise'
+type BillingCycle = 'monthly' | '1year' | '2year'
+
+const signupSchema = z.object({
+  email: z.string().trim().email('올바른 이메일 주소를 입력해 주세요.'),
+  password: z
+    .string()
+    .min(8, '비밀번호는 8자 이상이어야 합니다.')
+    .regex(/[a-z]/, '비밀번호에 영문 소문자를 포함해 주세요.')
+    .regex(/[A-Z]/, '비밀번호에 영문 대문자를 포함해 주세요.')
+    .regex(/[0-9]/, '비밀번호에 숫자를 포함해 주세요.')
+    .regex(/[^a-zA-Z0-9]/, '비밀번호에 특수문자를 포함해 주세요.'),
+  companyName: z.string().trim().min(1, '운송사명을 입력해 주세요.').max(100),
+  ownerName: z.string().trim().min(1, '대표자명을 입력해 주세요.').max(50),
+  businessNumber: z
+    .string()
+    .trim()
+    .regex(/^\d{3}-?\d{2}-?\d{5}$/, '사업자등록번호 형식이 올바르지 않습니다.')
+    .optional()
+    .or(z.literal('')),
+  ownerBirthDate: z
+    .string()
+    .trim()
+    .regex(/^\d{4}-?\d{2}-?\d{2}$/, '대표자 생년월일 형식이 올바르지 않습니다.')
+    .optional()
+    .or(z.literal('')),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^01[0-9]-?\d{3,4}-?\d{4}$/, '휴대전화 번호 형식이 올바르지 않습니다.')
+    .optional()
+    .or(z.literal('')),
+  address: z.string().trim().max(200).optional().or(z.literal('')),
+  addressDetail: z.string().trim().max(100).optional().or(z.literal('')),
+  businessType: z.string().trim().max(50).optional().or(z.literal('')),
+  businessCategory: z.string().trim().max(50).optional().or(z.literal('')),
+  bankName: z.string().trim().max(30).optional().or(z.literal('')),
+  bankAccount: z
+    .string()
+    .trim()
+    .regex(/^[\d-]{8,20}$/, '계좌번호 형식이 올바르지 않습니다.')
+    .optional()
+    .or(z.literal('')),
+  bankHolder: z.string().trim().max(30).optional().or(z.literal('')),
+  planMode: z.enum(['point', 'subscription']).default('point'),
+  plan: z.enum(['point', 'basic', 'standard', 'pro', 'enterprise']).default('point'),
+  billing: z.enum(['monthly', '1year', '2year']).default('monthly'),
+})
+
+function normalizeNullable(value?: string): string | null {
+  const normalized = typeof value === 'string' ? value.trim() : ''
+  return normalized.length > 0 ? normalized : null
+}
+
+function normalizeBusinessNumber(value?: string): string | null {
+  const normalized = normalizeNullable(value)
+  return normalized ? normalized.replace(/\s+/g, '') : null
+}
+
 function generateInviteCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // 혼동 문자 제외 (0/O, 1/I)
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
   let code = ''
-  for (let i = 0; i < 6; i++) {
+
+  for (let index = 0; index < 6; index += 1) {
     code += chars[Math.floor(Math.random() * chars.length)]
   }
+
   return code
 }
 
-const signupSchema = z.object({
-  email: z.email(),
-  password: z.string()
-    .min(8, '비밀번호는 8자 이상')
-    .regex(/[a-z]/, '소문자 포함 필요')
-    .regex(/[A-Z]/, '대문자 포함 필요')
-    .regex(/[0-9]/, '숫자 포함 필요')
-    .regex(/[^a-zA-Z0-9]/, '특수문자 포함 필요'),
-  companyName: z.string().min(1, '회사명은 필수'),
-  ownerName: z.string().min(1, '대표자명은 필수'),
-  businessNumber: z.string()
-    .max(12, '사업자등록번호는 12자 이내')
-    .regex(/^\d{3}-?\d{2}-?\d{5}$/, '사업자등록번호 형식이 올바르지 않습니다')
-    .optional(),
-  ownerBirthDate: z.string().max(10).optional(),
-  phone: z.string()
-    .max(13, '전화번호는 13자 이내')
-    .regex(/^01[0-9]-?\d{3,4}-?\d{4}$/, '유효한 전화번호 형식이 아닙니다')
-    .optional(),
-  address: z.string().max(200).optional(),
-  addressDetail: z.string().max(100).optional(),
-  businessType: z.string().max(50).optional(),
-  businessCategory: z.string().max(50).optional(),
-  bankName: z.string().max(20).optional(),
-  bankAccount: z.string()
-    .max(20, '계좌번호는 20자 이내')
-    .regex(/^[\d-]{8,20}$/, '계좌번호 형식이 올바르지 않습니다')
-    .optional(),
-  bankHolder: z.string().max(30).optional(),
-  plan: z.enum(['free', 'basic', 'standard', 'pro', 'enterprise']).default('free'),
-  billing: z.enum(['monthly', '1year', '2year']).optional().default('monthly'),
-})
+async function generateUniqueInviteCode(): Promise<string> {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const code = generateInviteCode()
+    const { data } = await supabaseAdmin
+      .from('agencies')
+      .select('id')
+      .eq('invite_code', code)
+      .maybeSingle()
 
-/**
- * POST /api/auth/signup
- * 서버에서 역할(role)을 강제 설정하는 회원가입 엔드포인트
- * 
- * ⛔ 현재 신규 운영사 가입 차단 중 (기존 계정만 허용)
- *    기사 초대코드 가입(/api/auth/driver-signup)은 별도 엔드포인트로 정상 동작
- */
+    if (!data) {
+      return code
+    }
+  }
+
+  throw new Error('초대코드를 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+}
+
+async function updateAgencyUsersPlan(agencyId: string, plan: string) {
+  let page = 1
+  const perPage = 100
+
+  while (true) {
+    const { data } = await supabaseAdmin.auth.admin.listUsers({ page, perPage })
+    const users = data?.users ?? []
+    const agencyUsers = users.filter((user) => user.app_metadata?.agency_id === agencyId)
+
+    for (const user of agencyUsers) {
+      await supabaseAdmin.auth.admin.updateUserById(user.id, {
+        app_metadata: {
+          ...user.app_metadata,
+          plan,
+        },
+      })
+    }
+
+    if (users.length < perPage) {
+      break
+    }
+
+    page += 1
+  }
+}
+
+async function createPointSubscription(agencyId: string) {
+  const now = new Date().toISOString()
+  const { data: existing, error: existingError } = await supabaseAdmin
+    .from('subscriptions')
+    .select('id')
+    .eq('agency_id', agencyId)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (existingError) {
+    throw new Error(`포인트 플랜 설정을 준비하지 못했습니다: ${existingError.message}`)
+  }
+
+  const payload = {
+    agency_id: agencyId,
+    plan: 'point',
+    billing_cycle: 'monthly',
+    amount: 0,
+    monthly_amount: 0,
+    total_amount: 0,
+    payment_method: 'POINT',
+    status: 'active',
+    started_at: now,
+    updated_at: now,
+  }
+
+  if (existing?.id) {
+    const { error } = await supabaseAdmin
+      .from('subscriptions')
+      .update(payload)
+      .eq('id', existing.id)
+
+    if (error) {
+      throw new Error(`포인트 플랜 설정에 실패했습니다: ${error.message}`)
+    }
+    return
+  }
+
+  const { error } = await supabaseAdmin.from('subscriptions').insert(payload as never)
+  if (error) {
+    throw new Error(`포인트 플랜 설정에 실패했습니다: ${error.message}`)
+  }
+}
+
 export async function POST(request: NextRequest) {
-  return NextResponse.json(
-    { error: '현재 신규 가입이 중단되었습니다. 문의: support@logissign.com' },
-    { status: 403 }
-  )
-
-  /* ── 아래 기존 가입 로직은 가입 재개 시 이 return문만 제거하면 복원됩니다 ──
   const ip = getClientIp(request)
   const limited = rateLimitPublic(ip, '/api/auth/signup')
   if (limited) return limited
 
   try {
-    const body = await request.json()
-    const { data: validated, error: validationError } = validateInput(signupSchema, body)
-    if (validationError || !validated) {
-      return NextResponse.json({ error: validationError }, { status: 400 })
+    const rawBody = await request.json()
+    const parsed = signupSchema.safeParse(rawBody)
+
+    if (!parsed.success) {
+      const message = parsed.error.issues.map((issue) => issue.message).join(', ')
+      return NextResponse.json({ error: message }, { status: 400 })
     }
 
-    // 사업자번호 중복 체크
-    if (validated.businessNumber) {
-      const { data: existing } = await supabaseAdmin
-        .from('agencies')
-        .select('id')
-        .eq('business_number', validated.businessNumber)
-        .maybeSingle()
+    const body = parsed.data
+    const planMode: SignupPlanMode = body.planMode
+    const selectedPlan: SignupPlanType =
+      planMode === 'point' ? 'point' : body.plan === 'point' ? 'basic' : body.plan
+    const initialPlan = planMode === 'point' ? 'point' : 'free'
+    const initialPlanType = planMode === 'point' ? 'point' : 'subscription'
+    const businessNumber = normalizeBusinessNumber(body.businessNumber)
 
-      if (existing) {
-        return NextResponse.json({ error: '이미 등록된 사업자번호입니다' }, { status: 409 })
-      }
-    }
-
-    // 1. Supabase Auth 계정 생성 — role은 서버에서 강제 설정
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: validated.email,
-      password: validated.password,
-      email_confirm: true,
-      user_metadata: {
-        role: 'agency_admin', // 서버에서 강제 — 클라이언트 조작 불가
-        company_name: validated.companyName,
-        owner_name: validated.ownerName,
-        plan: validated.plan,
-      },
-    })
-
-    if (authError) {
-      return NextResponse.json({ error: authError.message }, { status: 400 })
-    }
-
-    const userId = authData.user?.id
-    if (!userId) {
-      return NextResponse.json({ error: '계정 생성 실패' }, { status: 500 })
-    }
-
-    // 2. agencies 테이블 생성 (초대코드 자동 생성 포함)
-    const inviteCode = generateInviteCode()
-    const { data: agencyData, error: agencyError } = await supabaseAdmin
-      .from('agencies')
-      .insert({
-        name: validated.companyName,
-        business_number: validated.businessNumber ?? null,
-        owner_name: validated.ownerName,
-        owner_birth_date: validated.ownerBirthDate ?? null,
-        phone: validated.phone ?? null,
-        email: validated.email,
-        address: validated.address ?? null,
-        address_detail: validated.addressDetail ?? null,
-        business_type: validated.businessType ?? null,
-        business_category: validated.businessCategory ?? null,
-        bank_name: validated.bankName ?? null,
-        bank_account: validated.bankAccount ?? null,
-        bank_holder: validated.bankHolder ?? null,
-        plan: validated.plan,
-        status: 'active',
-        invite_code: inviteCode,
-      } as never)
-      .select('id')
-      .single()
-
-    if (agencyError) {
-      // 롤백: 계정 삭제
-      await supabaseAdmin.auth.admin.deleteUser(userId)
-      return NextResponse.json({ error: '대리점 생성 실패: ' + agencyError.message }, { status: 500 })
-    }
-
-    // 3. app_metadata에 role + agency_id 설정 (서버에서만 변경 가능, RLS에서 참조)
-    const { error: metaError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-      app_metadata: {
-        role: 'agency_admin',
-        agency_id: agencyData.id,
-        plan: validated.plan,
-      },
-    })
-
-    if (metaError) {
-      // 롤백: 대리점 + 계정 삭제
-      await supabaseAdmin.from('agencies').delete().eq('id', agencyData.id)
-      await supabaseAdmin.auth.admin.deleteUser(userId)
+    if (selectedPlan === 'enterprise') {
       return NextResponse.json(
-        { error: '메타데이터 설정 실패: ' + metaError.message },
-        { status: 500 }
+        { error: 'Enterprise 플랜은 별도 상담 후 가입할 수 있습니다.' },
+        { status: 400 }
       )
     }
 
-    // 4. 구독(subscriptions) 레코드 생성
-    const { PLAN_PRICES } = await import('@/lib/plan-limits')
-    const monthlyAmount = (PLAN_PRICES as Record<string, number>)[validated.plan] ?? 0;
-    const _billingCycle = validated.billing ?? 'monthly';
+    if (businessNumber) {
+      const { data: existingAgency } = await supabaseAdmin
+        .from('agencies')
+        .select('id')
+        .eq('business_number', businessNumber)
+        .maybeSingle()
 
-    const { error: subError } = await supabaseAdmin
-      .from('subscriptions')
-      .insert({
-        agency_id: agencyData.id,
-        plan: validated.plan,
-        amount: monthlyAmount,
-        billing_date: new Date().getDate(),
-        status: validated.plan === 'free' ? 'active' : 'active',
-        last_paid_at: new Date().toISOString(),
-        next_billing_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      } as never)
-
-    if (subError) {
-      console.error('[Signup] 구독 생성 실패:', subError.message)
-      // 구독 실패는 치명적 — 에러 반환
-      return NextResponse.json({ error: '구독 등록 실패: ' + subError.message }, { status: 500 })
+      if (existingAgency) {
+        return NextResponse.json(
+          { error: '이미 등록된 사업자등록번호입니다.' },
+          { status: 409 }
+        )
+      }
     }
 
-    return NextResponse.json({
-      success: true,
-      userId,
-      agencyId: agencyData.id,
-      plan: validated.plan,
+    const createUserResult = await supabaseAdmin.auth.admin.createUser({
+      email: body.email,
+      password: body.password,
+      email_confirm: true,
+      user_metadata: {
+        role: 'agency_admin',
+        company_name: body.companyName,
+        owner_name: body.ownerName,
+        requested_plan: selectedPlan,
+      },
     })
-  } catch (err) {
-    console.error('[Signup] 예상치 못한 오류:', err)
-    return apiError('회원가입 처리 중 오류가 발생했습니다', 500)
+
+    if (createUserResult.error || !createUserResult.data.user) {
+      return NextResponse.json(
+        { error: createUserResult.error?.message ?? '회원 계정을 생성하지 못했습니다.' },
+        { status: 400 }
+      )
+    }
+
+    const userId = createUserResult.data.user.id
+    let agencyId: string | null = null
+
+    try {
+      const inviteCode = await generateUniqueInviteCode()
+      const encryptedAgencyFields = await encryptAgencyPii({
+        owner_birth_date: normalizeNullable(body.ownerBirthDate),
+        bank_account: normalizeNullable(body.bankAccount),
+      })
+
+      const agencyInsert = {
+        name: body.companyName,
+        business_number: businessNumber,
+        owner_name: body.ownerName,
+        owner_birth_date: encryptedAgencyFields.owner_birth_date ?? null,
+        phone: normalizeNullable(body.phone),
+        email: body.email,
+        address: normalizeNullable(body.address),
+        address_detail: normalizeNullable(body.addressDetail),
+        business_type: normalizeNullable(body.businessType),
+        business_category: normalizeNullable(body.businessCategory),
+        bank_name: normalizeNullable(body.bankName),
+        bank_account: encryptedAgencyFields.bank_account ?? null,
+        bank_holder: normalizeNullable(body.bankHolder),
+        plan: initialPlan,
+        plan_type: initialPlanType,
+        monthly_fee: 0,
+        status: 'active',
+        invite_code: inviteCode,
+      }
+
+      const agencyResult = await supabaseAdmin
+        .from('agencies')
+        .insert(agencyInsert as never)
+        .select('id')
+        .single()
+
+      if (agencyResult.error || !agencyResult.data) {
+        throw new Error(agencyResult.error?.message ?? '대리점 정보를 저장하지 못했습니다.')
+      }
+
+      const createdAgencyId = agencyResult.data.id
+      agencyId = createdAgencyId
+
+      const updateMetadataResult = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        user_metadata: {
+          company_name: body.companyName,
+          owner_name: body.ownerName,
+          requested_plan: selectedPlan,
+        },
+        app_metadata: {
+          role: 'agency_admin',
+          agency_id: createdAgencyId,
+          plan: initialPlan,
+        },
+      })
+
+      if (updateMetadataResult.error) {
+        throw new Error(updateMetadataResult.error.message)
+      }
+
+      if (planMode === 'point') {
+        await createPointSubscription(createdAgencyId)
+        await getPointBalance(createdAgencyId)
+        await updateAgencyUsersPlan(createdAgencyId, 'point')
+      }
+
+      return NextResponse.json({
+        success: true,
+        userId,
+        agencyId,
+        inviteCode,
+        initialPlan,
+        selectedPlan,
+        billing: body.billing as BillingCycle,
+      })
+    } catch (innerError) {
+      if (agencyId) {
+        await supabaseAdmin.from('agencies').delete().eq('id', agencyId)
+      }
+      await supabaseAdmin.auth.admin.deleteUser(userId)
+
+      throw innerError
+    }
+  } catch (error) {
+    console.error('[Signup] Unexpected error:', error)
+    return apiError(
+      error instanceof Error ? error.message : '회원가입 처리 중 오류가 발생했습니다.',
+      500
+    )
   }
-  ── 기존 가입 로직 끝 ── */
 }

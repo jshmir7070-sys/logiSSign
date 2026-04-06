@@ -7,7 +7,7 @@ import {
   type PlanFeature,
   type PlanLimits,
   getPlanLimits,
-  hasFeature as _hasFeature,
+  hasFeature as hasPlanFeature,
   PLAN_LABELS,
 } from '@/lib/plan-limits';
 
@@ -20,7 +20,6 @@ interface PlanContextValue {
   email: string;
   limits: PlanLimits;
   hasFeature: (feature: PlanFeature) => boolean;
-  /** 플랜 변경 후 UI 즉시 갱신 */
   refreshPlan: () => Promise<void>;
   loading: boolean;
 }
@@ -37,19 +36,24 @@ export function PlanProvider({ children }: { children: ReactNode }) {
 
   const loadUser = useCallback(async () => {
     const supabase = createBrowserSupabaseClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (user) {
-      const p = (user.app_metadata?.plan || 'free') as PlanType;
-      setPlan(p);
-      setAgencyId(user.app_metadata?.agency_id as string ?? null);
+      setPlan((user.app_metadata?.plan || 'free') as PlanType);
+      setAgencyId((user.app_metadata?.agency_id as string) ?? null);
       setOwnerName(user.user_metadata?.owner_name || '');
       setCompanyName(user.user_metadata?.company_name || '대리점');
       setEmail(user.email || '');
     }
+
     setLoading(false);
   }, []);
 
-  useEffect(() => { loadUser(); }, [loadUser]);
+  useEffect(() => {
+    void loadUser();
+  }, [loadUser]);
 
   const refreshPlan = useCallback(async () => {
     setLoading(true);
@@ -57,21 +61,23 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   }, [loadUser]);
 
   const limits = getPlanLimits(plan);
-  const hasFeature = useCallback((feature: PlanFeature) => _hasFeature(plan, feature), [plan]);
+  const hasFeature = useCallback((feature: PlanFeature) => hasPlanFeature(plan, feature), [plan]);
 
   return (
-    <PlanContext.Provider value={{
-      plan,
-      planLabel: PLAN_LABELS[plan] || 'Free',
-      agencyId,
-      ownerName,
-      companyName,
-      email,
-      limits,
-      hasFeature,
-      refreshPlan,
-      loading,
-    }}>
+    <PlanContext.Provider
+      value={{
+        plan,
+        planLabel: PLAN_LABELS[plan] || 'Free',
+        agencyId,
+        ownerName,
+        companyName,
+        email,
+        limits,
+        hasFeature,
+        refreshPlan,
+        loading,
+      }}
+    >
       {children}
     </PlanContext.Provider>
   );

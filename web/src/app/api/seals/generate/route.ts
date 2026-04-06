@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
 
     ensureSealFontsLoaded()
 
-    const shapes: SealShape[] = ['circle', 'square', 'oval']
+    const shapes: SealShape[] = ['circle', 'square', 'oval', 'rounded_square']
     // 인기 폰트 4개만
     const fontIndices = [0, 1, 2, 3].filter(i => i < ALL_SEAL_FONTS.length)
 
