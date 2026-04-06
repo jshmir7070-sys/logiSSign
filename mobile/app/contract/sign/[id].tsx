@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 계약서 서명 화면 (기사 앱)
  *
  * 두 가지 모드:
@@ -19,6 +19,7 @@ import {
   ActivityIndicator,
   Modal,
   Image,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -70,6 +71,10 @@ const FIELD_COLORS: Record<FieldType, string> = {
   date: '#059669',
   text: '#D97706',
 };
+
+function compareSignFieldOrder(a: SignField, b: SignField) {
+  return (a.sort_order - b.sort_order) || (a.page_number - b.page_number) || (a.y - b.y) || (a.x - b.x);
+}
 
 /* ══════════════════════ 동의 항목 (text 모드) ══════════════════════ */
 
@@ -142,6 +147,8 @@ export default function ContractSignScreen() {
   const [fieldResponses, setFieldResponses] = useState<Record<string, FieldResponse>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [sigModalField, setSigModalField] = useState<string | null>(null);
+  const [textModalFieldId, setTextModalFieldId] = useState<string | null>(null);
+  const [textModalValue, setTextModalValue] = useState('');
 
   const padWidth = width - spacing.lg * 2;
   const padHeight = 200;
@@ -162,13 +169,22 @@ export default function ContractSignScreen() {
       const type = (contract as Record<string, unknown>).template_type as string;
       if (type === 'pdf') {
         setTemplateType('pdf');
-        setPdfUrl((contract as Record<string, unknown>).template_pdf_url as string ?? '');
+        const rawPdfUrl = ((contract as Record<string, unknown>).template_pdf_url as string) ?? '';
+        if (rawPdfUrl.startsWith('http')) {
+          setPdfUrl(rawPdfUrl);
+        } else if (rawPdfUrl) {
+          const { data: signed } = await supabase.storage.from('contracts').createSignedUrl(rawPdfUrl, 3600);
+          setPdfUrl(signed?.signedUrl ?? '');
+        } else {
+          setPdfUrl('');
+        }
         const fields = (contract as Record<string, unknown>).sign_fields;
         if (Array.isArray(fields)) {
-          setSignFields(fields as SignField[]);
+          const sortedFields = [...(fields as SignField[])].sort(compareSignFieldOrder);
+          setSignFields(sortedFields);
           // 자동 채움: sender 필드 + receiver 바인딩 필드
           const autoResponses: Record<string, FieldResponse> = {};
-          for (const f of fields as SignField[]) {
+          for (const f of sortedFields) {
             // sender 필드: default_value가 이미 전송 시 채워져 옴
             if (f.field_owner === 'sender' && f.default_value) {
               if (f.field_type === 'seal' || f.field_type === 'signature') {
@@ -292,6 +308,47 @@ export default function ContractSignScreen() {
     setFieldResponses(prev => ({ ...prev, [fieldId]: { value: today } }));
   }, []);
 
+  const orderedReceiverTextFields = [...signFields]
+    .filter((field) => field.field_owner !== 'sender' && field.field_type === 'text')
+    .sort(compareSignFieldOrder);
+
+  const openTextFieldModal = useCallback((field: SignField) => {
+    setCurrentPage(field.page_number);
+    setTextModalFieldId(field.id);
+    setTextModalValue(fieldResponses[field.id]?.value ?? field.default_value ?? '');
+  }, [fieldResponses]);
+
+  const moveTextFieldModal = useCallback((direction: -1 | 1) => {
+    if (!textModalFieldId) return;
+
+    const currentIndex = orderedReceiverTextFields.findIndex((field) => field.id === textModalFieldId);
+    const nextField = orderedReceiverTextFields[currentIndex + direction];
+    if (!nextField) return;
+
+    setCurrentPage(nextField.page_number);
+    setTextModalFieldId(nextField.id);
+    setTextModalValue(fieldResponses[nextField.id]?.value ?? nextField.default_value ?? '');
+  }, [fieldResponses, orderedReceiverTextFields, textModalFieldId]);
+
+  const submitTextFieldValue = useCallback((direction?: -1 | 1) => {
+    if (!textModalFieldId) return;
+
+    const nextValue = textModalValue.trim();
+    setFieldResponses((prev) => {
+      const updated = { ...prev };
+      if (nextValue) updated[textModalFieldId] = { value: nextValue };
+      else delete updated[textModalFieldId];
+      return updated;
+    });
+
+    if (direction) {
+      moveTextFieldModal(direction);
+      return;
+    }
+
+    setTextModalFieldId(null);
+  }, [moveTextFieldModal, textModalFieldId, textModalValue]);
+
   const handleFieldTap = useCallback((field: SignField) => {
     // sender 필드는 읽기 전용 — 터치 무시
     if (field.field_owner === 'sender') return;
@@ -310,20 +367,22 @@ export default function ContractSignScreen() {
         applyDate(field.id);
         break;
       case 'text':
-        if (typeof Alert.prompt === 'function') {
-          Alert.prompt('텍스트 입력', field.label ?? '내용을 입력하세요', (text: string) => {
-            if (text) setFieldResponses(prev => ({ ...prev, [field.id]: { value: text } }));
-          });
-        } else {
-          Alert.alert('안내', '텍스트 입력은 추후 지원됩니다');
-        }
+        openTextFieldModal(field);
         break;
     }
-  }, [toggleCheckbox, applySeal, applyDate]);
+  }, [toggleCheckbox, applySeal, applyDate, openTextFieldModal]);
 
   // PDF 필드 완료 상태
   const pageFields = signFields.filter(f => f.page_number === currentPage);
   const totalPages = Math.max(1, ...signFields.map(f => f.page_number));
+  const activeTextField = textModalFieldId
+    ? orderedReceiverTextFields.find((field) => field.id === textModalFieldId) ?? null
+    : null;
+  const activeTextFieldIndex = activeTextField
+    ? orderedReceiverTextFields.findIndex((field) => field.id === activeTextField.id)
+    : -1;
+  const hasPrevTextField = activeTextFieldIndex > 0;
+  const hasNextTextField = activeTextFieldIndex >= 0 && activeTextFieldIndex < orderedReceiverTextFields.length - 1;
   // receiver 필드만 필수 체크 (sender는 자동 채움)
   const totalRequired = signFields.filter(f => f.required && f.field_owner !== 'sender').length;
   const completedRequired = signFields.filter(f => {
@@ -625,6 +684,47 @@ export default function ContractSignScreen() {
             size="lg"
           />
         </View>
+
+        <Modal visible={!!textModalFieldId} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>{activeTextField?.label ?? '텍스트 입력'}</Text>
+              <Text style={styles.modalDesc}>
+                {activeTextFieldIndex >= 0 ? `${activeTextFieldIndex + 1} / ${orderedReceiverTextFields.length}` : '텍스트 값을 입력해 주세요'}
+              </Text>
+
+              <TextInput
+                value={textModalValue}
+                onChangeText={setTextModalValue}
+                placeholder="값을 입력해 주세요"
+                style={styles.textModalInput}
+                autoFocus
+              />
+
+              <View style={styles.textModalActions}>
+                <TouchableOpacity
+                  onPress={() => moveTextFieldModal(-1)}
+                  disabled={!hasPrevTextField}
+                  style={[styles.textModalButton, !hasPrevTextField && styles.textModalButtonDisabled]}
+                >
+                  <Text style={[styles.textModalButtonText, !hasPrevTextField && styles.textModalButtonTextDisabled]}>이전</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setTextModalFieldId(null)}
+                  style={[styles.textModalButton, styles.modalCancel]}
+                >
+                  <Text style={[styles.textModalButtonText, styles.modalCancelText]}>취소</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => submitTextFieldValue(hasNextTextField ? 1 : undefined)}
+                  style={[styles.textModalButton, styles.textModalPrimaryButton]}
+                >
+                  <Text style={styles.textModalPrimaryText}>{hasNextTextField ? '저장 후 다음' : '저장'}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         {/* 서명패드 모달 */}
         <Modal visible={!!sigModalField} animationType="slide" transparent>
@@ -1053,6 +1153,49 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 18, fontWeight: '700', color: '#111', marginBottom: 4 },
   modalDesc: { fontSize: 13, color: '#6B7280', marginBottom: 16 },
   modalButtons: { flexDirection: 'row', justifyContent: 'center', marginTop: 16 },
+  textModalInput: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: colors.onSurface,
+    backgroundColor: colors.surfaceContainerLowest,
+  },
+  textModalActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: 16,
+  },
+  textModalButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F4F6',
+  },
+  textModalButtonDisabled: {
+    opacity: 0.45,
+  },
+  textModalButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.onSurface,
+  },
+  textModalButtonTextDisabled: {
+    color: '#9CA3AF',
+  },
+  textModalPrimaryButton: {
+    backgroundColor: colors.primary,
+  },
+  textModalPrimaryText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.onPrimary,
+  },
   modalCancel: {
     paddingHorizontal: 24,
     paddingVertical: 10,

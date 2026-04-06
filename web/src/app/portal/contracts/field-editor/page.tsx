@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 /**
  * 계약서 템플릿 필드 배치 에디터 — 모두싸인 스타일 풀스크린
@@ -63,6 +63,12 @@ interface SealRecord {
   is_default: boolean
 }
 
+interface FieldPreset {
+  label: string
+  bindingVar?: string
+  fieldType: 'text' | 'date'
+}
+
 /* ── 발송인(대리점) 바인딩 변수 ── */
 const SENDER_BINDING_OPTIONS = [
   { value: '', label: '직접 입력' },
@@ -112,6 +118,27 @@ const OWNER_META: Record<FieldOwner, { label: string; color: string; bgColor: st
   receiver: { label: '수신자', color: '#2563EB', bgColor: '#EFF6FF', textColor: '#2563EB' },   // 라벨=blue, 텍스트=파랑
 }
 
+const SENDER_FIELD_PRESETS: FieldPreset[] = [
+  { label: '대리점명', bindingVar: '대리점명', fieldType: 'text' },
+  { label: '대표자명', bindingVar: '대표자명_대리점', fieldType: 'text' },
+  { label: '사업자번호', bindingVar: '대리점사업자번호', fieldType: 'text' },
+  { label: '주소', bindingVar: '대리점주소', fieldType: 'text' },
+  { label: '전화번호', bindingVar: '대리점전화', fieldType: 'text' },
+  { label: '이메일', bindingVar: '대리점이메일', fieldType: 'text' },
+  { label: '작성일', fieldType: 'date' },
+]
+
+const RECEIVER_FIELD_PRESETS: FieldPreset[] = [
+  { label: '이름', bindingVar: '기사명', fieldType: 'text' },
+  { label: '전화번호', bindingVar: '전화번호', fieldType: 'text' },
+  { label: '주소', bindingVar: '주소', fieldType: 'text' },
+  { label: '생년월일', bindingVar: '생년월일', fieldType: 'text' },
+  { label: '차량번호', bindingVar: '차량번호', fieldType: 'text' },
+  { label: '계좌번호', bindingVar: '계좌번호', fieldType: 'text' },
+  { label: '예금주', bindingVar: '예금주', fieldType: 'text' },
+  { label: '계약일', fieldType: 'date' },
+]
+
 /* ── 메인 ── */
 
 export default function ContractFieldEditorPageWrapper() {
@@ -144,6 +171,7 @@ function ContractFieldEditorPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [dragging, setDragging] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null)
+  const [contextMenu, setContextMenu] = useState<{ fieldId: string; x: number; y: number } | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [savedFields, setSavedFields] = useState<string>('[]') // 저장 시점 스냅샷 (JSON)
 
@@ -160,6 +188,27 @@ function ContractFieldEditorPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pdfDocRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null)
+
+  const normalizeFieldOrder = useCallback((nextFields: LocalField[]) => (
+    nextFields.map((field, index) => ({ ...field, sort_order: index }))
+  ), [])
+
+  const serializeFieldsSnapshot = useCallback((nextFields: LocalField[]) => (
+    JSON.stringify(nextFields.map((field, index) => ({
+      field_type: field.field_type,
+      field_owner: field.field_owner,
+      page_number: field.page_number,
+      x: field.x,
+      y: field.y,
+      width: field.width,
+      height: field.height,
+      label: field.label,
+      required: field.required,
+      sort_order: index,
+      default_value: field.default_value,
+      binding_var: field.binding_var,
+    })))
+  ), [])
 
   // ── PDF 캔버스 렌더링 ──
   const renderPdfPage = useCallback(async (pageNum: number) => {
@@ -231,13 +280,15 @@ function ContractFieldEditorPage() {
         }
         const existing = t.sign_fields as SignFieldInput[] | null
         if (existing && Array.isArray(existing)) {
-          const loaded = existing.map((f, i) => ({
+          const loaded = normalizeFieldOrder([...existing].sort((a, b) => (
+            (a.sort_order - b.sort_order) || (a.page_number - b.page_number) || (a.y - b.y) || (a.x - b.x)
+          )).map((f, i) => ({
             ...f,
             field_owner: f.field_owner || 'receiver', // 기존 데이터 호환
             _id: `f_${i}_${Date.now()}`,
-          }))
+          })))
           setFields(loaded)
-          setSavedFields(JSON.stringify(existing))
+          setSavedFields(serializeFieldsSnapshot(loaded))
         }
 
         // 2) 대리점 도장 목록 조회
@@ -267,18 +318,13 @@ function ContractFieldEditorPage() {
       }
       setLoading(false)
     })()
-  }, [templateId])
+  }, [templateId, normalizeFieldOrder, serializeFieldsSnapshot])
 
   // ── 변경 감지 ──
   useEffect(() => {
-    const currentSnapshot = JSON.stringify(fields.map(f => ({
-      field_type: f.field_type, field_owner: f.field_owner, page_number: f.page_number,
-      x: f.x, y: f.y, width: f.width, height: f.height,
-      label: f.label, required: f.required,
-      default_value: f.default_value, binding_var: f.binding_var,
-    })))
+    const currentSnapshot = serializeFieldsSnapshot(fields)
     setHasUnsavedChanges(currentSnapshot !== savedFields)
-  }, [fields, savedFields])
+  }, [fields, savedFields, serializeFieldsSnapshot])
 
   // ── 브라우저 닫기/새로고침 시 경고 ──
   useEffect(() => {
@@ -288,6 +334,22 @@ function ContractFieldEditorPage() {
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
   }, [hasUnsavedChanges])
+
+  useEffect(() => {
+    if (!contextMenu) return
+
+    const handleClickAway = () => setContextMenu(null)
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setContextMenu(null)
+    }
+
+    window.addEventListener('click', handleClickAway)
+    window.addEventListener('keydown', handleEscape)
+    return () => {
+      window.removeEventListener('click', handleClickAway)
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [contextMenu])
 
 
   // ── 파일 업로드 ──
@@ -398,9 +460,9 @@ function ContractFieldEditorPage() {
       required: owner === 'receiver', // sender 필드는 자동이므로 required 아님
       sort_order: fields.length, binding_var: bindingVar,
     }
-    setFields(prev => [...prev, newField])
+    setFields(prev => normalizeFieldOrder([...prev, newField]))
     setSelectedId(newField._id)
-  }, [currentPage, fields.length])
+  }, [currentPage, fields.length, normalizeFieldOrder])
 
   // 대리점 도장 추가
   const addSealField = useCallback((seal: SealRecord) => {
@@ -413,19 +475,79 @@ function ContractFieldEditorPage() {
       binding_var: '대리점도장',
       default_value: seal.seal_data_uri || seal.seal_image_url || '',
     }
-    setFields(prev => [...prev, newField])
+    setFields(prev => normalizeFieldOrder([...prev, newField]))
     setSelectedId(newField._id)
     setShowSealPicker(false)
-  }, [currentPage, fields.length])
+  }, [currentPage, fields.length, normalizeFieldOrder])
 
   const removeField = useCallback((id: string) => {
-    setFields(prev => prev.filter(f => f._id !== id))
+    setFields(prev => normalizeFieldOrder(prev.filter(f => f._id !== id)))
     if (selectedId === id) setSelectedId(null)
-  }, [selectedId])
+    if (contextMenu?.fieldId === id) setContextMenu(null)
+  }, [selectedId, contextMenu, normalizeFieldOrder])
 
   const updateField = useCallback((id: string, patch: Partial<LocalField>) => {
     setFields(prev => prev.map(f => f._id === id ? { ...f, ...patch } : f))
   }, [])
+
+  const moveField = useCallback((fieldId: string, direction: -1 | 1) => {
+    setFields(prev => {
+      const currentIndex = prev.findIndex((field) => field._id === fieldId)
+      if (currentIndex === -1) return prev
+
+      const nextIndex = currentIndex + direction
+      if (nextIndex < 0 || nextIndex >= prev.length) return prev
+
+      const reordered = [...prev]
+      const [moved] = reordered.splice(currentIndex, 1)
+      reordered.splice(nextIndex, 0, moved)
+      return normalizeFieldOrder(reordered)
+    })
+  }, [normalizeFieldOrder])
+
+  const setFieldOrder = useCallback((fieldId: string, nextOrder: number) => {
+    setFields(prev => {
+      const currentIndex = prev.findIndex((field) => field._id === fieldId)
+      if (currentIndex === -1) return prev
+
+      const targetIndex = Math.max(0, Math.min(prev.length - 1, nextOrder - 1))
+      if (targetIndex === currentIndex) return prev
+
+      const reordered = [...prev]
+      const [moved] = reordered.splice(currentIndex, 1)
+      reordered.splice(targetIndex, 0, moved)
+      return normalizeFieldOrder(reordered)
+    })
+  }, [normalizeFieldOrder])
+
+  const getFieldPresets = useCallback((field: LocalField | undefined | null): FieldPreset[] => {
+    if (!field || (field.field_type !== 'text' && field.field_type !== 'date')) return []
+
+    const presets = field.field_owner === 'sender'
+      ? SENDER_FIELD_PRESETS
+      : RECEIVER_FIELD_PRESETS
+
+    return presets.filter((preset) => preset.fieldType === field.field_type)
+  }, [])
+
+  const applyFieldPreset = useCallback((fieldId: string, preset: FieldPreset) => {
+    updateField(fieldId, {
+      label: preset.label,
+      binding_var: preset.bindingVar,
+      default_value: preset.bindingVar ? undefined : '',
+    })
+    setContextMenu(null)
+  }, [updateField])
+
+  const openFieldContextMenu = useCallback((event: React.MouseEvent, fieldId: string) => {
+    const field = fields.find((item) => item._id === fieldId)
+    if (!field || getFieldPresets(field).length === 0) return
+
+    event.preventDefault()
+    event.stopPropagation()
+    setSelectedId(fieldId)
+    setContextMenu({ fieldId, x: event.clientX, y: event.clientY })
+  }, [fields, getFieldPresets])
 
   // ── 드래그 ──
   const handleMouseDown = useCallback((e: React.MouseEvent, fieldId: string) => {
@@ -452,7 +574,9 @@ function ContractFieldEditorPage() {
   const handleSave = useCallback(async () => {
     if (!templateId) return
     setSaving(true)
-    const signFields: SignFieldInput[] = fields.map((f, i) => ({
+    const normalizedFields = normalizeFieldOrder(fields)
+    setFields(normalizedFields)
+    const signFields: SignFieldInput[] = normalizedFields.map((f, i) => ({
       field_type: f.field_type, field_owner: f.field_owner, page_number: f.page_number,
       x: f.x, y: f.y, width: f.width, height: f.height,
       label: f.label, required: f.required, sort_order: i,
@@ -466,16 +590,19 @@ function ContractFieldEditorPage() {
     if (error) {
       alert('저장 실패: ' + error.message)
     } else {
-      setSavedFields(JSON.stringify(signFields))
+      setSavedFields(serializeFieldsSnapshot(normalizedFields))
       setHasUnsavedChanges(false)
       alert('필드 배치가 저장되었습니다.')
     }
-  }, [templateId, fields])
+  }, [templateId, fields, normalizeFieldOrder, serializeFieldsSnapshot])
 
   const pageFields = fields.filter(f => f.page_number === currentPage)
   const selectedField = fields.find(f => f._id === selectedId)
+  const selectedFieldOrder = selectedField ? fields.findIndex((field) => field._id === selectedField._id) + 1 : 0
   const senderFields = fields.filter(f => f.field_owner === 'sender')
   const receiverFields = fields.filter(f => f.field_owner === 'receiver')
+  const contextMenuField = contextMenu ? fields.find(f => f._id === contextMenu.fieldId) : null
+  const contextMenuPresets = getFieldPresets(contextMenuField)
 
   if (loading) {
     return (
@@ -793,6 +920,7 @@ function ContractFieldEditorPage() {
                   }}
                   onMouseDown={(e) => handleMouseDown(e, field._id)}
                   onClick={(e) => { e.stopPropagation(); setSelectedId(field._id) }}
+                  onContextMenu={(e) => openFieldContextMenu(e, field._id)}
                 >
                   {/* 넘버링 라벨 태그 — 발송인은 빨강, 수신자는 파랑 */}
                   <div className="absolute -top-[18px] left-0 flex items-center gap-0.5 px-1.5 py-0.5 rounded-t text-white text-[10px] font-bold whitespace-nowrap leading-none"
@@ -869,6 +997,7 @@ function ContractFieldEditorPage() {
                   return (
                     <div key={f._id}
                       onClick={() => { setSelectedId(f._id); setCurrentPage(f.page_number) }}
+                      onContextMenu={(e) => openFieldContextMenu(e, f._id)}
                       className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-korean cursor-pointer transition-all ${
                         isSelected ? 'bg-rose-50 ring-1 ring-rose-300' : 'hover:bg-neutral-50'
                       }`}>
@@ -876,6 +1005,24 @@ function ContractFieldEditorPage() {
                       <span className="text-sm shrink-0">{meta.icon}</span>
                       <span className="flex-1 truncate text-neutral-700">{f.label || meta.label}</span>
                       {f.binding_var && <span className="text-[8px] px-1 rounded bg-rose-100 text-rose-600 shrink-0">자동</span>}
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); moveField(f._id, -1) }}
+                          disabled={num === 1}
+                          className="w-5 h-5 rounded text-[10px] text-neutral-300 hover:text-neutral-600 hover:bg-white disabled:text-neutral-200 disabled:hover:bg-transparent"
+                          title="위로"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); moveField(f._id, 1) }}
+                          disabled={num === fields.length}
+                          className="w-5 h-5 rounded text-[10px] text-neutral-300 hover:text-neutral-600 hover:bg-white disabled:text-neutral-200 disabled:hover:bg-transparent"
+                          title="아래로"
+                        >
+                          ↓
+                        </button>
+                      </div>
                       <button onClick={(e) => { e.stopPropagation(); removeField(f._id) }}
                         className="text-neutral-300 hover:text-red-500 shrink-0">&times;</button>
                     </div>
@@ -903,6 +1050,7 @@ function ContractFieldEditorPage() {
                   return (
                     <div key={f._id}
                       onClick={() => { setSelectedId(f._id); setCurrentPage(f.page_number) }}
+                      onContextMenu={(e) => openFieldContextMenu(e, f._id)}
                       className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-korean cursor-pointer transition-all ${
                         isSelected ? 'bg-blue-50 ring-1 ring-blue-300' : 'hover:bg-neutral-50'
                       }`}>
@@ -910,6 +1058,24 @@ function ContractFieldEditorPage() {
                       <span className="text-sm shrink-0">{meta.icon}</span>
                       <span className="flex-1 truncate text-neutral-700">{f.label || meta.label}</span>
                       {f.binding_var && <span className="text-[8px] px-1 rounded bg-green-100 text-green-700 shrink-0">자동</span>}
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); moveField(f._id, -1) }}
+                          disabled={num === 1}
+                          className="w-5 h-5 rounded text-[10px] text-neutral-300 hover:text-neutral-600 hover:bg-white disabled:text-neutral-200 disabled:hover:bg-transparent"
+                          title="위로"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); moveField(f._id, 1) }}
+                          disabled={num === fields.length}
+                          className="w-5 h-5 rounded text-[10px] text-neutral-300 hover:text-neutral-600 hover:bg-white disabled:text-neutral-200 disabled:hover:bg-transparent"
+                          title="아래로"
+                        >
+                          ↓
+                        </button>
+                      </div>
                       <button onClick={(e) => { e.stopPropagation(); removeField(f._id) }}
                         className="text-neutral-300 hover:text-red-500 shrink-0">&times;</button>
                     </div>
@@ -951,12 +1117,45 @@ function ContractFieldEditorPage() {
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 flex items-center justify-center rounded-lg text-white text-xs font-bold shrink-0"
                   style={{ backgroundColor: OWNER_META[selectedField.field_owner].color }}>
-                  {fields.indexOf(selectedField) + 1}
+                  {selectedFieldOrder}
                 </div>
                 <div className="flex-1">
                   <p className="text-xs font-bold text-neutral-800 font-korean">{FIELD_TYPE_META[selectedField.field_type].label}</p>
                   <p className="text-[10px] text-neutral-400">P{selectedField.page_number} &middot; {OWNER_META[selectedField.field_owner].label}</p>
                 </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-neutral-500 font-bold font-korean">입력 순서</label>
+                <div className="mt-1 flex items-center gap-1.5">
+                  <button
+                    onClick={() => moveField(selectedField._id, -1)}
+                    disabled={selectedFieldOrder <= 1}
+                    className="w-8 h-8 rounded-lg border border-neutral-200 text-xs text-neutral-500 hover:border-neutral-300 hover:bg-neutral-50 disabled:text-neutral-300 disabled:hover:bg-transparent"
+                    title="위로"
+                  >
+                    ↑
+                  </button>
+                  <input
+                    type="number"
+                    min={1}
+                    max={fields.length}
+                    value={selectedFieldOrder}
+                    onChange={(e) => setFieldOrder(selectedField._id, Number(e.target.value || 1))}
+                    className="flex-1 h-8 px-2.5 text-xs rounded-lg border border-neutral-200 font-korean focus:ring-2 focus:ring-blue-300 outline-none"
+                  />
+                  <button
+                    onClick={() => moveField(selectedField._id, 1)}
+                    disabled={selectedFieldOrder >= fields.length}
+                    className="w-8 h-8 rounded-lg border border-neutral-200 text-xs text-neutral-500 hover:border-neutral-300 hover:bg-neutral-50 disabled:text-neutral-300 disabled:hover:bg-transparent"
+                    title="아래로"
+                  >
+                    ↓
+                  </button>
+                </div>
+                <p className="mt-1 text-[9px] text-neutral-400 font-korean">
+                  기사 앱의 텍스트 입력 이동 순서는 이 번호 기준으로 적용됩니다.
+                </p>
               </div>
 
               {/* 라벨 */}
@@ -1054,6 +1253,27 @@ function ContractFieldEditorPage() {
           )}
         </div>
       </div>
+
+      {contextMenu && contextMenuPresets.length > 0 && (
+        <div
+          className="fixed z-[100] min-w-[180px] rounded-xl border border-neutral-200 bg-white p-2 shadow-2xl"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <p className="px-2 pb-1 text-[10px] font-bold text-neutral-400 font-korean">빠른 필드 적용</p>
+          <div className="space-y-1">
+            {contextMenuPresets.map((preset) => (
+              <button
+                key={`${contextMenu.fieldId}_${preset.fieldType}_${preset.label}`}
+                onClick={() => applyFieldPreset(contextMenu.fieldId, preset)}
+                className="w-full rounded-lg px-2 py-2 text-left text-[11px] font-korean text-neutral-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ══ 하단: 페이지 네비게이션 ══ */}
       <div className="h-12 bg-white border-t border-neutral-200 flex items-center px-4 gap-3 shrink-0 shadow-inner">

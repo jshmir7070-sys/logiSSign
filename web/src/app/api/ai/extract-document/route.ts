@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateAdmin } from '@/lib/api-auth'
+import { aiExtractDocumentSchema, validateInput } from '@/lib/api-schemas'
+import {
+  buildExtractDocumentUserPrompt,
+  extractDocumentSystemPrompt,
+  parseExtractDocumentResponse,
+} from '@/lib/ai-prompts'
 import { rateLimitAuth } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/get-ip'
 
 /**
  * POST /api/ai/extract-document
- * 업로드된 문서 텍스트에서 계약서 본문 추출 + 변수 자동 매핑
+ * 업로드한 문서 텍스트에서 계약 본문과 변수 후보를 추출한다.
  *
  * Body: { text, fileName? }
  * Returns: { content, detectedVariables }
@@ -20,41 +26,36 @@ export async function POST(request: NextRequest) {
 
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
-    return NextResponse.json({ error: 'OPENAI_API_KEY가 설정되지 않았습니다. 환경변수를 추가하세요.' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'OPENAI_API_KEY가 설정되지 않았습니다. 환경변수를 추가해 주세요.' },
+      { status: 500 }
+    )
   }
 
   try {
-    const { text, fileName } = await request.json()
-    if (!text || text.length < 10) return NextResponse.json({ error: '문서 텍스트가 필요합니다' }, { status: 400 })
-    if (text.length > 50000) return NextResponse.json({ error: '문서 크기가 50KB를 초과합니다' }, { status: 400 })
-
-    const systemPrompt = `당신은 한국 물류 계약서 분석 전문가입니다.
-주어진 문서 텍스트를 분석하여:
-1. 계약서 본문을 정리하고 조항 번호를 정돈하세요
-2. 기사/대리점 정보가 들어갈 자리를 {{변수}} 형태로 변환하세요:
-   - 기사 이름 → {{기사명}}
-   - 기사 전화번호 → {{전화번호}}
-   - 기사 주소 → {{주소}}
-   - 대리점 상호 → {{대리점명}}
-   - 대리점 사업자번호 → {{대리점사업자번호}}
-   - 계약 시작일 → {{계약시작일}}
-   - 계약 종료일 → {{계약종료일}}
-   - 차량번호 → {{차량번호}}
-   - 등등
-3. 원본의 법적 내용은 최대한 유지하세요
-4. 응답은 JSON 형식: { "content": "변환된 본문", "detectedVariables": ["기사명", "전화번호", ...] }`
+    const rawBody = await request.json().catch(() => ({}))
+    const { data: body, error: validationError } = validateInput(aiExtractDocumentSchema, rawBody)
+    if (validationError || !body) {
+      return NextResponse.json({ error: validationError ?? '문서 텍스트가 필요합니다' }, { status: 400 })
+    }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `파일명: ${fileName ?? '알 수 없음'}\n\n문서 내용:\n${text.slice(0, 8000)}` },
+          { role: 'system', content: extractDocumentSystemPrompt },
+          {
+            role: 'user',
+            content: buildExtractDocumentUserPrompt({
+              fileName: body.fileName,
+              text: body.text.slice(0, 8000),
+            }),
+          },
         ],
         temperature: 0.2,
         max_tokens: 4000,
@@ -67,12 +68,9 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await response.json()
-    const parsed = JSON.parse(result.choices?.[0]?.message?.content ?? '{}')
+    const parsed = parseExtractDocumentResponse(result.choices?.[0]?.message?.content)
 
-    return NextResponse.json({
-      content: parsed.content ?? '',
-      detectedVariables: parsed.detectedVariables ?? [],
-    })
+    return NextResponse.json(parsed)
   } catch (err) {
     console.error('[AI ExtractDocument] 예외 발생:', err instanceof Error ? err.message : err)
     return NextResponse.json({ error: '문서 분석 처리 중 오류가 발생했습니다' }, { status: 500 })

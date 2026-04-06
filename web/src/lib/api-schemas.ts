@@ -1,54 +1,47 @@
 import { z } from 'zod'
 
 /**
- * API 입력 검증 스키마 모음 (Zod v4)
- * 모든 POST/PATCH 엔드포인트에서 사용
+ * API 입력 검증 스키마 모음.
+ * 모든 POST/PATCH 핸들러에서 공통으로 사용한다.
  */
 
-// UUID 형식
 const uuid = z.uuid()
+const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '날짜 형식은 YYYY-MM-DD여야 합니다')
 
-// 날짜 형식 YYYY-MM-DD
-const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '날짜 형식은 YYYY-MM-DD')
-
-// ── 공통 PII 검증 프리미티브 ──
-
-/** 사업자등록번호: 000-00-00000 (하이픈 유무 모두 허용) */
 export const businessNumberSchema = z.string()
-  .max(12, '사업자등록번호는 12자 이내')
+  .max(12, '사업자등록번호는 12자 이내여야 합니다')
   .regex(/^\d{3}-?\d{2}-?\d{5}$/, '사업자등록번호 형식이 올바르지 않습니다 (000-00-00000)')
   .optional()
 
-/** 은행 계좌번호: 숫자+하이픈, 8~20자 */
 export const bankAccountSchema = z.string()
-  .max(20, '계좌번호는 20자 이내')
+  .max(20, '계좌번호는 20자 이내여야 합니다')
   .regex(/^[\d-]{8,20}$/, '계좌번호 형식이 올바르지 않습니다')
   .optional()
 
-/** 한국 전화번호: 01X-XXXX-XXXX (하이픈 유무 모두 허용) */
 export const phoneSchema = z.string()
-  .max(13, '전화번호는 13자 이내')
-  .regex(/^01[0-9]-?\d{3,4}-?\d{4}$/, '유효한 전화번호 형식이 아닙니다')
+  .max(13, '전화번호는 13자 이내여야 합니다')
+  .regex(/^01[0-9]-?\d{3,4}-?\d{4}$/, '유효한 휴대전화번호 형식이 아닙니다')
   .optional()
 
-/** z.record 키/값 크기 제한 헬퍼 */
 function boundedRecord(maxKeyLen: number, maxValLen: number) {
   return z.record(
-    z.string().max(maxKeyLen, `키는 ${maxKeyLen}자 이내`),
-    z.string().max(maxValLen, `값은 ${maxValLen}자 이내`),
+    z.string().max(maxKeyLen, `키는 ${maxKeyLen}자 이내여야 합니다`),
+    z.string().max(maxValLen, `값은 ${maxValLen}자 이내여야 합니다`),
   )
 }
 
-// ── Amendments ──
-
 export const createAmendmentSchema = z.object({
-  driverIds: z.array(uuid).min(1, '기사를 1명 이상 선택하세요'),
+  driverIds: z.array(uuid).min(1, '기사는 1명 이상 선택해야 합니다'),
   contractId: uuid.optional(),
   amendmentType: z.enum([
-    'rate_change', 'insurance_change', 'deduction_change',
-    'area_change', 'renewal', 'general_change',
+    'rate_change',
+    'insurance_change',
+    'deduction_change',
+    'area_change',
+    'renewal',
+    'general_change',
   ]),
-  title: z.string().min(1, '제목은 필수입니다').max(200, '제목은 200자 이내'),
+  title: z.string().min(1, '제목은 필수입니다').max(200, '제목은 200자 이내여야 합니다'),
   description: z.string().max(2000).optional(),
   changes: z.object({
     before: z.record(z.string(), z.string()).optional().default({}),
@@ -63,12 +56,10 @@ export const patchAmendmentSchema = z.object({
   rejectionReason: z.string().max(1000).optional(),
 })
 
-// ── Contracts ──
-
 export const sendContractSchema = z.object({
   driverId: uuid.optional(),
   driverIds: z.array(uuid).optional(),
-  templateIds: z.array(uuid).min(1, '템플릿을 1개 이상 선택하세요'),
+  templateIds: z.array(uuid).min(1, '템플릿은 1개 이상 선택해야 합니다'),
   bindingDataMap: z.record(
     z.string().max(100),
     boundedRecord(100, 5000),
@@ -76,22 +67,16 @@ export const sendContractSchema = z.object({
   bindingData: boundedRecord(100, 5000).optional().default({}),
 })
 
-// ── Verify ──
-
 export const verifyContractSchema = z.object({
   verificationCode: z
     .string()
-    .length(8, '인증코드는 8자리입니다')
-    .regex(/^[A-Z0-9]+$/i, '영문/숫자만 가능합니다'),
+    .length(8, '인증코드는 8자리여야 합니다')
+    .regex(/^[A-Z0-9]+$/i, '인증코드는 영문과 숫자만 사용할 수 있습니다'),
 })
-
-// ── Integrity Check ──
 
 export const integrityCheckSchema = z.object({
   contractId: uuid.optional(),
 })
-
-// ── Payment ──
 
 export const paymentSaveBillingKeySchema = z.object({
   action: z.literal('save-billing-key'),
@@ -124,29 +109,28 @@ export const paymentSchema = z.discriminatedUnion('action', [
   paymentGetPaymentSchema,
 ])
 
-// ── SMS ──
-
 export const smsSendSchema = z.object({
-  to: z.string().min(1, '수신번호는 필수입니다').regex(/^01[0-9]{8,9}$/, '유효한 전화번호 형식이 아닙니다'),
-  text: z.string().min(1, '메시지는 필수입니다').max(2000, '메시지는 2000자 이내'),
+  to: z.string().min(1, '수신번호는 필수입니다').regex(/^01[0-9]{8,9}$/, '유효한 휴대전화번호 형식이 아닙니다'),
+  text: z.string().min(1, '메시지는 필수입니다').max(2000, '메시지는 2000자 이내여야 합니다'),
   from: z.string().optional(),
 })
 
 export const smsInviteSchema = z.object({
-  driverPhone: z.string().min(1, '기사 전화번호는 필수입니다'),
+  driverPhone: z.string().min(1, '기사 휴대전화번호는 필수입니다'),
   driverName: z.string().min(1, '기사 이름은 필수입니다'),
   inviteCode: z.string().optional(),
   agencyName: z.string().optional(),
   agencyId: z.string().uuid().optional(),
 })
 
-// ── Signed PDF ──
-
 export const signedPdfSchema = z.object({
   contractId: uuid,
 })
 
-// ── AI Template ──
+export const aiExtractDocumentSchema = z.object({
+  text: z.string().trim().min(10, '문서 텍스트가 필요합니다').max(50000, '문서 크기가 50KB를 초과합니다'),
+  fileName: z.string().trim().max(255, '파일명은 255자 이내여야 합니다').optional(),
+})
 
 export const aiGenerateTemplateSchema = z.object({
   title: z.string().min(1, '템플릿 제목이 필요합니다').max(200),
@@ -154,15 +138,10 @@ export const aiGenerateTemplateSchema = z.object({
   description: z.string().max(2000).optional(),
 })
 
-// ── Contracts List (query params) ──
-
 export const contractListQuerySchema = z.object({
   status: z.enum(['draft', 'sent', 'viewed', 'signed', 'expired']).optional(),
 })
 
-/**
- * 검증 헬퍼 — parse 결과를 { data, error } 형태로 반환
- */
 export function validateInput<T>(
   schema: z.ZodType<T>,
   input: unknown
@@ -171,6 +150,7 @@ export function validateInput<T>(
   if (result.success) {
     return { data: result.data, error: null }
   }
-  const messages = result.error.issues.map(i => i.message).join(', ')
+
+  const messages = result.error.issues.map((issue) => issue.message).join(', ')
   return { data: null, error: messages }
 }

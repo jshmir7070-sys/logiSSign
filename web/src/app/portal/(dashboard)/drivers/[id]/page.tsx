@@ -87,6 +87,7 @@ export default function DriverDetailPage() {
   const [isRouteSame, setIsRouteSame] = useState(false); // 원청사 설정: 라우트 동일단가
   const [editMode, setEditMode] = useState(false);
   const [editFields, setEditFields] = useState<Record<string, string>>({});
+  const [statusChanging, setStatusChanging] = useState(false);
 
   /* ── Business settings ── */
   const [bizSettings, setBizSettings] = useState<DriverBusinessSettings>({
@@ -343,8 +344,6 @@ export default function DriverDetailPage() {
   }
 
   /* ── 퇴사 / 복직 처리 ── */
-  const [statusChanging, setStatusChanging] = useState(false);
-
   async function handleResign() {
     if (!id || !driver) return;
     if (!confirm(`${driver.name} 기사를 퇴사 처리하시겠습니까?\n\n퇴사 처리하면 기사 목록에서 '퇴사' 상태로 표시되며,\n계약서 발송 등 일부 기능이 제한됩니다.`)) return;
