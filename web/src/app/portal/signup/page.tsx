@@ -349,9 +349,9 @@ export default function PortalSignupPage() {
                   form.planMode === 'point' ? 'border-primary bg-primary/5' : 'border-outline-variant/20'
                 }`}
               >
-                <p className="text-sm font-bold text-on-surface">포인트형</p>
+                <p className="text-sm font-bold text-on-surface">무료가입</p>
                 <p className="mt-1 text-xs text-on-surface-variant">
-                  가입 후 바로 시작하고, 사용량만큼 포인트로 결제합니다.
+                  가입 즉시 5,000P 무료 지급! 포인트 소진 후 충전 또는 구독 전환 가능합니다.
                 </p>
               </button>
               <button
@@ -475,27 +475,6 @@ export default function PortalSignupPage() {
               />
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-              <input
-                className={INPUT_CLASS}
-                value={form.bankName}
-                onChange={(event) => updateForm({ bankName: event.target.value })}
-                placeholder="정산 은행"
-              />
-              <input
-                className={INPUT_CLASS}
-                value={form.bankAccount}
-                onChange={(event) => updateForm({ bankAccount: event.target.value })}
-                placeholder="정산 계좌번호"
-              />
-              <input
-                className={INPUT_CLASS}
-                value={form.bankHolder}
-                onChange={(event) => updateForm({ bankHolder: event.target.value })}
-                placeholder="예금주"
-              />
-            </div>
-
             <div className="grid gap-4 md:grid-cols-2">
               <input
                 type="password"
@@ -569,10 +548,10 @@ export default function PortalSignupPage() {
             <section className="rounded-3xl bg-surface-container-lowest p-7 shadow-ambient">
               <h2 className="font-headline text-lg font-bold text-on-surface">가입 요약</h2>
               <div className="mt-5 space-y-3">
-                <SummaryRow label="가입 방식" value={form.planMode === 'point' ? '포인트형' : '구독형'} />
+                <SummaryRow label="가입 방식" value={form.planMode === 'point' ? '무료가입' : '구독형'} />
                 <SummaryRow
                   label="선택 플랜"
-                  value={form.planMode === 'point' ? '포인트형' : form.plan.toUpperCase()}
+                  value={form.planMode === 'point' ? '무료가입 (5,000P 지급)' : form.plan.toUpperCase()}
                 />
                 {form.planMode === 'subscription' ? (
                   <>
@@ -590,7 +569,7 @@ export default function PortalSignupPage() {
                   </>
                 ) : (
                   <div className="rounded-2xl bg-primary/5 p-4 text-xs leading-5 text-on-surface-variant">
-                    가입 즉시 포인트형으로 시작하고, 사용량만큼 포인트로 차감됩니다.
+                    가입 즉시 <strong>5,000P</strong>가 무료 지급됩니다. 포인트 소진 후 포인트 충전 또는 구독 플랜으로 전환하여 계속 이용할 수 있습니다.
                   </div>
                 )}
               </div>
@@ -696,7 +675,7 @@ export default function PortalSignupPage() {
                 ? '처리 중입니다...'
                 : form.planMode === 'subscription'
                   ? '가입 및 결제 진행'
-                  : '가입 완료'}
+                  : '무료 가입 완료'}
             </button>
           </aside>
         </div>
