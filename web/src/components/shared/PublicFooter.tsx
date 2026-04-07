@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 /**
  * 공개 페이지 공통 푸터 — PG 심사 필수 사업자 정보 포함
@@ -19,7 +20,7 @@ export default function PublicFooter({ dark = false }: { dark?: boolean }) {
           {/* 사업자 정보 */}
           <div className="space-y-2">
             <div className="flex items-center gap-2 mb-3">
-              <img src="/logo-light.png" alt="logiSSign" className="h-6 object-contain opacity-70" />
+              <Image src="/logo-light.png" alt="logiSSign" width={120} height={24} className="h-6 w-auto object-contain opacity-70" />
             </div>
             <div className={`text-xs ${textMain} space-y-1 leading-relaxed`}>
               <p><strong>상호:</strong> 라이트 &nbsp;|&nbsp; <strong>대표자:</strong> 주상하</p>

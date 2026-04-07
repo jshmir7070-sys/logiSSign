@@ -42,6 +42,14 @@ export default function LoginScreen() {
     router.push('/(auth)/register');
   };
 
+  const handleFindId = () => {
+    router.push('/(auth)/find-id');
+  };
+
+  const handleResetPassword = () => {
+    router.push('/(auth)/reset-password');
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -110,6 +118,15 @@ export default function LoginScreen() {
           >
             <Text style={styles.registerButtonText}>초대코드로 가입하기</Text>
           </TouchableOpacity>
+
+          <View style={styles.linkRow}>
+            <TouchableOpacity onPress={handleFindId} activeOpacity={0.7}>
+              <Text style={styles.linkText}>아이디 찾기</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleResetPassword} activeOpacity={0.7}>
+              <Text style={styles.linkText}>비밀번호 찾기</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -201,6 +218,16 @@ const styles = StyleSheet.create({
   },
   registerButtonText: {
     ...typography.titleSmall,
+    color: colors.primary,
+  },
+  linkRow: {
+    marginTop: spacing.lg,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.lg,
+  },
+  linkText: {
+    ...typography.bodySmall,
     color: colors.primary,
   },
 });

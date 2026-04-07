@@ -1,24 +1,13 @@
-/**
- * POST /api/contracts/verify-signer
- *
- * 전자계약 서명 전 본인확인 (OTP)
- * 전자서명법 부인방지 요건 충족
- *
- * Flow:
- *   1. 기사가 서명 버튼 클릭
- *   2. → 이 API 호출 (contractId, driverId)
- *   3. ← OTP SMS 발송 + maskedPhone 반환
- *   4. 기사가 OTP 입력
- *   5. → /api/contracts/confirm-signature 호출 (contractId, driverId, otpCode)
- *   6. ← 서명 완료 + Sealed PDF 생성
- */
-
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { sendSms } from '@/services/sms.service'
-import { generateOtpCode, storeOtp, canResendOtp, maskPhone } from '@/lib/mfa'
-import { rateLimitPublic } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/get-ip'
+import { maskPhone } from '@/lib/mfa'
+import { rateLimitPublic } from '@/lib/rate-limit'
+import { sendSms } from '@/services/sms.service'
+import {
+  generateVerificationCode,
+  issueVerificationCode,
+} from '@/services/verification-code.service'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,7 +28,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'contractId와 driverId가 필요합니다.' }, { status: 400 })
     }
 
-    // 계약서 유효성 확인
     const { data: contract } = await supabaseAdmin
       .from('contracts')
       .select('id, status, driver_id')
@@ -50,16 +38,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '계약서를 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    // ✅ 보안: 요청된 driverId가 실제 계약서의 driver_id와 일치하는지 확인 (IDOR 방지)
     if (contract.driver_id !== driverId) {
-      return NextResponse.json({ error: '본인의 계약서만 서명할 수 있습니다.' }, { status: 403 })
+      return NextResponse.json({ error: '본인 계약서만 확인할 수 있습니다.' }, { status: 403 })
     }
 
     if (contract.status === 'signed') {
-      return NextResponse.json({ error: '이미 서명이 완료된 계약서입니다.' }, { status: 400 })
+      return NextResponse.json({ error: '이미 서명된 계약서입니다.' }, { status: 400 })
     }
 
-    // 기사 전화번호 조회
     const { data: driver } = await supabaseAdmin
       .from('drivers')
       .select('phone, name')
@@ -67,22 +53,26 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (!driver?.phone) {
-      return NextResponse.json({ error: '기사의 전화번호가 등록되지 않았습니다.' }, { status: 400 })
+      return NextResponse.json({ error: '기사 휴대폰 번호가 등록되어 있지 않습니다.' }, { status: 400 })
     }
 
-    // 쿨다운 체크
     const signerKey = `sign_${contractId}_${driverId}`
-    const { canResend, waitMs } = canResendOtp(signerKey)
-    if (!canResend) {
+    const code = generateVerificationCode()
+    const issueResult = await issueVerificationCode({
+      verificationKey: signerKey,
+      purpose: 'contract_signer',
+      phone: driver.phone,
+      code,
+      payload: { contractId, driverId },
+    })
+
+    if (!issueResult.issued) {
+      const waitSeconds = issueResult.waitSeconds ?? 60
       return NextResponse.json(
-        { error: `${Math.ceil(waitMs / 1000)}초 후 재발송 가능합니다.`, waitMs },
+        { error: `${waitSeconds}초 후 다시 시도해주세요.`, waitMs: waitSeconds * 1000 },
         { status: 429 }
       )
     }
-
-    // OTP 발송
-    const code = generateOtpCode()
-    storeOtp(signerKey, code, driver.phone)
 
     const smsResult = await sendSms({
       to: driver.phone,
@@ -90,9 +80,8 @@ export async function POST(req: NextRequest) {
     })
 
     if (!smsResult.sent) {
-      console.error('[Contract Verify] SMS 발송 실패:', smsResult.error)
       return NextResponse.json(
-        { error: 'SMS 발송에 실패했습니다. 전화번호를 확인해주세요.' },
+        { error: 'SMS 발송에 실패했습니다. 휴대폰 번호를 확인해주세요.' },
         { status: 500 }
       )
     }

@@ -1,49 +1,34 @@
-/**
- * 비밀번호 초기화 API
- *
- * Step 1 — SMS 인증번호 발송:
- *   POST { action: "send", email, name, phone }
- *   → agencies에서 email + owner_name + phone 매칭 → SMS 6자리 인증번호 발송
- *
- * Step 2 — 인증 확인 + 비밀번호 변경:
- *   POST { action: "reset", email, name, phone, code, newPassword }
- *   → 인증번호 검증 → Supabase Admin API로 비밀번호 변경
- */
-
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabaseClient } from '@/lib/supabase'
-import { rateLimitPublic } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/get-ip'
+import { rateLimitPublic } from '@/lib/rate-limit'
+import {
+  findAccountForPasswordReset,
+  type RecoveryAccountType,
+} from '@/services/account-recovery.service'
+import {
+  consumeVerifiedCode,
+  generateVerificationCode,
+  issueVerificationCode,
+  verifyVerificationCode,
+} from '@/services/verification-code.service'
 import { sendSms } from '@/services/sms.service'
 
-/* ── 인증번호 저장소 ── */
-interface VerifyEntry {
-  code: string
-  expiresAt: number
-  attempts: number
-  userId: string       // Supabase Auth user ID
+const PURPOSE_BY_ACCOUNT: Record<
+  RecoveryAccountType,
+  'agency_reset_password' | 'admin_reset_password' | 'driver_reset_password'
+> = {
+  agency: 'agency_reset_password',
+  admin: 'admin_reset_password',
+  driver: 'driver_reset_password',
 }
 
-const verifyStore = new Map<string, VerifyEntry>()
-
-setInterval(() => {
-  const now = Date.now()
-  Array.from(verifyStore.entries()).forEach(([key, entry]) => {
-    if (entry.expiresAt <= now) verifyStore.delete(key)
-  })
-}, 5 * 60_000)
-
-function normalizePhone(phone: string): string {
-  return phone.replace(/[^0-9]/g, '')
-}
-
-/** 비밀번호 유효성 검사: 8자 이상, 대소문자+숫자+특수문자 */
-function validatePassword(pw: string): string | null {
-  if (pw.length < 8) return '비밀번호는 8자 이상이어야 합니다.'
-  if (!/[a-z]/.test(pw)) return '소문자를 포함해야 합니다.'
-  if (!/[A-Z]/.test(pw)) return '대문자를 포함해야 합니다.'
-  if (!/[0-9]/.test(pw)) return '숫자를 포함해야 합니다.'
-  if (!/[^a-zA-Z0-9]/.test(pw)) return '특수문자를 포함해야 합니다.'
+function validatePassword(password: string) {
+  if (password.length < 8) return '비밀번호는 8자 이상이어야 합니다.'
+  if (!/[a-z]/.test(password)) return '영문 소문자를 포함해야 합니다.'
+  if (!/[A-Z]/.test(password)) return '영문 대문자를 포함해야 합니다.'
+  if (!/[0-9]/.test(password)) return '숫자를 포함해야 합니다.'
+  if (!/[^a-zA-Z0-9]/.test(password)) return '특수문자를 포함해야 합니다.'
   return null
 }
 
@@ -54,69 +39,59 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { action, email, name, phone, code, newPassword } = body as {
-      action: 'send' | 'reset'
-      email?: string
-      name?: string
-      phone?: string
-      code?: string
-      newPassword?: string
+    const action = body?.action as 'send' | 'verify' | 'reset' | undefined
+    const accountType = (body?.accountType as RecoveryAccountType | undefined) ?? 'agency'
+    const email = String(body?.email ?? '').trim().toLowerCase()
+    const name = String(body?.name ?? '').trim()
+    const phone = String(body?.phone ?? '').trim()
+    const code = String(body?.code ?? '').trim()
+    const newPassword = String(body?.newPassword ?? '')
+
+    if (!['agency', 'admin', 'driver'].includes(accountType)) {
+      return NextResponse.json({ error: '지원하지 않는 계정 유형입니다.' }, { status: 400 })
     }
 
-    if (!email?.trim() || !name?.trim() || !phone?.trim()) {
-      return NextResponse.json({ error: '이메일, 이름, 휴대폰 번호를 모두 입력해주세요.' }, { status: 400 })
+    if (!email || !phone) {
+      return NextResponse.json({ error: '이메일과 휴대폰 번호를 입력해주세요.' }, { status: 400 })
     }
 
-    const normalizedPhone = normalizePhone(phone)
-    const storeKey = `reset-pw:${email.trim().toLowerCase()}:${normalizedPhone}`
+    const account = await findAccountForPasswordReset({
+      accountType,
+      email,
+      name: name || undefined,
+      phone,
+    })
 
-    const supabase = createAdminSupabaseClient()
-
-    // agencies에서 email + owner_name + phone 매칭 조회
-    const { data: agency, error: dbErr } = await supabase
-      .from('agencies')
-      .select('id, email')
-      .eq('email', email.trim().toLowerCase())
-      .eq('owner_name', name.trim())
-      .eq('phone', normalizedPhone)
-      .maybeSingle()
-
-    if (dbErr || !agency) {
+    if (!account) {
       return NextResponse.json(
         { error: '입력한 정보와 일치하는 계정을 찾을 수 없습니다.' },
         { status: 404 }
       )
     }
 
-    // ✅ 성능+보안: listUsers(1000) 대신 이메일로 직접 조회 후 agency_id 확인
-    const { data: authUserList } = await supabase.auth.admin.listUsers({ perPage: 50 })
-    const authUser = authUserList?.users.find(
-      (u) => u.email?.toLowerCase() === email.trim().toLowerCase()
-        && u.app_metadata?.agency_id === agency.id
-    )
-
-    if (!authUser) {
-      return NextResponse.json(
-        { error: '인증 계정을 찾을 수 없습니다. 관리자에게 문의하세요.' },
-        { status: 404 }
-      )
-    }
+    const purpose = PURPOSE_BY_ACCOUNT[accountType]
 
     if (action === 'send') {
-      // ── Step 1: 인증번호 발송 ──
-      const verifyCode = String(Math.floor(100000 + Math.random() * 900000))
-      const TTL = 5 * 60_000
-
-      verifyStore.set(storeKey, {
-        code: verifyCode,
-        expiresAt: Date.now() + TTL,
-        attempts: 0,
-        userId: authUser.id,
+      const verificationCode = generateVerificationCode()
+      const issued = await issueVerificationCode({
+        verificationKey: account.lookupKey,
+        purpose,
+        phone: account.phone,
+        code: verificationCode,
+        payload: { userId: account.userId, email: account.email },
       })
 
+      if (!issued.issued) {
+        const waitSeconds = issued.waitSeconds ?? 60
+        return NextResponse.json(
+          { error: `${waitSeconds}초 후 다시 시도해주세요.` },
+          { status: 429 }
+        )
+      }
+
       const smsResult = await sendSms({
-        to: normalizedPhone,
-        text: `[logiSSign] 비밀번호 초기화 인증번호: ${verifyCode} (5분 내 입력)`,
+        to: account.phone,
+        text: `[logiSSign] 비밀번호 재설정 인증번호: ${verificationCode} (5분 내 입력)`,
       })
 
       if (!smsResult.sent) {
@@ -127,64 +102,62 @@ export async function POST(request: NextRequest) {
       }
 
       return NextResponse.json({ sent: true, expiresIn: 300 })
+    }
 
-    } else if (action === 'reset') {
-      // ── Step 2: 인증 확인 + 비밀번호 변경 ──
-      if (!code?.trim()) {
+    if (action === 'verify') {
+      if (!code) {
         return NextResponse.json({ error: '인증번호를 입력해주세요.' }, { status: 400 })
       }
-      if (!newPassword) {
-        return NextResponse.json({ error: '새 비밀번호를 입력해주세요.' }, { status: 400 })
+
+      const result = await verifyVerificationCode({
+        verificationKey: account.lookupKey,
+        purpose,
+        code,
+        mode: 'mark-verified',
+      })
+
+      if (!result.valid) {
+        return NextResponse.json({ error: result.error }, { status: 400 })
       }
 
-      const pwError = validatePassword(newPassword)
-      if (pwError) {
-        return NextResponse.json({ error: pwError }, { status: 400 })
+      return NextResponse.json({ verified: true })
+    }
+
+    if (action === 'reset') {
+      const passwordError = validatePassword(newPassword)
+      if (passwordError) {
+        return NextResponse.json({ error: passwordError }, { status: 400 })
       }
 
-      const entry = verifyStore.get(storeKey)
-      if (!entry) {
-        return NextResponse.json({ error: '인증번호가 만료되었습니다. 다시 요청해주세요.' }, { status: 400 })
+      const verification = await consumeVerifiedCode({
+        verificationKey: account.lookupKey,
+        purpose,
+      })
+
+      if (!verification.valid) {
+        return NextResponse.json({ error: verification.error }, { status: 400 })
       }
 
-      if (entry.expiresAt <= Date.now()) {
-        verifyStore.delete(storeKey)
-        return NextResponse.json({ error: '인증번호가 만료되었습니다. 다시 요청해주세요.' }, { status: 400 })
-      }
-
-      entry.attempts++
-      if (entry.attempts > 5) {
-        verifyStore.delete(storeKey)
-        return NextResponse.json({ error: '인증 시도 횟수를 초과했습니다. 다시 요청해주세요.' }, { status: 429 })
-      }
-
-      if (entry.code !== code.trim()) {
-        return NextResponse.json(
-          { error: `인증번호가 일치하지 않습니다. (${5 - entry.attempts}회 남음)` },
-          { status: 400 }
-        )
-      }
-
-      // 인증 성공 → 비밀번호 변경
-      const { error: updateErr } = await supabase.auth.admin.updateUserById(entry.userId, {
+      const supabase = createAdminSupabaseClient()
+      const { error } = await supabase.auth.admin.updateUserById(account.userId, {
         password: newPassword,
       })
 
-      verifyStore.delete(storeKey)
-
-      if (updateErr) {
+      if (error) {
         return NextResponse.json(
-          { error: '비밀번호 변경에 실패했습니다. 관리자에게 문의하세요.' },
+          { error: '비밀번호 변경에 실패했습니다. 관리자에게 문의해주세요.' },
           { status: 500 }
         )
       }
 
       return NextResponse.json({ success: true })
-
-    } else {
-      return NextResponse.json({ error: '잘못된 요청입니다.' }, { status: 400 })
     }
+
+    return NextResponse.json({ error: '잘못된 요청입니다.' }, { status: 400 })
   } catch {
-    return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
+    return NextResponse.json(
+      { error: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' },
+      { status: 500 }
+    )
   }
 }

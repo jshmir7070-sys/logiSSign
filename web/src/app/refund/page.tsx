@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import PublicFooter from '@/components/shared/PublicFooter';
 
 export const metadata = {
@@ -11,7 +12,9 @@ export default function RefundPage() {
     <div className="min-h-screen bg-white">
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center"><img src="/logo-light.png" alt="logiSSign" className="h-7 object-contain" /></Link>
+          <Link href="/" className="flex items-center">
+            <Image src="/logo-light.png" alt="logiSSign" width={136} height={28} className="h-7 w-auto object-contain" />
+          </Link>
           <Link href="/portal/login" className="text-sm text-gray-500 hover:text-gray-900">로그인</Link>
         </div>
       </nav>

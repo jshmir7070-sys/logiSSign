@@ -171,7 +171,16 @@ export default function AdminLoginPage() {
             </button>
           </form>
 
-          <div className="mt-8 text-center">
+          <div className="mt-8 space-y-3 text-center">
+            <div className="flex items-center justify-center gap-4">
+              <Link href="/admin/find-id" className="text-xs text-on-surface-variant hover:text-primary transition-colors">
+                아이디 찾기
+              </Link>
+              <span className="text-on-surface-variant/30">|</span>
+              <Link href="/admin/reset-password" className="text-xs text-on-surface-variant hover:text-primary transition-colors">
+                비밀번호 재설정
+              </Link>
+            </div>
             <Link href="/" className="text-sm text-on-surface-variant hover:text-primary transition-colors">← 역할 선택으로 돌아가기</Link>
           </div>
         </div>
