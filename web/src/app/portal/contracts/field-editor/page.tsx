@@ -685,7 +685,7 @@ function ContractFieldEditorPage() {
      ════════════════════════════════════════════ */
   if (!pdfUrl) {
     return (
-      <div className="h-screen w-screen flex flex-col bg-gradient-to-br from-slate-50 to-blue-50/30">
+      <div className="min-h-screen w-screen flex flex-col bg-gradient-to-br from-slate-50 to-blue-50/30">
         <div className="flex items-center px-6 h-14 border-b border-neutral-200/60 bg-white/80 backdrop-blur shrink-0">
           <button onClick={() => router.push('/portal/contracts/templates')}
             className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-800 font-korean transition-colors">
@@ -694,8 +694,8 @@ function ContractFieldEditorPage() {
           </button>
           <div className="ml-4 text-sm font-bold text-neutral-700 font-korean">{title || '템플릿 만들기'}</div>
         </div>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-full max-w-lg px-6">
+        <div className="flex-1 overflow-y-auto py-8">
+          <div className="w-full max-w-4xl mx-auto px-6">
             <div className="text-center mb-10">
               <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-600/20">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5">
@@ -705,7 +705,7 @@ function ContractFieldEditorPage() {
               <h1 className="text-2xl font-bold text-neutral-800 font-korean">문서를 불러오세요</h1>
               <p className="text-sm text-neutral-500 font-korean mt-2">계약서 문서를 선택하면 서명 필드를 배치할 수 있습니다</p>
             </div>
-            <div className="grid grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <button onClick={() => fileInputRef.current?.click()}
                 className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-white border-2 border-transparent hover:border-blue-400 shadow-sm hover:shadow-xl transition-all group">
                 <div className="w-14 h-14 rounded-xl bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center transition-colors">
@@ -784,7 +784,7 @@ function ContractFieldEditorPage() {
               setSelectedDocBoxItem(null)
             }}
           >
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[1080px] h-[86vh] flex flex-col" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
                 <h3 className="text-base font-bold text-neutral-800 font-korean">내 문서함</h3>
                 <button
@@ -824,9 +824,9 @@ function ContractFieldEditorPage() {
                             >
                               <div className="aspect-[3/4] rounded-xl overflow-hidden border border-neutral-100 bg-white">
                                 <iframe
-                                  src={`${item.url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                                  src={`${item.url}#toolbar=0&navpanes=0&scrollbar=0&view=FitV`}
                                   className="h-full w-full pointer-events-none"
-                                  style={{ transform: 'scale(0.88)', transformOrigin: 'top center' }}
+                                  style={{ transform: 'scale(0.92)', transformOrigin: 'top center' }}
                                   title={item.name}
                                 />
                               </div>
@@ -845,11 +845,11 @@ function ContractFieldEditorPage() {
                             <p className="text-base font-bold text-neutral-800 font-korean">{selectedDocBoxItem.name}</p>
                             <p className="text-xs text-neutral-400 font-korean mt-1">미리보기 후 이 문서로 바로 템플릿을 만들 수 있습니다.</p>
                           </div>
-                          <div className="flex-1 min-h-0 overflow-auto p-5 bg-slate-100">
-                            <div className="mx-auto w-full max-w-[720px]">
-                              <div className="aspect-[210/297] rounded-2xl overflow-hidden bg-white border border-neutral-200 shadow-sm">
+                          <div className="flex-1 min-h-0 overflow-auto px-6 py-5 bg-slate-100">
+                            <div className="mx-auto w-full max-w-[620px]">
+                              <div className="aspect-[210/297] rounded-[28px] overflow-hidden bg-white border border-neutral-200 shadow-sm">
                                 <iframe
-                                  src={`${selectedDocBoxItem.url}#toolbar=0&navpanes=0&view=FitH`}
+                                  src={`${selectedDocBoxItem.url}#toolbar=0&navpanes=0&view=FitV`}
                                   className="h-full w-full"
                                   title={selectedDocBoxItem.name}
                                 />

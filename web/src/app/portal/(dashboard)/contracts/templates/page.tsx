@@ -8,10 +8,8 @@ import {
   getContractTemplates,
   createContractTemplate,
   deleteContractTemplate,
-  CONTRACT_VARIABLES,
   type ContractTemplate,
 } from '@/services/contract.service';
-import { getPrincipals, type Principal } from '@/services/principal.service';
 import { getPlanLimits, isPaidPlan, PLAN_LABELS, type PlanType } from '@/lib/plan-limits';
 
 const SYSTEM_TEMPLATE_IDS = new Set([
@@ -30,26 +28,15 @@ const SYSTEM_TEMPLATE_IDS = new Set([
 export default function ContractTemplatesPage() {
   const router = useRouter();
   const [templates, setTemplates] = useState<ContractTemplate[]>([]);
-  const [principals, setPrincipals] = useState<Principal[]>([]);
   const [loading, setLoading] = useState(true);
   const [agencyId, setAgencyId] = useState<string | null>(null);
   const [userPlan, setUserPlan] = useState<string>('free');
-  const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<ContractTemplate | null>(null);
   const [showPlanGuide, setShowPlanGuide] = useState(false);
   const [templatesLocked, setTemplatesLocked] = useState(false);
   const [userRole, setUserRole] = useState<string>('agency_admin');
   const [creatingPdf, setCreatingPdf] = useState(false);
   const [templatePreviewUrls, setTemplatePreviewUrls] = useState<Record<string, string>>({});
-
-  const [formTitle, setFormTitle] = useState('');
-  const [formPrincipalId, setFormPrincipalId] = useState('');
-  const [formContent, setFormContent] = useState('');
-
-  const inputCls =
-    'w-full h-11 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-on-surface-variant/40';
-  const labelCls = 'block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean';
 
   useEffect(() => {
     async function load() {
@@ -73,14 +60,12 @@ export default function ContractTemplatesPage() {
       setUserPlan((user.app_metadata?.plan as string) ?? 'free');
       setUserRole((user.app_metadata?.role as string) ?? 'agency_admin');
 
-      const [tmplRes, princRes, agencyRes] = await Promise.all([
+      const [tmplRes, agencyRes] = await Promise.all([
         getContractTemplates(aid),
-        getPrincipals(aid),
         supabase.from('agencies').select('templates_locked').eq('id', aid).single(),
       ]);
 
       if (tmplRes.data) setTemplates(tmplRes.data);
-      if (princRes.data) setPrincipals(princRes.data);
       if (agencyRes.data) {
         setTemplatesLocked((agencyRes.data as { templates_locked: boolean }).templates_locked ?? false);
       }
@@ -148,32 +133,6 @@ export default function ContractTemplatesPage() {
   const canLockTemplates = activeDefaultCount === limits.maxDefaultTemplates && !templatesLocked && paid;
   const canUploadMore = userTemplates.length < limits.maxUploadTemplates;
 
-  function resetForm() {
-    setFormTitle('');
-    setFormPrincipalId('');
-    setFormContent('');
-    setShowForm(false);
-  }
-
-  async function handleCreate() {
-    if (!agencyId || !formTitle.trim() || !formContent.trim()) return;
-    setSaving(true);
-
-    const result = await createContractTemplate({
-      agency_id: agencyId,
-      principal_id: formPrincipalId || undefined,
-      title: formTitle.trim(),
-      content: formContent.trim(),
-    });
-
-    if (result.data) {
-      setTemplates((previous) => [...previous, result.data!]);
-      resetForm();
-    }
-
-    setSaving(false);
-  }
-
   async function handleDelete(id: string, title: string) {
     if (!confirm(`"${title}" 템플릿을 삭제하시겠습니까?`)) return;
     const result = await deleteContractTemplate(id);
@@ -181,10 +140,6 @@ export default function ContractTemplatesPage() {
       setTemplates((previous) => previous.filter((template) => template.id !== id));
       setPreviewTemplate((current) => (current?.id === id ? null : current));
     }
-  }
-
-  function insertVariable(key: string) {
-    setFormContent((previous) => previous + `{{${key}}}`);
   }
 
   async function handleLockTemplates() {
@@ -245,17 +200,11 @@ export default function ContractTemplatesPage() {
         {paid && !templatesLocked && isAdmin && canUploadMore ? (
           <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={() => setShowForm(true)}
-              className="h-10 px-5 rounded-xl bg-power-gradient text-white font-label text-sm font-semibold shadow-ambient hover:shadow-float transition-all flex items-center gap-2 font-korean"
-            >
-              새 텍스트 템플릿
-            </button>
-            <button
               onClick={handleCreatePdfTemplate}
               disabled={creatingPdf}
               className="h-10 px-5 rounded-xl bg-surface-container-high text-on-surface font-label text-sm font-semibold hover:bg-surface-container-highest transition-all flex items-center gap-2 font-korean disabled:opacity-50"
             >
-              PDF 문서 불러오기
+              내 컴퓨터 문서 가져오기
             </button>
           </div>
         ) : paid && templatesLocked && isAdmin ? (
@@ -281,84 +230,6 @@ export default function ContractTemplatesPage() {
           </button>
         )}
       </div>
-
-      {showForm && (
-        <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 space-y-5">
-          <h2 className="text-lg font-headline font-bold text-on-surface font-korean">새 계약서 템플릿</h2>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className={labelCls}>템플릿 제목 *</label>
-              <input
-                type="text"
-                placeholder="예) 배달 위탁 계약서"
-                value={formTitle}
-                onChange={(event) => setFormTitle(event.target.value)}
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>적용 카테고리</label>
-              <select
-                value={formPrincipalId}
-                onChange={(event) => setFormPrincipalId(event.target.value)}
-                className={inputCls}
-              >
-                <option value="">전체 카테고리</option>
-                {principals.map((principal) => (
-                  <option key={principal.id} value={principal.id}>{principal.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className={labelCls}>변수 삽입</label>
-            <div className="flex flex-wrap gap-1.5">
-              {CONTRACT_VARIABLES.map((variable) => (
-                <button
-                  key={variable.key}
-                  type="button"
-                  onClick={() => insertVariable(variable.key)}
-                  className="px-2.5 py-1 rounded-lg bg-primary/10 text-primary text-[11px] font-label font-semibold hover:bg-primary/20 transition-colors"
-                  title={variable.description}
-                >
-                  {`{{${variable.key}}}`}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className={labelCls}>계약서 본문 *</label>
-            <textarea
-              value={formContent}
-              onChange={(event) => setFormContent(event.target.value)}
-              rows={12}
-              className="w-full px-4 py-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-on-surface-variant/40 resize-y"
-              placeholder="계약서 본문을 입력하고 필요한 변수를 추가해 주세요."
-            />
-          </div>
-
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={resetForm}
-              className="h-10 px-6 rounded-xl bg-surface-container-high text-on-surface-variant font-label text-sm hover:bg-surface-container-highest transition-colors font-korean"
-            >
-              취소
-            </button>
-            <button
-              type="button"
-              onClick={handleCreate}
-              disabled={saving || !formTitle.trim() || !formContent.trim()}
-              className="h-10 px-6 rounded-xl bg-power-gradient text-white font-label font-semibold text-sm hover:shadow-lg transition-shadow disabled:opacity-50 font-korean"
-            >
-              {saving ? '생성 중...' : '템플릿 저장'}
-            </button>
-          </div>
-        </div>
-      )}
 
       {templatesLocked && (
         <div className="bg-error/5 border border-error/20 rounded-2xl p-5 flex items-center gap-4">
@@ -398,7 +269,7 @@ export default function ContractTemplatesPage() {
           <div className="text-4xl">📄</div>
           <p className="text-sm text-on-surface-variant font-korean">등록된 계약서 템플릿이 없습니다.</p>
           <p className="text-xs text-on-surface-variant/60 font-korean">
-            새 템플릿을 만들거나 PDF 계약서를 불러와 템플릿으로 저장해 보세요.
+            내 컴퓨터 문서를 가져와 실제 계약서 템플릿으로 저장해 보세요.
           </p>
         </div>
       ) : (
@@ -421,9 +292,9 @@ export default function ContractTemplatesPage() {
                   <div className="aspect-[3/4] bg-white relative">
                     {previewUrl ? (
                       <iframe
-                        src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                        src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitV`}
                         className="absolute inset-0 h-full w-full pointer-events-none"
-                        style={{ transform: 'scale(0.9)', transformOrigin: 'top center' }}
+                        style={{ transform: 'scale(0.92)', transformOrigin: 'top center' }}
                         title={template.title}
                       />
                     ) : (
@@ -469,7 +340,7 @@ export default function ContractTemplatesPage() {
       {previewTemplate && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setPreviewTemplate(null)}>
           <div
-            className="w-full max-w-[1040px] max-h-[88vh] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+            className="w-full max-w-[880px] max-h-[90vh] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant/15">
@@ -491,11 +362,11 @@ export default function ContractTemplatesPage() {
             </div>
 
             {getTemplatePreviewUrl(previewTemplate) ? (
-              <div className="flex-1 min-h-0 overflow-auto bg-slate-100 p-6">
-                <div className="mx-auto w-full max-w-[720px]">
-                  <div className="aspect-[210/297] rounded-2xl overflow-hidden bg-white border border-outline-variant/15 shadow-sm">
+              <div className="flex-1 min-h-0 overflow-auto bg-slate-100 px-6 py-5">
+                <div className="mx-auto w-full max-w-[620px]">
+                  <div className="aspect-[210/297] rounded-[28px] overflow-hidden bg-white border border-outline-variant/15 shadow-sm">
                     <iframe
-                      src={`${getTemplatePreviewUrl(previewTemplate)}#toolbar=0&navpanes=0&view=FitH`}
+                      src={`${getTemplatePreviewUrl(previewTemplate)}#toolbar=0&navpanes=0&view=FitV`}
                       title={previewTemplate.title}
                       className="h-full w-full"
                     />
@@ -521,12 +392,12 @@ export default function ContractTemplatesPage() {
             )}
 
             <div className="px-6 py-4 border-t border-outline-variant/15 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Badge label={previewTemplate.principals?.name ?? '전체'} variant={previewTemplate.principals?.name ? 'info' : 'default'} />
-                <span className="text-xs text-on-surface-variant font-korean">
-                  {previewTemplate.template_type === 'pdf' ? 'PDF 템플릿' : '텍스트 템플릿'}
-                </span>
-              </div>
+                <div className="flex items-center gap-2">
+                  <Badge label={previewTemplate.principals?.name ?? '전체'} variant={previewTemplate.principals?.name ? 'info' : 'default'} />
+                  <span className="text-xs text-on-surface-variant font-korean">
+                    PDF 템플릿
+                  </span>
+                </div>
 
               <div className="flex flex-wrap items-center justify-end gap-3">
                 {getTemplatePreviewUrl(previewTemplate) && (
@@ -544,7 +415,7 @@ export default function ContractTemplatesPage() {
                     onClick={() => router.push(`/portal/contracts/field-editor?templateId=${previewTemplate.id}`)}
                     className="h-10 px-4 rounded-xl bg-primary/10 text-primary text-sm font-semibold font-korean hover:bg-primary/20 transition-colors"
                   >
-                    {isPdfTemplate(previewTemplate) ? '필드 편집' : '문서 가져오기'}
+                    필드 편집
                   </button>
                 )}
                 {!SYSTEM_TEMPLATE_IDS.has(previewTemplate.id) && (

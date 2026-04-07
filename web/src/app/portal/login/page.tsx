@@ -48,6 +48,23 @@ export default function PortalLoginPage() {
   });
 
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const notice = new URLSearchParams(window.location.search).get("notice");
+    const nextMessage =
+      notice === "signup-payment-complete"
+        ? "결제가 완료되었습니다. 로그인 후 서비스를 시작해 주세요."
+        : notice === "signup-payment-pending"
+          ? "가입이 완료되었습니다. 입금 확인 후 로그인해 주세요."
+          : notice === "signup-complete"
+            ? "회원가입이 완료되었습니다. 로그인 후 서비스를 시작해 주세요."
+            : null;
+
+    setNoticeMessage(nextMessage);
+  }, []);
 
   // OTP 만료 타이머 (3분)
   useEffect(() => {
@@ -215,6 +232,12 @@ export default function PortalLoginPage() {
         {/* Login Card */}
         <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-8">
           <h2 className="font-headline text-lg font-bold text-on-surface mb-6 text-center">로그인</h2>
+
+          {noticeMessage && (
+            <div className="mb-5 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary">
+              {noticeMessage}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-4">
             {/* Email */}

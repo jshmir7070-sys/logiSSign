@@ -286,6 +286,7 @@ export default function PortalSignupPage() {
     setError(null)
 
     let accountCreated = false
+    let loginNotice = 'signup-complete'
 
     try {
       const signupResponse = await fetch('/api/auth/signup', {
@@ -319,17 +320,17 @@ export default function PortalSignupPage() {
 
       accountCreated = true
 
-      const supabase = createBrowserSupabaseClient()
-      const signInResult = await supabase.auth.signInWithPassword({
-        email: form.email,
-        password: form.password,
-      })
-
-      if (signInResult.error) {
-        throw new Error(`가입은 완료되었지만 자동 로그인에 실패했습니다. (${signInResult.error.message})`)
-      }
-
       if (form.planMode === 'subscription' && form.plan !== 'free') {
+        const supabase = createBrowserSupabaseClient()
+        const signInResult = await supabase.auth.signInWithPassword({
+          email: form.email,
+          password: form.password,
+        })
+
+        if (signInResult.error) {
+          throw new Error(`가입은 완료되었지만 결제 준비 중 자동 로그인에 실패했습니다. (${signInResult.error.message})`)
+        }
+
         const paymentResult = await requestAgencyPayment({
           paymentId: `signup_${signupData.agencyId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           orderName: `logiSSign ${form.plan.toUpperCase()} 플랜`,
@@ -370,6 +371,7 @@ export default function PortalSignupPage() {
         }
 
         if (paymentData.status === 'pending') {
+          loginNotice = 'signup-payment-pending'
           alert(
             [
               '가입이 완료되었습니다.',
@@ -380,10 +382,14 @@ export default function PortalSignupPage() {
               .filter(Boolean)
               .join('\n'),
           )
+        } else {
+          loginNotice = 'signup-payment-complete'
         }
+
+        await supabase.auth.signOut()
       }
 
-      router.replace('/portal/dashboard')
+      router.replace(`/portal/login?notice=${loginNotice}`)
     } catch (submitError) {
       const message =
         submitError instanceof Error ? submitError.message : '가입 처리 중 오류가 발생했습니다.'
