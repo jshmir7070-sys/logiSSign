@@ -250,7 +250,7 @@ const CLASSIC_TEMPLATE: SettlementTemplate = {
     notes: '본 정산서의 내용에 이의가 있을 경우 지급일로부터 3일 이내에 운영팀으로 문의하시기 바랍니다.',
     showSignatureLine: true, showDate: true, showStamp: true,
     showCompanyInfo: true, companyAddress: '', companyPhone: '',
-    disclaimerText: '본 문서는 전자적으로 생성되었으며, LogiSign의 공식적인 정산 기록임을 보증합니다.',
+    disclaimerText: '본 문서는 전자적으로 생성되었으며, logiSSign의 공식적인 정산 기록임을 보증합니다.',
   },
   tableStyle: {
     style: 'bordered', headerBgColor: '#f1f5f9', headerTextColor: '#1e293b',

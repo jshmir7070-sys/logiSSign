@@ -58,7 +58,7 @@ CREATE INDEX IF NOT EXISTS idx_contract_verification_logs_contract
 
 -- ═══════════════════════════════════════
 -- 4. 계약서 문서번호 시퀀스 + RPC
---    형식: LOGISIGN-YYYYMMDD-NNNNN
+--    형식: LOGISSIGN-YYYYMMDD-NNNNN
 -- ═══════════════════════════════════════
 CREATE SEQUENCE IF NOT EXISTS contract_doc_number_seq START WITH 1 INCREMENT BY 1;
 
@@ -76,7 +76,7 @@ DECLARE
   doc_num TEXT;
 BEGIN
   seq_val := nextval('contract_doc_number_seq');
-  doc_num := 'LOGISIGN-' || to_char(now(), 'YYYYMMDD') || '-' || lpad(seq_val::text, 5, '0');
+  doc_num := 'LOGISSIGN-' || to_char(now(), 'YYYYMMDD') || '-' || lpad(seq_val::text, 5, '0');
   RETURN doc_num;
 END;
 $$;
