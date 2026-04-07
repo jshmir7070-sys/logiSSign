@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Badge from '@/components/shared/Badge'
 
 interface AgencyRow {
@@ -57,7 +56,6 @@ function formatKRW(value: number): string {
 }
 
 export default function AgenciesPage() {
-  const router = useRouter()
   const [agencies, setAgencies] = useState<AgencyRow[]>([])
   const [loading, setLoading] = useState(true)
   const [filterPlan, setFilterPlan] = useState('all')
@@ -200,7 +198,11 @@ export default function AgenciesPage() {
                   <tr
                     key={agency.id}
                     className="border-t border-outline-variant/10 cursor-pointer hover:bg-surface-container-low/50 transition-colors"
-                    onClick={() => router.push(`/admin/agencies/${agency.id}`)}
+                    onClick={() => window.open(
+                      `/admin/agency-view/${agency.id}`,
+                      `agency_${agency.id}`,
+                      'popup=yes,width=1600,height=1000,scrollbars=yes',
+                    )}
                   >
                     <td className="px-5 py-4">
                       <p className="font-medium text-on-surface">{agency.name}</p>
