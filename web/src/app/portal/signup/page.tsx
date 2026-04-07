@@ -60,10 +60,10 @@ const PLANS: Array<{ id: Extract<PlanType, 'basic' | 'standard' | 'pro'>; name: 
   { id: 'pro', name: 'Pro', description: '기사 150명 이상 대량 처리와 확장 운영에 적합합니다.' },
 ]
 
-const BILLING_OPTIONS: Array<{ value: BillingCycle; label: string; description: string }> = [
-  { value: 'monthly', label: '월 결제', description: '매월 1회 정기적으로 결제합니다.' },
-  { value: '1year', label: '1년 선결제', description: '1년 단위 선결제로 할인 혜택을 받을 수 있습니다.' },
-  { value: '2year', label: '2년 선결제', description: '2년 단위 선결제로 가장 큰 할인 혜택을 받습니다.' },
+const BILLING_OPTIONS: Array<{ value: BillingCycle; label: string; discount: number; description: string }> = [
+  { value: 'monthly', label: '월 결제', discount: 0, description: '매월 1회 정기적으로 결제합니다.' },
+  { value: '1year', label: '1년 선결제', discount: 20, description: '20% 할인이 적용됩니다.' },
+  { value: '2year', label: '2년 선결제', discount: 30, description: '30% 할인이 적용됩니다.' },
 ]
 
 const INPUT_CLASS =
@@ -449,10 +449,15 @@ export default function PortalSignupPage() {
                       key={cycle.value}
                       type="button"
                       onClick={() => updateForm({ billing: cycle.value })}
-                      className={`rounded-2xl border p-4 text-left ${
+                      className={`rounded-2xl border p-4 text-left relative ${
                         form.billing === cycle.value ? 'border-primary bg-primary/5' : 'border-outline-variant/20'
                       }`}
                     >
+                      {cycle.discount > 0 ? (
+                        <span className="absolute -top-2.5 right-3 rounded-full bg-error px-2.5 py-0.5 text-[11px] font-bold text-white">
+                          {cycle.discount}% 할인
+                        </span>
+                      ) : null}
                       <p className="text-sm font-semibold text-on-surface">{cycle.label}</p>
                       <p className="mt-1 text-xs text-on-surface-variant">{cycle.description}</p>
                     </button>
@@ -672,11 +677,24 @@ export default function PortalSignupPage() {
                         form.billing === 'monthly'
                           ? '월 결제'
                           : form.billing === '1year'
-                            ? '1년 선결제'
-                            : '2년 선결제'
+                            ? '1년 선결제 (20% 할인)'
+                            : '2년 선결제 (30% 할인)'
                       }
                     />
+                    {form.billing !== 'monthly' ? (
+                      <div className="flex items-center justify-between gap-4 text-sm">
+                        <span className="text-on-surface-variant">정가</span>
+                        <span className="text-on-surface-variant line-through">
+                          {formatKRW(getSubscriptionPrice(form.plan, 'monthly') * (form.billing === '1year' ? 12 : 24))}
+                        </span>
+                      </div>
+                    ) : null}
                     <SummaryRow label="결제 금액" value={formatKRW(amount)} />
+                    {form.billing !== 'monthly' ? (
+                      <div className="rounded-xl bg-error/10 px-3 py-2 text-center text-xs font-semibold text-error">
+                        {formatKRW(getSubscriptionPrice(form.plan, 'monthly') * (form.billing === '1year' ? 12 : 24) - amount)} 절약!
+                      </div>
+                    ) : null}
                   </>
                 ) : (
                   <div className="rounded-2xl bg-primary/5 p-4 text-xs leading-5 text-on-surface-variant">
