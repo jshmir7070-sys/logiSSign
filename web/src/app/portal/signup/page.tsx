@@ -508,7 +508,7 @@ export default function PortalSignupPage() {
               disabled={submitting}
               className="h-12 w-full rounded-2xl bg-power-gradient text-sm font-semibold text-white shadow-ambient disabled:opacity-60"
             >
-              {submitting ? '처리 중입니다...' : '가입 완료 후 플랜 선택'}
+              {submitting ? '처리 중입니다...' : '가입완료'}
             </button>
           </aside>
         </div>
