@@ -1,30 +1,13 @@
-﻿'use client'
+'use client'
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import AddressSearch, { type AddressValue } from '@/components/shared/AddressSearch'
 import { formatBirthDate, formatBusinessNumber, formatPhoneNumber } from '@/lib/formatters'
-import { getSubscriptionPrice, type PlanType } from '@/lib/plan-limits'
-import {
-  EASY_PAY_PROVIDER_OPTIONS,
-  PAYMENT_METHOD_OPTIONS,
-  VIRTUAL_ACCOUNT_BANK_OPTIONS,
-  type AgencyEasyPayProvider,
-  type AgencyPaymentMethod,
-} from '@/lib/payment-methods'
-import { requestAgencyPayment } from '@/lib/portone-client'
 import { createBrowserSupabaseClient } from '@/lib/supabase'
 
-type PlanMode = 'free' | 'subscription'
-type BillingCycle = 'monthly' | '1year' | '2year'
-type PaymentSchedule = 'one_time' | 'recurring'
-
 type FormState = {
-  planMode: PlanMode
-  plan: PlanType
-  billing: BillingCycle
-  paymentSchedule: PaymentSchedule
   ownerName: string
   personalAddress: string
   personalAddressDetail: string
@@ -47,38 +30,10 @@ type FormState = {
   businessEmail: string
   agreeTerms: boolean
   agreePrivacy: boolean
-  paymentMethod: AgencyPaymentMethod
-  easyPayProvider: AgencyEasyPayProvider
-  virtualAccountBank: string
 }
-
-const PLANS: Array<{ id: Extract<PlanType, 'basic' | 'standard' | 'pro'>; name: string; description: string }> = [
-  { id: 'basic', name: 'Basic', description: '기사 30명 규모에 적합한 기본 운영 플랜입니다.' },
-  { id: 'standard', name: 'Standard', description: '기사 80명 규모와 정산, 알림 기능이 필요한 운영에 적합합니다.' },
-  { id: 'pro', name: 'Pro', description: '기사 150명 이상 조직과 대량 처리에 적합합니다.' },
-]
-
-const BILLING_OPTIONS: Array<{ value: BillingCycle; label: string; discount: number; description: string }> = [
-  { value: 'monthly', label: '월 결제', discount: 0, description: '매월 1회 정기적으로 결제됩니다.' },
-  { value: '1year', label: '1년 선결제', discount: 20, description: '20% 할인 혜택이 적용됩니다.' },
-  { value: '2year', label: '2년 선결제', discount: 30, description: '30% 할인 혜택이 적용됩니다.' },
-]
 
 const INPUT_CLASS =
   'w-full h-11 rounded-xl bg-surface-container-low px-4 text-sm text-on-surface placeholder:text-on-surface-variant/50 outline-none focus:ring-2 focus:ring-primary/30'
-
-function formatKRW(value: number): string {
-  return `₩${value.toLocaleString('ko-KR')}`
-}
-
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-4 text-sm">
-      <span className="text-on-surface-variant">{label}</span>
-      <span className="font-semibold text-on-surface">{value}</span>
-    </div>
-  )
-}
 
 function SectionTitle({ children }: { children: ReactNode }) {
   return (
@@ -88,16 +43,26 @@ function SectionTitle({ children }: { children: ReactNode }) {
   )
 }
 
+function GuideItem({ index, title, description }: { index: string; title: string; description: string }) {
+  return (
+    <div className="flex gap-3 rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+        {index}
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-on-surface">{title}</p>
+        <p className="mt-1 text-xs leading-5 text-on-surface-variant">{description}</p>
+      </div>
+    </div>
+  )
+}
+
 export default function PortalSignupPage() {
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [emailCheckMsg, setEmailCheckMsg] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>({
-    planMode: 'free',
-    plan: 'free',
-    billing: 'monthly',
-    paymentSchedule: 'one_time',
     ownerName: '',
     personalAddress: '',
     personalAddressDetail: '',
@@ -120,68 +85,14 @@ export default function PortalSignupPage() {
     businessEmail: '',
     agreeTerms: false,
     agreePrivacy: false,
-    paymentMethod: 'CARD',
-    easyPayProvider: 'KAKAOPAY',
-    virtualAccountBank: 'KOOKMIN_BANK',
   })
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    const params = new URLSearchParams(window.location.search)
-    const requestedPlan = params.get('plan')
-    const requestedMode = params.get('mode')
-    const requestedBilling = params.get('billing')
-
+  function updateForm(patch: Partial<FormState>) {
     setForm((previous) => ({
       ...previous,
-      planMode: requestedMode === 'subscription' || requestedPlan ? 'subscription' : 'free',
-      plan:
-        requestedPlan && PLANS.some((plan) => plan.id === requestedPlan)
-          ? (requestedPlan as PlanType)
-          : previous.plan,
-      billing:
-        requestedBilling === 'monthly' || requestedBilling === '1year' || requestedBilling === '2year'
-          ? requestedBilling
-          : previous.billing,
-      paymentSchedule:
-        requestedMode === 'subscription' || requestedPlan ? previous.paymentSchedule : 'one_time',
+      ...patch,
+      ...(patch.email !== undefined ? { emailChecked: false } : {}),
     }))
-  }, [])
-
-  const amount = useMemo(() => {
-    if (form.planMode !== 'subscription' || form.plan === 'free') {
-      return 0
-    }
-
-    return getSubscriptionPrice(form.plan, form.billing)
-  }, [form.billing, form.plan, form.planMode])
-
-  const isRecurringSubscription =
-    form.planMode === 'subscription' && form.billing === 'monthly' && form.paymentSchedule === 'recurring'
-
-  function updateForm(patch: Partial<FormState>) {
-    setForm((previous) => {
-      const next = {
-        ...previous,
-        ...patch,
-        ...(patch.email !== undefined ? { emailChecked: false } : {}),
-      }
-
-      const nextPlanMode = patch.planMode ?? previous.planMode
-      const nextBilling = patch.billing ?? previous.billing
-      const nextPaymentSchedule = patch.paymentSchedule ?? previous.paymentSchedule
-
-      if (nextPlanMode === 'subscription' && nextBilling === 'monthly' && nextPaymentSchedule === 'recurring') {
-        next.paymentMethod = 'CARD'
-      }
-
-      if (patch.planMode === 'free') {
-        next.paymentSchedule = 'one_time'
-      }
-
-      return next
-    })
 
     if (patch.email !== undefined) {
       setEmailCheckMsg(null)
@@ -194,6 +105,7 @@ export default function PortalSignupPage() {
       setEmailCheckMsg('이메일을 입력해 주세요.')
       return
     }
+
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setEmailCheckMsg('올바른 이메일 형식이 아닙니다.')
       return
@@ -286,7 +198,6 @@ export default function PortalSignupPage() {
     setError(null)
 
     let accountCreated = false
-    let loginNotice = 'signup-complete'
 
     try {
       const signupResponse = await fetch('/api/auth/signup', {
@@ -307,9 +218,9 @@ export default function PortalSignupPage() {
           businessType: form.businessType,
           businessCategory: form.businessCategory,
           businessEmail: form.businessEmail,
-          planMode: form.planMode,
-          plan: form.plan,
-          billing: form.billing,
+          planMode: 'free',
+          plan: 'free',
+          billing: 'monthly',
         }),
       })
 
@@ -320,83 +231,24 @@ export default function PortalSignupPage() {
 
       accountCreated = true
 
-      if (form.planMode === 'subscription' && form.plan !== 'free') {
-        const supabase = createBrowserSupabaseClient()
-        const signInResult = await supabase.auth.signInWithPassword({
-          email: form.email,
-          password: form.password,
-        })
+      const supabase = createBrowserSupabaseClient()
+      const signInResult = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      })
 
-        if (signInResult.error) {
-          throw new Error(`가입은 완료되었지만 결제 준비 중 자동 로그인에 실패했습니다. (${signInResult.error.message})`)
-        }
-
-        const paymentResult = await requestAgencyPayment({
-          paymentId: `signup_${signupData.agencyId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          orderName: `logiSSign ${form.plan.toUpperCase()} 플랜`,
-          amount,
-          method: isRecurringSubscription ? 'CARD' : form.paymentMethod,
-          easyPayProvider:
-            !isRecurringSubscription && form.paymentMethod === 'EASY_PAY' ? form.easyPayProvider : undefined,
-          virtualAccountBankCode:
-            !isRecurringSubscription && form.paymentMethod === 'VIRTUAL_ACCOUNT' ? form.virtualAccountBank : undefined,
-          redirectUrl: `${window.location.origin}/portal/settings?tab=billing`,
-          customer: {
-            customerId: signupData.agencyId,
-            fullName: form.companyName,
-            email: form.email,
-            phoneNumber: form.phone,
-          },
-        })
-
-        const paymentResponse = await fetch('/api/payment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'record-plan-payment',
-            paymentId: paymentResult.paymentId,
-            plan: form.plan,
-            billing: form.billing,
-            amount,
-            paymentMethod: isRecurringSubscription ? 'CARD' : form.paymentMethod,
-            easyPayProvider:
-              !isRecurringSubscription && form.paymentMethod === 'EASY_PAY' ? form.easyPayProvider : undefined,
-            paymentSchedule: isRecurringSubscription ? 'recurring' : 'one_time',
-          }),
-        })
-
-        const paymentData = await paymentResponse.json()
-        if (!paymentResponse.ok) {
-          throw new Error(paymentData.error ?? '결제 결과 저장에 실패했습니다.')
-        }
-
-        if (paymentData.status === 'pending') {
-          loginNotice = 'signup-payment-pending'
-          alert(
-            [
-              '가입이 완료되었습니다.',
-              '결제가 입금 대기 상태로 등록되었습니다.',
-              paymentData.virtualAccountBank ? `은행: ${paymentData.virtualAccountBank}` : null,
-              paymentData.virtualAccountNumber ? `가상계좌: ${paymentData.virtualAccountNumber}` : null,
-            ]
-              .filter(Boolean)
-              .join('\n'),
-          )
-        } else {
-          loginNotice = 'signup-payment-complete'
-        }
-
-        await supabase.auth.signOut()
+      if (signInResult.error) {
+        throw new Error(`가입은 완료되었지만 자동 로그인에 실패했습니다. (${signInResult.error.message})`)
       }
 
-      router.replace(`/portal/login?notice=${loginNotice}`)
+      router.replace('/portal/plan-select')
     } catch (submitError) {
       const message =
         submitError instanceof Error ? submitError.message : '가입 처리 중 오류가 발생했습니다.'
 
       setError(
         accountCreated
-          ? `${message}\n계정은 생성되었으니 로그인 후 설정 > 결제 관리에서 이어서 진행해 주세요.`
+          ? `${message}\n계정은 생성되었으니 로그인 후 플랜을 선택해 주세요.`
           : message,
       )
     } finally {
@@ -412,7 +264,7 @@ export default function PortalSignupPage() {
           <img src="/logo-light.png" alt="logiSSign" className="mx-auto mb-5 w-[260px] object-contain" />
           <h1 className="font-headline text-[30px] font-bold text-on-surface">운영사 회원가입</h1>
           <p className="mt-2 text-sm text-on-surface-variant">
-            개인 정보와 사업자 정보를 입력하고 바로 운영을 시작할 수 있습니다.
+            계정을 만든 뒤 다음 단계에서 무료 시작 또는 유료 플랜을 선택할 수 있습니다.
           </p>
           <p className="mt-3 text-sm text-on-surface-variant">
             이미 계정이 있다면{' '}
@@ -425,115 +277,6 @@ export default function PortalSignupPage() {
 
         <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-6 rounded-3xl bg-surface-container-lowest p-7 shadow-ambient">
-            <div className="grid gap-3 md:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => updateForm({ planMode: 'free', plan: 'free' })}
-                className={`rounded-2xl border-2 p-4 text-left ${
-                  form.planMode === 'free' ? 'border-primary bg-primary/5' : 'border-outline-variant/20'
-                }`}
-              >
-                <p className="text-sm font-bold text-on-surface">무료 가입</p>
-                <p className="mt-1 text-xs text-on-surface-variant">
-                  가입 즉시 5,000P가 무료로 지급됩니다. 이후 필요에 따라 포인트를 충전하거나 구독 플랜으로
-                  전환할 수 있습니다.
-                </p>
-              </button>
-              <button
-                type="button"
-                onClick={() => updateForm({ planMode: 'subscription', plan: 'basic' })}
-                className={`rounded-2xl border-2 p-4 text-left ${
-                  form.planMode === 'subscription' ? 'border-primary bg-primary/5' : 'border-outline-variant/20'
-                }`}
-              >
-                <p className="text-sm font-bold text-on-surface">구독형 플랜</p>
-                <p className="mt-1 text-xs text-on-surface-variant">
-                  월 결제는 한 달 이용과 월 정기구독 중에서 선택할 수 있습니다. 월 정기구독만 카드 등록과 자동 갱신을 사용합니다.
-                </p>
-              </button>
-            </div>
-
-            {form.planMode === 'subscription' ? (
-              <>
-                <div className="grid gap-3 md:grid-cols-3">
-                  {PLANS.map((plan) => (
-                    <button
-                      key={plan.id}
-                      type="button"
-                      onClick={() => updateForm({ plan: plan.id })}
-                      className={`rounded-2xl border p-4 text-left ${
-                        form.plan === plan.id ? 'border-primary bg-primary/5' : 'border-outline-variant/20'
-                      }`}
-                    >
-                      <p className="text-sm font-bold text-on-surface">{plan.name}</p>
-                      <p className="mt-1 text-xs text-on-surface-variant">{plan.description}</p>
-                      <p className="mt-3 text-lg font-bold text-primary">
-                        {formatKRW(getSubscriptionPrice(plan.id, 'monthly'))}
-                        <span className="ml-1 text-xs font-normal text-on-surface-variant">/월</span>
-                      </p>
-                    </button>
-                  ))}
-                </div>
-                <div className="grid gap-3 md:grid-cols-3">
-                  {BILLING_OPTIONS.map((cycle) => (
-                    <button
-                      key={cycle.value}
-                      type="button"
-                      onClick={() =>
-                        updateForm({
-                          billing: cycle.value,
-                          paymentSchedule: cycle.value === 'monthly' ? form.paymentSchedule : 'one_time',
-                        })
-                      }
-                      className={`relative rounded-2xl border p-4 text-left ${
-                        form.billing === cycle.value ? 'border-primary bg-primary/5' : 'border-outline-variant/20'
-                      }`}
-                    >
-                      {cycle.discount > 0 ? (
-                        <span className="absolute -top-2.5 right-3 rounded-full bg-error px-2.5 py-0.5 text-[11px] font-bold text-white">
-                          {cycle.discount}% 할인
-                        </span>
-                      ) : null}
-                      <p className="text-sm font-semibold text-on-surface">{cycle.label}</p>
-                      <p className="mt-1 text-xs text-on-surface-variant">{cycle.description}</p>
-                    </button>
-                  ))}
-                </div>
-                {form.billing === 'monthly' ? (
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <button
-                      type="button"
-                      onClick={() => updateForm({ paymentSchedule: 'one_time' })}
-                      className={`rounded-2xl border p-4 text-left ${
-                        form.paymentSchedule === 'one_time'
-                          ? 'border-primary bg-primary/5'
-                          : 'border-outline-variant/20'
-                      }`}
-                    >
-                      <p className="text-sm font-semibold text-on-surface">한 달 이용</p>
-                      <p className="mt-1 text-xs text-on-surface-variant">
-                        이번 달만 결제하고 이용합니다. 카드, 간편결제, 계좌이체, 가상계좌를 선택할 수 있습니다.
-                      </p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => updateForm({ paymentSchedule: 'recurring' })}
-                      className={`rounded-2xl border p-4 text-left ${
-                        form.paymentSchedule === 'recurring'
-                          ? 'border-primary bg-primary/5'
-                          : 'border-outline-variant/20'
-                      }`}
-                    >
-                      <p className="text-sm font-semibold text-on-surface">월 정기구독</p>
-                      <p className="mt-1 text-xs text-on-surface-variant">
-                        매달 자동 갱신되는 구독입니다. 월 정기구독은 카드 결제와 카드 등록만 지원합니다.
-                      </p>
-                    </button>
-                  </div>
-                ) : null}
-              </>
-            ) : null}
-
             <SectionTitle>1. 개인 정보</SectionTitle>
 
             <input
@@ -611,9 +354,7 @@ export default function PortalSignupPage() {
               {emailCheckMsg ? (
                 <p
                   className={`mt-1.5 text-xs ${
-                    emailCheckMsg.includes('사용 가능한') || emailCheckMsg.includes('확인됨')
-                      ? 'text-tertiary'
-                      : 'text-error'
+                    emailCheckMsg.includes('사용 가능한') ? 'text-tertiary' : 'text-error'
                   }`}
                 >
                   {emailCheckMsg}
@@ -727,209 +468,33 @@ export default function PortalSignupPage() {
 
           <aside className="space-y-6">
             <section className="rounded-3xl bg-surface-container-lowest p-7 shadow-ambient">
-              <h2 className="font-headline text-lg font-bold text-on-surface">가입 요약</h2>
+              <h2 className="font-headline text-lg font-bold text-on-surface">가입 후 진행 순서</h2>
               <div className="mt-5 space-y-3">
-                <SummaryRow label="가입 방식" value={form.planMode === 'free' ? '무료 가입' : '구독형'} />
-                <SummaryRow
-                  label="선택 플랜"
-                  value={form.planMode === 'free' ? '무료 가입 (5,000P 지급)' : form.plan.toUpperCase()}
+                <GuideItem
+                  index="1"
+                  title="운영사 계정 생성"
+                  description="개인 정보와 사업자 정보를 입력하고 본인인증을 완료해 계정을 만듭니다."
                 />
-                {form.planMode === 'subscription' ? (
-                  <>
-                    <SummaryRow
-                      label="결제 주기"
-                      value={
-                        form.billing === 'monthly'
-                          ? '월 결제'
-                          : form.billing === '1year'
-                            ? '1년 선결제 (20% 할인)'
-                            : '2년 선결제 (30% 할인)'
-                      }
-                    />
-                    <SummaryRow
-                      label="이용 방식"
-                      value={
-                        form.billing === 'monthly'
-                          ? isRecurringSubscription
-                            ? '월 정기구독'
-                            : '한 달 이용'
-                          : '기간권 이용'
-                      }
-                    />
-                    {form.billing !== 'monthly' ? (
-                      <div className="flex items-center justify-between gap-4 text-sm">
-                        <span className="text-on-surface-variant">정가</span>
-                        <span className="text-on-surface-variant line-through">
-                          {formatKRW(
-                            getSubscriptionPrice(form.plan, 'monthly') * (form.billing === '1year' ? 12 : 24),
-                          )}
-                        </span>
-                      </div>
-                    ) : null}
-                    <SummaryRow label="결제 금액" value={formatKRW(amount)} />
-                    {form.billing !== 'monthly' ? (
-                      <div className="rounded-xl bg-error/10 px-3 py-2 text-center text-xs font-semibold text-error">
-                        {formatKRW(
-                          getSubscriptionPrice(form.plan, 'monthly') * (form.billing === '1year' ? 12 : 24) - amount,
-                        )}{' '}
-                        절약
-                      </div>
-                    ) : null}
-                  </>
-                ) : (
-                  <div className="rounded-2xl bg-primary/5 p-4 text-xs leading-5 text-on-surface-variant">
-                    가입 즉시 <strong>5,000P</strong>가 무료 지급됩니다. 이후 사용량에 따라 포인트를 충전하거나
-                    구독 플랜으로 전환해 계속 이용할 수 있습니다.
-                  </div>
-                )}
+                <GuideItem
+                  index="2"
+                  title="플랜 선택"
+                  description="가입 직후 별도 페이지에서 무료 시작 또는 유료 플랜 결제를 선택합니다."
+                />
+                <GuideItem
+                  index="3"
+                  title="로그인 후 시작"
+                  description="플랜 선택이 끝나면 로그인 페이지로 이동하며, 로그인 후 바로 운영을 시작할 수 있습니다."
+                />
               </div>
             </section>
 
-            {form.planMode === 'subscription' ? (
-              <section className="space-y-4 rounded-3xl bg-surface-container-lowest p-7 shadow-ambient">
-                <h2 className="font-headline text-lg font-bold text-on-surface">결제 수단</h2>
-                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
-                  <p className="text-sm font-semibold text-on-surface">
-                    {isRecurringSubscription ? '월 정기구독은 카드 결제만 가능합니다.' : '결제를 누르면 바로 PortOne 결제 화면으로 이동합니다.'}
-                  </p>
-                  <p className="mt-1 text-xs text-on-surface-variant">
-                    {isRecurringSubscription
-                      ? '카드 등록과 변경은 월 정기구독 이용 중에만 가능하며, 자동 갱신은 등록된 카드로 처리됩니다.'
-                      : '한 달 이용 또는 기간권은 카드, 간편결제, 계좌이체, 가상계좌 중 원하는 수단으로 결제할 수 있습니다.'}
-                  </p>
-                </div>
-                {isRecurringSubscription ? (
-                  <label className="block rounded-2xl border border-primary bg-primary/5 p-4">
-                  <div className="flex items-start gap-3">
-                    <input type="radio" name="paymentMethod" className="mt-1 accent-primary" checked readOnly />
-                    <div>
-                      <p className="text-sm font-semibold text-on-surface">결제</p>
-                      <p className="mt-1 text-xs text-on-surface-variant">
-                        월 정기구독은 카드 등록 후 자동 갱신되는 방식으로 진행됩니다.
-                      </p>
-                    </div>
-                  </div>
-                  </label>
-                ) : (
-                  <>
-                    {PAYMENT_METHOD_OPTIONS.map((option) => (
-                      <label
-                        key={option.value}
-                        className={`block rounded-2xl border p-4 ${
-                          form.paymentMethod === option.value ? 'border-primary bg-primary/5' : 'border-outline-variant/20'
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <input
-                            type="radio"
-                            name="paymentMethod"
-                            className="mt-1 accent-primary"
-                            checked={form.paymentMethod === option.value}
-                            onChange={() => updateForm({ paymentMethod: option.value })}
-                          />
-                          <div>
-                            <p className="text-sm font-semibold text-on-surface">{option.label}</p>
-                            <p className="mt-1 text-xs text-on-surface-variant">{option.description}</p>
-                          </div>
-                        </div>
-                      </label>
-                    ))}
-
-                    {form.paymentMethod === 'EASY_PAY' ? (
-                      <div className="grid grid-cols-2 gap-3">
-                        {EASY_PAY_PROVIDER_OPTIONS.map((option) => (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => updateForm({ easyPayProvider: option.value })}
-                            className={`h-10 rounded-xl text-sm font-medium ${
-                              form.easyPayProvider === option.value
-                                ? 'bg-primary text-white'
-                                : 'bg-surface-container-low text-on-surface-variant'
-                            }`}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    {form.paymentMethod === 'VIRTUAL_ACCOUNT' ? (
-                      <select
-                        value={form.virtualAccountBank}
-                        onChange={(event) => updateForm({ virtualAccountBank: event.target.value })}
-                        className={INPUT_CLASS}
-                      >
-                        {VIRTUAL_ACCOUNT_BANK_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    ) : null}
-                  </>
-                )}
-              </section>
-            ) : (
-              <section className="space-y-4 rounded-3xl bg-surface-container-lowest p-7 shadow-ambient">
-                <h2 className="font-headline text-lg font-bold text-on-surface">결제 수단</h2>
-                {PAYMENT_METHOD_OPTIONS.map((option) => (
-                  <label
-                    key={option.value}
-                    className={`block rounded-2xl border p-4 ${
-                      form.paymentMethod === option.value ? 'border-primary bg-primary/5' : 'border-outline-variant/20'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        className="mt-1 accent-primary"
-                        checked={form.paymentMethod === option.value}
-                        onChange={() => updateForm({ paymentMethod: option.value })}
-                      />
-                      <div>
-                        <p className="text-sm font-semibold text-on-surface">{option.label}</p>
-                        <p className="mt-1 text-xs text-on-surface-variant">{option.description}</p>
-                      </div>
-                    </div>
-                  </label>
-                ))}
-
-                {form.paymentMethod === 'EASY_PAY' ? (
-                  <div className="grid grid-cols-2 gap-3">
-                    {EASY_PAY_PROVIDER_OPTIONS.map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => updateForm({ easyPayProvider: option.value })}
-                        className={`h-10 rounded-xl text-sm font-medium ${
-                          form.easyPayProvider === option.value
-                            ? 'bg-primary text-white'
-                            : 'bg-surface-container-low text-on-surface-variant'
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-
-                {form.paymentMethod === 'VIRTUAL_ACCOUNT' ? (
-                  <select
-                    value={form.virtualAccountBank}
-                    onChange={(event) => updateForm({ virtualAccountBank: event.target.value })}
-                    className={INPUT_CLASS}
-                  >
-                    {VIRTUAL_ACCOUNT_BANK_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                ) : null}
-              </section>
-            )}
+            <section className="rounded-3xl bg-surface-container-lowest p-7 shadow-ambient">
+              <h2 className="font-headline text-lg font-bold text-on-surface">안내</h2>
+              <div className="mt-5 rounded-2xl bg-primary/5 p-4 text-sm leading-6 text-on-surface-variant">
+                회원가입만 먼저 완료하고, 다음 단계에서 무료 플랜 또는 유료 플랜을 선택하게 됩니다.
+                결제는 가입 페이지가 아니라 별도 플랜 선택 페이지에서 진행됩니다.
+              </div>
+            </section>
 
             {error ? (
               <section className="whitespace-pre-line rounded-3xl border border-error/20 bg-error/5 p-5 text-sm leading-6 text-error">
@@ -943,11 +508,7 @@ export default function PortalSignupPage() {
               disabled={submitting}
               className="h-12 w-full rounded-2xl bg-power-gradient text-sm font-semibold text-white shadow-ambient disabled:opacity-60"
             >
-              {submitting
-                ? '처리 중입니다...'
-                : form.planMode === 'subscription'
-                  ? '결제'
-                  : '무료 가입 완료'}
+              {submitting ? '처리 중입니다...' : '가입 완료 후 플랜 선택'}
             </button>
           </aside>
         </div>
