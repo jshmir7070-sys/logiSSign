@@ -23,26 +23,32 @@ type FormState = {
   planMode: PlanMode
   plan: PlanType
   billing: BillingCycle
-  companyName: string
-  businessNumber: string
+  /* 개인정보 */
   ownerName: string
+  personalAddress: string
+  personalAddressDetail: string
   ownerBirthDate: string
   phone: string
   email: string
+  emailChecked: boolean
+  password: string
+  passwordConfirm: string
+  identityVerified: boolean
+  identityName: string
+  identityPhone: string
+  /* 사업자정보 */
+  companyName: string
+  representativeName: string
+  businessNumber: string
   address: string
   addressDetail: string
   businessType: string
   businessCategory: string
-  bankName: string
-  bankAccount: string
-  bankHolder: string
-  password: string
-  passwordConfirm: string
+  businessEmail: string
+  /* 약관 */
   agreeTerms: boolean
   agreePrivacy: boolean
-  identityVerified: boolean
-  identityName: string
-  identityPhone: string
+  /* 결제 */
   paymentMethod: AgencyPaymentMethod
   easyPayProvider: AgencyEasyPayProvider
   virtualAccountBank: string
@@ -76,34 +82,45 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   )
 }
 
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="flex items-center gap-2 text-[15px] font-bold text-on-surface border-b border-outline-variant/20 pb-3">
+      {children}
+    </h2>
+  )
+}
+
 export default function PortalSignupPage() {
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [emailCheckMsg, setEmailCheckMsg] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>({
     planMode: 'point',
     plan: 'free' as PlanType,
     billing: 'monthly',
-    companyName: '',
-    businessNumber: '',
     ownerName: '',
+    personalAddress: '',
+    personalAddressDetail: '',
     ownerBirthDate: '',
     phone: '',
     email: '',
+    emailChecked: false,
+    password: '',
+    passwordConfirm: '',
+    identityVerified: false,
+    identityName: '',
+    identityPhone: '',
+    companyName: '',
+    representativeName: '',
+    businessNumber: '',
     address: '',
     addressDetail: '',
     businessType: '',
     businessCategory: '',
-    bankName: '',
-    bankAccount: '',
-    bankHolder: '',
-    password: '',
-    passwordConfirm: '',
+    businessEmail: '',
     agreeTerms: false,
     agreePrivacy: false,
-    identityVerified: false,
-    identityName: '',
-    identityPhone: '',
     paymentMethod: 'CARD',
     easyPayProvider: 'KAKAOPAY',
     virtualAccountBank: 'KOOKMIN_BANK',
@@ -147,7 +164,39 @@ export default function PortalSignupPage() {
       ...previous,
       ...patch,
       ...(patch.planMode === 'subscription' ? { paymentMethod: 'CARD' as AgencyPaymentMethod } : {}),
+      ...(patch.email !== undefined ? { emailChecked: false } : {}),
     }))
+    if (patch.email !== undefined) setEmailCheckMsg(null)
+  }
+
+  async function handleCheckEmail() {
+    const email = form.email.trim()
+    if (!email) {
+      setEmailCheckMsg('이메일을 입력해 주세요.')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setEmailCheckMsg('올바른 이메일 형식이 아닙니다.')
+      return
+    }
+
+    try {
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'check-email', email }),
+      })
+      const data = await res.json()
+
+      if (data.available) {
+        setForm((prev) => ({ ...prev, emailChecked: true }))
+        setEmailCheckMsg('✓ 사용 가능한 이메일입니다.')
+      } else {
+        setEmailCheckMsg('이미 가입된 이메일입니다.')
+      }
+    } catch {
+      setEmailCheckMsg('확인 중 오류가 발생했습니다.')
+    }
   }
 
   async function handleVerifyIdentity() {
@@ -203,14 +252,16 @@ export default function PortalSignupPage() {
   }
 
   async function handleSubmit() {
-    if (!form.companyName.trim()) return setError('운송사명을 입력해 주세요.')
-    if (!form.ownerName.trim()) return setError('대표자명을 입력해 주세요.')
-    if (!form.email.trim()) return setError('로그인 이메일을 입력해 주세요.')
+    if (!form.ownerName.trim()) return setError('이름을 입력해 주세요.')
+    if (!form.phone.trim()) return setError('휴대폰 번호를 입력해 주세요.')
     if (!form.identityVerified) return setError('본인인증을 완료해 주세요.')
-    if (!form.agreeTerms || !form.agreePrivacy) return setError('필수 약관 동의가 필요합니다.')
+    if (!form.email.trim()) return setError('아이디(이메일)를 입력해 주세요.')
+    if (!form.emailChecked) return setError('이메일 중복확인을 진행해 주세요.')
     if (!form.password || form.password !== form.passwordConfirm) {
       return setError('비밀번호와 비밀번호 확인이 일치해야 합니다.')
     }
+    if (!form.companyName.trim()) return setError('상호를 입력해 주세요.')
+    if (!form.agreeTerms || !form.agreePrivacy) return setError('필수 약관 동의가 필요합니다.')
 
     setSubmitting(true)
     setError(null)
@@ -225,17 +276,17 @@ export default function PortalSignupPage() {
           email: form.email,
           password: form.password,
           companyName: form.companyName,
-          ownerName: form.ownerName,
+          ownerName: form.representativeName || form.ownerName,
           businessNumber: form.businessNumber,
           ownerBirthDate: form.ownerBirthDate,
           phone: form.phone,
+          personalAddress: form.personalAddress,
+          personalAddressDetail: form.personalAddressDetail,
           address: form.address,
           addressDetail: form.addressDetail,
           businessType: form.businessType,
           businessCategory: form.businessCategory,
-          bankName: form.bankName,
-          bankAccount: form.bankAccount,
-          bankHolder: form.bankHolder,
+          businessEmail: form.businessEmail,
           planMode: form.planMode,
           plan: form.plan,
           billing: form.billing,
@@ -328,7 +379,7 @@ export default function PortalSignupPage() {
           <img src="/logo-light.png" alt="logiSSign" className="mx-auto mb-5 w-[260px] object-contain" />
           <h1 className="font-headline text-[30px] font-bold text-on-surface">운영사 회원가입</h1>
           <p className="mt-2 text-sm text-on-surface-variant">
-            사업자 정보, 본인인증, 결제를 한 번에 마치고 바로 운영을 시작할 수 있습니다.
+            개인정보와 사업자 정보를 입력하고 바로 운영을 시작할 수 있습니다.
           </p>
           <p className="mt-3 text-sm text-on-surface-variant">
             이미 계정이 있다면{' '}
@@ -341,6 +392,7 @@ export default function PortalSignupPage() {
 
         <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-6 rounded-3xl bg-surface-container-lowest p-7 shadow-ambient">
+            {/* ── 플랜 선택 ── */}
             <div className="grid gap-3 md:grid-cols-2">
               <button
                 type="button"
@@ -391,7 +443,6 @@ export default function PortalSignupPage() {
                     </button>
                   ))}
                 </div>
-
                 <div className="grid gap-3 md:grid-cols-3">
                   {BILLING_OPTIONS.map((cycle) => (
                     <button
@@ -410,45 +461,133 @@ export default function PortalSignupPage() {
               </>
             ) : null}
 
+            {/* ── 개인정보 섹션 ── */}
+            <SectionTitle>👤 개인정보</SectionTitle>
+
+            <input
+              className={INPUT_CLASS}
+              value={form.ownerName}
+              onChange={(event) => updateForm({ ownerName: event.target.value })}
+              placeholder="이름 *"
+            />
+
+            <AddressSearch
+              value={form.personalAddress}
+              detailValue={form.personalAddressDetail}
+              onChange={(value: AddressValue) =>
+                updateForm({ personalAddress: value.address, personalAddressDetail: value.addressDetail })
+              }
+              label="주소"
+            />
+
             <div className="grid gap-4 md:grid-cols-2">
-              <input
-                className={INPUT_CLASS}
-                value={form.companyName}
-                onChange={(event) => updateForm({ companyName: event.target.value })}
-                placeholder="운송사명"
-              />
-              <input
-                className={INPUT_CLASS}
-                value={form.businessNumber}
-                onChange={(event) => updateForm({ businessNumber: formatBusinessNumber(event.target.value) })}
-                placeholder="사업자등록번호"
-              />
-              <input
-                className={INPUT_CLASS}
-                value={form.ownerName}
-                onChange={(event) => updateForm({ ownerName: event.target.value })}
-                placeholder="대표자명"
-              />
               <input
                 className={INPUT_CLASS}
                 value={form.ownerBirthDate}
                 onChange={(event) => updateForm({ ownerBirthDate: formatBirthDate(event.target.value) })}
-                placeholder="대표자 생년월일"
+                placeholder="생년월일 (YYMMDD)"
               />
               <input
                 className={INPUT_CLASS}
                 value={form.phone}
                 onChange={(event) => updateForm({ phone: formatPhoneNumber(event.target.value) })}
-                placeholder="대표 연락처"
-              />
-              <input
-                type="email"
-                className={INPUT_CLASS}
-                value={form.email}
-                onChange={(event) => updateForm({ email: event.target.value })}
-                placeholder="로그인 이메일"
+                placeholder="휴대폰 번호 *"
               />
             </div>
+
+            {/* 본인인증 */}
+            <div className="rounded-2xl border border-outline-variant/20 p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-on-surface">본인인증</p>
+                  <p className="mt-1 text-xs text-on-surface-variant">
+                    {form.identityVerified
+                      ? `${form.identityName} / ${form.identityPhone}`
+                      : '가입 전에 본인인증을 먼저 완료해 주세요.'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleVerifyIdentity}
+                  className={`h-10 rounded-xl px-5 text-sm font-semibold ${
+                    form.identityVerified ? 'bg-tertiary/10 text-tertiary' : 'bg-power-gradient text-white'
+                  }`}
+                >
+                  {form.identityVerified ? '✓ 인증 완료' : '본인인증 진행'}
+                </button>
+              </div>
+            </div>
+
+            {/* 아이디(이메일) + 중복확인 */}
+            <div>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  className={`${INPUT_CLASS} flex-1`}
+                  value={form.email}
+                  onChange={(event) => updateForm({ email: event.target.value })}
+                  placeholder="아이디 (이메일) *"
+                />
+                <button
+                  type="button"
+                  onClick={handleCheckEmail}
+                  className={`h-11 shrink-0 rounded-xl px-4 text-sm font-semibold ${
+                    form.emailChecked
+                      ? 'bg-tertiary/10 text-tertiary'
+                      : 'bg-primary text-white'
+                  }`}
+                >
+                  {form.emailChecked ? '✓ 확인됨' : '중복확인'}
+                </button>
+              </div>
+              {emailCheckMsg ? (
+                <p className={`mt-1.5 text-xs ${emailCheckMsg.startsWith('✓') ? 'text-tertiary' : 'text-error'}`}>
+                  {emailCheckMsg}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <input
+                type="password"
+                className={INPUT_CLASS}
+                value={form.password}
+                onChange={(event) => updateForm({ password: event.target.value })}
+                placeholder="비밀번호 *"
+              />
+              <input
+                type="password"
+                className={INPUT_CLASS}
+                value={form.passwordConfirm}
+                onChange={(event) => updateForm({ passwordConfirm: event.target.value })}
+                placeholder="비밀번호 확인 *"
+              />
+            </div>
+
+            {/* ── 사업자정보 섹션 ── */}
+            <SectionTitle>🏢 사업자정보</SectionTitle>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <input
+                className={INPUT_CLASS}
+                value={form.companyName}
+                onChange={(event) => updateForm({ companyName: event.target.value })}
+                placeholder="상호 *"
+              />
+              <input
+                className={INPUT_CLASS}
+                value={form.representativeName}
+                onChange={(event) => updateForm({ representativeName: event.target.value })}
+                placeholder="대표자명"
+              />
+            </div>
+
+            <input
+              className={INPUT_CLASS}
+              value={form.businessNumber}
+              onChange={(event) => updateForm({ businessNumber: formatBusinessNumber(event.target.value) })}
+              placeholder="사업자등록번호"
+            />
 
             <AddressSearch
               value={form.address}
@@ -457,7 +596,6 @@ export default function PortalSignupPage() {
                 updateForm({ address: value.address, addressDetail: value.addressDetail })
               }
               label="사업장 주소"
-              required
             />
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -475,44 +613,16 @@ export default function PortalSignupPage() {
               />
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <input
-                type="password"
-                className={INPUT_CLASS}
-                value={form.password}
-                onChange={(event) => updateForm({ password: event.target.value })}
-                placeholder="비밀번호"
-              />
-              <input
-                type="password"
-                className={INPUT_CLASS}
-                value={form.passwordConfirm}
-                onChange={(event) => updateForm({ passwordConfirm: event.target.value })}
-                placeholder="비밀번호 확인"
-              />
-            </div>
+            <input
+              type="email"
+              className={INPUT_CLASS}
+              value={form.businessEmail}
+              onChange={(event) => updateForm({ businessEmail: event.target.value })}
+              placeholder="사업장 이메일"
+            />
 
-            <div className="rounded-2xl border border-outline-variant/20 p-4">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-on-surface">대표자 본인인증</p>
-                  <p className="mt-1 text-xs text-on-surface-variant">
-                    {form.identityVerified
-                      ? `${form.identityName} / ${form.identityPhone}`
-                      : '가입 전에 본인인증을 먼저 완료해 주세요.'}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleVerifyIdentity}
-                  className={`h-10 rounded-xl px-5 text-sm font-semibold ${
-                    form.identityVerified ? 'bg-tertiary/10 text-tertiary' : 'bg-power-gradient text-white'
-                  }`}
-                >
-                  {form.identityVerified ? '인증 완료' : '본인인증 진행'}
-                </button>
-              </div>
-            </div>
+            {/* ── 약관동의 ── */}
+            <SectionTitle>📋 약관동의</SectionTitle>
 
             <label className="flex items-center gap-2 text-sm text-on-surface-variant">
               <input
@@ -544,6 +654,7 @@ export default function PortalSignupPage() {
             </label>
           </div>
 
+          {/* ── 우측 사이드바 ── */}
           <aside className="space-y-6">
             <section className="rounded-3xl bg-surface-container-lowest p-7 shadow-ambient">
               <h2 className="font-headline text-lg font-bold text-on-surface">가입 요약</h2>

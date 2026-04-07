@@ -175,6 +175,25 @@ export async function POST(request: NextRequest) {
 
   try {
     const rawBody = await request.json()
+
+    // 이메일 중복확인 액션
+    if (rawBody.action === 'check-email') {
+      const email = typeof rawBody.email === 'string' ? rawBody.email.trim().toLowerCase() : ''
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return NextResponse.json({ available: false, error: '올바른 이메일 형식이 아닙니다.' })
+      }
+      const { data } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1 })
+      // listUsers doesn't filter by email, so use a different approach
+      const { data: users } = await supabaseAdmin
+        .from('agencies')
+        .select('id')
+        .eq('email', email)
+        .limit(1)
+      const { data: authUser } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+      const exists = authUser?.users?.some((u) => u.email?.toLowerCase() === email)
+      return NextResponse.json({ available: !exists })
+    }
+
     const parsed = signupSchema.safeParse(rawBody)
 
     if (!parsed.success) {
