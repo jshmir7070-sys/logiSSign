@@ -896,13 +896,18 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="border-t border-white/5 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
-            <p className="text-xs text-gray-600">
-              © 2026 logiSSign. All rights reserved.
-            </p>
-            <div className="flex gap-6 text-xs text-gray-600">
-              <Link href="/terms" className="hover:text-gray-400 transition-colors">이용약관</Link>
-              <Link href="/privacy" className="hover:text-gray-400 transition-colors">개인정보처리방침</Link>
+          <div className="border-t border-white/5 mt-10 pt-6">
+            <div className="text-xs text-gray-500 space-y-1 mb-4 leading-relaxed">
+              <p>상호: 라이트 | 대표자: 주상하 | 사업자등록번호: 819-16-01461</p>
+              <p>주소: 경기도 시흥시 목감남서로5, 406호 | 전화: 010-5695-8838 | 이메일: jshmir77@naver.com</p>
+            </div>
+            <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+              <p className="text-xs text-gray-600">© 2026 logiSSign. All rights reserved.</p>
+              <div className="flex gap-6 text-xs text-gray-600">
+                <Link href="/terms" className="hover:text-gray-400 transition-colors">이용약관</Link>
+                <Link href="/privacy" className="hover:text-gray-400 transition-colors">개인정보처리방침</Link>
+                <Link href="/refund" className="hover:text-gray-400 transition-colors">환불정책</Link>
+              </div>
             </div>
           </div>
         </div>

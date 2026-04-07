@@ -123,6 +123,23 @@ export default function PrivacyPage() {
           ))}
         </div>
       </main>
+
+      <footer className="border-t border-gray-200 mt-16">
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          <div className="text-xs text-gray-400 space-y-1 mb-4 leading-relaxed">
+            <p>상호: 라이트 | 대표자: 주상하 | 사업자등록번호: 819-16-01461</p>
+            <p>주소: 경기도 시흥시 목감남서로5, 406호 | 전화: 010-5695-8838 | 이메일: jshmir77@naver.com</p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500">
+            <p>&copy; 2026 logiSSign. All rights reserved.</p>
+            <div className="flex gap-6">
+              <Link href="/terms" className="hover:text-gray-700 transition-colors">이용약관</Link>
+              <span className="text-gray-900 font-medium">개인정보처리방침</span>
+              <Link href="/refund" className="hover:text-gray-700 transition-colors">환불정책</Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

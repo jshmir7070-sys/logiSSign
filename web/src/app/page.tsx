@@ -246,11 +246,18 @@ export default function HomePage() {
 
         {/* Footer */}
         <footer className="footer fade-in" style={{ animationDelay: '1.3s' }}>
+          <div style={{ marginBottom: '12px', fontSize: '11px', color: '#475569', lineHeight: '1.6' }}>
+            <p>상호: 라이트 | 대표자: 주상하 | 사업자등록번호: 819-16-01461</p>
+            <p>주소: 경기도 시흥시 목감남서로5, 406호 | 전화: 010-5695-8838</p>
+            <p>이메일: jshmir77@naver.com</p>
+          </div>
           <p>© 2026 logiSSign(로지사인). All rights reserved.</p>
           <p className="footer-links">
             <Link href="/terms">이용약관</Link>
             <span>·</span>
             <Link href="/privacy">개인정보처리방침</Link>
+            <span>·</span>
+            <Link href="/refund">환불정책</Link>
             <span>·</span>
             <Link href="/about">서비스 소개</Link>
           </p>
