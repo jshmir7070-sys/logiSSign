@@ -55,7 +55,7 @@ export default function ResetPasswordScreen() {
 
   const handleSend = async () => {
     if (!email.trim() || !name.trim() || !phone.trim()) {
-      Alert.alert('입력 오류', '이메일, 이름, 휴대폰 번호를 입력해주세요.');
+      Alert.alert('입력 오류', '이메일, 이름, 휴대폰 번호를 입력해 주세요.');
       return;
     }
 
@@ -77,7 +77,7 @@ export default function ResetPasswordScreen() {
 
   const handleVerify = async () => {
     if (code.trim().length !== 6) {
-      Alert.alert('입력 오류', '6자리 인증번호를 입력해주세요.');
+      Alert.alert('입력 오류', '6자리 인증번호를 입력해 주세요.');
       return;
     }
 
@@ -99,7 +99,7 @@ export default function ResetPasswordScreen() {
 
   const handleReset = async () => {
     if (!passwordValid) {
-      Alert.alert('비밀번호 오류', '비밀번호 조건을 모두 충족해주세요.');
+      Alert.alert('비밀번호 오류', '비밀번호 조건을 모두 충족해 주세요.');
       return;
     }
 
@@ -127,7 +127,7 @@ export default function ResetPasswordScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <GradientView style={styles.heroSection}>
           <Text style={styles.heroTitle}>비밀번호 찾기</Text>
-          <Text style={styles.heroSubtitle}>휴대폰 인증 후 새 비밀번호를 설정합니다.</Text>
+          <Text style={styles.heroSubtitle}>휴대폰 인증 후 비밀번호를 다시 설정합니다.</Text>
         </GradientView>
 
         <View style={styles.formCard}>
@@ -142,7 +142,6 @@ export default function ResetPasswordScreen() {
                   onChangeText={setEmail}
                   placeholder="example@email.com"
                   placeholderTextColor={colors.outline}
-                  keyboardType="email-address"
                   autoCapitalize="none"
                 />
               </View>
@@ -178,7 +177,7 @@ export default function ResetPasswordScreen() {
           {step === 'verify' && (
             <>
               <Text style={styles.formTitle}>휴대폰 인증</Text>
-              <Text style={styles.helperText}>{phone} 번호로 받은 인증번호를 입력해주세요.</Text>
+              <Text style={styles.helperText}>{phone} 번호로 받은 인증번호를 입력해 주세요.</Text>
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>인증번호</Text>
                 <TextInput
@@ -193,7 +192,7 @@ export default function ResetPasswordScreen() {
               </View>
               <TouchableOpacity onPress={handleVerify} disabled={isSubmitting} activeOpacity={0.8}>
                 <GradientButton style={styles.actionButton}>
-                  <Text style={styles.actionText}>{isSubmitting ? '확인 중...' : '휴대폰 인증 완료'}</Text>
+                  <Text style={styles.actionText}>{isSubmitting ? '확인 중...' : '인증번호 확인'}</Text>
                 </GradientButton>
               </TouchableOpacity>
             </>
@@ -208,40 +207,31 @@ export default function ResetPasswordScreen() {
                   style={styles.input}
                   value={password}
                   onChangeText={setPassword}
-                  placeholder="영문, 숫자, 특수문자 포함"
+                  placeholder="새 비밀번호 입력"
                   placeholderTextColor={colors.outline}
                   secureTextEntry
                 />
               </View>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>비밀번호 재입력</Text>
+                <Text style={styles.label}>비밀번호 확인</Text>
                 <TextInput
                   style={styles.input}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
-                  placeholder="비밀번호를 다시 입력해주세요"
+                  placeholder="비밀번호 다시 입력"
                   placeholderTextColor={colors.outline}
                   secureTextEntry
                 />
               </View>
-              <View style={styles.checkGrid}>
-                {[
-                  ['length', '8자 이상'],
-                  ['lower', '영문 소문자 포함'],
-                  ['upper', '영문 대문자 포함'],
-                  ['number', '숫자 포함'],
-                  ['special', '특수문자 포함'],
-                  ['match', '비밀번호 일치'],
-                ].map(([key, label]) => (
-                  <Text
-                    key={key}
-                    style={passwordChecks[key as keyof typeof passwordChecks] ? styles.checkOk : styles.checkPending}
-                  >
-                    {passwordChecks[key as keyof typeof passwordChecks] ? '✓' : '○'} {label}
-                  </Text>
-                ))}
+              <View style={styles.checkList}>
+                <Text style={[styles.checkItem, passwordChecks.length && styles.checkItemSuccess]}>8자 이상</Text>
+                <Text style={[styles.checkItem, passwordChecks.lower && styles.checkItemSuccess]}>영문 소문자 포함</Text>
+                <Text style={[styles.checkItem, passwordChecks.upper && styles.checkItemSuccess]}>영문 대문자 포함</Text>
+                <Text style={[styles.checkItem, passwordChecks.number && styles.checkItemSuccess]}>숫자 포함</Text>
+                <Text style={[styles.checkItem, passwordChecks.special && styles.checkItemSuccess]}>특수문자 포함</Text>
+                <Text style={[styles.checkItem, passwordChecks.match && styles.checkItemSuccess]}>비밀번호 일치</Text>
               </View>
-              <TouchableOpacity onPress={handleReset} disabled={isSubmitting || !passwordValid} activeOpacity={0.8}>
+              <TouchableOpacity onPress={handleReset} disabled={isSubmitting} activeOpacity={0.8}>
                 <GradientButton style={styles.actionButton}>
                   <Text style={styles.actionText}>{isSubmitting ? '변경 중...' : '비밀번호 변경'}</Text>
                 </GradientButton>
@@ -251,24 +241,15 @@ export default function ResetPasswordScreen() {
 
           {step === 'done' && (
             <>
-              <Text style={styles.formTitle}>비밀번호가 변경되었습니다</Text>
-              <Text style={styles.helperText}>새 비밀번호로 로그인해주세요.</Text>
+              <Text style={styles.formTitle}>변경 완료</Text>
+              <Text style={styles.helperText}>새 비밀번호가 정상적으로 저장되었습니다.</Text>
               <TouchableOpacity onPress={() => router.replace('/(auth)/login')} activeOpacity={0.8}>
                 <GradientButton style={styles.actionButton}>
-                  <Text style={styles.actionText}>로그인으로 돌아가기</Text>
+                  <Text style={styles.actionText}>로그인으로 이동</Text>
                 </GradientButton>
               </TouchableOpacity>
             </>
           )}
-
-          <View style={styles.linkRow}>
-            <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>
-              <Text style={styles.linkText}>로그인</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/(auth)/find-id')}>
-              <Text style={styles.linkText}>아이디 찾기</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -276,93 +257,96 @@ export default function ResetPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.surface },
-  scrollContent: { flexGrow: 1 },
+  container: {
+    flex: 1,
+    backgroundColor: colors.surface,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
   heroSection: {
-    paddingTop: 88,
-    paddingBottom: 56,
+    marginBottom: spacing.xl,
+    borderRadius: borderRadius.xl,
+    paddingVertical: spacing.xl,
     paddingHorizontal: spacing.lg,
-    alignItems: 'center',
+    ...shadows.lg,
   },
   heroTitle: {
-    ...typography.displayMedium,
-    color: colors.surfaceContainerLowest,
-    marginBottom: spacing.sm,
+    color: '#fff',
+    fontFamily: typography.displayLarge.fontFamily,
+    fontSize: typography.displayLarge.fontSize,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   heroSubtitle: {
-    ...typography.bodyMedium,
-    color: colors.surfaceContainerLowest,
-    opacity: 0.9,
+    marginTop: spacing.xs,
+    color: 'rgba(255,255,255,0.85)',
+    fontFamily: typography.bodyMedium.fontFamily,
+    fontSize: typography.bodyMedium.fontSize,
     textAlign: 'center',
   },
   formCard: {
-    flex: 1,
+    borderRadius: borderRadius.xl,
     backgroundColor: colors.surfaceContainerLowest,
-    borderTopLeftRadius: borderRadius['2xl'],
-    borderTopRightRadius: borderRadius['2xl'],
-    marginTop: -spacing['2xl'],
-    paddingHorizontal: spacing['2xl'],
-    paddingTop: spacing['3xl'],
-    paddingBottom: spacing['4xl'],
-    ...shadows.lg,
+    padding: spacing.xl,
+    ...shadows.md,
   },
   formTitle: {
-    ...typography.titleLarge,
+    marginBottom: spacing.md,
     color: colors.onSurface,
-    marginBottom: spacing.lg,
+    fontFamily: typography.displayMedium.fontFamily,
+    fontSize: typography.displayMedium.fontSize,
+    fontWeight: '700',
   },
   helperText: {
-    ...typography.bodyMedium,
+    marginBottom: spacing.md,
     color: colors.onSurfaceVariant,
-    marginBottom: spacing.lg,
+    fontFamily: typography.bodyMedium.fontFamily,
+    fontSize: typography.bodyMedium.fontSize,
+    lineHeight: 20,
   },
-  inputGroup: { marginBottom: spacing.lg },
+  inputGroup: {
+    marginBottom: spacing.md,
+  },
   label: {
-    ...typography.labelLarge,
+    marginBottom: spacing.xs,
     color: colors.onSurfaceVariant,
-    marginBottom: spacing.sm,
+    fontFamily: typography.labelLarge.fontFamily,
+    fontSize: typography.labelLarge.fontSize,
+    fontWeight: '600',
   },
   input: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.lg,
-    ...typography.bodyLarge,
-    color: colors.onSurface,
-    backgroundColor: colors.surfaceContainerLowest,
-  },
-  actionButton: {
     height: 52,
     borderRadius: borderRadius.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: colors.surfaceContainerLow,
+    paddingHorizontal: spacing.md,
+    color: colors.onSurface,
+    fontFamily: typography.bodyLarge.fontFamily,
+    fontSize: typography.bodyLarge.fontSize,
+  },
+  checkList: {
+    marginBottom: spacing.md,
+    gap: spacing.xs,
+  },
+  checkItem: {
+    color: colors.onSurfaceVariant,
+    fontFamily: typography.bodyMedium.fontFamily,
+    fontSize: typography.bodyMedium.fontSize,
+  },
+  checkItemSuccess: {
+    color: colors.tertiary,
+    fontWeight: '700',
+  },
+  actionButton: {
     marginTop: spacing.sm,
   },
   actionText: {
-    ...typography.titleSmall,
-    color: colors.surfaceContainerLowest,
-  },
-  checkGrid: {
-    gap: spacing.xs,
-    marginBottom: spacing.lg,
-  },
-  checkOk: {
-    ...typography.bodySmall,
-    color: '#16a34a',
-  },
-  checkPending: {
-    ...typography.bodySmall,
-    color: colors.onSurfaceVariant,
-  },
-  linkRow: {
-    marginTop: spacing.xl,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.lg,
-  },
-  linkText: {
-    ...typography.bodySmall,
-    color: colors.primary,
+    color: '#fff',
+    fontFamily: typography.labelLarge.fontFamily,
+    fontSize: typography.labelLarge.fontSize,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });

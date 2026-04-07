@@ -94,9 +94,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="font-headline text-[26px] font-bold tracking-tight text-on-surface">
-          관리자 대시보드
-        </h2>
+        <h2 className="font-headline text-[26px] font-bold tracking-tight text-on-surface">관리자 대시보드</h2>
         <p className="mt-1 text-[14px] text-on-surface-variant">{getCurrentDate()}</p>
       </div>
 
@@ -139,7 +137,7 @@ export default function AdminDashboardPage() {
         <div className="min-h-[320px] rounded-2xl bg-surface-container-lowest p-6 shadow-ambient">
           <h3 className="mb-1 font-headline text-[16px] font-bold text-on-surface">MRR 추이</h3>
           <p className="mb-6 text-[13px] text-on-surface-variant">
-            최근 6개월 기준 반영 매출 추정치를 확인합니다.
+            최근 6개월 기준 예상 반복 매출 추정치를 확인합니다.
           </p>
           <MrrChart data={data?.mrrHistory ?? []} />
         </div>
@@ -188,9 +186,7 @@ export default function AdminDashboardPage() {
                   <div>
                     <p className="font-medium text-on-surface">{order.title}</p>
                     <p className="mt-1 text-xs text-on-surface-variant">
-                      {Array.isArray(order.agencies)
-                        ? order.agencies[0]?.name ?? '-'
-                        : order.agencies?.name ?? '-'}
+                      {Array.isArray(order.agencies) ? order.agencies[0]?.name ?? '-' : order.agencies?.name ?? '-'}
                     </p>
                     <p className="mt-1 text-xs text-on-surface-variant">
                       {new Date(order.created_at).toLocaleString('ko-KR')}

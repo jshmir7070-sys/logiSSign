@@ -73,9 +73,7 @@ export default function ServerPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="font-headline text-[26px] font-bold tracking-tight text-on-surface">
-          서버 상태
-        </h2>
+        <h2 className="font-headline text-[26px] font-bold tracking-tight text-on-surface">서버 상태</h2>
         <p className="mt-1 text-[14px] text-on-surface-variant">
           주요 서비스의 운영 상태와 최근 장애 징후, 보안 이벤트를 한 화면에서 확인합니다.
         </p>
@@ -84,10 +82,7 @@ export default function ServerPage() {
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
         {loading
           ? [1, 2, 3, 4].map((index) => (
-              <div
-                key={index}
-                className="h-[120px] animate-pulse rounded-2xl bg-surface-container-lowest p-6 shadow-ambient"
-              />
+              <div key={index} className="h-[120px] animate-pulse rounded-2xl bg-surface-container-lowest p-6 shadow-ambient" />
             ))
           : (data?.services ?? []).map((service) => (
               <div key={service.name} className="rounded-2xl bg-surface-container-lowest p-6 shadow-ambient">
@@ -104,7 +99,7 @@ export default function ServerPage() {
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <div className="rounded-2xl bg-surface-container-lowest p-6 shadow-ambient">
-          <h3 className="mb-4 font-headline text-[16px] font-bold text-on-surface">운영 위험 요약</h3>
+          <h3 className="mb-4 font-headline text-[16px] font-bold text-on-surface">운영 현황 요약</h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="rounded-xl bg-surface-container-low p-4">
               <p className="text-xs text-on-surface-variant">결제 실패</p>
@@ -112,9 +107,7 @@ export default function ServerPage() {
             </div>
             <div className="rounded-xl bg-surface-container-low p-4">
               <p className="text-xs text-on-surface-variant">가상계좌 입금 대기</p>
-              <p className="mt-1 text-2xl font-bold text-amber-600">
-                {data?.opsSummary.pendingVirtualAccounts ?? 0}
-              </p>
+              <p className="mt-1 text-2xl font-bold text-amber-600">{data?.opsSummary.pendingVirtualAccounts ?? 0}</p>
             </div>
             <div className="rounded-xl bg-surface-container-low p-4">
               <p className="text-xs text-on-surface-variant">미서명 계약</p>
@@ -125,6 +118,7 @@ export default function ServerPage() {
               <p className="mt-1 text-2xl font-bold text-primary">{data?.opsSummary.pendingDocuments ?? 0}</p>
             </div>
           </div>
+
           {data?.dbStats ? (
             <p className="mt-4 text-sm text-on-surface-variant">
               집계 기준 테이블 {data.dbStats.tables}개 · 총 레코드 {data.dbStats.totalRows.toLocaleString()}건

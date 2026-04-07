@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase'
-import ProfileTab from '@/components/portal/settings/ProfileTab'
-import CategoryTab from '@/components/portal/settings/CategoryTab'
-import SealTab from '@/components/portal/settings/SealTab'
-import BillingTab from '@/components/portal/settings/BillingTab'
-import NotificationTab from '@/components/portal/settings/NotificationTab'
 import AdminsTab from '@/components/portal/settings/AdminsTab'
+import BillingTab from '@/components/portal/settings/BillingTab'
+import CategoryTab from '@/components/portal/settings/CategoryTab'
+import NotificationTab from '@/components/portal/settings/NotificationTab'
+import ProfileTab from '@/components/portal/settings/ProfileTab'
+import SealTab from '@/components/portal/settings/SealTab'
 
 type SettingsTab = 'profile' | 'category' | 'seal' | 'billing' | 'notification' | 'admins'
 
@@ -41,10 +41,10 @@ export default function PortalSettingsPage() {
   }, [])
 
   const tabs: Array<{ id: SettingsTab; label: string }> = [
-    { id: 'profile', label: '프로필' },
+    { id: 'profile', label: '기본 정보' },
     { id: 'admins', label: '관리자 계정' },
     { id: 'category', label: '카테고리 관리' },
-    { id: 'seal', label: '도장/서명' },
+    { id: 'seal', label: '도장 / 서명' },
     { id: 'billing', label: '결제 관리' },
     { id: 'notification', label: '알림 설정' },
   ]
@@ -63,7 +63,7 @@ export default function PortalSettingsPage() {
             <h2 className="font-korean text-sm font-bold text-on-surface">가입이 완료되었습니다.</h2>
             <p className="mt-1 font-korean text-xs text-on-surface-variant">
               계약서에 사용할 도장과 서명을 먼저 준비해 두면, 일반 도장과 법인 도장, 직접 그린 서명까지
-              모두 빠르게 등록할 수 있습니다.
+              빠르게 등록할 수 있습니다.
             </p>
             <button
               onClick={() => setActiveTab('seal')}

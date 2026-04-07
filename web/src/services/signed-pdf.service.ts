@@ -20,7 +20,7 @@ import type { ContractBindingData } from './contract.service'
  * - 怨꾩빟??蹂몃Ц ?띿뒪???뚮뜑留?
  * - ?쒕챸 ?대?吏 ?쎌엯
  * - content_hash 湲곕줉
- * - 臾몄꽌踰덊샇 / ?몄쬆肄붾뱶 / QR 肄붾뱶 ?쎌엯
+ * - 문서번호 / 인증코드 / QR 肄붾뱶 ?쎌엯
  * - Supabase Storage???낅줈??
  * - contracts.signed_pdf_url ?낅뜲?댄듃
  * - 媛먯궗異붿쟻?몄쬆???먮룞 ?앹꽦
@@ -39,7 +39,7 @@ export async function generateSignedPdf(contractId: string): Promise<{
       .eq('id', contractId)
       .single()
 
-    if (contractErr || !contract) throw new Error('怨꾩빟?쒕? 李얠쓣 ???놁뒿?덈떎')
+    if (contractErr || !contract) throw new Error('계약서를 찾을 수 없습니다')
 
     const contractRec = contract as Record<string, unknown>
 
@@ -69,7 +69,7 @@ export async function generateSignedPdf(contractId: string): Promise<{
       .limit(1)
       .single()
 
-    if (sigErr || !signature) throw new Error('?쒕챸 ?곗씠?곕? 李얠쓣 ???놁뒿?덈떎')
+    if (sigErr || !signature) throw new Error('서명 데이터를 찾을 수 없습니다')
 
     // Consent ?곗씠??蹂꾨룄 議고쉶 (DB ?ㅽ궎留덉뿉 ?꾩쭅 諛섏쁺 ?꾩씪 ???덉쑝誘濡?
     let consentData = {
@@ -163,13 +163,13 @@ export async function generateSignedPdf(contractId: string): Promise<{
     }
     const consentLines = [
       `[${consentData.consent_contract ? 'V' : ' '}] 怨꾩빟 ?댁슜 ?숈쓽`,
-      `[${consentData.consent_privacy_collect ? 'V' : ' '}] 媛쒖씤?뺣낫 ?섏쭛쨌?댁슜 ?숈쓽`,
-      `[${consentData.consent_privacy_id ? 'V' : ' '}] 怨좎쑀?앸퀎?뺣낫 ?섏쭛쨌?댁슜 ?숈쓽`,
-      `[${consentData.consent_privacy_3rd ? 'V' : ' '}] 媛쒖씤?뺣낫 ?????쒓났 ?숈쓽`,
-      `[${consentData.consent_privacy_3rd_id ? 'V' : ' '}] 怨좎쑀?앸퀎?뺣낫 ?????쒓났 ?숈쓽`,
+      `[${consentData.consent_privacy_collect ? 'V' : ' '}] 개인정보 수집·이용 동의`,
+      `[${consentData.consent_privacy_id ? 'V' : ' '}] 고유식별정보 수집·이용 동의`,
+      `[${consentData.consent_privacy_3rd ? 'V' : ' '}] 개인정보 제3자 제공 동의`,
+      `[${consentData.consent_privacy_3rd_id ? 'V' : ' '}] 고유식별정보 제3자 제공 동의`,
     ]
 
-    currentPage.drawText('?숈쓽 ??ぉ:', {
+    currentPage.drawText('동의 항목:', {
       x: margin, y, size: 10, font: boldFont, color: rgb(0, 0, 0),
     })
     y -= 16
@@ -200,7 +200,7 @@ export async function generateSignedPdf(contractId: string): Promise<{
         const imgWidth = 180
         const imgHeight = (image.height / image.width) * imgWidth
 
-        currentPage.drawText('?쒕챸:', {
+        currentPage.drawText('서명:', {
           x: margin, y, size: 10, font: boldFont, color: rgb(0, 0, 0),
         })
         y -= imgHeight + 5
@@ -213,14 +213,14 @@ export async function generateSignedPdf(contractId: string): Promise<{
         })
         y -= 15
       } catch {
-        currentPage.drawText('[?쒕챸 ?대?吏 濡쒕뱶 ?ㅽ뙣]', {
+        currentPage.drawText('[서명 이미지 로드 실패]', {
           x: margin, y, size: 9, font, color: rgb(0.8, 0, 0),
         })
         y -= 14
       }
     }
 
-    // ?먥븧??吏꾩쐞?뺤씤 ?곗씠???앹꽦 (臾몄꽌踰덊샇 + ?몄쬆肄붾뱶 + ?댁떆) ?먥븧??
+    // ?먥븧??吏꾩쐞?뺤씤 ?곗씠???앹꽦 (문서번호 + 인증코드 + ?댁떆) ?먥븧??
     const contentHash = (contract as { content_hash: string }).content_hash ?? ''
     const signedAt = sig.signed_at ?? new Date().toISOString()
 
@@ -234,7 +234,7 @@ export async function generateSignedPdf(contractId: string): Promise<{
       signedAt
     )
 
-    // ?먥븧??硫뷀??뺣낫 + QR 肄붾뱶 + 臾몄꽌踰덊샇 ?섏씠吏 ?먥븧??
+    // ?먥븧??硫뷀??뺣낫 + QR 肄붾뱶 + 문서번호 ?섏씠吏 ?먥븧??
     // ???섏씠吏???몄쬆 ?뺣낫 ?쒖떆
     const certPage = pdfDoc.addPage([pageWidth, pageHeight])
     let certY = pageHeight - margin
@@ -246,7 +246,7 @@ export async function generateSignedPdf(contractId: string): Promise<{
     certY -= 20
 
     // 臾몄꽌 ?몄쬆 ?뺣낫 ?쒕ぉ
-    certPage.drawText('DOCUMENT VERIFICATION / 臾몄꽌 ?몄쬆 ?뺣낫', {
+    certPage.drawText('DOCUMENT VERIFICATION / 문서 인증 정보', {
       x: margin, y: certY, size: 12, font: boldFont, color: rgb(0.15, 0.15, 0.15),
     })
     certY -= 25
@@ -274,19 +274,19 @@ export async function generateSignedPdf(contractId: string): Promise<{
 
     // ?몄쬆 ?곸꽭
     const certLines: [string, string][] = [
-      ['臾몄꽌踰덊샇', verification?.documentNumber ?? '-'],
-      ['?몄쬆肄붾뱶', verification?.verificationCode ?? '-'],
-      ['?쒕챸?쇱떆', sig.signed_at ? new Date(sig.signed_at).toLocaleString('ko-KR') : '-'],
-      ['?쒕챸??IP', sig.signer_ip ?? '-'],
+      ['문서번호', verification?.documentNumber ?? '-'],
+      ['인증코드', verification?.verificationCode ?? '-'],
+      ['서명일시', sig.signed_at ? new Date(sig.signed_at).toLocaleString('ko-KR') : '-'],
+      ['서명자 IP', sig.signer_ip ?? '-'],
       ['', ''],
-      ['臾몄꽌 ?댁슜 ?댁떆 (SHA-256)', ''],
+      ['문서 내용 해시 (SHA-256)', ''],
       ['', contentHash],
-      ['?쒕챸 PDF ?댁떆 (SHA-256)', ''],
+      ['서명 PDF 해시 (SHA-256)', ''],
       ['', verification?.signedPdfHash ?? '-'],
-      ['??꾩뒪?ы봽 ?댁떆 (SHA-256)', ''],
+      ['타임스탬프 해시 (SHA-256)', ''],
       ['', verification?.timestampHash ?? '-'],
       ['', ''],
-      ['吏꾩쐞?뺤씤 URL', verification?.verificationUrl ?? '-'],
+      ['진위확인 URL', verification?.verificationUrl ?? '-'],
     ]
 
     for (const item of certLines) {
@@ -335,7 +335,7 @@ export async function generateSignedPdf(contractId: string): Promise<{
     }
 
     certY -= 15
-    certPage.drawText(`logiSSign ?꾩옄怨꾩빟 ?쒖뒪?? |  諛쒓툒: ${new Date().toLocaleString('ko-KR')}`, {
+    certPage.drawText(`logiSSign 전자계약 서비스 | 발급: ${new Date().toLocaleString('ko-KR')}`, {
       x: margin, y: certY, size: 7, font, color: rgb(0.6, 0.6, 0.6),
     })
 
@@ -356,7 +356,7 @@ export async function generateSignedPdf(contractId: string): Promise<{
         opacity: 0.15,
       })
 
-      // ?섎떒 臾몄꽌踰덊샇 ?뚰꽣留덊겕
+      // ?섎떒 문서번호 ?뚰꽣留덊겕
       pg.drawText(`${watermarkText}  |  logiSSign`, {
         x: margin,
         y: 20,
@@ -379,7 +379,7 @@ export async function generateSignedPdf(contractId: string): Promise<{
         upsert: true,
       })
 
-    if (uploadErr) throw new Error('PDF ?낅줈???ㅽ뙣: ' + uploadErr.message)
+    if (uploadErr) throw new Error('PDF 업로드 실패: ' + uploadErr.message)
 
     const { url: pdfUrl } = await createSignedStorageUrl(
       supabase,
@@ -560,7 +560,7 @@ async function generatePdfTypeSignedContract(
     })
     certY -= 20
 
-    certPage.drawText('DOCUMENT VERIFICATION / 臾몄꽌 ?몄쬆 ?뺣낫', {
+    certPage.drawText('DOCUMENT VERIFICATION / 문서 인증 정보', {
       x: margin, y: certY, size: 12, font: boldFont, color: rgb(0.15, 0.15, 0.15),
     })
     certY -= 25
@@ -583,12 +583,12 @@ async function generatePdfTypeSignedContract(
     }
 
     const certLines: [string, string][] = [
-      ['臾몄꽌踰덊샇', verification?.documentNumber ?? '-'],
-      ['?몄쬆肄붾뱶', verification?.verificationCode ?? '-'],
-      ['?쒕챸?쇱떆', new Date(signedAt).toLocaleString('ko-KR')],
-      ['?쒕챸??IP', signerIp],
+      ['문서번호', verification?.documentNumber ?? '-'],
+      ['인증코드', verification?.verificationCode ?? '-'],
+      ['서명일시', new Date(signedAt).toLocaleString('ko-KR')],
+      ['서명자 IP', signerIp],
       ['', ''],
-      ['吏꾩쐞?뺤씤 URL', verification?.verificationUrl ?? '-'],
+      ['진위확인 URL', verification?.verificationUrl ?? '-'],
     ]
 
     for (const item of certLines) {
@@ -614,7 +614,7 @@ async function generatePdfTypeSignedContract(
     }
 
     certY -= 15
-    certPage.drawText(`logiSSign ?꾩옄怨꾩빟 ?쒖뒪?? |  諛쒓툒: ${new Date().toLocaleString('ko-KR')}`, {
+    certPage.drawText(`logiSSign 전자계약 서비스 | 발급: ${new Date().toLocaleString('ko-KR')}`, {
       x: margin, y: certY, size: 7, font, color: rgb(0.6, 0.6, 0.6),
     })
 
@@ -633,7 +633,7 @@ async function generatePdfTypeSignedContract(
       })
     }
 
-    // 5. 理쒖쥌 PDF ???諛??낅줈??
+    // 5. 최종 PDF 저장 및 업로드
     const finalPdfBytes = await pdfDoc.save()
     const fileName = `signed/${contractId}_${Date.now()}.pdf`
 
@@ -641,7 +641,7 @@ async function generatePdfTypeSignedContract(
       .from('contracts')
       .upload(fileName, finalPdfBytes, { contentType: 'application/pdf', upsert: true })
 
-    if (uploadErr) throw new Error('PDF ?낅줈???ㅽ뙣: ' + uploadErr.message)
+    if (uploadErr) throw new Error('PDF 업로드 실패: ' + uploadErr.message)
 
     const { url: pdfUrl } = await createSignedStorageUrl(
       supabase,
@@ -668,7 +668,7 @@ async function generatePdfTypeSignedContract(
 
     return { url: pdfUrl, error: null }
   } catch (err) {
-    return { url: null, error: err instanceof Error ? err.message : 'PDF ???怨꾩빟??PDF ?앹꽦 ?ㅽ뙣' }
+    return { url: null, error: err instanceof Error ? err.message : 'PDF 기반 계약서 생성 실패' }
   }
 }
 
@@ -693,7 +693,7 @@ async function generateGovernmentFormSignedPdf(
       .limit(1)
       .single()
 
-    if (sigErr || !signature) throw new Error('?쒕챸 ?곗씠?곕? 李얠쓣 ???놁뒿?덈떎')
+    if (sigErr || !signature) throw new Error('서명 데이터를 찾을 수 없습니다')
 
     const sig = signature as unknown as {
       signed_at: string
@@ -715,7 +715,7 @@ async function generateGovernmentFormSignedPdf(
     const sigPage = pdfDoc.addPage([pageWidth, pageHeight])
     let y = pageHeight - margin
 
-    sigPage.drawText('Electronic Signature / ?꾩옄?쒕챸 ?뺤씤', {
+    sigPage.drawText('Electronic Signature / 전자서명 확인', {
       x: margin, y, size: 14, font: boldFont, color: rgb(0.15, 0.15, 0.15),
     })
     y -= 30
@@ -744,7 +744,7 @@ async function generateGovernmentFormSignedPdf(
         })
         y -= 20
       } catch {
-        sigPage.drawText('[?쒕챸 ?대?吏 濡쒕뱶 ?ㅽ뙣]', {
+        sigPage.drawText('[서명 이미지 로드 실패]', {
           x: margin, y, size: 9, font, color: rgb(0.8, 0, 0),
         })
         y -= 14
@@ -754,8 +754,8 @@ async function generateGovernmentFormSignedPdf(
     // ?쒕챸 硫뷀??곗씠??
     y -= 20
     const metaLines: [string, string][] = [
-      ['?쒕챸?쇱떆', sig.signed_at ? new Date(sig.signed_at).toLocaleString('ko-KR') : '-'],
-      ['?쒕챸??IP', sig.signer_ip ?? '-'],
+      ['서명일시', sig.signed_at ? new Date(sig.signed_at).toLocaleString('ko-KR') : '-'],
+      ['서명자 IP', sig.signer_ip ?? '-'],
       ['臾몄꽌 ID', contractId],
     ]
     for (const [label, value] of metaLines) {
@@ -765,7 +765,7 @@ async function generateGovernmentFormSignedPdf(
     }
 
     y -= 20
-    sigPage.drawText('??臾몄꽌??logiSSign ?꾩옄怨꾩빟 ?쒖뒪?쒖뿉???꾩옄?쒕챸???먮낯?낅땲??', {
+    sigPage.drawText('본 문서는 logiSSign 전자계약 서비스에서 전자서명된 원본입니다.', {
       x: margin, y, size: 8, font, color: rgb(0.5, 0.5, 0.5),
     })
 
@@ -777,7 +777,7 @@ async function generateGovernmentFormSignedPdf(
       .from('contracts')
       .upload(fileName, pdfBytes, { contentType: 'application/pdf', upsert: true })
 
-    if (uploadErr) throw new Error('PDF ?낅줈???ㅽ뙣: ' + uploadErr.message)
+    if (uploadErr) throw new Error('PDF 업로드 실패: ' + uploadErr.message)
 
     const { url: pdfUrl } = await createSignedStorageUrl(
       supabase,
@@ -808,3 +808,5 @@ async function generateGovernmentFormSignedPdf(
     return { url: null, error: err instanceof Error ? err.message : '관공서 서류 PDF 생성 실패' }
   }
 }
+
+

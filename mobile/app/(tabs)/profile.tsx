@@ -292,7 +292,7 @@ export default function ProfileScreen() {
 
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        Alert.alert('요청 실패', payload?.error || '삭제 요청을 접수하지 못했습니다.');
+        Alert.alert('요청 실패', payload?.error || '개인정보 삭제 요청을 접수하지 못했습니다.');
         return;
       }
 

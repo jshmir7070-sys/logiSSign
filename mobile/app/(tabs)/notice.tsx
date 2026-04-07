@@ -8,6 +8,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../../constants/theme';
 import { getDriverNotices, categoryLabel } from '../../services/notice.service';
@@ -26,6 +27,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export default function NoticeScreen() {
+  const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState<NoticeCategory>('전체');
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +59,7 @@ export default function NoticeScreen() {
     const dateStr = publishedAt ? new Date(publishedAt).toLocaleDateString('ko-KR') : '';
 
     return (
-      <TouchableOpacity style={styles.noticeCard} activeOpacity={0.7}>
+      <TouchableOpacity style={styles.noticeCard} activeOpacity={0.7} onPress={() => router.push(`/notice/${item.id}`)}>
         <View style={[styles.noticeLeftBorder, { backgroundColor: borderColor }]} />
         <View style={styles.noticeContent}>
           <View style={styles.noticeTop}>

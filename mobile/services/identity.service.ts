@@ -1,8 +1,7 @@
 /**
- * 본인인증 서비스 (모바일)
- *
- * 포트원 V2 본인인증을 WebView/외부 브라우저로 호출
- * 서버 API에서 결과 검증
+ * 모바일 본인인증 서비스
+ * PortOne V2 본인인증 페이지를 외부 브라우저로 열고
+ * 서버 API에서 결과를 확인합니다.
  */
 
 import { Platform, Linking } from 'react-native';
@@ -23,7 +22,7 @@ const APP_URL = process.env.EXPO_PUBLIC_APP_URL || 'https://logissign.com';
 
 /**
  * 본인인증 실행
- * 서버 API를 통해 포트원 본인인증 결과를 검증
+ * 서버 API를 통해 PortOne 본인인증 결과를 검증합니다.
  */
 export async function requestIdentityVerification(
   provider: IdentityProvider,
@@ -31,20 +30,16 @@ export async function requestIdentityVerification(
   driverInfo: { name: string; phone: string }
 ): Promise<VerificationResult> {
   try {
-    // 서버에 본인인증 세션 생성 요청
     const verificationId = `identity_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-
-    // 포트원 본인인증 URL로 외부 브라우저 열기
-    const verifyUrl = `${APP_URL}/verify-identity?id=${verificationId}&name=${encodeURIComponent(driverInfo.name)}&phone=${encodeURIComponent(driverInfo.phone)}&provider=${provider}`;
+    const verifyUrl = `${APP_URL}/verify-identity?id=${verificationId}&name=${encodeURIComponent(driverInfo.name)}&phone=${encodeURIComponent(driverInfo.phone)}&provider=${provider}&contractId=${encodeURIComponent(contractId)}`;
 
     const canOpen = await Linking.canOpenURL(verifyUrl);
     if (canOpen) {
       await Linking.openURL(verifyUrl);
     }
 
-    // 서버에서 본인인증 결과 확인 (폴링)
-    for (let i = 0; i < 60; i++) {
-      await new Promise(r => setTimeout(r, 3000)); // 3초 간격
+    for (let i = 0; i < 60; i += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 3000));
 
       const res = await fetch(`${APP_URL}/api/payment`, {
         method: 'POST',
@@ -71,7 +66,6 @@ export async function requestIdentityVerification(
       }
     }
 
-    // 타임아웃 (3분)
     return {
       verified: false,
       provider,
@@ -79,7 +73,7 @@ export async function requestIdentityVerification(
       name: '',
       phone: '',
       verifiedAt: '',
-      error: '본인인증 시간이 초과되었습니다. 다시 시도해주세요.',
+      error: '본인인증 시간이 초과되었습니다. 다시 시도해 주세요.',
     };
   } catch (err) {
     return {
@@ -89,19 +83,19 @@ export async function requestIdentityVerification(
       name: '',
       phone: '',
       verifiedAt: '',
-      error: err instanceof Error ? err.message : '본인인증 실패',
+      error: err instanceof Error ? err.message : '본인인증에 실패했습니다.',
     };
   }
 }
 
 /**
- * 본인인증 제공업체 선택 UI에 표시할 정보
+ * 본인인증 수단 선택 UI 데이터
  */
 export const IDENTITY_PROVIDERS = [
   {
     id: 'pass' as IdentityProvider,
     name: 'PASS 인증',
-    description: '통신사 본인확인 + 민간인증서',
+    description: '통신사 본인확인 + 휴대폰 인증',
     icon: '🔐',
     recommended: Platform.OS === 'android',
   },

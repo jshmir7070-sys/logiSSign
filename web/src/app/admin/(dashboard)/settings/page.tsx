@@ -182,9 +182,7 @@ export default function AdminSettingsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="font-headline text-[26px] font-bold tracking-tight text-on-surface">
-          관리자 설정
-        </h2>
+        <h2 className="font-headline text-[26px] font-bold tracking-tight text-on-surface">관리자 설정</h2>
         <p className="mt-1 text-[14px] text-on-surface-variant">
           플랫폼 기본 정보, 플랜 정책, 결제 수단, 안내 템플릿을 운영 기준으로 관리합니다.
         </p>
@@ -250,7 +248,9 @@ export default function AdminSettingsPage() {
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-on-surface-variant">개인정보 책임자 이메일</label>
+              <label className="mb-1.5 block text-xs font-medium text-on-surface-variant">
+                개인정보 책임자 이메일
+              </label>
               <input
                 type="email"
                 value={general.privacyOfficerEmail}
@@ -261,7 +261,9 @@ export default function AdminSettingsPage() {
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-on-surface-variant">개인정보 책임자 연락처</label>
+              <label className="mb-1.5 block text-xs font-medium text-on-surface-variant">
+                개인정보 책임자 연락처
+              </label>
               <input
                 type="text"
                 value={general.privacyOfficerPhone}
@@ -291,7 +293,7 @@ export default function AdminSettingsPage() {
           <div>
             <h3 className="font-headline text-[16px] font-bold text-on-surface">결제 정책</h3>
             <p className="mt-1 text-sm text-on-surface-variant">
-              사용자 화면에 보이는 결제 수단과 구독 만료 알림 정책을 여기에서 결정합니다.
+              사용자 화면에 노출할 결제 수단과 구독 만료 알림 정책을 여기서 설정합니다.
             </p>
           </div>
 
@@ -346,7 +348,7 @@ export default function AdminSettingsPage() {
             </div>
 
             <div>
-              <p className="mb-2 text-xs font-medium text-on-surface-variant">가상계좌 은행</p>
+              <p className="mb-2 text-xs font-medium text-on-surface-variant">가상계좌 은행 목록</p>
               <div className="space-y-2">
                 {VIRTUAL_ACCOUNT_BANK_OPTIONS.map((bank) => (
                   <label key={bank.value} className="flex items-center gap-2 rounded-xl bg-surface-container-low p-3">
@@ -387,7 +389,9 @@ export default function AdminSettingsPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-on-surface-variant">가상계좌 입금 만료 시간</label>
+              <label className="mb-1.5 block text-xs font-medium text-on-surface-variant">
+                가상계좌 입금 만료 시간
+              </label>
               <input
                 type="number"
                 min={1}
@@ -403,7 +407,9 @@ export default function AdminSettingsPage() {
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-on-surface-variant">플랜 만료 알림 일수</label>
+              <label className="mb-1.5 block text-xs font-medium text-on-surface-variant">
+                플랜 만료 알림 일수
+              </label>
               <input
                 type="text"
                 value={payment.subscriptionExpiryNoticeDays.join(', ')}
@@ -448,7 +454,7 @@ export default function AdminSettingsPage() {
                     setPayment((previous) => ({ ...previous, subscriptionCardOnly: event.target.checked }))
                   }
                 />
-                <span>구독형 카드 전용</span>
+                <span>구독은 카드 전용</span>
               </label>
               <label className="flex items-center gap-2 text-sm text-on-surface">
                 <input
@@ -484,7 +490,7 @@ export default function AdminSettingsPage() {
           <div>
             <h3 className="font-headline text-[16px] font-bold text-on-surface">이메일 템플릿</h3>
             <p className="mt-1 text-sm text-on-surface-variant">
-              가입 승인, 결제 실패, 만료 알림 등 자동 메일의 제목과 본문을 관리합니다.
+              가입 승인, 결제 실패, 만료 안내 같은 자동 메일의 제목과 본문을 관리합니다.
             </p>
           </div>
 
@@ -564,7 +570,7 @@ export default function AdminSettingsPage() {
             <div>
               <h3 className="font-headline text-[16px] font-bold text-on-surface">플랜 관리</h3>
               <p className="mt-1 text-sm text-on-surface-variant">
-                플랜별 요금, 기사 수 한도, 기능 제공 범위를 조정합니다.
+                플랜별 금액, 기사 수 제한, 관리자 계정 수, 기능 제공 범위를 조정합니다.
               </p>
             </div>
           </div>
@@ -592,7 +598,7 @@ export default function AdminSettingsPage() {
                       </p>
                     </div>
                   </div>
-                  <p className="mt-3 text-sm text-on-surface-variant">{plan.description || '설명 없음'}</p>
+                  <p className="mt-3 text-sm text-on-surface-variant">{plan.description || '설명이 없습니다.'}</p>
                 </button>
               ))}
             </div>
@@ -623,7 +629,9 @@ export default function AdminSettingsPage() {
                 <input
                   type="text"
                   value={editingPlan.label}
-                  onChange={(event) => setEditingPlan((previous) => previous && { ...previous, label: event.target.value })}
+                  onChange={(event) =>
+                    setEditingPlan((previous) => previous && { ...previous, label: event.target.value })
+                  }
                   className={INPUT_CLASS}
                 />
               </div>
@@ -633,13 +641,15 @@ export default function AdminSettingsPage() {
                   type="number"
                   value={editingPlan.price_monthly}
                   onChange={(event) =>
-                    setEditingPlan((previous) => previous && { ...previous, price_monthly: Number(event.target.value || 0) })
+                    setEditingPlan(
+                      (previous) => previous && { ...previous, price_monthly: Number(event.target.value || 0) },
+                    )
                   }
                   className={INPUT_CLASS}
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-on-surface-variant">기사 수 한도</label>
+                <label className="mb-1.5 block text-xs font-medium text-on-surface-variant">기사 수 제한</label>
                 <input
                   type="number"
                   value={editingPlan.max_drivers ?? ''}
@@ -656,39 +666,47 @@ export default function AdminSettingsPage() {
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-on-surface-variant">관리자 계정 수</label>
+                <label className="mb-1.5 block text-xs font-medium text-on-surface-variant">
+                  관리자 계정 수
+                </label>
                 <input
                   type="number"
                   value={editingPlan.max_admin_accounts}
                   onChange={(event) =>
-                    setEditingPlan((previous) =>
-                      previous && { ...previous, max_admin_accounts: Number(event.target.value || 0) },
+                    setEditingPlan(
+                      (previous) => previous && { ...previous, max_admin_accounts: Number(event.target.value || 0) },
                     )
                   }
                   className={INPUT_CLASS}
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-on-surface-variant">기본 템플릿 수</label>
+                <label className="mb-1.5 block text-xs font-medium text-on-surface-variant">
+                  기본 템플릿 수
+                </label>
                 <input
                   type="number"
                   value={editingPlan.max_default_templates}
                   onChange={(event) =>
-                    setEditingPlan((previous) =>
-                      previous && { ...previous, max_default_templates: Number(event.target.value || 0) },
+                    setEditingPlan(
+                      (previous) =>
+                        previous && { ...previous, max_default_templates: Number(event.target.value || 0) },
                     )
                   }
                   className={INPUT_CLASS}
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-on-surface-variant">업로드 템플릿 수</label>
+                <label className="mb-1.5 block text-xs font-medium text-on-surface-variant">
+                  업로드 템플릿 수
+                </label>
                 <input
                   type="number"
                   value={editingPlan.max_upload_templates}
                   onChange={(event) =>
-                    setEditingPlan((previous) =>
-                      previous && { ...previous, max_upload_templates: Number(event.target.value || 0) },
+                    setEditingPlan(
+                      (previous) =>
+                        previous && { ...previous, max_upload_templates: Number(event.target.value || 0) },
                     )
                   }
                   className={INPUT_CLASS}

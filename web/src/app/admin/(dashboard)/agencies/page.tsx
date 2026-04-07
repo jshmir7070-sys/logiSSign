@@ -93,10 +93,7 @@ export default function AgenciesPage() {
       if (!search.trim()) return true
 
       const keyword = search.toLowerCase()
-      return (
-        agency.name.toLowerCase().includes(keyword) ||
-        (agency.owner_name ?? '').toLowerCase().includes(keyword)
-      )
+      return agency.name.toLowerCase().includes(keyword) || (agency.owner_name ?? '').toLowerCase().includes(keyword)
     })
   }, [agencies, filterPlan, search])
 
@@ -114,6 +111,7 @@ export default function AgenciesPage() {
           reason: reason || undefined,
         }),
       })
+
       const payload = await response.json()
       if (!response.ok) {
         throw new Error(payload.error || '플랜 변경에 실패했습니다.')
@@ -136,7 +134,7 @@ export default function AgenciesPage() {
       <div>
         <h2 className="font-headline text-[26px] font-bold tracking-tight text-on-surface">대리점 관리</h2>
         <p className="mt-1 text-[14px] text-on-surface-variant">
-          대리점별 플랜, 기사 수, 최신 결제 상태를 확인하고 필요할 때 플랜을 조정합니다.
+          대리점별 플랜, 기사 수, 최근 결제 상태를 확인하고 필요할 경우 플랜을 조정합니다.
         </p>
       </div>
 
@@ -198,9 +196,7 @@ export default function AgenciesPage() {
                   <tr key={agency.id} className="border-t border-outline-variant/10">
                     <td className="px-5 py-4">
                       <p className="font-medium text-on-surface">{agency.name}</p>
-                      <p className="mt-1 text-xs text-on-surface-variant">
-                        대표자 {agency.owner_name || '-'}
-                      </p>
+                      <p className="mt-1 text-xs text-on-surface-variant">대표자 {agency.owner_name || '-'}</p>
                     </td>
                     <td className="px-5 py-4">
                       <Badge
@@ -256,7 +252,8 @@ export default function AgenciesPage() {
               {changingAgency.name} 플랜 변경
             </h3>
             <p className="mt-1 text-sm text-on-surface-variant">
-              현재 플랜은 {changingAgency.plan.toUpperCase()}입니다. 변경 사유를 남기면 추적이 쉬워집니다.
+              현재 플랜은 {changingAgency.plan.toUpperCase()}입니다. 변경 사유를 함께 기록하면 추후 이력
+              확인이 쉬워집니다.
             </p>
 
             <div className="mt-5 space-y-4">

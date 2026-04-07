@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import AddressSearch, { type AddressValue } from '@/components/shared/AddressSearch'
@@ -23,7 +23,6 @@ type FormState = {
   planMode: PlanMode
   plan: PlanType
   billing: BillingCycle
-  /* 개인정보 */
   ownerName: string
   personalAddress: string
   personalAddressDetail: string
@@ -36,7 +35,6 @@ type FormState = {
   identityVerified: boolean
   identityName: string
   identityPhone: string
-  /* 사업자정보 */
   companyName: string
   representativeName: string
   businessNumber: string
@@ -45,10 +43,8 @@ type FormState = {
   businessType: string
   businessCategory: string
   businessEmail: string
-  /* 약관 */
   agreeTerms: boolean
   agreePrivacy: boolean
-  /* 결제 */
   paymentMethod: AgencyPaymentMethod
   easyPayProvider: AgencyEasyPayProvider
   virtualAccountBank: string
@@ -56,14 +52,14 @@ type FormState = {
 
 const PLANS: Array<{ id: Extract<PlanType, 'basic' | 'standard' | 'pro'>; name: string; description: string }> = [
   { id: 'basic', name: 'Basic', description: '기사 30명 규모에 적합한 기본 운영 플랜입니다.' },
-  { id: 'standard', name: 'Standard', description: '기사 80명 규모와 정산·알림 기능을 함께 운영합니다.' },
-  { id: 'pro', name: 'Pro', description: '기사 150명 이상 대량 처리와 확장 운영에 적합합니다.' },
+  { id: 'standard', name: 'Standard', description: '기사 80명 규모와 정산, 알림 기능이 필요한 운영에 적합합니다.' },
+  { id: 'pro', name: 'Pro', description: '기사 150명 이상 조직과 대량 처리에 적합합니다.' },
 ]
 
 const BILLING_OPTIONS: Array<{ value: BillingCycle; label: string; discount: number; description: string }> = [
-  { value: 'monthly', label: '월 결제', discount: 0, description: '매월 1회 정기적으로 결제합니다.' },
-  { value: '1year', label: '1년 선결제', discount: 20, description: '20% 할인이 적용됩니다.' },
-  { value: '2year', label: '2년 선결제', discount: 30, description: '30% 할인이 적용됩니다.' },
+  { value: 'monthly', label: '월 결제', discount: 0, description: '매월 1회 정기적으로 결제됩니다.' },
+  { value: '1year', label: '1년 선결제', discount: 20, description: '20% 할인 혜택이 적용됩니다.' },
+  { value: '2year', label: '2년 선결제', discount: 30, description: '30% 할인 혜택이 적용됩니다.' },
 ]
 
 const INPUT_CLASS =
@@ -82,9 +78,9 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
+function SectionTitle({ children }: { children: ReactNode }) {
   return (
-    <h2 className="flex items-center gap-2 text-[15px] font-bold text-on-surface border-b border-outline-variant/20 pb-3">
+    <h2 className="flex items-center gap-2 border-b border-outline-variant/20 pb-3 text-[15px] font-bold text-on-surface">
       {children}
     </h2>
   )
@@ -97,7 +93,7 @@ export default function PortalSignupPage() {
   const [emailCheckMsg, setEmailCheckMsg] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>({
     planMode: 'point',
-    plan: 'free' as PlanType,
+    plan: 'point',
     billing: 'monthly',
     ownerName: '',
     personalAddress: '',
@@ -145,8 +141,7 @@ export default function PortalSignupPage() {
         requestedBilling === 'monthly' || requestedBilling === '1year' || requestedBilling === '2year'
           ? requestedBilling
           : previous.billing,
-      paymentMethod:
-        requestedMode === 'subscription' || requestedPlan ? 'CARD' : previous.paymentMethod,
+      paymentMethod: requestedMode === 'subscription' || requestedPlan ? 'CARD' : previous.paymentMethod,
     }))
   }, [])
 
@@ -154,10 +149,9 @@ export default function PortalSignupPage() {
     if (form.planMode !== 'subscription' || form.plan === 'point' || form.plan === 'free') {
       return 0
     }
+
     return getSubscriptionPrice(form.plan, form.billing)
   }, [form.billing, form.plan, form.planMode])
-
-  const availablePointPaymentMethods = PAYMENT_METHOD_OPTIONS.filter((option) => option.value !== 'CARD' || true)
 
   function updateForm(patch: Partial<FormState>) {
     setForm((previous) => ({
@@ -166,7 +160,10 @@ export default function PortalSignupPage() {
       ...(patch.planMode === 'subscription' ? { paymentMethod: 'CARD' as AgencyPaymentMethod } : {}),
       ...(patch.email !== undefined ? { emailChecked: false } : {}),
     }))
-    if (patch.email !== undefined) setEmailCheckMsg(null)
+
+    if (patch.email !== undefined) {
+      setEmailCheckMsg(null)
+    }
   }
 
   async function handleCheckEmail() {
@@ -181,21 +178,21 @@ export default function PortalSignupPage() {
     }
 
     try {
-      const res = await fetch('/api/auth/signup', {
+      const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'check-email', email }),
       })
-      const data = await res.json()
+      const data = await response.json()
 
       if (data.available) {
-        setForm((prev) => ({ ...prev, emailChecked: true }))
-        setEmailCheckMsg('✓ 사용 가능한 이메일입니다.')
+        setForm((previous) => ({ ...previous, emailChecked: true }))
+        setEmailCheckMsg('사용 가능한 이메일입니다.')
       } else {
         setEmailCheckMsg('이미 가입된 이메일입니다.')
       }
     } catch {
-      setEmailCheckMsg('확인 중 오류가 발생했습니다.')
+      setEmailCheckMsg('중복 확인 중 오류가 발생했습니다.')
     }
   }
 
@@ -255,8 +252,8 @@ export default function PortalSignupPage() {
     if (!form.ownerName.trim()) return setError('이름을 입력해 주세요.')
     if (!form.phone.trim()) return setError('휴대폰 번호를 입력해 주세요.')
     if (!form.identityVerified) return setError('본인인증을 완료해 주세요.')
-    if (!form.email.trim()) return setError('아이디(이메일)를 입력해 주세요.')
-    if (!form.emailChecked) return setError('이메일 중복확인을 진행해 주세요.')
+    if (!form.email.trim()) return setError('아이디로 사용할 이메일을 입력해 주세요.')
+    if (!form.emailChecked) return setError('이메일 중복 확인을 진행해 주세요.')
     if (!form.password || form.password !== form.passwordConfirm) {
       return setError('비밀번호와 비밀번호 확인이 일치해야 합니다.')
     }
@@ -361,6 +358,7 @@ export default function PortalSignupPage() {
     } catch (submitError) {
       const message =
         submitError instanceof Error ? submitError.message : '가입 처리 중 오류가 발생했습니다.'
+
       setError(
         accountCreated
           ? `${message}\n계정은 생성되었으니 로그인 후 설정 > 결제 관리에서 이어서 진행해 주세요.`
@@ -379,7 +377,7 @@ export default function PortalSignupPage() {
           <img src="/logo-light.png" alt="logiSSign" className="mx-auto mb-5 w-[260px] object-contain" />
           <h1 className="font-headline text-[30px] font-bold text-on-surface">운영사 회원가입</h1>
           <p className="mt-2 text-sm text-on-surface-variant">
-            개인정보와 사업자 정보를 입력하고 바로 운영을 시작할 수 있습니다.
+            개인 정보와 사업자 정보를 입력하고 바로 운영을 시작할 수 있습니다.
           </p>
           <p className="mt-3 text-sm text-on-surface-variant">
             이미 계정이 있다면{' '}
@@ -392,7 +390,6 @@ export default function PortalSignupPage() {
 
         <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-6 rounded-3xl bg-surface-container-lowest p-7 shadow-ambient">
-            {/* ── 플랜 선택 ── */}
             <div className="grid gap-3 md:grid-cols-2">
               <button
                 type="button"
@@ -401,23 +398,22 @@ export default function PortalSignupPage() {
                   form.planMode === 'point' ? 'border-primary bg-primary/5' : 'border-outline-variant/20'
                 }`}
               >
-                <p className="text-sm font-bold text-on-surface">무료가입</p>
+                <p className="text-sm font-bold text-on-surface">무료 가입</p>
                 <p className="mt-1 text-xs text-on-surface-variant">
-                  가입 즉시 5,000P 무료 지급! 포인트 소진 후 충전 또는 구독 전환 가능합니다.
+                  가입 즉시 5,000P가 무료로 지급됩니다. 이후 필요에 따라 포인트를 충전하거나 구독 플랜으로
+                  전환할 수 있습니다.
                 </p>
               </button>
               <button
                 type="button"
                 onClick={() => updateForm({ planMode: 'subscription', plan: 'basic' })}
                 className={`rounded-2xl border-2 p-4 text-left ${
-                  form.planMode === 'subscription'
-                    ? 'border-primary bg-primary/5'
-                    : 'border-outline-variant/20'
+                  form.planMode === 'subscription' ? 'border-primary bg-primary/5' : 'border-outline-variant/20'
                 }`}
               >
                 <p className="text-sm font-bold text-on-surface">구독형 플랜</p>
                 <p className="mt-1 text-xs text-on-surface-variant">
-                  구독형 플랜은 카드 결제만 사용할 수 있으며, 카드 등록/변경도 구독형에서만 가능합니다.
+                  구독형 플랜은 카드 결제만 지원하며, 카드 등록과 변경도 구독형 플랜 이용 중에만 가능합니다.
                 </p>
               </button>
             </div>
@@ -449,7 +445,7 @@ export default function PortalSignupPage() {
                       key={cycle.value}
                       type="button"
                       onClick={() => updateForm({ billing: cycle.value })}
-                      className={`rounded-2xl border p-4 text-left relative ${
+                      className={`relative rounded-2xl border p-4 text-left ${
                         form.billing === cycle.value ? 'border-primary bg-primary/5' : 'border-outline-variant/20'
                       }`}
                     >
@@ -466,8 +462,7 @@ export default function PortalSignupPage() {
               </>
             ) : null}
 
-            {/* ── 개인정보 섹션 ── */}
-            <SectionTitle>👤 개인정보</SectionTitle>
+            <SectionTitle>1. 개인 정보</SectionTitle>
 
             <input
               className={INPUT_CLASS}
@@ -500,7 +495,6 @@ export default function PortalSignupPage() {
               />
             </div>
 
-            {/* 본인인증 */}
             <div className="rounded-2xl border border-outline-variant/20 p-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
@@ -518,12 +512,11 @@ export default function PortalSignupPage() {
                     form.identityVerified ? 'bg-tertiary/10 text-tertiary' : 'bg-power-gradient text-white'
                   }`}
                 >
-                  {form.identityVerified ? '✓ 인증 완료' : '본인인증 진행'}
+                  {form.identityVerified ? '인증 완료' : '본인인증 진행'}
                 </button>
               </div>
             </div>
 
-            {/* 아이디(이메일) + 중복확인 */}
             <div>
               <div className="flex gap-2">
                 <input
@@ -531,22 +524,26 @@ export default function PortalSignupPage() {
                   className={`${INPUT_CLASS} flex-1`}
                   value={form.email}
                   onChange={(event) => updateForm({ email: event.target.value })}
-                  placeholder="아이디 (이메일) *"
+                  placeholder="아이디 이메일 *"
                 />
                 <button
                   type="button"
                   onClick={handleCheckEmail}
                   className={`h-11 shrink-0 rounded-xl px-4 text-sm font-semibold ${
-                    form.emailChecked
-                      ? 'bg-tertiary/10 text-tertiary'
-                      : 'bg-primary text-white'
+                    form.emailChecked ? 'bg-tertiary/10 text-tertiary' : 'bg-primary text-white'
                   }`}
                 >
-                  {form.emailChecked ? '✓ 확인됨' : '중복확인'}
+                  {form.emailChecked ? '확인됨' : '중복확인'}
                 </button>
               </div>
               {emailCheckMsg ? (
-                <p className={`mt-1.5 text-xs ${emailCheckMsg.startsWith('✓') ? 'text-tertiary' : 'text-error'}`}>
+                <p
+                  className={`mt-1.5 text-xs ${
+                    emailCheckMsg.includes('사용 가능한') || emailCheckMsg.includes('확인됨')
+                      ? 'text-tertiary'
+                      : 'text-error'
+                  }`}
+                >
                   {emailCheckMsg}
                 </p>
               ) : null}
@@ -569,8 +566,7 @@ export default function PortalSignupPage() {
               />
             </div>
 
-            {/* ── 사업자정보 섹션 ── */}
-            <SectionTitle>🏢 사업자정보</SectionTitle>
+            <SectionTitle>2. 사업자 정보</SectionTitle>
 
             <div className="grid gap-4 md:grid-cols-2">
               <input
@@ -597,9 +593,7 @@ export default function PortalSignupPage() {
             <AddressSearch
               value={form.address}
               detailValue={form.addressDetail}
-              onChange={(value: AddressValue) =>
-                updateForm({ address: value.address, addressDetail: value.addressDetail })
-              }
+              onChange={(value: AddressValue) => updateForm({ address: value.address, addressDetail: value.addressDetail })}
               label="사업장 주소"
             />
 
@@ -623,11 +617,10 @@ export default function PortalSignupPage() {
               className={INPUT_CLASS}
               value={form.businessEmail}
               onChange={(event) => updateForm({ businessEmail: event.target.value })}
-              placeholder="사업장 이메일"
+              placeholder="사업자 이메일"
             />
 
-            {/* ── 약관동의 ── */}
-            <SectionTitle>📋 약관동의</SectionTitle>
+            <SectionTitle>3. 약관 동의</SectionTitle>
 
             <label className="flex items-center gap-2 text-sm text-on-surface-variant">
               <input
@@ -643,6 +636,7 @@ export default function PortalSignupPage() {
                 에 동의합니다. (필수)
               </span>
             </label>
+
             <label className="flex items-center gap-2 text-sm text-on-surface-variant">
               <input
                 type="checkbox"
@@ -659,15 +653,14 @@ export default function PortalSignupPage() {
             </label>
           </div>
 
-          {/* ── 우측 사이드바 ── */}
           <aside className="space-y-6">
             <section className="rounded-3xl bg-surface-container-lowest p-7 shadow-ambient">
               <h2 className="font-headline text-lg font-bold text-on-surface">가입 요약</h2>
               <div className="mt-5 space-y-3">
-                <SummaryRow label="가입 방식" value={form.planMode === 'point' ? '무료가입' : '구독형'} />
+                <SummaryRow label="가입 방식" value={form.planMode === 'point' ? '무료 가입' : '구독형'} />
                 <SummaryRow
                   label="선택 플랜"
-                  value={form.planMode === 'point' ? '무료가입 (5,000P 지급)' : form.plan.toUpperCase()}
+                  value={form.planMode === 'point' ? '무료 가입 (5,000P 지급)' : form.plan.toUpperCase()}
                 />
                 {form.planMode === 'subscription' ? (
                   <>
@@ -685,20 +678,26 @@ export default function PortalSignupPage() {
                       <div className="flex items-center justify-between gap-4 text-sm">
                         <span className="text-on-surface-variant">정가</span>
                         <span className="text-on-surface-variant line-through">
-                          {formatKRW(getSubscriptionPrice(form.plan, 'monthly') * (form.billing === '1year' ? 12 : 24))}
+                          {formatKRW(
+                            getSubscriptionPrice(form.plan, 'monthly') * (form.billing === '1year' ? 12 : 24),
+                          )}
                         </span>
                       </div>
                     ) : null}
                     <SummaryRow label="결제 금액" value={formatKRW(amount)} />
                     {form.billing !== 'monthly' ? (
                       <div className="rounded-xl bg-error/10 px-3 py-2 text-center text-xs font-semibold text-error">
-                        {formatKRW(getSubscriptionPrice(form.plan, 'monthly') * (form.billing === '1year' ? 12 : 24) - amount)} 절약!
+                        {formatKRW(
+                          getSubscriptionPrice(form.plan, 'monthly') * (form.billing === '1year' ? 12 : 24) - amount,
+                        )}{' '}
+                        절약
                       </div>
                     ) : null}
                   </>
                 ) : (
                   <div className="rounded-2xl bg-primary/5 p-4 text-xs leading-5 text-on-surface-variant">
-                    가입 즉시 <strong>5,000P</strong>가 무료 지급됩니다. 포인트 소진 후 포인트 충전 또는 구독 플랜으로 전환하여 계속 이용할 수 있습니다.
+                    가입 즉시 <strong>5,000P</strong>가 무료 지급됩니다. 이후 사용량에 따라 포인트를 충전하거나
+                    구독 플랜으로 전환해 계속 이용할 수 있습니다.
                   </div>
                 )}
               </div>
@@ -710,7 +709,8 @@ export default function PortalSignupPage() {
                 <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
                   <p className="text-sm font-semibold text-on-surface">구독형은 카드 결제만 가능합니다.</p>
                   <p className="mt-1 text-xs text-on-surface-variant">
-                    카드 등록/변경도 구독형 플랜 이용 시에만 가능하며, 다른 결제수단은 가입 시 노출되지 않습니다.
+                    카드 등록과 변경도 구독형 플랜 이용 중에만 가능하며, 다른 결제 수단은 가입 화면에 노출되지
+                    않습니다.
                   </p>
                 </div>
                 <label className="block rounded-2xl border border-primary bg-primary/5 p-4">
@@ -719,7 +719,8 @@ export default function PortalSignupPage() {
                     <div>
                       <p className="text-sm font-semibold text-on-surface">카드 일시불</p>
                       <p className="mt-1 text-xs text-on-surface-variant">
-                        최초 가입 결제는 카드 승인으로 진행되며, 이후 카드 등록 상태에 따라 만료 전 갱신을 안내합니다.
+                        최초 가입 결제는 카드 승인을 통해 진행되고, 이후 등록된 카드 상태에 따라 만료 및 갱신을
+                        안내합니다.
                       </p>
                     </div>
                   </div>
@@ -728,13 +729,11 @@ export default function PortalSignupPage() {
             ) : (
               <section className="space-y-4 rounded-3xl bg-surface-container-lowest p-7 shadow-ambient">
                 <h2 className="font-headline text-lg font-bold text-on-surface">결제 수단</h2>
-                {availablePointPaymentMethods.map((option) => (
+                {PAYMENT_METHOD_OPTIONS.map((option) => (
                   <label
                     key={option.value}
                     className={`block rounded-2xl border p-4 ${
-                      form.paymentMethod === option.value
-                        ? 'border-primary bg-primary/5'
-                        : 'border-outline-variant/20'
+                      form.paymentMethod === option.value ? 'border-primary bg-primary/5' : 'border-outline-variant/20'
                     }`}
                   >
                     <div className="flex items-start gap-3">

@@ -22,6 +22,7 @@ import { getDriverSettlements, type SettlementWithPrincipal } from '../../servic
 import { getDriverNotices, categoryLabel } from '../../services/notice.service';
 import { supabase } from '../../lib/supabase';
 import type { Row } from '../../types/database';
+import * as SecureStore from 'expo-secure-store';
 import { colors, spacing, typography, borderRadius, shadows } from '../../constants/theme';
 
 type Notice = Row<'notices'>;
@@ -100,9 +101,18 @@ export default function HomeScreen() {
 
       setBanners(stripBanners);
       if (popup) {
-        const popupKey = `popup_shown_${popup.id}`;
-        const alreadyShown = false; // AsyncStorage 대신 세션 단위
-        if (!alreadyShown) {
+        const popupKey = `popup_dismiss_${popup.id}`;
+        try {
+          const dismissedAt = await SecureStore.getItemAsync(popupKey);
+          // 24시간 이내 닫은 팝업은 다시 표시하지 않음
+          const alreadyShown = dismissedAt
+            ? Date.now() - Number(dismissedAt) < 24 * 60 * 60 * 1000
+            : false;
+          if (!alreadyShown) {
+            setPopupBanner(popup);
+            setShowPopup(true);
+          }
+        } catch {
           setPopupBanner(popup);
           setShowPopup(true);
         }
@@ -307,6 +317,19 @@ export default function HomeScreen() {
               </TouchableOpacity>
             )}
             <View style={styles.popupButtons}>
+              <TouchableOpacity
+                onPress={async () => {
+                  if (popupBanner) {
+                    try {
+                      await SecureStore.setItemAsync(`popup_dismiss_${popupBanner.id}`, String(Date.now()));
+                    } catch { /* ignore */ }
+                  }
+                  setShowPopup(false);
+                }}
+                style={styles.popupCloseBtn}
+              >
+                <Text style={styles.popupCloseText}>오늘 하루 보지 않기</Text>
+              </TouchableOpacity>
               <TouchableOpacity onPress={() => setShowPopup(false)} style={styles.popupCloseBtn}>
                 <Text style={styles.popupCloseText}>닫기</Text>
               </TouchableOpacity>

@@ -1,13 +1,14 @@
-import { apiError } from '@/lib/api-error'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { Resend } from 'resend'
+import { apiError } from '@/lib/api-error'
 import { authenticateCron } from '@/lib/api-auth'
-import { todayKST, addDays } from '@/lib/date-kst'
 import {
   ADMIN_SETTINGS_KEYS,
   DEFAULT_ADMIN_PAYMENT_SETTINGS,
   buildAdminSettingsPayload,
 } from '@/lib/admin-settings'
+import { addDays, todayKST } from '@/lib/date-kst'
 import { sendRenewalSms, sendSms } from '@/services/sms.service'
 
 const supabaseAdmin = createClient(
@@ -15,6 +16,10 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
   { auth: { autoRefreshToken: false, persistSession: false } },
 )
+
+const resendApiKey = process.env.RESEND_API_KEY
+const resendFromEmail = process.env.RESEND_FROM_EMAIL || 'logiSSign <onboarding@resend.dev>'
+const resendClient = resendApiKey ? new Resend(resendApiKey) : null
 
 async function sendExpoPush(tokens: string[], title: string, body: string, data?: Record<string, string>) {
   const messages = tokens.filter(Boolean).map((to) => ({
@@ -25,10 +30,11 @@ async function sendExpoPush(tokens: string[], title: string, body: string, data?
     data,
     channelId: 'default',
   }))
+
   if (messages.length === 0) return
 
-  for (let i = 0; i < messages.length; i += 100) {
-    const batch = messages.slice(i, i + 100)
+  for (let index = 0; index < messages.length; index += 100) {
+    const batch = messages.slice(index, index + 100)
     await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -75,8 +81,8 @@ async function createSubscriptionExpiryNotice(params: {
   const expiryText = new Date(params.expiresAt).toLocaleDateString('ko-KR')
   const content =
     `현재 이용 중인 ${params.plan.toUpperCase()} 플랜의 만료 예정일은 ${expiryText}입니다.\n` +
-    '설정 > 결제 관리에서 카드 등록 상태와 다음 결제 일정을 확인해 주세요.\n' +
-    '카드 등록은 구독형 플랜 이용 시에만 가능합니다.'
+    '설정 > 결제 관리에서 등록된 카드 상태와 다음 결제 일정을 확인해 주세요.\n' +
+    '카드 등록과 카드 변경은 구독형 플랜 이용 중에만 가능합니다.'
 
   const { error } = await supabaseAdmin.from('notices').insert({
     created_by_type: 'provider',
@@ -109,11 +115,46 @@ async function sendSubscriptionExpirySms(params: {
   const result = await sendSms({
     to: params.phone,
     text:
-      `[로지사인] ${params.agencyName}의 ${params.plan.toUpperCase()} 플랜이 ${expiryText}에 만료됩니다. ` +
-      `D-${params.daysLeft} 알림입니다. 설정 > 결제 관리에서 카드 등록 상태와 결제 일정을 확인해 주세요.`,
+      `[로지싸인] ${params.agencyName}의 ${params.plan.toUpperCase()} 플랜이 ${expiryText}에 만료됩니다. ` +
+      `D-${params.daysLeft} 안내입니다. 설정 > 결제 관리에서 카드 상태와 결제 일정을 확인해 주세요.`,
   })
 
   return result.sent
+}
+
+async function sendSubscriptionExpiryEmail(params: {
+  email: string | null
+  agencyName: string
+  plan: string
+  expiresAt: string
+  daysLeft: number
+}) {
+  if (!params.email || !resendClient) return false
+
+  const expiryText = new Date(params.expiresAt).toLocaleDateString('ko-KR')
+
+  await resendClient.emails.send({
+    from: resendFromEmail,
+    to: params.email,
+    subject: `[로지싸인] ${params.plan.toUpperCase()} 플랜 만료 예정 안내 (D-${params.daysLeft})`,
+    html: `
+      <div style="font-family: Pretendard, -apple-system, BlinkMacSystemFont, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+        <h1 style="font-size: 22px; color: #111827; margin-bottom: 16px;">플랜 만료 예정 안내</h1>
+        <p style="font-size: 15px; line-height: 1.7; color: #374151;">
+          ${params.agencyName}에서 사용 중인 <strong>${params.plan.toUpperCase()}</strong> 플랜은
+          <strong>${expiryText}</strong>에 만료됩니다.
+        </p>
+        <p style="font-size: 15px; line-height: 1.7; color: #374151;">
+          설정 &gt; 결제 관리에서 등록된 카드 상태와 다음 결제 일정을 확인해 주세요.
+        </p>
+        <div style="margin-top: 24px; padding: 16px; border-radius: 12px; background: #eff6ff; color: #1d4ed8; font-size: 14px;">
+          카드 등록과 카드 변경은 구독형 플랜 이용 중에만 가능합니다.
+        </div>
+      </div>
+    `,
+  })
+
+  return true
 }
 
 export async function GET(request: NextRequest) {
@@ -127,6 +168,7 @@ export async function GET(request: NextRequest) {
   let activated = 0
   let subscriptionExpiryNotices = 0
   let subscriptionExpirySms = 0
+  let subscriptionExpiryEmails = 0
 
   try {
     const { data: expiring } = await supabaseAdmin
@@ -235,7 +277,7 @@ export async function GET(request: NextRequest) {
 
     const { data: subscriptions, error: subscriptionError } = await supabaseAdmin
       .from('subscriptions')
-      .select('agency_id, plan, status, expires_at, agencies(name, phone)')
+      .select('agency_id, plan, status, expires_at, agencies(name, phone, email)')
       .eq('status', 'active')
       .not('expires_at', 'is', null)
 
@@ -249,7 +291,7 @@ export async function GET(request: NextRequest) {
         plan: string
         status: string
         expires_at: string | null
-        agencies?: { name?: string | null; phone?: string | null } | null
+        agencies?: { name?: string | null; phone?: string | null; email?: string | null } | null
       }> | null) ?? []
 
     for (const subscription of activeSubscriptions) {
@@ -273,20 +315,35 @@ export async function GET(request: NextRequest) {
         daysLeft,
       })
 
-      if (created) {
-        subscriptionExpiryNotices += 1
+      if (!created) continue
 
-        const smsSent = await sendSubscriptionExpirySms({
-          phone: subscription.agencies?.phone ?? null,
-          agencyName: subscription.agencies?.name ?? '대리점',
-          plan: subscription.plan,
-          expiresAt: subscription.expires_at,
-          daysLeft,
-        })
+      subscriptionExpiryNotices += 1
 
-        if (smsSent) {
-          subscriptionExpirySms += 1
-        }
+      const smsSent = await sendSubscriptionExpirySms({
+        phone: subscription.agencies?.phone ?? null,
+        agencyName: subscription.agencies?.name ?? '대리점',
+        plan: subscription.plan,
+        expiresAt: subscription.expires_at,
+        daysLeft,
+      })
+
+      if (smsSent) {
+        subscriptionExpirySms += 1
+      }
+
+      const emailSent = await sendSubscriptionExpiryEmail({
+        email: subscription.agencies?.email ?? null,
+        agencyName: subscription.agencies?.name ?? '대리점',
+        plan: subscription.plan,
+        expiresAt: subscription.expires_at,
+        daysLeft,
+      }).catch((error) => {
+        console.error('Subscription expiry email failed:', error)
+        return false
+      })
+
+      if (emailSent) {
+        subscriptionExpiryEmails += 1
       }
     }
 
@@ -298,6 +355,7 @@ export async function GET(request: NextRequest) {
       activated,
       subscriptionExpiryNotices,
       subscriptionExpirySms,
+      subscriptionExpiryEmails,
     })
   } catch (error) {
     return apiError(error)

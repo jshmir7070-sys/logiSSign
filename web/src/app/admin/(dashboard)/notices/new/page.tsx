@@ -2,16 +2,55 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { createBrowserSupabaseClient } from '@/lib/supabase';
+import type { NoticeCategory, NoticeTargetType } from '@/types/database';
 
 export default function AdminNewNoticePage() {
   const router = useRouter();
   const [form, setForm] = useState({
     title: '',
-    target: 'all',
-    category: 'notice',
+    target: 'all' as NoticeTargetType,
+    category: 'notice' as NoticeCategory,
     content: '',
     scheduledAt: '',
   });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSave = async (status: 'published' | 'draft') => {
+    if (!form.title.trim() || !form.content.trim()) {
+      setError('제목과 내용을 입력하세요.');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+
+    const supabase = createBrowserSupabaseClient();
+
+    const insertData = {
+      title: form.title.trim(),
+      content: form.content.trim(),
+      category: form.category,
+      target_type: form.target,
+      created_by_type: 'provider' as const,
+      status,
+      published_at: status === 'published' ? new Date().toISOString() : null,
+    };
+
+    const { error: insertError } = await supabase
+      .from('notices')
+      .insert(insertData);
+
+    if (insertError) {
+      setError('공지 저장 실패: ' + insertError.message);
+      setSaving(false);
+      return;
+    }
+
+    setSaving(false);
+    router.push('/admin/notices');
+  };
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
@@ -34,11 +73,8 @@ export default function AdminNewNoticePage() {
             <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5">대상</label>
             <div className="flex gap-2">
               {[
-                { id: 'all', label: '전체' },
-                { id: 'free', label: 'Free' },
-                { id: 'basic', label: 'Basic' },
-                { id: 'standard', label: 'Standard' },
-                { id: 'enterprise', label: 'Enterprise' },
+                { id: 'all' as NoticeTargetType, label: '전체' },
+                { id: 'agency' as NoticeTargetType, label: '대리점' },
               ].map((t) => (
                 <button
                   key={t.id}
@@ -58,9 +94,9 @@ export default function AdminNewNoticePage() {
             <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5">카테고리</label>
             <div className="flex gap-2">
               {[
-                { id: 'notice', label: '공지' },
-                { id: 'update', label: '업데이트' },
-                { id: 'guide', label: '가이드' },
+                { id: 'notice' as NoticeCategory, label: '공지' },
+                { id: 'update' as NoticeCategory, label: '업데이트' },
+                { id: 'guide' as NoticeCategory, label: '가이드' },
               ].map((cat) => (
                 <button
                   key={cat.id}
@@ -111,12 +147,24 @@ export default function AdminNewNoticePage() {
         </div>
       </div>
 
+      {error && (
+        <p className="text-sm text-error">{error}</p>
+      )}
+
       <div className="flex justify-end gap-3">
-        <button className="h-11 px-6 rounded-xl bg-surface-container-high text-on-surface-variant font-label font-medium text-sm hover:bg-surface-container-highest transition-colors">
-          임시저장
+        <button
+          onClick={() => handleSave('draft')}
+          disabled={saving}
+          className="h-11 px-6 rounded-xl bg-surface-container-high text-on-surface-variant font-label font-medium text-sm hover:bg-surface-container-highest transition-colors disabled:opacity-50"
+        >
+          {saving ? '저장 중...' : '임시저장'}
         </button>
-        <button className="h-11 px-8 rounded-xl bg-power-gradient text-white font-label font-medium text-sm shadow-ambient hover:shadow-float transition-all">
-          게시하기
+        <button
+          onClick={() => handleSave('published')}
+          disabled={saving || !form.title.trim() || !form.content.trim()}
+          className="h-11 px-8 rounded-xl bg-power-gradient text-white font-label font-medium text-sm shadow-ambient hover:shadow-float transition-all disabled:opacity-50"
+        >
+          {saving ? '게시 중...' : '게시하기'}
         </button>
       </div>
     </div>

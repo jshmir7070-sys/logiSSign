@@ -1,31 +1,31 @@
 import { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
+  Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
-  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import GradientView, { GradientButton } from '../../components/common/GradientView';
 import { useRouter } from 'expo-router';
+import GradientView, { GradientButton } from '../../components/common/GradientView';
 import { useAuthStore } from '../../stores/authStore';
-import { colors, spacing, typography, borderRadius, shadows } from '../../constants/theme';
+import { borderRadius, colors, shadows, spacing, typography } from '../../constants/theme';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const signIn = useAuthStore((s) => s.signIn);
+  const signIn = useAuthStore((state) => state.signIn);
   const router = useRouter();
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('입력 오류', '이메일과 비밀번호를 입력해주세요.');
+      Alert.alert('입력 오류', '이메일과 비밀번호를 입력해 주세요.');
       return;
     }
 
@@ -38,27 +38,12 @@ export default function LoginScreen() {
     }
   };
 
-  const handleRegister = () => {
-    router.push('/(auth)/register');
-  };
-
-  const handleFindId = () => {
-    router.push('/(auth)/find-id');
-  };
-
-  const handleResetPassword = () => {
-    router.push('/(auth)/reset-password');
-  };
-
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <GradientView style={styles.heroSection}>
           <Image
             source={require('../../assets/logiSSign.png')}
@@ -98,11 +83,7 @@ export default function LoginScreen() {
             />
           </View>
 
-          <TouchableOpacity
-            onPress={handleLogin}
-            disabled={isSubmitting}
-            activeOpacity={0.8}
-          >
+          <TouchableOpacity onPress={handleLogin} disabled={isSubmitting} activeOpacity={0.8}>
             <GradientButton style={styles.loginButton}>
               <Text style={styles.loginButtonText}>
                 {isSubmitting ? '로그인 중...' : '로그인'}
@@ -112,7 +93,7 @@ export default function LoginScreen() {
 
           <TouchableOpacity
             style={styles.registerButton}
-            onPress={handleRegister}
+            onPress={() => router.push('/(auth)/register')}
             disabled={isSubmitting}
             activeOpacity={0.7}
           >
@@ -120,10 +101,10 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <View style={styles.linkRow}>
-            <TouchableOpacity onPress={handleFindId} activeOpacity={0.7}>
+            <TouchableOpacity onPress={() => router.push('/(auth)/find-id')} activeOpacity={0.7}>
               <Text style={styles.linkText}>아이디 찾기</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleResetPassword} activeOpacity={0.7}>
+            <TouchableOpacity onPress={() => router.push('/(auth)/reset-password')} activeOpacity={0.7}>
               <Text style={styles.linkText}>비밀번호 찾기</Text>
             </TouchableOpacity>
           </View>
@@ -140,94 +121,88 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    justifyContent: 'center',
+    padding: spacing.lg,
   },
   heroSection: {
-    paddingTop: 80,
-    paddingBottom: 60,
-    paddingHorizontal: spacing.lg,
     alignItems: 'center',
-  },
-  heroLogo: {
-    width: 234,
-    height: 234,
-    marginBottom: spacing.sm,
-  },
-  heroTitle: {
-    ...typography.displayLarge,
-    color: colors.surfaceContainerLowest,
-    marginBottom: spacing.sm,
-  },
-  heroSubtitle: {
-    ...typography.bodyLarge,
-    color: colors.surfaceContainerLowest,
-    opacity: 0.85,
-  },
-  formCard: {
-    flex: 1,
-    backgroundColor: colors.surfaceContainerLowest,
-    borderTopLeftRadius: borderRadius['2xl'],
-    borderTopRightRadius: borderRadius['2xl'],
-    marginTop: -spacing['2xl'],
-    paddingHorizontal: spacing['2xl'],
-    paddingTop: spacing['3xl'],
-    paddingBottom: spacing['4xl'],
+    justifyContent: 'center',
+    marginBottom: spacing.xl,
+    borderRadius: borderRadius.xl,
+    paddingVertical: spacing.xl,
     ...shadows.lg,
   },
+  heroLogo: {
+    width: 220,
+    height: 80,
+  },
+  formCard: {
+    borderRadius: borderRadius.xl,
+    backgroundColor: colors.surfaceContainerLowest,
+    padding: spacing.xl,
+    ...shadows.md,
+  },
   formTitle: {
-    ...typography.titleLarge,
+    marginBottom: spacing.lg,
     color: colors.onSurface,
-    marginBottom: spacing['2xl'],
+    fontFamily: typography.displayMedium.fontFamily,
+    fontSize: typography.displayMedium.fontSize,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   inputGroup: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   label: {
-    ...typography.labelLarge,
+    marginBottom: spacing.xs,
     color: colors.onSurfaceVariant,
-    marginBottom: spacing.sm,
+    fontFamily: typography.labelLarge.fontFamily,
+    fontSize: typography.labelLarge.fontSize,
+    fontWeight: '600',
   },
   input: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.lg,
-    ...typography.bodyLarge,
+    height: 52,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.surfaceContainerLow,
+    paddingHorizontal: spacing.md,
     color: colors.onSurface,
-    backgroundColor: colors.surfaceContainerLowest,
+    fontFamily: typography.bodyLarge.fontFamily,
+    fontSize: typography.bodyLarge.fontSize,
   },
   loginButton: {
-    height: 52,
-    borderRadius: borderRadius.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: spacing.xl,
+    marginTop: spacing.sm,
   },
   loginButtonText: {
-    ...typography.titleSmall,
-    color: colors.surfaceContainerLowest,
+    color: '#fff',
+    fontFamily: typography.labelLarge.fontFamily,
+    fontSize: typography.labelLarge.fontSize,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   registerButton: {
-    height: 52,
+    marginTop: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: spacing.md,
+    borderColor: colors.outlineVariant,
+    paddingVertical: spacing.md,
   },
   registerButtonText: {
-    ...typography.titleSmall,
-    color: colors.primary,
+    color: colors.onSurface,
+    fontFamily: typography.labelLarge.fontFamily,
+    fontSize: typography.labelLarge.fontSize,
+    fontWeight: '600',
   },
   linkRow: {
     marginTop: spacing.lg,
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.lg,
+    justifyContent: 'space-between',
   },
   linkText: {
-    ...typography.bodySmall,
     color: colors.primary,
+    fontFamily: typography.labelLarge.fontFamily,
+    fontSize: typography.labelLarge.fontSize,
+    fontWeight: '600',
   },
 });

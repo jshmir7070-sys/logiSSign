@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminSupabaseClient } from '@/lib/supabase'
+import { z } from 'zod'
+import { apiError } from '@/lib/api-error'
 import { getClientIp } from '@/lib/get-ip'
 import { rateLimitPublic } from '@/lib/rate-limit'
-import { apiError } from '@/lib/api-error'
+import { createAdminSupabaseClient } from '@/lib/supabase'
 import { getPointBalance } from '@/services/point.service'
 import { encryptAgencyPii } from '@/services/pii.service'
-import { z } from 'zod'
 
 const supabaseAdmin = createAdminSupabaseClient()
 
@@ -39,7 +39,7 @@ const signupSchema = z.object({
   phone: z
     .string()
     .trim()
-    .regex(/^01[0-9]-?\d{3,4}-?\d{4}$/, '휴대전화 번호 형식이 올바르지 않습니다.')
+    .regex(/^01[0-9]-?\d{3,4}-?\d{4}$/, '휴대폰 번호 형식이 올바르지 않습니다.')
     .optional()
     .or(z.literal('')),
   address: z.string().trim().max(200).optional().or(z.literal('')),
@@ -83,18 +83,38 @@ function generateInviteCode(): string {
 async function generateUniqueInviteCode(): Promise<string> {
   for (let attempt = 0; attempt < 20; attempt += 1) {
     const code = generateInviteCode()
-    const { data } = await supabaseAdmin
-      .from('agencies')
-      .select('id')
-      .eq('invite_code', code)
-      .maybeSingle()
+    const { data } = await supabaseAdmin.from('agencies').select('id').eq('invite_code', code).maybeSingle()
 
     if (!data) {
       return code
     }
   }
 
-  throw new Error('초대코드를 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+  throw new Error('초대 코드를 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+}
+
+async function authEmailExists(email: string): Promise<boolean> {
+  const normalizedEmail = email.trim().toLowerCase()
+  let page = 1
+  const perPage = 200
+
+  while (true) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage })
+    if (error) {
+      throw new Error(`이메일 중복 여부를 확인하지 못했습니다. ${error.message}`)
+    }
+
+    const users = data?.users ?? []
+    if (users.some((user) => user.email?.toLowerCase() === normalizedEmail)) {
+      return true
+    }
+
+    if (users.length < perPage) {
+      return false
+    }
+
+    page += 1
+  }
 }
 
 async function updateAgencyUsersPlan(agencyId: string, plan: string) {
@@ -102,17 +122,25 @@ async function updateAgencyUsersPlan(agencyId: string, plan: string) {
   const perPage = 100
 
   while (true) {
-    const { data } = await supabaseAdmin.auth.admin.listUsers({ page, perPage })
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage })
+    if (error) {
+      throw new Error(`대리점 사용자 플랜 동기화에 실패했습니다: ${error.message}`)
+    }
+
     const users = data?.users ?? []
     const agencyUsers = users.filter((user) => user.app_metadata?.agency_id === agencyId)
 
     for (const user of agencyUsers) {
-      await supabaseAdmin.auth.admin.updateUserById(user.id, {
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
         app_metadata: {
           ...user.app_metadata,
           plan,
         },
       })
+
+      if (updateError) {
+        throw new Error(`사용자 플랜 갱신에 실패했습니다: ${updateError.message}`)
+      }
     }
 
     if (users.length < perPage) {
@@ -151,11 +179,7 @@ async function createPointSubscription(agencyId: string) {
   }
 
   if (existing?.id) {
-    const { error } = await supabaseAdmin
-      .from('subscriptions')
-      .update(payload)
-      .eq('id', existing.id)
-
+    const { error } = await supabaseAdmin.from('subscriptions').update(payload).eq('id', existing.id)
     if (error) {
       throw new Error(`포인트형 플랜 설정에 실패했습니다: ${error.message}`)
     }
@@ -176,26 +200,17 @@ export async function POST(request: NextRequest) {
   try {
     const rawBody = await request.json()
 
-    // 이메일 중복확인 액션
     if (rawBody.action === 'check-email') {
       const email = typeof rawBody.email === 'string' ? rawBody.email.trim().toLowerCase() : ''
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         return NextResponse.json({ available: false, error: '올바른 이메일 형식이 아닙니다.' })
       }
-      const { data } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1 })
-      // listUsers doesn't filter by email, so use a different approach
-      const { data: users } = await supabaseAdmin
-        .from('agencies')
-        .select('id')
-        .eq('email', email)
-        .limit(1)
-      const { data: authUser } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-      const exists = authUser?.users?.some((u) => u.email?.toLowerCase() === email)
+
+      const exists = await authEmailExists(email)
       return NextResponse.json({ available: !exists })
     }
 
     const parsed = signupSchema.safeParse(rawBody)
-
     if (!parsed.success) {
       const message = parsed.error.issues.map((issue) => issue.message).join(', ')
       return NextResponse.json({ error: message }, { status: 400 })
@@ -210,10 +225,11 @@ export async function POST(request: NextRequest) {
     const businessNumber = normalizeBusinessNumber(body.businessNumber)
 
     if (selectedPlan === 'enterprise') {
-      return NextResponse.json(
-        { error: 'Enterprise 플랜은 별도 상담 후 가입할 수 있습니다.' },
-        { status: 400 },
-      )
+      return NextResponse.json({ error: 'Enterprise 플랜은 별도 상담 후 가입할 수 있습니다.' }, { status: 400 })
+    }
+
+    if (await authEmailExists(body.email)) {
+      return NextResponse.json({ error: '이미 가입된 이메일입니다.' }, { status: 409 })
     }
 
     if (businessNumber) {
@@ -224,10 +240,7 @@ export async function POST(request: NextRequest) {
         .maybeSingle()
 
       if (existingAgency) {
-        return NextResponse.json(
-          { error: '이미 등록된 사업자등록번호입니다.' },
-          { status: 409 },
-        )
+        return NextResponse.json({ error: '이미 등록된 사업자등록번호입니다.' }, { status: 409 })
       }
     }
 
@@ -281,11 +294,7 @@ export async function POST(request: NextRequest) {
         invite_code: inviteCode,
       }
 
-      const agencyResult = await supabaseAdmin
-        .from('agencies')
-        .insert(agencyInsert as never)
-        .select('id')
-        .single()
+      const agencyResult = await supabaseAdmin.from('agencies').insert(agencyInsert as never).select('id').single()
 
       if (agencyResult.error || !agencyResult.data) {
         throw new Error(agencyResult.error?.message ?? '대리점 정보를 저장하지 못했습니다.')
@@ -331,14 +340,10 @@ export async function POST(request: NextRequest) {
         await supabaseAdmin.from('agencies').delete().eq('id', agencyId)
       }
       await supabaseAdmin.auth.admin.deleteUser(userId)
-
       throw innerError
     }
   } catch (error) {
     console.error('[Signup] Unexpected error:', error)
-    return apiError(
-      error instanceof Error ? error.message : '회원가입 처리 중 오류가 발생했습니다.',
-      500,
-    )
+    return apiError(error instanceof Error ? error.message : '회원가입 처리 중 오류가 발생했습니다.', 500)
   }
 }

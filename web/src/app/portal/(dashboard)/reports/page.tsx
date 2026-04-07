@@ -13,7 +13,7 @@ interface DriverShare { name: string; total: number }
 
 export default function ReportsPage() {
   const [monthly, setMonthly] = useState<MonthlyStat[]>([])
-  const [_driverShares, setDriverShares] = useState<DriverShare[]>([])
+  const [driverShares, setDriverShares] = useState<DriverShare[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -130,6 +130,39 @@ export default function ReportsPage() {
           </div>
         </div>
       </div>
+      {/* 기사별 점유율 */}
+      {!loading && driverShares.length > 0 && (
+        <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6">
+          <h2 className="text-base font-headline font-semibold text-on-surface font-korean">기사별 매출 점유율</h2>
+          <p className="text-xs text-on-surface-variant mt-1 mb-4 font-korean">상위 7명 기준</p>
+
+          <div className="space-y-3">
+            {(() => {
+              const maxTotal = driverShares[0]?.total ?? 1;
+              return driverShares.map((ds, idx) => {
+                const pct = totalRevenue > 0 ? ((ds.total / totalRevenue) * 100).toFixed(1) : '0.0';
+                const barWidth = Math.max((ds.total / maxTotal) * 100, 2);
+                return (
+                  <div key={ds.name} className="flex items-center gap-3">
+                    <span className="w-5 text-xs font-data text-on-surface-variant text-right">{idx + 1}</span>
+                    <span className="w-24 text-sm font-korean text-on-surface truncate">{ds.name}</span>
+                    <div className="flex-1 h-7 bg-surface-container-low rounded-lg overflow-hidden relative">
+                      <div
+                        className="h-full bg-primary/80 rounded-lg transition-all"
+                        style={{ width: `${barWidth}%` }}
+                      />
+                      <span className="absolute inset-y-0 right-2 flex items-center text-[11px] font-data text-on-surface-variant">
+                        {formatKRW(ds.total)}
+                      </span>
+                    </div>
+                    <span className="w-14 text-xs font-data text-on-surface-variant text-right">{pct}%</span>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
-} 
+}

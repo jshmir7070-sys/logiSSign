@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
@@ -32,13 +32,13 @@ export default function NewNoticePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // agency_id 로드
-  useState(() => {
+  // agency_id 로드 — ✅ 버그 수정: useState → useEffect
+  useEffect(() => {
     const supabase = createBrowserSupabaseClient();
     supabase.auth.getUser().then(({ data }) => {
       setAgencyId(data.user?.app_metadata?.agency_id as string ?? null);
     });
-  });
+  }, []);
 
   // 이미지 선택 핸들러
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

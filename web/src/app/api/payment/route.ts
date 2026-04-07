@@ -202,19 +202,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            '자동 정기결제는 현재 사용하지 않습니다. 카드 등록은 만료 안내와 차후 수동 결제 전환을 위한 용도로만 지원합니다.',
+            '자동 정기결제는 현재 사용하지 않습니다. 카드 등록은 만료 안내와 수동 결제 전환을 위한 용도로만 지원합니다.',
         },
         { status: 410 },
       )
     }
 
     if (body.action === 'switch-to-point') {
-      const { data: agency } = await supabaseAdmin
-        .from('agencies')
-        .select('plan')
-        .eq('id', auth.agencyId)
-        .single()
-
+      const { data: agency } = await supabaseAdmin.from('agencies').select('plan').eq('id', auth.agencyId).single()
       const oldPlan = (agency?.plan as string | undefined) ?? 'free'
 
       await supabaseAdmin
@@ -353,12 +348,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const currentAgency = await supabaseAdmin
-        .from('agencies')
-        .select('plan')
-        .eq('id', auth.agencyId)
-        .single()
-
+      const currentAgency = await supabaseAdmin.from('agencies').select('plan').eq('id', auth.agencyId).single()
       const currentPlan = (currentAgency.data?.plan as string | undefined) ?? 'free'
       const isDowngrade =
         currentPlan !== body.plan &&
@@ -511,9 +501,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '지원하지 않는 결제 요청입니다.' }, { status: 400 })
   } catch (error) {
     console.error('[Payment] Unexpected error:', error)
-    return NextResponse.json(
-      { error: '결제 처리 중 오류가 발생했습니다.' },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: '결제 처리 중 오류가 발생했습니다.' }, { status: 500 })
   }
 }

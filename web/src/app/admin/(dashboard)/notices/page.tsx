@@ -1,29 +1,66 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Badge from '@/components/shared/Badge';
 import Link from 'next/link';
+import { createBrowserSupabaseClient } from '@/lib/supabase';
+import type { Database } from '@/types/database';
 
-const notices = [
-  { title: '3월 정기 점검 안내 (03/29 02:00~06:00)', target: '전체', date: '2026-03-20', views: 342, status: '게시중' },
-  { title: 'Enterprise 플랜 신규 기능 업데이트', target: 'Enterprise', date: '2026-03-18', views: 87, status: '게시중' },
-  { title: '4월 요금제 변경 사전 안내', target: '전체', date: '2026-03-25', views: 12, status: '예약' },
-  { title: '설 연휴 고객센터 운영 안내', target: '전체', date: '2026-01-22', views: 521, status: '종료' },
-  { title: 'Standard 플랜 SMS 발송 한도 상향 안내', target: 'Standard', date: '2026-03-10', views: 198, status: '게시중' },
-];
+type NoticeRow = Database['public']['Tables']['notices']['Row'];
+
+const categoryLabel: Record<string, string> = {
+  notice: '공지',
+  update: '업데이트',
+  guide: '안내',
+  etc: '기타',
+};
 
 const statusBadgeVariant: Record<string, 'success' | 'warning' | 'default'> = {
-  '게시중': 'success',
-  '예약': 'warning',
-  '종료': 'default',
+  published: 'success',
+  draft: 'warning',
+};
+
+const statusLabel: Record<string, string> = {
+  published: '게시중',
+  draft: '임시저장',
+};
+
+const targetLabel: Record<string, string> = {
+  all: '전체',
+  agency: '대리점',
 };
 
 const targetBadgeVariant: Record<string, 'info' | 'success' | 'default'> = {
-  '전체': 'default',
-  Enterprise: 'info',
-  Standard: 'success',
-  Basic: 'info',
-  Free: 'default',
+  all: 'default',
+  agency: 'info',
+};
+
+const createdByLabel: Record<string, string> = {
+  provider: '본사',
+  agency: '대리점',
 };
 
 export default function NoticesPage() {
+  const [notices, setNotices] = useState<NoticeRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      const supabase = createBrowserSupabaseClient();
+
+      const { data, error } = await supabase
+        .from('notices')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        setNotices(data);
+      }
+      setLoading(false);
+    }
+    load();
+  }, []);
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -52,59 +89,84 @@ export default function NoticesPage() {
 
       {/* Table */}
       <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-surface-container-low">
-                <th className="text-left font-label text-on-surface-variant text-[12px] font-semibold px-4 py-3 rounded-l-xl w-[45%]">
-                  제목
-                </th>
-                <th className="text-left font-label text-on-surface-variant text-[12px] font-semibold px-4 py-3">
-                  대상
-                </th>
-                <th className="text-left font-label text-on-surface-variant text-[12px] font-semibold px-4 py-3">
-                  작성일
-                </th>
-                <th className="text-right font-label text-on-surface-variant text-[12px] font-semibold px-4 py-3">
-                  조회수
-                </th>
-                <th className="text-left font-label text-on-surface-variant text-[12px] font-semibold px-4 py-3 rounded-r-xl">
-                  상태
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {notices.map((notice, idx) => (
-                <tr
-                  key={idx}
-                  className="group hover:bg-surface-container-lowest/60 transition-colors cursor-pointer"
-                >
-                  <td className="px-4 py-3.5">
-                    <span className="font-body text-on-surface text-[14px] font-medium group-hover:text-primary transition-colors">
-                      {notice.title}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <Badge label={notice.target} variant={targetBadgeVariant[notice.target] ?? 'default'} />
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <span className="font-data text-on-surface-variant text-[13px]">
-                      {notice.date}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 text-right">
-                    <span className="font-data text-on-surface text-[14px]">
-                      {notice.views.toLocaleString()}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <Badge label={notice.status} variant={statusBadgeVariant[notice.status]} />
-                  </td>
+        {loading ? (
+          <div className="text-center py-12">
+            <span className="text-sm text-on-surface-variant">불러오는 중...</span>
+          </div>
+        ) : notices.length === 0 ? (
+          <div className="text-center py-12">
+            <span className="text-sm text-on-surface-variant">등록된 공지사항이 없습니다</span>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-surface-container-low">
+                  <th className="text-left font-label text-on-surface-variant text-[12px] font-semibold px-4 py-3 rounded-l-xl w-[40%]">
+                    제목
+                  </th>
+                  <th className="text-left font-label text-on-surface-variant text-[12px] font-semibold px-4 py-3">
+                    작성자
+                  </th>
+                  <th className="text-left font-label text-on-surface-variant text-[12px] font-semibold px-4 py-3">
+                    대상
+                  </th>
+                  <th className="text-left font-label text-on-surface-variant text-[12px] font-semibold px-4 py-3">
+                    카테고리
+                  </th>
+                  <th className="text-left font-label text-on-surface-variant text-[12px] font-semibold px-4 py-3">
+                    작성일
+                  </th>
+                  <th className="text-left font-label text-on-surface-variant text-[12px] font-semibold px-4 py-3 rounded-r-xl">
+                    상태
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {notices.map((notice) => (
+                  <tr
+                    key={notice.id}
+                    className="group hover:bg-surface-container-lowest/60 transition-colors cursor-pointer"
+                  >
+                    <td className="px-4 py-3.5">
+                      <span className="font-body text-on-surface text-[14px] font-medium group-hover:text-primary transition-colors">
+                        {notice.title}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <Badge
+                        label={notice.created_by_type ? (createdByLabel[notice.created_by_type] ?? notice.created_by_type) : '-'}
+                        variant={notice.created_by_type === 'provider' ? 'info' : 'default'}
+                      />
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <Badge
+                        label={targetLabel[notice.target_type] ?? notice.target_type}
+                        variant={targetBadgeVariant[notice.target_type] ?? 'default'}
+                      />
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <span className="font-body text-on-surface-variant text-[13px]">
+                        {notice.category ? (categoryLabel[notice.category] ?? notice.category) : '-'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <span className="font-data text-on-surface-variant text-[13px]">
+                        {new Date(notice.created_at).toLocaleDateString('ko-KR')}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <Badge
+                        label={statusLabel[notice.status] ?? notice.status}
+                        variant={statusBadgeVariant[notice.status] ?? 'default'}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

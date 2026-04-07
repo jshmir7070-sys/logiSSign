@@ -224,6 +224,21 @@ export default function DocumentsScreen() {
             </Text>
           )}
         </View>
+
+        {/* 서명하기 버튼: 미서명 문서에 표시 */}
+        {(['sent', 'delivered', 'viewed'].includes(item.status)) && item.document_file_id && !item.contract_id && (
+          <TouchableOpacity
+            style={styles.signBtn}
+            activeOpacity={0.7}
+            onPress={(e) => {
+              e.stopPropagation();
+              router.push(`/document/sign/${item.document_file_id}` as never);
+            }}
+          >
+            <MaterialIcons name="draw" size={16} color="#fff" />
+            <Text style={styles.signBtnText}>서명하기</Text>
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
     );
   };
@@ -355,4 +370,19 @@ const styles = StyleSheet.create({
   viewedText: { fontSize: 11, color: '#999' },
   centerBox: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   emptyText: { fontSize: 14, color: '#999' },
+  signBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#4F46E5',
+  },
+  signBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
 });

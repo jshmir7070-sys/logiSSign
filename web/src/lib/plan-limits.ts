@@ -1,6 +1,6 @@
 /**
- * 플랜별 기능과 사용 한도 정의
- * 모든 플랜 정책 계산의 단일 기준점으로 사용한다.
+ * 플랜별 기능과 사용 한도를 정의한다.
+ * 모든 플랜 정책 계산은 이 파일을 기준으로 한다.
  */
 
 export type PlanType = 'free' | 'point' | 'basic' | 'standard' | 'pro' | 'enterprise'
@@ -176,12 +176,12 @@ export const PLAN_DISCOUNTS: Record<string, number> = {
 }
 
 export const PLAN_HIGHLIGHTS: Record<PlanType, string[]> = {
-  free: ['기사 5명 무료 (앱 제공)', '초과 시 3,000P/명/월', '기본 정산', '가입 축하 5,000P'],
-  point: ['기사 5명 무료 (앱 제공)', '초과 시 3,000P/명/월', '사용량 기반 결제', '포인트 충전형'],
-  basic: ['기사 30명 (앱 제공)', '전자계약 무제한', '정산서 빌더', '세금계산서'],
-  standard: ['기사 80명 (앱 제공)', '전자계약 무제한', '매출 리포트', '실시간 알림'],
-  pro: ['기사 150명 (앱 제공)', '전자계약 무제한', 'API 연동', '대량 처리'],
-  enterprise: ['기사 무제한 (앱 제공)', '전자계약 무제한', '전담 매니저', '맞춤형 정산'],
+  free: ['기사 5명 무료 제공', '초과 시 월 3,000P/명', '기본 정산 지원', '가입 축하 5,000P 제공'],
+  point: ['기사 5명 무료 제공', '초과 시 월 3,000P/명', '사용량 기반 결제', '사인 포인트 충전형'],
+  basic: ['기사 30명 제공', '전자계약 무제한', '정산서 빌더', '세금계산서 지원'],
+  standard: ['기사 80명 제공', '전자계약 무제한', '매출 리포트', '실시간 알림'],
+  pro: ['기사 150명 제공', '전자계약 무제한', 'API 연동', '대량 처리'],
+  enterprise: ['기사 무제한 제공', '전자계약 무제한', '전담 매니저', '맞춤형 정산'],
 }
 
 export function getSubscriptionPrice(plan: PlanType, billing: string = 'monthly'): number {
@@ -250,7 +250,7 @@ export const POINT_COSTS: Record<PointAction, { cost: number; label: string; des
   settlement_generate: { cost: 700, label: '정산서 생성', desc: '기사 5명당 1회 정산서 생성' },
   settlement_pdf: { cost: 0, label: '정산 PDF', desc: '정산 PDF 다운로드' },
   driver_register: { cost: 0, label: '기사 등록', desc: '기사 신규 등록' },
-  driver_extra: { cost: 3000, label: '추가 기사 등록', desc: '플랜 한도 초과 기사 1명 월 등록비' },
+  driver_extra: { cost: 3000, label: '추가 기사 등록', desc: '플랜 한도 초과 기사 1명 추가 등록비' },
   excel_upload: { cost: 2500, label: '정산 업로드', desc: '정산 엑셀 1회 업로드 처리' },
   tax_invoice: { cost: 0, label: '세금계산서', desc: '세금계산서 발행 기능' },
   report_generate: { cost: 0, label: '리포트 생성', desc: '매출 리포트 생성' },

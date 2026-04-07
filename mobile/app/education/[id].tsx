@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
+import { WebView } from 'react-native-webview';
 import Header from '../../components/common/Header';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
@@ -298,7 +299,15 @@ export default function EducationDetailScreen() {
           <View style={styles.section}>
             <View style={styles.videoPlaceholder}>
               {course.video_url ? (
-                <Text style={styles.videoUrl}>영상 URL: {course.video_url}</Text>
+                <View style={{ width: '100%', aspectRatio: 16/9, borderRadius: borderRadius.md, overflow: 'hidden', backgroundColor: colors.surfaceVariant }}>
+                  <WebView
+                    source={{ uri: course.video_url }}
+                    style={{ flex: 1 }}
+                    allowsInlineMediaPlayback
+                    mediaPlaybackRequiresUserAction={false}
+                    javaScriptEnabled
+                  />
+                </View>
               ) : (
                 <View style={styles.videoEmpty}>
                   <MaterialIcons name="play-circle-outline" size={64} color={colors.outline} />
