@@ -141,7 +141,7 @@ export default function AdminTemplatesPage() {
   const CONTRACT_VARIABLES = [
     '기사명', '전화번호', '주소', '사번', '카테고리명', '배송지역',
     '배송단가', '반품단가', '집하단가', '계약시작일', '계약종료일', '계약일',
-    '대리점명', '대리점사업자번호', '대리점주소', '대리점대표자',
+    '고객사명', '고객사사업자번호', '고객사주소', '고객사대표자',
     '사업자번호', '대표자명', '사업장주소', '차량번호', '차종', '연식',
   ];
 
@@ -241,7 +241,7 @@ export default function AdminTemplatesPage() {
           <div>
             <label className="block text-xs font-label font-medium text-on-surface-variant mb-1.5 font-korean">계약서 본문 *</label>
             <textarea value={formContent} onChange={e => setFormContent(e.target.value)}
-              placeholder="계약서 본문을 작성하세요. {{기사명}}, {{대리점명}} 등 변수를 사용할 수 있습니다."
+              placeholder="계약서 본문을 작성하세요. {{기사명}}, {{고객사명}} 등 변수를 사용할 수 있습니다."
               rows={16}
               className="w-full px-4 py-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-korean focus:outline-none focus:ring-2 focus:ring-primary/30 resize-y" />
           </div>

@@ -36,7 +36,7 @@ CREATE POLICY "template_fields_agency_select" ON contract_template_fields
     template_id IN (
       SELECT id FROM contract_templates
       WHERE agency_id = (auth.jwt()->'app_metadata'->>'agency_id')::uuid
-         OR is_default = true
+         OR is_system = true
     )
   );
 

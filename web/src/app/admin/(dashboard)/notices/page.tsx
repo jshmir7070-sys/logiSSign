@@ -27,7 +27,7 @@ const statusLabel: Record<string, string> = {
 
 const targetLabel: Record<string, string> = {
   all: '전체',
-  agency: '대리점',
+  agency: '고객사',
 };
 
 const targetBadgeVariant: Record<string, 'info' | 'success' | 'default'> = {
@@ -37,7 +37,7 @@ const targetBadgeVariant: Record<string, 'info' | 'success' | 'default'> = {
 
 const createdByLabel: Record<string, string> = {
   provider: '본사',
-  agency: '대리점',
+  agency: '고객사',
 };
 
 export default function NoticesPage() {

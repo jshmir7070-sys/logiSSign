@@ -74,7 +74,7 @@ export default function AdminNewNoticePage() {
             <div className="flex gap-2">
               {[
                 { id: 'all' as NoticeTargetType, label: '전체' },
-                { id: 'agency' as NoticeTargetType, label: '대리점' },
+                { id: 'agency' as NoticeTargetType, label: '고객사' },
               ].map((t) => (
                 <button
                   key={t.id}

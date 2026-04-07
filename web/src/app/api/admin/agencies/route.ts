@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
 
   if (auth.role !== 'provider_admin') {
     return NextResponse.json(
-      { error: '슈퍼 관리자만 대리점 목록을 조회할 수 있습니다.' },
+      { error: '슈퍼 관리자만 고객사 목록을 조회할 수 있습니다.' },
       { status: 403 }
     )
   }
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
         .from('agencies')
         .select('id, name, owner_name, plan, monthly_fee, created_at, status')
         .order('created_at', { ascending: false }),
-      supabaseAdmin.from('drivers').select('agency_id'),
+      supabaseAdmin.from('drivers').select('agency_id, push_token'),
       supabaseAdmin
         .from('agency_payment_orders')
         .select('agency_id, title, payment_method, status, created_at, paid_at')
@@ -65,9 +65,13 @@ export async function GET(request: NextRequest) {
     if (ordersRes.error) throw new Error(ordersRes.error.message)
 
     const driverCountMap = new Map<string, number>()
-    for (const row of (driversRes.data ?? []) as { agency_id: string | null }[]) {
+    const appActiveCountMap = new Map<string, number>()
+    for (const row of (driversRes.data ?? []) as { agency_id: string | null; push_token: string | null }[]) {
       if (!row.agency_id) continue
       driverCountMap.set(row.agency_id, (driverCountMap.get(row.agency_id) ?? 0) + 1)
+      if (row.push_token) {
+        appActiveCountMap.set(row.agency_id, (appActiveCountMap.get(row.agency_id) ?? 0) + 1)
+      }
     }
 
     const latestOrderMap = pickLatestByAgency((ordersRes.data ?? []) as Array<Record<string, unknown>>)
@@ -82,6 +86,7 @@ export async function GET(request: NextRequest) {
       return {
         ...agency,
         driver_count: driverCountMap.get(id) ?? 0,
+        app_active_count: appActiveCountMap.get(id) ?? 0,
         payment_status: paymentStatus,
         latest_payment_title: typeof latestOrder?.title === 'string' ? latestOrder.title : null,
         latest_payment_method:
@@ -100,7 +105,7 @@ export async function GET(request: NextRequest) {
         error:
           fetchError instanceof Error
             ? fetchError.message
-            : '대리점 목록을 불러오지 못했습니다.',
+            : '고객사 목록을 불러오지 못했습니다.',
       },
       { status: 500 }
     )

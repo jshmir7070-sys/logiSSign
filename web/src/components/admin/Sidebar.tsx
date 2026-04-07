@@ -11,8 +11,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: '대시보드', icon: 'dashboard', href: '/admin/dashboard' },
-  { label: '대리점 관리', icon: 'apartment', href: '/admin/agencies' },
-  { label: '기사 운영', icon: 'groups', href: '/admin/drivers' },
+  { label: '고객사 관리', icon: 'apartment', href: '/admin/agencies' },
   { label: '계약서 템플릿', icon: 'description', href: '/admin/templates' },
   { label: '결제 관리', icon: 'payments', href: '/admin/billing' },
   { label: '매출 분석', icon: 'bar_chart', href: '/admin/revenue' },

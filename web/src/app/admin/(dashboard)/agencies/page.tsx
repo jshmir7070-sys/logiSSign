@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Badge from '@/components/shared/Badge'
 
 interface AgencyRow {
@@ -12,6 +13,7 @@ interface AgencyRow {
   created_at: string
   status: string | null
   driver_count: number
+  app_active_count: number
   payment_status: string
   latest_payment_title: string | null
   latest_payment_method: string | null
@@ -55,6 +57,7 @@ function formatKRW(value: number): string {
 }
 
 export default function AgenciesPage() {
+  const router = useRouter()
   const [agencies, setAgencies] = useState<AgencyRow[]>([])
   const [loading, setLoading] = useState(true)
   const [filterPlan, setFilterPlan] = useState('all')
@@ -71,11 +74,11 @@ export default function AgenciesPage() {
       const response = await fetch('/api/admin/agencies')
       const payload = await response.json()
       if (!response.ok) {
-        throw new Error(payload.error || '대리점 목록을 불러오지 못했습니다.')
+        throw new Error(payload.error || '고객사 목록을 불러오지 못했습니다.')
       }
       setAgencies(payload.agencies ?? [])
     } catch (error) {
-      alert(error instanceof Error ? error.message : '대리점 목록을 불러오지 못했습니다.')
+      alert(error instanceof Error ? error.message : '고객사 목록을 불러오지 못했습니다.')
     } finally {
       setLoading(false)
     }
@@ -132,9 +135,9 @@ export default function AgenciesPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="font-headline text-[26px] font-bold tracking-tight text-on-surface">대리점 관리</h2>
+        <h2 className="font-headline text-[26px] font-bold tracking-tight text-on-surface">고객사 관리</h2>
         <p className="mt-1 text-[14px] text-on-surface-variant">
-          대리점별 플랜, 기사 수, 최근 결제 상태를 확인하고 필요할 경우 플랜을 조정합니다.
+          고객사별 플랜, 소속 기사 수, 앱 활성화 현황, 결제 상태를 확인하고 플랜을 조정합니다.
         </p>
       </div>
 
@@ -157,7 +160,7 @@ export default function AgenciesPage() {
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="대리점명 또는 대표자명 검색"
+            placeholder="고객사명 또는 대표자명 검색"
             className="h-11 rounded-xl border border-outline-variant/20 bg-surface px-3 text-sm text-on-surface"
           />
         </div>
@@ -168,9 +171,10 @@ export default function AgenciesPage() {
           <table className="min-w-full text-sm">
             <thead className="bg-surface-container-low text-left text-on-surface-variant">
               <tr>
-                <th className="px-5 py-4">대리점</th>
+                <th className="px-5 py-4">고객사</th>
                 <th className="px-5 py-4">플랜</th>
                 <th className="px-5 py-4">기사 수</th>
+                <th className="px-5 py-4">앱 활성화</th>
                 <th className="px-5 py-4">월 기준 요금</th>
                 <th className="px-5 py-4">결제 상태</th>
                 <th className="px-5 py-4">최근 결제</th>
@@ -181,19 +185,23 @@ export default function AgenciesPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-12 text-center text-on-surface-variant">
-                    대리점 목록을 불러오는 중입니다...
+                  <td colSpan={9} className="px-5 py-12 text-center text-on-surface-variant">
+                    고객사 목록을 불러오는 중입니다...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-12 text-center text-on-surface-variant">
-                    조건에 맞는 대리점이 없습니다.
+                  <td colSpan={9} className="px-5 py-12 text-center text-on-surface-variant">
+                    조건에 맞는 고객사이 없습니다.
                   </td>
                 </tr>
               ) : (
                 filtered.map((agency) => (
-                  <tr key={agency.id} className="border-t border-outline-variant/10">
+                  <tr
+                    key={agency.id}
+                    className="border-t border-outline-variant/10 cursor-pointer hover:bg-surface-container-low/50 transition-colors"
+                    onClick={() => router.push(`/admin/agencies/${agency.id}`)}
+                  >
                     <td className="px-5 py-4">
                       <p className="font-medium text-on-surface">{agency.name}</p>
                       <p className="mt-1 text-xs text-on-surface-variant">대표자 {agency.owner_name || '-'}</p>
@@ -205,6 +213,12 @@ export default function AgenciesPage() {
                       />
                     </td>
                     <td className="px-5 py-4 text-on-surface">{agency.driver_count.toLocaleString()}명</td>
+                    <td className="px-5 py-4">
+                      <span className="text-on-surface">{agency.app_active_count.toLocaleString()}명</span>
+                      <span className="ml-1 text-xs text-on-surface-variant">
+                        / {agency.driver_count.toLocaleString()}
+                      </span>
+                    </td>
                     <td className="px-5 py-4 text-on-surface">{formatKRW(agency.monthly_fee ?? 0)}</td>
                     <td className="px-5 py-4">
                       <Badge

@@ -107,7 +107,7 @@ export default function AdminDriversPage() {
               type="text"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="기사명, 대리점명, 사번, 기사고유코드, 전화번호 검색"
+              placeholder="기사명, 고객사명, 사번, 기사고유코드, 전화번호 검색"
               className="w-full h-10 px-4 rounded-xl bg-surface-container-low text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
@@ -140,7 +140,7 @@ export default function AdminDriversPage() {
             <thead>
               <tr className="bg-surface-container-low">
                 <th className="px-4 py-3 text-xs font-semibold text-on-surface-variant">기사</th>
-                <th className="px-4 py-3 text-xs font-semibold text-on-surface-variant">대리점</th>
+                <th className="px-4 py-3 text-xs font-semibold text-on-surface-variant">고객사</th>
                 <th className="px-4 py-3 text-xs font-semibold text-on-surface-variant">코드</th>
                 <th className="px-4 py-3 text-xs font-semibold text-on-surface-variant">상태</th>
                 <th className="px-4 py-3 text-xs font-semibold text-on-surface-variant">운영 지표</th>

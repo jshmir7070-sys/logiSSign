@@ -100,7 +100,7 @@ export default function AdminDashboardPage() {
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
         <KpiCard
-          label="활성 대리점"
+          label="활성 고객사"
           value={loading ? '...' : `${summary?.activeAgencies ?? 0}개`}
           change={`전체 ${summary?.totalAgencies ?? 0}개 중`}
           changeType="up"
@@ -116,12 +116,12 @@ export default function AdminDashboardPage() {
           icon="trending_up"
         />
         <KpiCard
-          label="기사 연결 현황"
-          value={loading ? '...' : `${summary?.linkedDrivers ?? 0}/${summary?.totalDrivers ?? 0}`}
-          change={`푸시 가능 ${summary?.pushEnabledDrivers ?? 0}명`}
+          label="앱 활성 기사"
+          value={loading ? '...' : `${summary?.pushEnabledDrivers ?? 0}명`}
+          change={`전체 ${summary?.totalDrivers ?? 0}명 중 앱 사용`}
           changeType="up"
           accentColor="#6750a4"
-          icon="group"
+          icon="smartphone"
         />
         <KpiCard
           label="이탈률"
@@ -156,7 +156,7 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <div className="rounded-2xl bg-surface-container-lowest p-6 shadow-ambient">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-headline text-[16px] font-bold text-on-surface">최근 가입 대리점</h3>
+            <h3 className="font-headline text-[16px] font-bold text-on-surface">최근 가입 고객사</h3>
           </div>
           <div className="space-y-3">
             {(data?.recentAgencies ?? []).map((agency) => (

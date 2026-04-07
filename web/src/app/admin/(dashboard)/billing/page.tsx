@@ -148,7 +148,7 @@ export default function BillingPage() {
       <div>
         <h2 className="font-headline text-[26px] font-bold tracking-tight text-on-surface">결제 관리</h2>
         <p className="mt-1 text-[14px] text-on-surface-variant">
-          대리점의 플랜 결제와 포인트 결제를 조회하고, 가상계좌 입금 확인과 운영 메모를 처리합니다.
+          고객사의 플랜 결제와 포인트 결제를 조회하고, 가상계좌 입금 확인과 운영 메모를 처리합니다.
         </p>
       </div>
 
