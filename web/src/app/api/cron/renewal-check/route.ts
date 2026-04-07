@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { apiError } from '@/lib/api-error'
 import { authenticateCron } from '@/lib/api-auth'
+import { isPointBased } from '@/lib/plan-limits'
 import {
   ADMIN_SETTINGS_KEYS,
   DEFAULT_ADMIN_PAYMENT_SETTINGS,
@@ -295,7 +296,7 @@ export async function GET(request: NextRequest) {
       }> | null) ?? []
 
     for (const subscription of activeSubscriptions) {
-      if (!subscription.expires_at || subscription.plan === 'point') continue
+      if (!subscription.expires_at || isPointBased(subscription.plan)) continue
 
       const expiresAt = new Date(subscription.expires_at)
       const todayDate = new Date(`${today}T00:00:00+09:00`)

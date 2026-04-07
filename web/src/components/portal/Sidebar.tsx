@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { type ReactNode, useState } from 'react';
-import { type PlanFeature, hasFeature, PLAN_LABELS as PLAN_LABEL_MAP, getMinimumPlan } from '@/lib/plan-limits';
+import { type PlanFeature, hasFeature, PLAN_LABELS as PLAN_LABEL_MAP, getMinimumPlan, isPointBased } from '@/lib/plan-limits';
 import { toastWarning } from '@/components/shared/Toast';
 
 interface NavChild {
@@ -245,7 +245,7 @@ export default function Sidebar({ plan, ownerName, pointBalance }: { plan?: stri
         </ul>
       </nav>
 
-      {plan === 'point' && pointBalance !== undefined && (
+      {isPointBased(plan) && pointBalance !== undefined && (
         <div className="mx-4 mb-2">
           <Link href="/portal/settings?tab=billing" className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
             <div className="flex items-center gap-2">

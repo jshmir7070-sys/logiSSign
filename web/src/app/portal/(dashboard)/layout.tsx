@@ -5,6 +5,7 @@ import UserMenu from '@/components/shared/UserMenu';
 import TopStatusBar from '@/components/portal/TopStatusBar';
 import { ToastContainer } from '@/components/shared/Toast';
 import { PlanProvider, usePlan } from '@/contexts/PlanContext';
+import { isPointBased } from '@/lib/plan-limits';
 import { useEffect, useState } from 'react';
 
 function PortalDashboardInner({ children }: { children: React.ReactNode }) {
@@ -13,7 +14,7 @@ function PortalDashboardInner({ children }: { children: React.ReactNode }) {
 
   // 포인트형 플랜이면 잔액 조회
   useEffect(() => {
-    if (plan === 'point') {
+    if (isPointBased(plan)) {
       fetch('/api/points?action=balance')
         .then(r => r.ok ? r.json() : null)
         .then(data => { if (data) setPointBalance(data.balance); })

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { authenticateRequest } from '@/lib/api-auth'
 import { rateLimitAuth } from '@/lib/rate-limit'
-import { isPaidPlan, type PlanType } from '@/lib/plan-limits'
+import { isPointBased, isPaidPlan, type PlanType } from '@/lib/plan-limits'
 import { deductPoints, hasEnoughPoints } from '@/services/point.service'
 
 const supabaseAdmin = createClient(
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       .eq('id', agencyId)
       .single()
     const agencyPlan = (agency?.plan ?? 'free') as PlanType
-    const isSubscription = isPaidPlan(agencyPlan) && agencyPlan !== 'point'
+    const isSubscription = isPaidPlan(agencyPlan) && !isPointBased(agencyPlan)
 
     if (action === 'check') {
       // 사전 잔액 확인만 (업로드 시작 전)

@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { authenticateRequest } from '@/lib/api-auth'
 import { getClientIp } from '@/lib/get-ip'
 import { paymentSchema, validateInput } from '@/lib/api-schemas'
-import { isPlanAtLeast } from '@/lib/plan-limits'
+import { isPointBased, isPlanAtLeast } from '@/lib/plan-limits'
 import { rateLimitAuth } from '@/lib/rate-limit'
 import { chargePoints } from '@/services/point.service'
 import {
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
     if (body.action === 'save-billing-key') {
       const subscription = await getLatestSubscription(auth.agencyId)
 
-      if (!subscription || subscription.plan === 'point') {
+      if (!subscription || isPointBased(subscription.plan)) {
         return NextResponse.json(
           { error: '구독형 플랜 이용 중일 때만 카드 등록 또는 변경이 가능합니다.' },
           { status: 400 },
@@ -215,32 +215,32 @@ export async function POST(request: NextRequest) {
       await supabaseAdmin
         .from('agencies')
         .update({
-          plan: 'point',
+          plan: 'free',
           plan_type: 'point',
         })
         .eq('id', auth.agencyId)
 
       await upsertSubscriptionRecord({
         agencyId: auth.agencyId,
-        plan: 'point',
+        plan: 'free',
         billing: 'monthly',
         amount: 0,
         paymentMethod: 'POINT',
         status: 'active',
       })
 
-      await updateAgencyUsersPlan(auth.agencyId, 'point')
+      await updateAgencyUsersPlan(auth.agencyId, 'free')
 
       await supabaseAdmin.from('plan_change_log').insert({
         agency_id: auth.agencyId,
         old_plan: oldPlan,
-        new_plan: 'point',
+        new_plan: 'free',
         changed_by: auth.userId,
         change_type: 'self_upgrade',
         reason: '포인트형 전환',
       })
 
-      return NextResponse.json({ success: true, plan: 'point' })
+      return NextResponse.json({ success: true, plan: 'free' })
     }
 
     if (body.action === 'record-point-payment') {
@@ -353,7 +353,7 @@ export async function POST(request: NextRequest) {
       const isDowngrade =
         currentPlan !== body.plan &&
         currentPlan !== 'free' &&
-        currentPlan !== 'point' &&
+        !isPointBased(currentPlan) &&
         isPlanAtLeast(currentPlan, body.plan)
 
       if (isDowngrade) {

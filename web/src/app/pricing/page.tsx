@@ -38,7 +38,6 @@ function Check() {
 
 const PLAN_LIST: { id: PlanType; popular?: boolean }[] = [
   { id: 'free' },
-  { id: 'point' },
   { id: 'basic' },
   { id: 'standard', popular: true },
   { id: 'pro' },
@@ -116,7 +115,7 @@ export default function PricingPage() {
             <h2 className="text-3xl md:text-4xl font-extrabold text-on-surface tracking-tight">기사 수에 맞게, 합리적으로</h2>
           </div>
 
-          <div className="grid grid-cols-5 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             {PLAN_LIST.map(({ id, popular }) => {
               const price = PLAN_PRICES[id];
               const planHref = id === 'enterprise' ? 'mailto:contact@logissign.com' : '/portal/signup';
@@ -129,14 +128,14 @@ export default function PricingPage() {
                   )}
                   <h3 className="text-sm font-bold text-on-surface">{PLAN_LABELS[id]}</h3>
                   <p className="text-2xl font-extrabold text-on-surface mt-2 font-data">
-                    {id === 'point' ? '충전식' : price === 0 ? '무료' : fmtKRW(price)}
+                    {price === 0 ? '무료' : fmtKRW(price)}
                     {price > 0 && id !== 'enterprise' && <span className="text-xs text-on-surface-variant font-normal">/월</span>}
                   </p>
                   <ul className="mt-4 space-y-1.5 flex-1">
                     {PLAN_HIGHLIGHTS[id].map(h => (
                       <li key={h} className="flex items-start gap-1.5 text-xs text-on-surface-variant"><Check />{h}</li>
                     ))}
-                    {id !== 'free' && id !== 'point' && (
+                    {id !== 'free' && (
                       <li className="flex items-start gap-1.5 text-xs text-on-surface-variant"><Check />포인트 차감 없음</li>
                     )}
                   </ul>
@@ -146,7 +145,7 @@ export default function PricingPage() {
                         ? 'bg-gradient-to-r from-[#004ac6] to-[#2563eb] text-white hover:shadow-lg hover:shadow-blue-500/20'
                         : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
                     }`}>
-                    {id === 'free' || id === 'point' ? '무료 시작' : id === 'enterprise' ? '문의하기' : '시작하기'}
+                    {id === 'free' ? '무료 시작' : id === 'enterprise' ? '문의하기' : '시작하기'}
                   </Link>
                 </div>
               );

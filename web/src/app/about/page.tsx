@@ -713,10 +713,9 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-4 gap-4 mb-8">
             {([
               { id: 'free' as PlanType },
-              { id: 'point' as PlanType },
               { id: 'basic' as PlanType },
               { id: 'standard' as PlanType, popular: true },
               { id: 'pro' as PlanType },
@@ -731,7 +730,7 @@ export default function LandingPage() {
                   )}
                   <h3 className="text-sm font-bold text-on-surface">{PLAN_LABELS[id]}</h3>
                   <p className="text-2xl font-extrabold text-on-surface mt-2 font-data">
-                    {id === 'point' ? '충전식' : price === 0 ? '무료' : `₩${price.toLocaleString()}`}
+                    {price === 0 ? '무료' : `₩${price.toLocaleString()}`}
                     {price > 0 && <span className="text-xs text-on-surface-variant font-normal">/월</span>}
                   </p>
                   <ul className="mt-4 space-y-1.5 flex-1">
@@ -747,7 +746,7 @@ export default function LandingPage() {
                       popular
                         ? 'bg-gradient-to-r from-[#004ac6] to-[#2563eb] text-white hover:shadow-lg hover:shadow-blue-500/20'
                         : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
-                    }`}>                    {id === 'free' || id === 'point' ? '무료 시작' : '시작하기'}
+                    }`}>                    {id === 'free' ? '무료 시작' : '시작하기'}
                   </Link>
                 </div>
               );

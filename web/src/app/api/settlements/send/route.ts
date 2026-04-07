@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { apiError } from '@/lib/api-error'
 import { authenticateRequest } from '@/lib/api-auth'
 import { getClientIp } from '@/lib/get-ip'
-import { isPaidPlan, type PlanType } from '@/lib/plan-limits'
+import { isPointBased, isPaidPlan, type PlanType } from '@/lib/plan-limits'
 import { rateLimitAuth } from '@/lib/rate-limit'
 import { createSignedStorageUrl } from '@/lib/storage-reference'
 import { deductPoints, hasEnoughPoints } from '@/services/point.service'
@@ -286,7 +286,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     const agencyPlan = (agency?.plan ?? 'free') as PlanType
-    const isSubscription = isPaidPlan(agencyPlan) && agencyPlan !== 'point'
+    const isSubscription = isPaidPlan(agencyPlan) && !isPointBased(agencyPlan)
 
     const generatedPdfCount = await generateSettlementPdfs(agencyId, settlementRows)
 

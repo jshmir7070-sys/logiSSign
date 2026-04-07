@@ -1,9 +1,12 @@
 /**
  * 플랜별 기능과 사용 한도를 정의한다.
  * 모든 플랜 정책 계산은 이 파일을 기준으로 한다.
+ *
+ * ─ Free: 포인트 충전형 (모든 기능 사용 가능, 전부 포인트 차감)
+ * ─ Basic ~ Enterprise: 구독형 (기능 포인트 차감 없음, 할당 기사 초과 시만 포인트 차감)
  */
 
-export type PlanType = 'free' | 'point' | 'basic' | 'standard' | 'pro' | 'enterprise'
+export type PlanType = 'free' | 'basic' | 'standard' | 'pro' | 'enterprise'
 
 export type PlanFeature =
   | 'dashboard'
@@ -23,52 +26,11 @@ export interface PlanLimits {
   maxAdminAccounts: number
   maxDefaultTemplates: number
   maxUploadTemplates: number
+  /** null = 무제한, 0 = 포인트 차감 */
   monthlyFreeContracts: number | null
   features: Record<PlanFeature, boolean>
-}
-
-const PLAN_ORDER: PlanType[] = ['free', 'point', 'basic', 'standard', 'pro', 'enterprise']
-
-const FREE_FEATURES: Record<PlanFeature, boolean> = {
-  dashboard: true,
-  drivers: true,
-  contracts: false,
-  'contracts.templates': false,
-  'settlements.basic': true,
-  'settlements.builder': false,
-  'settlements.tax': false,
-  'settlements.upload': false,
-  reports: false,
-  notices: true,
-  settings: true,
-}
-
-const BASIC_FEATURES: Record<PlanFeature, boolean> = {
-  dashboard: true,
-  drivers: true,
-  contracts: true,
-  'contracts.templates': true,
-  'settlements.basic': true,
-  'settlements.builder': true,
-  'settlements.tax': true,
-  'settlements.upload': true,
-  reports: false,
-  notices: true,
-  settings: true,
-}
-
-const STANDARD_FEATURES: Record<PlanFeature, boolean> = {
-  dashboard: true,
-  drivers: true,
-  contracts: true,
-  'contracts.templates': true,
-  'settlements.basic': true,
-  'settlements.builder': true,
-  'settlements.tax': true,
-  'settlements.upload': true,
-  reports: true,
-  notices: true,
-  settings: true,
+  /** true = 기능 사용 시 포인트 차감 (Free), false = 구독 포함 (Basic+) */
+  pointBased: boolean
 }
 
 const ALL_FEATURES: Record<PlanFeature, boolean> = {
@@ -85,19 +47,16 @@ const ALL_FEATURES: Record<PlanFeature, boolean> = {
   settings: true,
 }
 
-const POINT_FEATURES: Record<PlanFeature, boolean> = {
-  dashboard: true,
-  drivers: true,
-  contracts: true,
-  'contracts.templates': true,
-  'settlements.basic': true,
-  'settlements.builder': true,
-  'settlements.tax': true,
-  'settlements.upload': true,
+/** Basic: 리포트 제외 */
+const BASIC_FEATURES: Record<PlanFeature, boolean> = {
+  ...ALL_FEATURES,
   reports: false,
-  notices: true,
-  settings: true,
 }
+
+/** Standard+: 모든 기능 */
+const FULL_FEATURES: Record<PlanFeature, boolean> = { ...ALL_FEATURES }
+
+const PLAN_ORDER: PlanType[] = ['free', 'basic', 'standard', 'pro', 'enterprise']
 
 export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
   free: {
@@ -105,54 +64,50 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     maxAdminAccounts: 0,
     maxDefaultTemplates: 999,
     maxUploadTemplates: 999,
-    monthlyFreeContracts: 60,
-    features: FREE_FEATURES,
-  },
-  point: {
-    maxDrivers: null,
-    maxAdminAccounts: 2,
-    maxDefaultTemplates: 999,
-    maxUploadTemplates: 999,
-    monthlyFreeContracts: 60,
-    features: POINT_FEATURES,
+    monthlyFreeContracts: 0,       // 전부 포인트 차감
+    features: ALL_FEATURES,        // 모든 기능 열림 (포인트 차감)
+    pointBased: true,
   },
   basic: {
     maxDrivers: 30,
     maxAdminAccounts: 2,
     maxDefaultTemplates: 999,
     maxUploadTemplates: 999,
-    monthlyFreeContracts: 160,
+    monthlyFreeContracts: 60,
     features: BASIC_FEATURES,
+    pointBased: false,
   },
   standard: {
     maxDrivers: 80,
     maxAdminAccounts: 5,
     maxDefaultTemplates: 999,
     maxUploadTemplates: 999,
-    monthlyFreeContracts: 300,
-    features: STANDARD_FEATURES,
+    monthlyFreeContracts: 160,
+    features: FULL_FEATURES,
+    pointBased: false,
   },
   pro: {
     maxDrivers: 150,
-    maxAdminAccounts: 10,
+    maxAdminAccounts: 5,
     maxDefaultTemplates: 999,
     maxUploadTemplates: 999,
-    monthlyFreeContracts: null,
-    features: ALL_FEATURES,
+    monthlyFreeContracts: 300,
+    features: FULL_FEATURES,
+    pointBased: false,
   },
   enterprise: {
     maxDrivers: null,
     maxAdminAccounts: 99,
     maxDefaultTemplates: 999,
     maxUploadTemplates: 999,
-    monthlyFreeContracts: null,
-    features: ALL_FEATURES,
+    monthlyFreeContracts: null,    // 무제한
+    features: FULL_FEATURES,
+    pointBased: false,
   },
 }
 
 export const PLAN_LABELS: Record<PlanType, string> = {
   free: 'Free',
-  point: '포인트형',
   basic: 'Basic',
   standard: 'Standard',
   pro: 'Pro',
@@ -161,7 +116,6 @@ export const PLAN_LABELS: Record<PlanType, string> = {
 
 export const PLAN_PRICES: Record<PlanType, number> = {
   free: 0,
-  point: 0,
   basic: 49900,
   standard: 99000,
   pro: 199000,
@@ -176,12 +130,11 @@ export const PLAN_DISCOUNTS: Record<string, number> = {
 }
 
 export const PLAN_HIGHLIGHTS: Record<PlanType, string[]> = {
-  free: ['기사 5명 무료 제공', '초과 시 월 3,000P/명', '기본 정산 지원', '가입 축하 5,000P 제공'],
-  point: ['기사 5명 무료 제공', '초과 시 월 3,000P/명', '사용량 기반 결제', '사인 포인트 충전형'],
-  basic: ['기사 30명 제공', '전자계약 무제한', '정산서 빌더', '세금계산서 지원'],
-  standard: ['기사 80명 제공', '전자계약 무제한', '매출 리포트', '실시간 알림'],
-  pro: ['기사 150명 제공', '전자계약 무제한', 'API 연동', '대량 처리'],
-  enterprise: ['기사 무제한 제공', '전자계약 무제한', '전담 매니저', '맞춤형 정산'],
+  free: ['기사 5명', '모든 기능 사용 가능', '포인트 충전형', '가입 축하 5,000P 제공'],
+  basic: ['기사 30명 포함', '월 60건 계약서 무료', '정산서 빌더', '세금계산서 지원'],
+  standard: ['기사 80명 포함', '월 160건 계약서 무료', '매출 리포트', '실시간 알림'],
+  pro: ['기사 150명 포함', '월 300건 계약서 무료', 'API 연동', '대량 처리'],
+  enterprise: ['기사 무제한', '전자계약 무제한', '전담 매니저', '맞춤형 정산'],
 }
 
 export function getSubscriptionPrice(plan: PlanType, billing: string = 'monthly'): number {
@@ -206,12 +159,19 @@ export const FEATURE_LABELS: Record<PlanFeature, string> = {
   settings: '설정',
 }
 
-export function isPaidPlan(plan: PlanType): boolean {
+export function isPaidPlan(plan: PlanType | string): boolean {
   return plan !== 'free'
 }
 
+/** Free 플랜 = 포인트 차감형 */
+export function isPointBased(plan: string | undefined): boolean {
+  return (plan || 'free') === 'free'
+}
+
 export function getPlanLimits(plan: string | undefined): PlanLimits {
-  const key = (plan || 'free') as PlanType
+  let key = (plan || 'free') as PlanType
+  // 기존 'point' 플랜 하위호환 → free로 매핑
+  if (key === ('point' as PlanType)) key = 'free'
   return PLAN_LIMITS[key] ?? PLAN_LIMITS.free
 }
 
@@ -228,7 +188,9 @@ export function getMinimumPlan(feature: PlanFeature): PlanType {
 }
 
 export function isPlanAtLeast(current: string | undefined, required: PlanType): boolean {
-  const currentIdx = PLAN_ORDER.indexOf((current || 'free') as PlanType)
+  let currentKey = (current || 'free') as PlanType
+  if (currentKey === ('point' as PlanType)) currentKey = 'free'
+  const currentIdx = PLAN_ORDER.indexOf(currentKey)
   const requiredIdx = PLAN_ORDER.indexOf(required)
   if (currentIdx === -1) return false
   return currentIdx >= requiredIdx
@@ -250,7 +212,7 @@ export const POINT_COSTS: Record<PointAction, { cost: number; label: string; des
   settlement_generate: { cost: 700, label: '정산서 생성', desc: '기사 5명당 1회 정산서 생성' },
   settlement_pdf: { cost: 0, label: '정산 PDF', desc: '정산 PDF 다운로드' },
   driver_register: { cost: 0, label: '기사 등록', desc: '기사 신규 등록' },
-  driver_extra: { cost: 3000, label: '추가 기사 등록', desc: '플랜 한도 초과 기사 1명 추가 등록비' },
+  driver_extra: { cost: 2200, label: '추가 기사 앱 사용', desc: '플랜 한도 초과 기사 1명 월 추가 포인트' },
   excel_upload: { cost: 2500, label: '정산 업로드', desc: '정산 엑셀 1회 업로드 처리' },
   tax_invoice: { cost: 0, label: '세금계산서', desc: '세금계산서 발행 기능' },
   report_generate: { cost: 0, label: '리포트 생성', desc: '매출 리포트 생성' },
@@ -258,7 +220,7 @@ export const POINT_COSTS: Record<PointAction, { cost: number; label: string; des
 }
 
 export const WELCOME_BONUS_POINTS = 5000
-export const EXTRA_DRIVER_MONTHLY_POINTS = 3000
+export const EXTRA_DRIVER_MONTHLY_POINTS = 2200
 export const FREE_PLAN_FREE_DRIVERS = 5
 
 export const POINT_PACKAGES = [

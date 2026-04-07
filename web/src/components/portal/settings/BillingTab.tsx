@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { createBrowserSupabaseClient } from '@/lib/supabase'
-import { type PlanType, getSubscriptionPrice } from '@/lib/plan-limits'
+import { type PlanType, getSubscriptionPrice, isPointBased } from '@/lib/plan-limits'
 import { usePlan } from '@/contexts/PlanContext'
 import {
   EASY_PAY_PROVIDER_OPTIONS,
@@ -16,7 +16,7 @@ import {
 import type { AdminPaymentSettings } from '@/lib/admin-settings'
 import { requestAgencyBillingKey, requestAgencyPayment } from '@/lib/portone-client'
 
-type BillingTabMode = 'overview' | 'plan' | 'point'
+type BillingTabMode = 'overview' | 'plan' | 'charge'
 type BillingCycle = 'monthly' | '1year' | '2year'
 
 type PointBalanceData = {
@@ -117,7 +117,7 @@ export default function BillingTab() {
   const [tab, setTab] = useState<BillingTabMode>('overview')
   const [loading, setLoading] = useState(true)
   const [processingKey, setProcessingKey] = useState<string | null>(null)
-  const [planType, setPlanType] = useState<'subscription' | 'point'>('subscription')
+  const [planType, setPlanType] = useState<'subscription' | 'free'>('subscription')
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly')
   const [paymentMethod, setPaymentMethod] = useState<AgencyPaymentMethod>('CARD')
   const [easyPayProvider, setEasyPayProvider] = useState<AgencyEasyPayProvider>('KAKAOPAY')
@@ -171,7 +171,7 @@ export default function BillingTab() {
           .maybeSingle(),
       ])
 
-      setPlanType(agency?.plan_type === 'point' ? 'point' : 'subscription')
+      setPlanType(isPointBased(agency?.plan_type) ? 'free' : 'subscription')
 
       if (pointBalanceRes.ok) {
         setPointBalance(await pointBalanceRes.json())
@@ -365,7 +365,7 @@ export default function BillingTab() {
       }
 
       window.alert('포인트형으로 전환되었습니다. 기존 포인트는 그대로 유지됩니다.')
-      setPlanType('point')
+      setPlanType('free')
       await reloadBillingState()
     } catch (error) {
       window.alert(error instanceof Error ? error.message : '포인트형 전환에 실패했습니다.')
@@ -375,7 +375,7 @@ export default function BillingTab() {
   }
 
   async function handleRegisterBillingKey() {
-    if (!agencyId || planType !== 'subscription') {
+    if (!agencyId || planType === 'free') {
       window.alert('구독형 플랜 이용 중일 때만 카드 등록이 가능합니다.')
       return
     }
@@ -426,7 +426,7 @@ export default function BillingTab() {
         {[
           { id: 'overview' as const, label: '요약' },
           { id: 'plan' as const, label: '플랜 결제' },
-          { id: 'point' as const, label: '포인트 충전' },
+          { id: 'charge' as const, label: '포인트 충전' },
         ].map((item) => (
           <button
             key={item.id}
@@ -449,7 +449,7 @@ export default function BillingTab() {
             <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-5">
               <p className="text-xs text-on-surface-variant">현재 이용 방식</p>
               <p className="mt-2 text-xl font-bold text-on-surface">
-                {planType === 'subscription' ? '구독형 플랜' : '포인트형'}
+                {planType === 'subscription' ? '구독형 플랜' : '무료 (포인트형)'}
               </p>
               <p className="mt-2 text-xs text-on-surface-variant">
                 {planType === 'subscription'
@@ -461,7 +461,7 @@ export default function BillingTab() {
             <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-5">
               <p className="text-xs text-on-surface-variant">현재 플랜</p>
               <p className="mt-2 text-xl font-bold text-on-surface">
-                {activePlanMeta?.name ?? (currentPlan === 'point' ? '포인트형' : currentPlan.toUpperCase())}
+                {activePlanMeta?.name ?? (isPointBased(currentPlan) ? '무료 (포인트형)' : currentPlan.toUpperCase())}
               </p>
               <p className="mt-2 text-xs text-on-surface-variant">
                 {subscription?.expires_at
@@ -623,7 +623,7 @@ export default function BillingTab() {
         </div>
       ) : null}
 
-      {tab === 'point' ? (
+      {tab === 'charge' ? (
         <div className="space-y-6 rounded-2xl bg-surface-container-lowest p-8 shadow-ambient">
           <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-5">
             <p className="text-sm font-bold text-on-surface">포인트 충전</p>

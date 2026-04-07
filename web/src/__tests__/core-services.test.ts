@@ -79,7 +79,6 @@ describe('plan limits', () => {
 
   it('marks paid plans correctly', () => {
     expect(isPaidPlan('free')).toBe(false)
-    expect(isPaidPlan('point')).toBe(true)
     expect(isPaidPlan('basic')).toBe(true)
     expect(isPaidPlan('standard')).toBe(true)
     expect(isPaidPlan('enterprise')).toBe(true)

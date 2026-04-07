@@ -5,6 +5,8 @@
 // =============================================================
 
 // Enum types matching SQL CHECK constraints
+// 'point' plan has been merged into 'free'. The free plan now acts as the point-based plan.
+// 'point' is retained here only for backward compatibility with existing DB rows.
 export type AgencyPlan = 'free' | 'point' | 'basic' | 'standard' | 'pro' | 'enterprise';
 export type AgencyStatus = 'active' | 'suspended' | 'cancelled';
 export type DriverStatus = 'active' | 'inactive';

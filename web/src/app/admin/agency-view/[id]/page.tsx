@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Badge from '@/components/shared/Badge'
 import KpiCard from '@/components/admin/KpiCard'
+import { isPointBased } from '@/lib/plan-limits'
 
 /* ────────── types ────────── */
 
@@ -223,7 +224,7 @@ export default function AgencyViewPage() {
               <h1 className="font-headline text-[22px] font-bold tracking-tight text-on-surface">{agency.name}</h1>
               <Badge label={agency.plan.toUpperCase()} variant={PLAN_VAR[agency.plan] ?? 'default'} />
               <Badge label={agency.status === 'active' ? '정상' : agency.status === 'suspended' ? '정지' : '해지'} variant={agency.status === 'active' ? 'success' : 'error'} />
-              {usageStats.planType === 'point' && <Badge label="포인트 충전형" variant="info" />}
+              {isPointBased(agency.plan) && <Badge label="포인트 충전형" variant="info" />}
             </div>
             <p className="mt-0.5 text-[13px] text-on-surface-variant">
               대표자 {agency.owner_name || '-'}{agency.phone ? ` · ${agency.phone}` : ''}{agency.business_number ? ` · 사업자 ${agency.business_number}` : ''} · 가입일 {formatDate(agency.created_at)}
@@ -287,7 +288,7 @@ export default function AgencyViewPage() {
                 <div className="rounded-xl border border-outline-variant/15 p-4 text-center">
                   <p className="text-xs text-on-surface-variant">플랜</p>
                   <p className="mt-1 text-lg font-bold text-on-surface">{agency.plan.toUpperCase()}</p>
-                  <p className="text-xs text-on-surface-variant">{usageStats.planType === 'point' ? '포인트 충전형' : '구독형'}</p>
+                  <p className="text-xs text-on-surface-variant">{isPointBased(agency.plan) ? '포인트 충전형' : '구독형'}</p>
                 </div>
                 <div className="rounded-xl border border-outline-variant/15 p-4 text-center">
                   <p className="text-xs text-on-surface-variant">플랜 기사수</p>

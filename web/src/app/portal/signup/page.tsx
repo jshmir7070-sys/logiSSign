@@ -16,7 +16,7 @@ import {
 import { requestAgencyPayment } from '@/lib/portone-client'
 import { createBrowserSupabaseClient } from '@/lib/supabase'
 
-type PlanMode = 'point' | 'subscription'
+type PlanMode = 'free' | 'subscription'
 type BillingCycle = 'monthly' | '1year' | '2year'
 
 type FormState = {
@@ -92,8 +92,8 @@ export default function PortalSignupPage() {
   const [error, setError] = useState<string | null>(null)
   const [emailCheckMsg, setEmailCheckMsg] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>({
-    planMode: 'point',
-    plan: 'point',
+    planMode: 'free',
+    plan: 'free',
     billing: 'monthly',
     ownerName: '',
     personalAddress: '',
@@ -132,7 +132,7 @@ export default function PortalSignupPage() {
 
     setForm((previous) => ({
       ...previous,
-      planMode: requestedMode === 'subscription' || requestedPlan ? 'subscription' : previous.planMode,
+      planMode: requestedMode === 'subscription' || requestedPlan ? 'subscription' : 'free',
       plan:
         requestedPlan && PLANS.some((plan) => plan.id === requestedPlan)
           ? (requestedPlan as PlanType)
@@ -146,7 +146,7 @@ export default function PortalSignupPage() {
   }, [])
 
   const amount = useMemo(() => {
-    if (form.planMode !== 'subscription' || form.plan === 'point' || form.plan === 'free') {
+    if (form.planMode !== 'subscription' || form.plan === 'free') {
       return 0
     }
 
@@ -307,7 +307,7 @@ export default function PortalSignupPage() {
         throw new Error(`가입은 완료되었지만 자동 로그인에 실패했습니다. (${signInResult.error.message})`)
       }
 
-      if (form.planMode === 'subscription' && form.plan !== 'point' && form.plan !== 'free') {
+      if (form.planMode === 'subscription' && form.plan !== 'free') {
         const paymentResult = await requestAgencyPayment({
           paymentId: `signup_${signupData.agencyId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           orderName: `logiSSign ${form.plan.toUpperCase()} 플랜`,
@@ -393,9 +393,9 @@ export default function PortalSignupPage() {
             <div className="grid gap-3 md:grid-cols-2">
               <button
                 type="button"
-                onClick={() => updateForm({ planMode: 'point', plan: 'point' })}
+                onClick={() => updateForm({ planMode: 'free', plan: 'free' })}
                 className={`rounded-2xl border-2 p-4 text-left ${
-                  form.planMode === 'point' ? 'border-primary bg-primary/5' : 'border-outline-variant/20'
+                  form.planMode === 'free' ? 'border-primary bg-primary/5' : 'border-outline-variant/20'
                 }`}
               >
                 <p className="text-sm font-bold text-on-surface">무료 가입</p>
@@ -657,10 +657,10 @@ export default function PortalSignupPage() {
             <section className="rounded-3xl bg-surface-container-lowest p-7 shadow-ambient">
               <h2 className="font-headline text-lg font-bold text-on-surface">가입 요약</h2>
               <div className="mt-5 space-y-3">
-                <SummaryRow label="가입 방식" value={form.planMode === 'point' ? '무료 가입' : '구독형'} />
+                <SummaryRow label="가입 방식" value={form.planMode === 'free' ? '무료 가입' : '구독형'} />
                 <SummaryRow
                   label="선택 플랜"
-                  value={form.planMode === 'point' ? '무료 가입 (5,000P 지급)' : form.plan.toUpperCase()}
+                  value={form.planMode === 'free' ? '무료 가입 (5,000P 지급)' : form.plan.toUpperCase()}
                 />
                 {form.planMode === 'subscription' ? (
                   <>

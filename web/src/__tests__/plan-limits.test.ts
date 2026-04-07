@@ -59,7 +59,7 @@ describe('plan-limits', () => {
 
   describe('PLAN_LIMITS shape', () => {
     it('defines all supported plans', () => {
-      const plans: PlanType[] = ['free', 'point', 'basic', 'standard', 'pro', 'enterprise']
+      const plans: PlanType[] = ['free', 'basic', 'standard', 'pro', 'enterprise']
 
       for (const plan of plans) {
         expect(PLAN_LIMITS[plan]).toBeDefined()

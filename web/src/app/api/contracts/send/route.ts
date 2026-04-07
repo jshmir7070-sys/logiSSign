@@ -5,7 +5,7 @@ import { apiError } from '@/lib/api-error'
 import { authenticateRequest } from '@/lib/api-auth'
 import { sendContractSchema, validateInput } from '@/lib/api-schemas'
 import { getClientIp } from '@/lib/get-ip'
-import { getPlanLimits, isPaidPlan, type PlanType } from '@/lib/plan-limits'
+import { getPlanLimits, isPointBased, isPaidPlan, type PlanType } from '@/lib/plan-limits'
 import { rateLimitAuth } from '@/lib/rate-limit'
 import { decryptAgencyPii, decryptDriverPii } from '@/services/pii.service'
 import { deductPoints, hasEnoughPoints } from '@/services/point.service'
@@ -289,7 +289,7 @@ export async function POST(request: NextRequest) {
     const remainingFree =
       monthlyFreeLimit === null ? totalContracts : Math.max(0, monthlyFreeLimit - usedThisMonth)
     const requestedChargeableContracts = Math.max(0, totalContracts - remainingFree)
-    const isSubscription = isPaidPlan(agencyPlan) && agencyPlan !== 'point'
+    const isSubscription = isPaidPlan(agencyPlan) && !isPointBased(agencyPlan)
 
     if (isSubscription && monthlyFreeLimit !== null && requestedChargeableContracts > 0) {
       return NextResponse.json(

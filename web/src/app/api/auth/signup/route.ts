@@ -9,8 +9,8 @@ import { encryptAgencyPii } from '@/services/pii.service'
 
 const supabaseAdmin = createAdminSupabaseClient()
 
-type SignupPlanMode = 'point' | 'subscription'
-type SignupPlanType = 'point' | 'basic' | 'standard' | 'pro' | 'enterprise'
+type SignupPlanMode = 'free' | 'subscription'
+type SignupPlanType = 'free' | 'basic' | 'standard' | 'pro' | 'enterprise'
 type BillingCycle = 'monthly' | '1year' | '2year'
 
 const signupSchema = z.object({
@@ -54,8 +54,8 @@ const signupSchema = z.object({
     .optional()
     .or(z.literal('')),
   bankHolder: z.string().trim().max(30).optional().or(z.literal('')),
-  planMode: z.enum(['point', 'subscription']).default('point'),
-  plan: z.enum(['point', 'basic', 'standard', 'pro', 'enterprise']).default('point'),
+  planMode: z.enum(['free', 'point', 'subscription']).default('free'),
+  plan: z.enum(['free', 'point', 'basic', 'standard', 'pro', 'enterprise']).default('free'),
   billing: z.enum(['monthly', '1year', '2year']).default('monthly'),
 })
 
@@ -217,11 +217,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = parsed.data
-    const planMode: SignupPlanMode = body.planMode
+    const planMode: SignupPlanMode = body.planMode === 'point' ? 'free' : body.planMode
     const selectedPlan: SignupPlanType =
-      planMode === 'point' ? 'point' : body.plan === 'point' ? 'basic' : body.plan
-    const initialPlan = planMode === 'point' ? 'point' : 'free'
-    const initialPlanType = planMode === 'point' ? 'point' : 'subscription'
+      planMode === 'free' ? 'free' : body.plan === 'free' || body.plan === 'point' ? 'basic' : body.plan
+    const initialPlan = planMode === 'free' ? 'free' : 'free'
+    // DB column plan_type kept as 'point' for backward compatibility when using point-based free plan
+    const initialPlanType = planMode === 'free' ? 'point' : 'subscription'
     const businessNumber = normalizeBusinessNumber(body.businessNumber)
 
     if (selectedPlan === 'enterprise') {
@@ -320,10 +321,10 @@ export async function POST(request: NextRequest) {
         throw new Error(updateMetadataResult.error.message)
       }
 
-      if (planMode === 'point') {
+      if (planMode === 'free') {
         await createPointSubscription(createdAgencyId)
         await getPointBalance(createdAgencyId)
-        await updateAgencyUsersPlan(createdAgencyId, 'point')
+        await updateAgencyUsersPlan(createdAgencyId, 'free')
       }
 
       return NextResponse.json({
