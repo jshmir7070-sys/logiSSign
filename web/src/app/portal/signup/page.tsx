@@ -82,7 +82,7 @@ export default function PortalSignupPage() {
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>({
     planMode: 'point',
-    plan: 'point',
+    plan: 'free' as PlanType,
     billing: 'monthly',
     companyName: '',
     businessNumber: '',

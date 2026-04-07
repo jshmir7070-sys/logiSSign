@@ -176,12 +176,12 @@ export const PLAN_DISCOUNTS: Record<string, number> = {
 }
 
 export const PLAN_HIGHLIGHTS: Record<PlanType, string[]> = {
-  free: ['기사 5명 무료', '전자계약 월 60건 무료', '기본 정산', '가입 축하 포인트 5,000P'],
-  point: ['기사 등록 무제한', '전자계약 월 60건 무료', '사용량 기반 결제', '포인트 충전형 운영'],
-  basic: ['기사 30명', '전자계약 월 160건 무료', '정산서 빌더', '세금계산서'],
-  standard: ['기사 80명', '전자계약 월 300건 무료', '매출 리포트', '실시간 알림'],
-  pro: ['기사 150명', '전자계약 무제한', 'API 연동', '대량 처리'],
-  enterprise: ['기사 무제한', '전자계약 무제한', '전담 매니저', '맞춤형 정산'],
+  free: ['기사 5명 무료 (앱 제공)', '초과 시 3,000P/명/월', '기본 정산', '가입 축하 5,000P'],
+  point: ['기사 5명 무료 (앱 제공)', '초과 시 3,000P/명/월', '사용량 기반 결제', '포인트 충전형'],
+  basic: ['기사 30명 (앱 제공)', '전자계약 무제한', '정산서 빌더', '세금계산서'],
+  standard: ['기사 80명 (앱 제공)', '전자계약 무제한', '매출 리포트', '실시간 알림'],
+  pro: ['기사 150명 (앱 제공)', '전자계약 무제한', 'API 연동', '대량 처리'],
+  enterprise: ['기사 무제한 (앱 제공)', '전자계약 무제한', '전담 매니저', '맞춤형 정산'],
 }
 
 export function getSubscriptionPrice(plan: PlanType, billing: string = 'monthly'): number {
@@ -246,11 +246,11 @@ export type PointAction =
   | 'template_upload'
 
 export const POINT_COSTS: Record<PointAction, { cost: number; label: string; desc: string }> = {
-  contract_send: { cost: 1200, label: '계약서 발송', desc: '기사 1명에게 계약서 1건 발송' },
+  contract_send: { cost: 500, label: '계약서 발송', desc: '기사 1명에게 계약/서류 1건 발송' },
   settlement_generate: { cost: 700, label: '정산서 생성', desc: '기사 5명당 1회 정산서 생성' },
   settlement_pdf: { cost: 0, label: '정산 PDF', desc: '정산 PDF 다운로드' },
   driver_register: { cost: 0, label: '기사 등록', desc: '기사 신규 등록' },
-  driver_extra: { cost: 1500, label: '추가 기사 등록', desc: '플랜 한도 초과 기사 1명 등록' },
+  driver_extra: { cost: 3000, label: '추가 기사 등록', desc: '플랜 한도 초과 기사 1명 월 등록비' },
   excel_upload: { cost: 2500, label: '정산 업로드', desc: '정산 엑셀 1회 업로드 처리' },
   tax_invoice: { cost: 0, label: '세금계산서', desc: '세금계산서 발행 기능' },
   report_generate: { cost: 0, label: '리포트 생성', desc: '매출 리포트 생성' },
@@ -258,7 +258,7 @@ export const POINT_COSTS: Record<PointAction, { cost: number; label: string; des
 }
 
 export const WELCOME_BONUS_POINTS = 5000
-export const EXTRA_DRIVER_MONTHLY_POINTS = 1500
+export const EXTRA_DRIVER_MONTHLY_POINTS = 3000
 export const FREE_PLAN_FREE_DRIVERS = 5
 
 export const POINT_PACKAGES = [
