@@ -717,7 +717,7 @@ export default function PortalSignupPage() {
                   <div className="flex items-start gap-3">
                     <input type="radio" name="paymentMethod" className="mt-1 accent-primary" checked readOnly />
                     <div>
-                      <p className="text-sm font-semibold text-on-surface">카드 일시불</p>
+                      <p className="text-sm font-semibold text-on-surface">결제</p>
                       <p className="mt-1 text-xs text-on-surface-variant">
                         최초 가입 결제는 카드 승인을 통해 진행되고, 이후 등록된 카드 상태에 따라 만료 및 갱신을
                         안내합니다.

@@ -21,7 +21,7 @@ export interface VirtualAccountBankOption {
 export const PAYMENT_METHOD_OPTIONS: PaymentMethodOption[] = [
   {
     value: 'CARD',
-    label: '카드 일시불',
+    label: '결제',
     description: '신용카드 또는 체크카드로 즉시 승인되는 1회성 결제입니다.',
   },
   {

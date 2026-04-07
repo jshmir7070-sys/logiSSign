@@ -44,7 +44,7 @@ describe('plan limits', () => {
     expect(limits.maxDrivers).toBe(5)
     expect(limits.maxDefaultTemplates).toBe(999)
     expect(limits.maxUploadTemplates).toBe(999)
-    expect(limits.monthlyFreeContracts).toBe(60)
+    expect(limits.monthlyFreeContracts).toBe(0)
   })
 
   it('uses the current basic plan defaults', () => {
@@ -53,7 +53,7 @@ describe('plan limits', () => {
     expect(limits.maxDrivers).toBe(30)
     expect(limits.maxDefaultTemplates).toBe(999)
     expect(limits.maxUploadTemplates).toBe(999)
-    expect(limits.monthlyFreeContracts).toBe(160)
+    expect(limits.monthlyFreeContracts).toBe(60)
   })
 
   it('uses the current standard plan defaults', () => {
@@ -61,7 +61,7 @@ describe('plan limits', () => {
 
     expect(limits.maxDrivers).toBe(80)
     expect(limits.maxDefaultTemplates).toBe(999)
-    expect(limits.monthlyFreeContracts).toBe(300)
+    expect(limits.monthlyFreeContracts).toBe(160)
   })
 
   it('keeps enterprise unlimited for drivers', () => {
@@ -74,7 +74,7 @@ describe('plan limits', () => {
     const limits = getPlanLimits('invalid')
 
     expect(limits.maxDrivers).toBe(5)
-    expect(limits.monthlyFreeContracts).toBe(60)
+    expect(limits.monthlyFreeContracts).toBe(0)
   })
 
   it('marks paid plans correctly', () => {

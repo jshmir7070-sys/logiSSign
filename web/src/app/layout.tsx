@@ -23,30 +23,32 @@ const manrope = Manrope({
 
 export const metadata: Metadata = {
   title: {
-    default: 'logiSSign — 택배 대리점 정산·전자계약 자동화 플랫폼',
-    template: '%s | logiSSign',
+    default: "logiSSign | 택배 대리점 정산 · 전자계약 자동화 플랫폼",
+    template: "%s | logiSSign",
   },
-  description: '엑셀 업로드 자동 정산, 기사 앱 전자서명, 법정교육 이수까지. 배송 대리점을 위한 올인원 SaaS 플랫폼.',
-  metadataBase: new URL('https://logissign.com'),
+  description:
+    "정산 업로드, 기사 전자서명, 문서 전송과 교육 관리까지. 택배 대리점을 위한 운영 자동화 SaaS 플랫폼입니다.",
+  metadataBase: new URL("https://logissign.com"),
   openGraph: {
-    type: 'website',
-    locale: 'ko_KR',
-    url: 'https://logissign.com',
-    siteName: 'logiSSign',
-    title: 'logiSSign — 택배 대리점 정산·전자계약 자동화 플랫폼',
-    description: '엑셀 업로드 자동 정산, 기사 앱 전자서명, 법정교육 이수까지.',
-    images: [{ url: '/logo.png', width: 512, height: 512, alt: 'logiSSign' }],
+    type: "website",
+    locale: "ko_KR",
+    url: "https://logissign.com",
+    siteName: "logiSSign",
+    title: "logiSSign | 택배 대리점 정산 · 전자계약 자동화 플랫폼",
+    description:
+      "정산 업로드, 기사 전자서명, 법정교육 이수 관리까지 한 번에 운영할 수 있습니다.",
+    images: [{ url: "/logo.png", width: 512, height: 512, alt: "logiSSign" }],
   },
   twitter: {
-    card: 'summary',
-    title: 'logiSSign',
-    description: '택배 대리점 정산·전자계약 자동화 플랫폼',
+    card: "summary",
+    title: "logiSSign",
+    description: "택배 대리점 정산 · 전자계약 자동화 플랫폼",
   },
   robots: {
     index: true,
     follow: true,
   },
-  icons: { icon: '/favicon.png' },
+  icons: { icon: "/favicon.png" },
 };
 
 export default function RootLayout({
@@ -59,15 +61,7 @@ export default function RootLayout({
       lang="ko"
       className={`${inter.variable} ${notoSansKR.variable} ${manrope.variable}`}
     >
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* Material Symbols — admin 대시보드에서 사용 */}
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
-        />
-      </head>
+      <head />
       <body className="bg-surface text-on-surface font-body antialiased">
         {children}
       </body>
