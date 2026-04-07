@@ -74,10 +74,10 @@ export async function GET(
         .maybeSingle(),
       supabaseAdmin
         .from('point_transactions')
-        .select('id, type, amount, balance_after, description, created_at')
+        .select('id, type, amount, balance_after, description, reference_type, reference_id, created_at')
         .eq('agency_id', agencyId)
         .order('created_at', { ascending: false })
-        .limit(15),
+        .limit(50),
     ])
 
     if (agencyRes.error) throw new Error(agencyRes.error.message)
@@ -156,7 +156,7 @@ export async function GET(
 
     const pointBalance = (pointBalanceRes as { data: { balance: number; total_charged: number; total_used: number; updated_at: string } | null }).data
     const pointTransactions = ((pointTxRes as { data: Array<Record<string, unknown>> | null }).data ?? []) as Array<{
-      id: string; type: string; amount: number; balance_after: number; description: string | null; created_at: string
+      id: string; type: string; amount: number; balance_after: number; description: string | null; reference_type: string | null; reference_id: string | null; created_at: string
     }>
 
     const pointStats = {
@@ -164,7 +164,7 @@ export async function GET(
       totalCharged: pointBalance?.total_charged ?? 0,
       totalUsed: pointBalance?.total_used ?? 0,
       lastUpdated: pointBalance?.updated_at ?? null,
-      recentTransactions: pointTransactions.slice(0, 10),
+      recentTransactions: pointTransactions,
     }
 
     const usageStats = {
