@@ -1,0 +1,42 @@
+name: Supabase Backup
+
+on:
+  schedule:
+    - cron: "5 18 * * *"
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.SUPABASE_DB_URL != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Create database backup
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          pg_dump --format=custom --no-owner --no-privileges "$SUPABASE_DB_URL" > backup.dump
+
+      - name: Encrypt backup archive
+        if: ${{ secrets.BACKUP_ARCHIVE_PASSWORD != '' }}
+        env:
+          BACKUP_ARCHIVE_PASSWORD: ${{ secrets.BACKUP_ARCHIVE_PASSWORD }}
+        run: |
+          openssl enc -aes-256-cbc -salt -pbkdf2 -in backup.dump -out backup.dump.enc -pass env:BACKUP_ARCHIVE_PASSWORD
+          rm backup.dump
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-backup-${{ github.run_id }}
+          path: |
+            backup.dump
+            backup.dump.enc
+          retention-days: 30

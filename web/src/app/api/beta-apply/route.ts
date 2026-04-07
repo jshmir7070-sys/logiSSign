@@ -19,7 +19,7 @@ const NOTIFY_EMAIL = 'jshmir7070@gmail.com'
 export async function POST(request: NextRequest) {
   // Rate limit: IP당 분 3회
   const ip = getClientIp(request)
-  const limited = rateLimitPublic(ip, '/api/beta-apply')
+  const limited = await rateLimitPublic(ip, '/api/beta-apply')
   if (limited) return limited
 
   const rawBody = await request.json().catch(() => null)

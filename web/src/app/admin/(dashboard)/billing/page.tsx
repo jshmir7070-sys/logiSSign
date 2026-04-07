@@ -1,41 +1,41 @@
-'use client';
+'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import KpiCard from '@/components/admin/KpiCard';
-import Badge from '@/components/shared/Badge';
-import { getAgencyPaymentMethodLabel, getEasyPayProviderLabel } from '@/lib/payment-methods';
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import KpiCard from '@/components/admin/KpiCard'
+import Badge from '@/components/shared/Badge'
+import { getAgencyPaymentMethodLabel, getEasyPayProviderLabel } from '@/lib/payment-methods'
 
 interface AgencyPaymentOrderRow {
-  id: string;
-  agency_id: string;
-  payment_id: string;
-  title: string;
-  purpose: 'plan' | 'point';
-  payment_method: string;
-  easy_pay_provider: string | null;
-  amount: number;
-  status: string;
-  created_at: string;
-  paid_at: string | null;
-  applied_at: string | null;
-  virtual_account_bank: string | null;
-  virtual_account_number: string | null;
-  deposit_expires_at: string | null;
-  agencies: { name: string } | { name: string }[] | null;
-  metadata: Record<string, unknown> | null;
-  portone_payload: Record<string, unknown> | null;
+  id: string
+  agency_id: string
+  payment_id: string
+  title: string
+  purpose: 'plan' | 'point'
+  payment_method: string
+  easy_pay_provider: string | null
+  amount: number
+  status: string
+  created_at: string
+  paid_at: string | null
+  applied_at: string | null
+  virtual_account_bank: string | null
+  virtual_account_number: string | null
+  deposit_expires_at: string | null
+  agencies: { name: string } | { name: string }[] | null
+  metadata: Record<string, unknown> | null
+  portone_payload: Record<string, unknown> | null
 }
 
 interface PaymentOrdersResponse {
-  orders: AgencyPaymentOrderRow[];
+  orders: AgencyPaymentOrderRow[]
   summary: {
-    totalOrders: number;
-    paidOrders: number;
-    pendingOrders: number;
-    failedOrders: number;
-    cancelledOrders: number;
-    paidAmount: number;
-  };
+    totalOrders: number
+    paidOrders: number
+    pendingOrders: number
+    failedOrders: number
+    cancelledOrders: number
+    paidAmount: number
+  }
 }
 
 const STATUS_VARIANT: Record<string, 'success' | 'error' | 'warning' | 'default'> = {
@@ -43,45 +43,45 @@ const STATUS_VARIANT: Record<string, 'success' | 'error' | 'warning' | 'default'
   pending: 'warning',
   failed: 'error',
   cancelled: 'default',
-};
+}
 
 const STATUS_LABEL: Record<string, string> = {
   paid: '결제 완료',
   pending: '입금 대기',
   failed: '결제 실패',
   cancelled: '취소',
-};
+}
 
 const PURPOSE_LABEL: Record<'plan' | 'point', string> = {
   plan: '플랜 결제',
   point: '포인트 충전',
-};
+}
 
 function formatKRW(value: number): string {
-  return `₩${value.toLocaleString('ko-KR')}`;
+  return `₩${value.toLocaleString('ko-KR')}`
 }
 
 function getAgencyName(value: AgencyPaymentOrderRow['agencies']): string {
-  if (!value) return '-';
-  if (Array.isArray(value)) return value[0]?.name ?? '-';
-  return value.name;
+  if (!value) return '-'
+  if (Array.isArray(value)) return value[0]?.name ?? '-'
+  return value.name
 }
 
 export default function BillingPage() {
-  const [data, setData] = useState<PaymentOrdersResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [processingOrderId, setProcessingOrderId] = useState<string | null>(null);
-  const [memoDrafts, setMemoDrafts] = useState<Record<string, string>>({});
+  const [data, setData] = useState<PaymentOrdersResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [processingOrderId, setProcessingOrderId] = useState<string | null>(null)
+  const [memoDrafts, setMemoDrafts] = useState<Record<string, string>>({})
 
   const loadOrders = useCallback(async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const response = await fetch('/api/admin/payment-orders');
-      const payload = await response.json();
+      const response = await fetch('/api/admin/payment-orders')
+      const payload = await response.json()
       if (!response.ok) {
-        throw new Error(payload.error || '결제 주문을 불러오지 못했습니다.');
+        throw new Error(payload.error || '결제 주문을 불러오지 못했습니다.')
       }
-      setData(payload);
+      setData(payload)
       setMemoDrafts(
         Object.fromEntries(
           ((payload.orders ?? []) as AgencyPaymentOrderRow[]).map((order) => [
@@ -89,26 +89,26 @@ export default function BillingPage() {
             typeof order.metadata?.adminMemo === 'string' ? order.metadata.adminMemo : '',
           ]),
         ),
-      );
+      )
     } catch (error) {
-      alert(error instanceof Error ? error.message : '결제 주문을 불러오지 못했습니다.');
+      alert(error instanceof Error ? error.message : '결제 주문을 불러오지 못했습니다.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    void loadOrders();
-  }, [loadOrders]);
+    void loadOrders()
+  }, [loadOrders])
 
   const pendingOrders = useMemo(
     () => (data?.orders ?? []).filter((order) => order.status === 'pending'),
     [data?.orders],
-  );
+  )
 
   const handleOrderAction = useCallback(
     async (orderId: string, action: 'mark_paid' | 'cancel' | 'save_memo') => {
-      setProcessingOrderId(orderId);
+      setProcessingOrderId(orderId)
       try {
         const response = await fetch('/api/admin/payment-orders', {
           method: 'PATCH',
@@ -118,11 +118,11 @@ export default function BillingPage() {
             action,
             memo: memoDrafts[orderId] ?? '',
           }),
-        });
+        })
 
-        const payload = await response.json();
+        const payload = await response.json()
         if (!response.ok) {
-          throw new Error(payload.error || '결제 주문 처리에 실패했습니다.');
+          throw new Error(payload.error || '결제 주문 처리에 실패했습니다.')
         }
 
         alert(
@@ -131,17 +131,17 @@ export default function BillingPage() {
             : action === 'cancel'
               ? '주문 취소 처리가 완료되었습니다.'
               : '운영 메모를 저장했습니다.',
-        );
+        )
 
-        await loadOrders();
+        await loadOrders()
       } catch (error) {
-        alert(error instanceof Error ? error.message : '결제 주문 처리에 실패했습니다.');
+        alert(error instanceof Error ? error.message : '결제 주문 처리에 실패했습니다.')
       } finally {
-        setProcessingOrderId(null);
+        setProcessingOrderId(null)
       }
     },
     [loadOrders, memoDrafts],
-  );
+  )
 
   return (
     <div className="space-y-8">
@@ -193,7 +193,7 @@ export default function BillingPage() {
             <div>
               <h3 className="font-headline text-[16px] font-bold text-on-surface">입금 대기 주문</h3>
               <p className="mt-1 text-sm text-on-surface-variant">
-                가상계좌 입금 확인이 필요한 주문을 먼저 처리하세요.
+                가상계좌 입금 확인이 필요한 주문을 먼저 처리해 주세요.
               </p>
             </div>
           </div>
@@ -288,7 +288,7 @@ export default function BillingPage() {
                       [order.id]: event.target.value,
                     }))
                   }
-                  placeholder="운영 메모를 남겨 두면 이후 추적이 쉬워집니다."
+                  placeholder="운영 메모를 남기면 이후 추적이 쉬워집니다."
                   className="mt-4 min-h-[88px] w-full rounded-xl border border-outline-variant/20 bg-surface px-3 py-3 text-sm text-on-surface"
                 />
 
@@ -308,5 +308,5 @@ export default function BillingPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }

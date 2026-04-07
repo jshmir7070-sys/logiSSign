@@ -23,7 +23,7 @@ const supabaseAdmin = createClient(
  */
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/contracts/sign')
+  const limited = await rateLimitAuth(ip, '/api/contracts/sign')
   if (limited) return limited
 
   try {

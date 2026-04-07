@@ -33,6 +33,7 @@ interface NotificationPreferences {
 }
 
 const APP_URL = process.env.EXPO_PUBLIC_APP_URL || 'https://logissign.com';
+
 const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   settlement: true,
   notice: true,

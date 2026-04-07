@@ -1,24 +1,24 @@
-'use client';
+'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import Badge from '@/components/shared/Badge';
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import Badge from '@/components/shared/Badge'
 
 interface AgencyRow {
-  id: string;
-  name: string;
-  owner_name: string | null;
-  plan: string;
-  monthly_fee: number;
-  created_at: string;
-  status: string | null;
-  driver_count: number;
-  payment_status: string;
-  latest_payment_title: string | null;
-  latest_payment_method: string | null;
-  latest_payment_at: string | null;
+  id: string
+  name: string
+  owner_name: string | null
+  plan: string
+  monthly_fee: number
+  created_at: string
+  status: string | null
+  driver_count: number
+  payment_status: string
+  latest_payment_title: string | null
+  latest_payment_method: string | null
+  latest_payment_at: string | null
 }
 
-const VALID_PLANS = ['free', 'basic', 'standard', 'pro', 'enterprise'];
+const VALID_PLANS = ['free', 'basic', 'standard', 'pro', 'enterprise']
 
 const PLAN_BADGE_VARIANT: Record<string, 'info' | 'success' | 'default' | 'warning'> = {
   free: 'default',
@@ -26,7 +26,7 @@ const PLAN_BADGE_VARIANT: Record<string, 'info' | 'success' | 'default' | 'warni
   standard: 'success',
   pro: 'warning',
   enterprise: 'warning',
-};
+}
 
 const STATUS_BADGE_VARIANT: Record<string, 'success' | 'error' | 'warning' | 'default'> = {
   active: 'success',
@@ -37,7 +37,7 @@ const STATUS_BADGE_VARIANT: Record<string, 'success' | 'error' | 'warning' | 'de
   failed: 'error',
   cancelled: 'default',
   inactive: 'default',
-};
+}
 
 const STATUS_LABEL: Record<string, string> = {
   active: '정상',
@@ -48,62 +48,62 @@ const STATUS_LABEL: Record<string, string> = {
   failed: '결제 실패',
   cancelled: '취소',
   inactive: '비활성',
-};
+}
 
 function formatKRW(value: number): string {
-  return `₩${value.toLocaleString('ko-KR')}`;
+  return `₩${value.toLocaleString('ko-KR')}`
 }
 
 export default function AgenciesPage() {
-  const [agencies, setAgencies] = useState<AgencyRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filterPlan, setFilterPlan] = useState('전체');
-  const [search, setSearch] = useState('');
+  const [agencies, setAgencies] = useState<AgencyRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filterPlan, setFilterPlan] = useState('all')
+  const [search, setSearch] = useState('')
 
-  const [changingAgency, setChangingAgency] = useState<AgencyRow | null>(null);
-  const [newPlan, setNewPlan] = useState('');
-  const [reason, setReason] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [changingAgency, setChangingAgency] = useState<AgencyRow | null>(null)
+  const [newPlan, setNewPlan] = useState('')
+  const [reason, setReason] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const loadAgencies = useCallback(async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const response = await fetch('/api/admin/agencies');
-      const payload = await response.json();
+      const response = await fetch('/api/admin/agencies')
+      const payload = await response.json()
       if (!response.ok) {
-        throw new Error(payload.error || '대리점 목록을 불러오지 못했습니다.');
+        throw new Error(payload.error || '대리점 목록을 불러오지 못했습니다.')
       }
-      setAgencies(payload.agencies ?? []);
+      setAgencies(payload.agencies ?? [])
     } catch (error) {
-      alert(error instanceof Error ? error.message : '대리점 목록을 불러오지 못했습니다.');
+      alert(error instanceof Error ? error.message : '대리점 목록을 불러오지 못했습니다.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    void loadAgencies();
-  }, [loadAgencies]);
+    void loadAgencies()
+  }, [loadAgencies])
 
   const filtered = useMemo(() => {
     return agencies.filter((agency) => {
-      if (filterPlan !== '전체' && agency.plan.toLowerCase() !== filterPlan.toLowerCase()) {
-        return false;
+      if (filterPlan !== 'all' && agency.plan.toLowerCase() !== filterPlan.toLowerCase()) {
+        return false
       }
-      if (!search.trim()) return true;
+      if (!search.trim()) return true
 
-      const keyword = search.toLowerCase();
+      const keyword = search.toLowerCase()
       return (
         agency.name.toLowerCase().includes(keyword) ||
         (agency.owner_name ?? '').toLowerCase().includes(keyword)
-      );
-    });
-  }, [agencies, filterPlan, search]);
+      )
+    })
+  }, [agencies, filterPlan, search])
 
   async function handlePlanChange() {
-    if (!changingAgency || !newPlan) return;
+    if (!changingAgency || !newPlan) return
 
-    setSaving(true);
+    setSaving(true)
     try {
       const response = await fetch('/api/admin/plan-change', {
         method: 'POST',
@@ -113,21 +113,21 @@ export default function AgenciesPage() {
           newPlan,
           reason: reason || undefined,
         }),
-      });
-      const payload = await response.json();
+      })
+      const payload = await response.json()
       if (!response.ok) {
-        throw new Error(payload.error || '플랜 변경에 실패했습니다.');
+        throw new Error(payload.error || '플랜 변경에 실패했습니다.')
       }
 
-      alert('플랜 변경이 완료되었습니다.');
-      setChangingAgency(null);
-      setReason('');
-      setNewPlan('');
-      await loadAgencies();
+      alert('플랜 변경이 완료되었습니다.')
+      setChangingAgency(null)
+      setReason('')
+      setNewPlan('')
+      await loadAgencies()
     } catch (error) {
-      alert(error instanceof Error ? error.message : '플랜 변경에 실패했습니다.');
+      alert(error instanceof Error ? error.message : '플랜 변경에 실패했습니다.')
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
   }
 
@@ -136,7 +136,7 @@ export default function AgenciesPage() {
       <div>
         <h2 className="font-headline text-[26px] font-bold tracking-tight text-on-surface">대리점 관리</h2>
         <p className="mt-1 text-[14px] text-on-surface-variant">
-          대리점별 플랜, 기사 수, 최근 결제 상태를 확인하고 필요한 경우 플랜을 조정합니다.
+          대리점별 플랜, 기사 수, 최신 결제 상태를 확인하고 필요할 때 플랜을 조정합니다.
         </p>
       </div>
 
@@ -147,7 +147,7 @@ export default function AgenciesPage() {
             onChange={(event) => setFilterPlan(event.target.value)}
             className="h-11 rounded-xl border border-outline-variant/20 bg-surface px-3 text-sm text-on-surface"
           >
-            <option value="전체">전체 플랜</option>
+            <option value="all">전체 플랜</option>
             {VALID_PLANS.map((plan) => (
               <option key={plan} value={plan}>
                 {plan.toUpperCase()}
@@ -173,7 +173,7 @@ export default function AgenciesPage() {
                 <th className="px-5 py-4">대리점</th>
                 <th className="px-5 py-4">플랜</th>
                 <th className="px-5 py-4">기사 수</th>
-                <th className="px-5 py-4">월 요금</th>
+                <th className="px-5 py-4">월 기준 요금</th>
                 <th className="px-5 py-4">결제 상태</th>
                 <th className="px-5 py-4">최근 결제</th>
                 <th className="px-5 py-4">가입일</th>
@@ -232,9 +232,9 @@ export default function AgenciesPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          setChangingAgency(agency);
-                          setNewPlan(agency.plan);
-                          setReason('');
+                          setChangingAgency(agency)
+                          setNewPlan(agency.plan)
+                          setReason('')
                         }}
                         className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white"
                       >
@@ -252,7 +252,9 @@ export default function AgenciesPage() {
       {changingAgency ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-lg rounded-3xl bg-surface-container-lowest p-6 shadow-ambient">
-            <h3 className="font-headline text-lg font-bold text-on-surface">{changingAgency.name} 플랜 변경</h3>
+            <h3 className="font-headline text-lg font-bold text-on-surface">
+              {changingAgency.name} 플랜 변경
+            </h3>
             <p className="mt-1 text-sm text-on-surface-variant">
               현재 플랜은 {changingAgency.plan.toUpperCase()}입니다. 변경 사유를 남기면 추적이 쉬워집니다.
             </p>
@@ -288,9 +290,9 @@ export default function AgenciesPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setChangingAgency(null);
-                  setReason('');
-                  setNewPlan('');
+                  setChangingAgency(null)
+                  setReason('')
+                  setNewPlan('')
                 }}
                 className="rounded-xl border border-outline-variant/20 px-4 py-2 text-sm font-medium text-on-surface-variant"
               >
@@ -309,5 +311,5 @@ export default function AgenciesPage() {
         </div>
       ) : null}
     </div>
-  );
+  )
 }

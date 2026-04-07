@@ -32,7 +32,7 @@ async function fetchRecentSentryIssues(): Promise<{
     return {
       configured: false,
       status: 'warning',
-      detail: 'Sentry 프로젝트 환경변수가 아직 설정되지 않았습니다.',
+      detail: 'Sentry 프로젝트 환경 변수가 아직 설정되지 않았습니다.',
       issues: [],
     }
   }
@@ -53,7 +53,7 @@ async function fetchRecentSentryIssues(): Promise<{
               'Content-Type': 'application/json',
             },
             cache: 'no-store',
-          }
+          },
         )
 
         if (!response.ok) {
@@ -70,7 +70,7 @@ async function fetchRecentSentryIssues(): Promise<{
           permalink: String(issue.permalink ?? ''),
           project,
         }))
-      })
+      }),
     )
 
     const issues = responses
@@ -102,7 +102,7 @@ async function fetchRecentSentryIssues(): Promise<{
 
 export async function GET(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/admin/server-status')
+  const limited = await rateLimitAuth(ip, '/api/admin/server-status')
   if (limited) return limited
 
   const { auth, error } = await authenticateAdmin(request)
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
   if (auth.role !== 'provider_admin') {
     return NextResponse.json(
       { error: '슈퍼 관리자만 서버 상태를 조회할 수 있습니다.' },
-      { status: 403 }
+      { status: 403 },
     )
   }
 
@@ -178,7 +178,9 @@ export async function GET(request: NextRequest) {
         {
           name: 'Auth',
           status: authError ? 'error' : authLatency > 3000 ? 'warning' : 'normal',
-          detail: authError ? authError.message : `응답 ${authLatency}ms · 관리자 인증 정상`,
+          detail: authError
+            ? authError.message
+            : `응답 ${authLatency}ms · 관리자 인증 API 정상`,
         },
         {
           name: 'Sentry',
@@ -200,10 +202,10 @@ export async function GET(request: NextRequest) {
         failedPayments: failedPayments.length,
         pendingVirtualAccounts: pendingVirtualAccounts.length,
         pendingContracts: ((contractsRes.data ?? []) as Array<Record<string, unknown>>).filter((row) =>
-          ['sent', 'viewed'].includes(String(row.status ?? ''))
+          ['sent', 'viewed'].includes(String(row.status ?? '')),
         ).length,
         pendingDocuments: ((deliveriesRes.data ?? []) as Array<Record<string, unknown>>).filter((row) =>
-          ['sent', 'delivered', 'viewed'].includes(String(row.status ?? ''))
+          ['sent', 'delivered', 'viewed'].includes(String(row.status ?? '')),
         ).length,
       },
       recentPaymentFailures: failedPayments.map((order) => ({
@@ -225,7 +227,7 @@ export async function GET(request: NextRequest) {
             ? fetchError.message
             : '서버 상태를 불러오지 못했습니다.',
       },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

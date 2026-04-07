@@ -9,11 +9,13 @@ const supabaseAdmin = createAdminSupabaseClient()
 
 export async function GET(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/runtime-settings/payment')
+  const limited = await rateLimitAuth(ip, '/api/runtime-settings/payment')
   if (limited) return limited
 
   const { auth, error } = await authenticateRequest(request)
-  if (error || !auth) return error ?? NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 })
+  if (error || !auth) {
+    return error ?? NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 })
+  }
 
   try {
     const { data, error: fetchError } = await supabaseAdmin
@@ -34,7 +36,7 @@ export async function GET(request: NextRequest) {
   } catch (runtimeError) {
     return NextResponse.json(
       { error: runtimeError instanceof Error ? runtimeError.message : '결제 설정을 불러오지 못했습니다.' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

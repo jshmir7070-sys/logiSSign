@@ -18,7 +18,7 @@ import {
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
+  { auth: { autoRefreshToken: false, persistSession: false } },
 )
 
 function addMonths(date: Date, months: number): Date {
@@ -62,9 +62,7 @@ async function getExistingPaymentOrder(paymentId: string) {
 }
 
 async function upsertPaymentOrder(order: Record<string, unknown>) {
-  const { error } = await supabaseAdmin
-    .from('agency_payment_orders')
-    .upsert(order, { onConflict: 'payment_id' })
+  const { error } = await supabaseAdmin.from('agency_payment_orders').upsert(order, { onConflict: 'payment_id' })
 
   if (error) {
     throw new Error(`결제 주문 저장에 실패했습니다: ${error.message}`)
@@ -129,7 +127,7 @@ async function getLatestSubscription(agencyId: string) {
     .maybeSingle()
 
   if (error) {
-    throw new Error(`구독 정보를 조회하지 못했습니다: ${error.message}`)
+    throw new Error(`구독 정보를 조회하지 못했습니다. ${error.message}`)
   }
 
   return data
@@ -137,7 +135,7 @@ async function getLatestSubscription(agencyId: string) {
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/payment')
+  const limited = await rateLimitAuth(ip, '/api/payment')
   if (limited) return limited
 
   try {
@@ -147,7 +145,7 @@ export async function POST(request: NextRequest) {
     if (validationError || !body) {
       return NextResponse.json(
         { error: validationError ?? '잘못된 결제 요청입니다.' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -171,7 +169,7 @@ export async function POST(request: NextRequest) {
       if (!subscription || subscription.plan === 'point') {
         return NextResponse.json(
           { error: '구독형 플랜 이용 중일 때만 카드 등록 또는 변경이 가능합니다.' },
-          { status: 400 }
+          { status: 400 },
         )
       }
 
@@ -187,8 +185,8 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         return NextResponse.json(
-          { error: `카드 등록 정보를 저장하지 못했습니다: ${error.message}` },
-          { status: 500 }
+          { error: `카드 등록 정보를 저장하지 못했습니다. ${error.message}` },
+          { status: 500 },
         )
       }
 
@@ -204,9 +202,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            '자동 정기결제는 현재 사용하지 않습니다. 카드 등록은 만료 안내 및 차후 수기 결제 전환을 위한 용도로만 지원합니다.',
+            '자동 정기결제는 현재 사용하지 않습니다. 카드 등록은 만료 안내와 차후 수동 결제 전환을 위한 용도로만 지원합니다.',
         },
-        { status: 410 }
+        { status: 410 },
       )
     }
 
@@ -351,7 +349,7 @@ export async function POST(request: NextRequest) {
       if (body.paymentMethod !== 'CARD') {
         return NextResponse.json(
           { error: '구독형 플랜 결제는 카드 결제만 사용할 수 있습니다.' },
-          { status: 400 }
+          { status: 400 },
         )
       }
 
@@ -371,14 +369,14 @@ export async function POST(request: NextRequest) {
       if (isDowngrade) {
         return NextResponse.json(
           { error: `현재 ${currentPlan} 플랜에서 ${body.plan} 플랜으로 바로 변경할 수 없습니다.` },
-          { status: 400 }
+          { status: 400 },
         )
       }
 
       const expectedAmount = Math.round(
         getBaseMonthlyPrice(body.plan) *
           (1 - getBillingDiscountRate(body.billing) / 100) *
-          getBillingMonths(body.billing)
+          getBillingMonths(body.billing),
       )
 
       if (expectedAmount !== body.amount) {
@@ -398,7 +396,10 @@ export async function POST(request: NextRequest) {
       const normalized = normalizePortonePayment(payment)
 
       if (normalized.amount !== body.amount) {
-        return NextResponse.json({ error: 'PortOne 결제 금액이 요청 금액과 일치하지 않습니다.' }, { status: 400 })
+        return NextResponse.json(
+          { error: 'PortOne 결제 금액과 요청 금액이 일치하지 않습니다.' },
+          { status: 400 },
+        )
       }
 
       await upsertPaymentOrder({
@@ -512,7 +513,7 @@ export async function POST(request: NextRequest) {
     console.error('[Payment] Unexpected error:', error)
     return NextResponse.json(
       { error: '결제 처리 중 오류가 발생했습니다.' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

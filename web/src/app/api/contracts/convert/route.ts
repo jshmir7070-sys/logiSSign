@@ -20,7 +20,7 @@ export const maxDuration = 60
  */
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/contracts/convert')
+  const limited = await rateLimitAuth(ip, '/api/contracts/convert')
   if (limited) return limited
 
   const { error: authError } = await authenticateRequest(request)

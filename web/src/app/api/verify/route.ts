@@ -12,7 +12,7 @@ import { rateLimitPublic } from '@/lib/rate-limit'
 export async function POST(req: NextRequest) {
   // Rate limit — 공개 API이므로 분당 10회
   const ip = getClientIp(req)
-  const limited = rateLimitPublic(ip, '/api/verify')
+  const limited = await rateLimitPublic(ip, '/api/verify')
   if (limited) return limited
 
   try {

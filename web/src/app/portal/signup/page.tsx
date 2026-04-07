@@ -49,22 +49,22 @@ type FormState = {
 }
 
 const PLANS: Array<{ id: Extract<PlanType, 'basic' | 'standard' | 'pro'>; name: string; description: string }> = [
-  { id: 'basic', name: 'Basic', description: '기사 30명, 전자계약, 정산 업로드를 바로 시작합니다.' },
-  { id: 'standard', name: 'Standard', description: '기사 80명, 보고서, 알림 기능까지 함께 사용합니다.' },
-  { id: 'pro', name: 'Pro', description: '기사 150명, 대량 처리, 외부 연동까지 확장합니다.' },
+  { id: 'basic', name: 'Basic', description: '기사 30명 규모에 적합한 기본 운영 플랜입니다.' },
+  { id: 'standard', name: 'Standard', description: '기사 80명 규모와 정산·알림 기능을 함께 운영합니다.' },
+  { id: 'pro', name: 'Pro', description: '기사 150명 이상 대량 처리와 확장 운영에 적합합니다.' },
 ]
 
 const BILLING_OPTIONS: Array<{ value: BillingCycle; label: string; description: string }> = [
-  { value: 'monthly', label: '월 결제', description: '한 달 단위로 1회 결제합니다.' },
-  { value: '1year', label: '1년 선결제', description: '1년 선결제로 할인 혜택을 받습니다.' },
-  { value: '2year', label: '2년 선결제', description: '2년 선결제로 더 큰 할인 혜택을 받습니다.' },
+  { value: 'monthly', label: '월 결제', description: '매월 1회 정기적으로 결제합니다.' },
+  { value: '1year', label: '1년 선결제', description: '1년 단위 선결제로 할인 혜택을 받을 수 있습니다.' },
+  { value: '2year', label: '2년 선결제', description: '2년 단위 선결제로 가장 큰 할인 혜택을 받습니다.' },
 ]
 
 const INPUT_CLASS =
   'w-full h-11 rounded-xl bg-surface-container-low px-4 text-sm text-on-surface placeholder:text-on-surface-variant/50 outline-none focus:ring-2 focus:ring-primary/30'
 
 function formatKRW(value: number): string {
-  return `${value.toLocaleString('ko-KR')}원`
+  return `₩${value.toLocaleString('ko-KR')}`
 }
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
@@ -128,6 +128,8 @@ export default function PortalSignupPage() {
         requestedBilling === 'monthly' || requestedBilling === '1year' || requestedBilling === '2year'
           ? requestedBilling
           : previous.billing,
+      paymentMethod:
+        requestedMode === 'subscription' || requestedPlan ? 'CARD' : previous.paymentMethod,
     }))
   }, [])
 
@@ -138,8 +140,14 @@ export default function PortalSignupPage() {
     return getSubscriptionPrice(form.plan, form.billing)
   }, [form.billing, form.plan, form.planMode])
 
+  const availablePointPaymentMethods = PAYMENT_METHOD_OPTIONS.filter((option) => option.value !== 'CARD' || true)
+
   function updateForm(patch: Partial<FormState>) {
-    setForm((previous) => ({ ...previous, ...patch }))
+    setForm((previous) => ({
+      ...previous,
+      ...patch,
+      ...(patch.planMode === 'subscription' ? { paymentMethod: 'CARD' as AgencyPaymentMethod } : {}),
+    }))
   }
 
   async function handleVerifyIdentity() {
@@ -189,7 +197,7 @@ export default function PortalSignupPage() {
       setError(
         verificationError instanceof Error
           ? verificationError.message
-          : '본인인증 처리 중 오류가 발생했습니다.'
+          : '본인인증 처리 중 오류가 발생했습니다.',
       )
     }
   }
@@ -256,10 +264,7 @@ export default function PortalSignupPage() {
           paymentId: `signup_${signupData.agencyId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           orderName: `logiSSign ${form.plan.toUpperCase()} 플랜`,
           amount,
-          method: form.paymentMethod,
-          easyPayProvider: form.paymentMethod === 'EASY_PAY' ? form.easyPayProvider : undefined,
-          virtualAccountBankCode:
-            form.paymentMethod === 'VIRTUAL_ACCOUNT' ? form.virtualAccountBank : undefined,
+          method: 'CARD',
           redirectUrl: `${window.location.origin}/portal/settings?tab=billing`,
           customer: {
             customerId: signupData.agencyId,
@@ -278,8 +283,7 @@ export default function PortalSignupPage() {
             plan: form.plan,
             billing: form.billing,
             amount,
-            paymentMethod: form.paymentMethod,
-            easyPayProvider: form.paymentMethod === 'EASY_PAY' ? form.easyPayProvider : undefined,
+            paymentMethod: 'CARD',
           }),
         })
 
@@ -292,14 +296,12 @@ export default function PortalSignupPage() {
           alert(
             [
               '가입이 완료되었습니다.',
-              '결제는 입금 대기 상태로 저장되었습니다.',
+              '결제가 입금 대기 상태로 등록되었습니다.',
               paymentData.virtualAccountBank ? `은행: ${paymentData.virtualAccountBank}` : null,
-              paymentData.virtualAccountNumber
-                ? `가상계좌: ${paymentData.virtualAccountNumber}`
-                : null,
+              paymentData.virtualAccountNumber ? `가상계좌: ${paymentData.virtualAccountNumber}` : null,
             ]
               .filter(Boolean)
-              .join('\n')
+              .join('\n'),
           )
         }
       }
@@ -311,7 +313,7 @@ export default function PortalSignupPage() {
       setError(
         accountCreated
           ? `${message}\n계정은 생성되었으니 로그인 후 설정 > 결제 관리에서 이어서 진행해 주세요.`
-          : message
+          : message,
       )
     } finally {
       setSubmitting(false)
@@ -349,7 +351,7 @@ export default function PortalSignupPage() {
               >
                 <p className="text-sm font-bold text-on-surface">포인트형</p>
                 <p className="mt-1 text-xs text-on-surface-variant">
-                  가입 즉시 시작하고, 사용한 만큼 포인트로 결제합니다.
+                  가입 후 바로 시작하고, 사용량만큼 포인트로 결제합니다.
                 </p>
               </button>
               <button
@@ -361,9 +363,9 @@ export default function PortalSignupPage() {
                     : 'border-outline-variant/20'
                 }`}
               >
-                <p className="text-sm font-bold text-on-surface">플랜형</p>
+                <p className="text-sm font-bold text-on-surface">구독형 플랜</p>
                 <p className="mt-1 text-xs text-on-surface-variant">
-                  카드, 간편결제, 계좌이체, 가상계좌 중 원하는 방식으로 1회 결제합니다.
+                  구독형 플랜은 카드 결제만 사용할 수 있으며, 카드 등록/변경도 구독형에서만 가능합니다.
                 </p>
               </button>
             </div>
@@ -518,7 +520,7 @@ export default function PortalSignupPage() {
                   <p className="mt-1 text-xs text-on-surface-variant">
                     {form.identityVerified
                       ? `${form.identityName} / ${form.identityPhone}`
-                      : '가입 전에 본인인증을 완료해 주세요.'}
+                      : '가입 전에 본인인증을 먼저 완료해 주세요.'}
                   </p>
                 </div>
                 <button
@@ -567,10 +569,7 @@ export default function PortalSignupPage() {
             <section className="rounded-3xl bg-surface-container-lowest p-7 shadow-ambient">
               <h2 className="font-headline text-lg font-bold text-on-surface">가입 요약</h2>
               <div className="mt-5 space-y-3">
-                <SummaryRow
-                  label="가입 방식"
-                  value={form.planMode === 'point' ? '포인트형' : '플랜형'}
-                />
+                <SummaryRow label="가입 방식" value={form.planMode === 'point' ? '포인트형' : '구독형'} />
                 <SummaryRow
                   label="선택 플랜"
                   value={form.planMode === 'point' ? '포인트형' : form.plan.toUpperCase()}
@@ -591,7 +590,7 @@ export default function PortalSignupPage() {
                   </>
                 ) : (
                   <div className="rounded-2xl bg-primary/5 p-4 text-xs leading-5 text-on-surface-variant">
-                    가입 즉시 포인트형으로 시작하고, 사용한 만큼 포인트로 차감됩니다.
+                    가입 즉시 포인트형으로 시작하고, 사용량만큼 포인트로 차감됩니다.
                   </div>
                 )}
               </div>
@@ -600,7 +599,28 @@ export default function PortalSignupPage() {
             {form.planMode === 'subscription' ? (
               <section className="space-y-4 rounded-3xl bg-surface-container-lowest p-7 shadow-ambient">
                 <h2 className="font-headline text-lg font-bold text-on-surface">결제 수단</h2>
-                {PAYMENT_METHOD_OPTIONS.map((option) => (
+                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                  <p className="text-sm font-semibold text-on-surface">구독형은 카드 결제만 가능합니다.</p>
+                  <p className="mt-1 text-xs text-on-surface-variant">
+                    카드 등록/변경도 구독형 플랜 이용 시에만 가능하며, 다른 결제수단은 가입 시 노출되지 않습니다.
+                  </p>
+                </div>
+                <label className="block rounded-2xl border border-primary bg-primary/5 p-4">
+                  <div className="flex items-start gap-3">
+                    <input type="radio" name="paymentMethod" className="mt-1 accent-primary" checked readOnly />
+                    <div>
+                      <p className="text-sm font-semibold text-on-surface">카드 일시불</p>
+                      <p className="mt-1 text-xs text-on-surface-variant">
+                        최초 가입 결제는 카드 승인으로 진행되며, 이후 카드 등록 상태에 따라 만료 전 갱신을 안내합니다.
+                      </p>
+                    </div>
+                  </div>
+                </label>
+              </section>
+            ) : (
+              <section className="space-y-4 rounded-3xl bg-surface-container-lowest p-7 shadow-ambient">
+                <h2 className="font-headline text-lg font-bold text-on-surface">결제 수단</h2>
+                {availablePointPaymentMethods.map((option) => (
                   <label
                     key={option.value}
                     className={`block rounded-2xl border p-4 ${
@@ -658,7 +678,7 @@ export default function PortalSignupPage() {
                   </select>
                 ) : null}
               </section>
-            ) : null}
+            )}
 
             {error ? (
               <section className="whitespace-pre-line rounded-3xl border border-error/20 bg-error/5 p-5 text-sm leading-6 text-error">
@@ -675,7 +695,7 @@ export default function PortalSignupPage() {
               {submitting
                 ? '처리 중입니다...'
                 : form.planMode === 'subscription'
-                  ? '가입 후 결제 진행'
+                  ? '가입 및 결제 진행'
                   : '가입 완료'}
             </button>
           </aside>

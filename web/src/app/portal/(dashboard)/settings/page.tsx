@@ -1,44 +1,44 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { createBrowserSupabaseClient } from '@/lib/supabase';
-import ProfileTab from '@/components/portal/settings/ProfileTab';
-import CategoryTab from '@/components/portal/settings/CategoryTab';
-import SealTab from '@/components/portal/settings/SealTab';
-import BillingTab from '@/components/portal/settings/BillingTab';
-import NotificationTab from '@/components/portal/settings/NotificationTab';
-import AdminsTab from '@/components/portal/settings/AdminsTab';
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { createBrowserSupabaseClient } from '@/lib/supabase'
+import ProfileTab from '@/components/portal/settings/ProfileTab'
+import CategoryTab from '@/components/portal/settings/CategoryTab'
+import SealTab from '@/components/portal/settings/SealTab'
+import BillingTab from '@/components/portal/settings/BillingTab'
+import NotificationTab from '@/components/portal/settings/NotificationTab'
+import AdminsTab from '@/components/portal/settings/AdminsTab'
 
-type SettingsTab = 'profile' | 'category' | 'seal' | 'billing' | 'notification' | 'admins';
+type SettingsTab = 'profile' | 'category' | 'seal' | 'billing' | 'notification' | 'admins'
 
-const VALID_TABS: SettingsTab[] = ['profile', 'category', 'seal', 'billing', 'notification', 'admins'];
+const VALID_TABS: SettingsTab[] = ['profile', 'category', 'seal', 'billing', 'notification', 'admins']
 
 export default function PortalSettingsPage() {
-  const searchParams = useSearchParams();
-  const tabParam = searchParams.get('tab');
-  const isWelcome = searchParams.get('welcome') === '1';
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const isWelcome = searchParams.get('welcome') === '1'
   const [activeTab, setActiveTab] = useState<SettingsTab>(
     VALID_TABS.includes(tabParam as SettingsTab) ? (tabParam as SettingsTab) : 'profile',
-  );
-  const [agencyId, setAgencyId] = useState<string | null>(null);
-  const [userPlan, setUserPlan] = useState<string>('free');
+  )
+  const [agencyId, setAgencyId] = useState<string | null>(null)
+  const [userPlan, setUserPlan] = useState<string>('free')
 
   useEffect(() => {
     async function init() {
-      const supabase = createBrowserSupabaseClient();
+      const supabase = createBrowserSupabaseClient()
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await supabase.auth.getUser()
 
       if (user) {
-        setAgencyId((user.app_metadata?.agency_id as string) ?? null);
-        setUserPlan((user.app_metadata?.plan as string) ?? 'free');
+        setAgencyId((user.app_metadata?.agency_id as string) ?? null)
+        setUserPlan((user.app_metadata?.plan as string) ?? 'free')
       }
     }
 
-    void init();
-  }, []);
+    void init()
+  }, [])
 
   const tabs: Array<{ id: SettingsTab; label: string }> = [
     { id: 'profile', label: '프로필' },
@@ -47,7 +47,7 @@ export default function PortalSettingsPage() {
     { id: 'seal', label: '도장/서명' },
     { id: 'billing', label: '결제 관리' },
     { id: 'notification', label: '알림 설정' },
-  ];
+  ]
 
   return (
     <div className="space-y-8">
@@ -62,8 +62,8 @@ export default function PortalSettingsPage() {
           <div>
             <h2 className="font-korean text-sm font-bold text-on-surface">가입이 완료되었습니다.</h2>
             <p className="mt-1 font-korean text-xs text-on-surface-variant">
-              계약서에 사용할 도장과 서명을 먼저 준비해 두세요. 일반 도장, 법인 도장, 직접 그린 서명까지 모두
-              등록할 수 있습니다.
+              계약서에 사용할 도장과 서명을 먼저 준비해 두면, 일반 도장과 법인 도장, 직접 그린 서명까지
+              모두 빠르게 등록할 수 있습니다.
             </p>
             <button
               onClick={() => setActiveTab('seal')}
@@ -105,5 +105,5 @@ export default function PortalSettingsPage() {
       {activeTab === 'billing' ? <BillingTab /> : null}
       {activeTab === 'notification' ? <NotificationTab /> : null}
     </div>
-  );
+  )
 }

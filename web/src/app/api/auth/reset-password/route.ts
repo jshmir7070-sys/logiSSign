@@ -49,7 +49,7 @@ function validatePassword(pw: string): string | null {
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitPublic(ip, 'reset-password')
+  const limited = await rateLimitPublic(ip, 'reset-password')
   if (limited) return limited
 
   try {

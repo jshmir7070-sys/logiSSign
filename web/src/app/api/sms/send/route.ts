@@ -12,7 +12,7 @@ import { getClientIp } from '@/lib/get-ip'
  */
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/sms/send')
+  const limited = await rateLimitAuth(ip, '/api/sms/send')
   if (limited) return limited
 
   // 인증 확인

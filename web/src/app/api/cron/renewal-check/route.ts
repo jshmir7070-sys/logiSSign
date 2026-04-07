@@ -8,11 +8,12 @@ import {
   DEFAULT_ADMIN_PAYMENT_SETTINGS,
   buildAdminSettingsPayload,
 } from '@/lib/admin-settings'
+import { sendRenewalSms, sendSms } from '@/services/sms.service'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
+  { auth: { autoRefreshToken: false, persistSession: false } },
 )
 
 async function sendExpoPush(tokens: string[], title: string, body: string, data?: Record<string, string>) {
@@ -73,8 +74,8 @@ async function createSubscriptionExpiryNotice(params: {
 
   const expiryText = new Date(params.expiresAt).toLocaleDateString('ko-KR')
   const content =
-    `현재 이용 중인 ${params.plan.toUpperCase()} 플랜의 만료 예정일이 ${expiryText} 입니다.\n` +
-    '설정 > 결제 관리에서 카드 등록 상태와 다음 결제 계획을 확인해 주세요.\n' +
+    `현재 이용 중인 ${params.plan.toUpperCase()} 플랜의 만료 예정일은 ${expiryText}입니다.\n` +
+    '설정 > 결제 관리에서 카드 등록 상태와 다음 결제 일정을 확인해 주세요.\n' +
     '카드 등록은 구독형 플랜 이용 시에만 가능합니다.'
 
   const { error } = await supabaseAdmin.from('notices').insert({
@@ -95,15 +96,37 @@ async function createSubscriptionExpiryNotice(params: {
   return true
 }
 
+async function sendSubscriptionExpirySms(params: {
+  phone: string | null
+  agencyName: string
+  plan: string
+  expiresAt: string
+  daysLeft: number
+}) {
+  if (!params.phone) return false
+
+  const expiryText = new Date(params.expiresAt).toLocaleDateString('ko-KR')
+  const result = await sendSms({
+    to: params.phone,
+    text:
+      `[로지사인] ${params.agencyName}의 ${params.plan.toUpperCase()} 플랜이 ${expiryText}에 만료됩니다. ` +
+      `D-${params.daysLeft} 알림입니다. 설정 > 결제 관리에서 카드 등록 상태와 결제 일정을 확인해 주세요.`,
+  })
+
+  return result.sent
+}
+
 export async function GET(request: NextRequest) {
   const cronError = authenticateCron(request)
   if (cronError) return cronError
 
   const today = todayKST()
   const sixtyDaysLater = addDays(today, 60)
-  let notified = 0
+  let renewalPushNotified = 0
+  let renewalSmsNotified = 0
   let activated = 0
   let subscriptionExpiryNotices = 0
+  let subscriptionExpirySms = 0
 
   try {
     const { data: expiring } = await supabaseAdmin
@@ -123,32 +146,52 @@ export async function GET(request: NextRequest) {
         .in('status', ['pending', 'approved'])
 
       const alreadyHandled = new Set(
-        ((existingAmendments as { driver_id: string }[] | null) ?? []).map((item) => item.driver_id)
+        ((existingAmendments as { driver_id: string }[] | null) ?? []).map((item) => item.driver_id),
       )
 
       const needsNotification = (expiring as { driver_id: string; period_end: string }[]).filter(
-        (period) => !alreadyHandled.has(period.driver_id)
+        (period) => !alreadyHandled.has(period.driver_id),
       )
 
       if (needsNotification.length > 0) {
         const notifyDriverIds = needsNotification.map((period) => period.driver_id)
         const { data: drivers } = await supabaseAdmin
           .from('drivers')
-          .select('id, push_token')
+          .select('id, name, phone, push_token')
           .in('id', notifyDriverIds)
 
-        const tokens = (drivers ?? [])
-          .filter((driver): driver is { id: string; push_token: string } => !!(driver as { push_token?: string }).push_token)
-          .map((driver) => (driver as { push_token: string }).push_token)
+        const tokens = ((drivers ?? []) as Array<{
+          id: string
+          name: string | null
+          phone: string | null
+          push_token: string | null
+        }>)
+          .map((driver) => driver.push_token)
+          .filter((token): token is string => Boolean(token))
 
         if (tokens.length > 0) {
           await sendExpoPush(
             tokens,
             '계약 만료 안내',
-            '계약 만료일이 60일 이내로 다가오고 있습니다. 갱신 관련 안내를 확인해 주세요.',
-            { type: 'renewal_reminder' }
+            '계약 만료일이 60일 이내로 다가오고 있습니다. 갱신 안내를 확인해 주세요.',
+            { type: 'renewal_reminder' },
           )
-          notified = tokens.length
+          renewalPushNotified = tokens.length
+        }
+
+        for (const period of needsNotification) {
+          const driver = (drivers ?? []).find((item) => item.id === period.driver_id)
+          if (!driver?.phone) continue
+
+          const sent = await sendRenewalSms(
+            driver.phone,
+            driver.name ?? '기사님',
+            new Date(period.period_end).toLocaleDateString('ko-KR'),
+          )
+
+          if (sent.sent) {
+            renewalSmsNotified += 1
+          }
         }
       }
     }
@@ -162,7 +205,7 @@ export async function GET(request: NextRequest) {
     if (upcoming && upcoming.length > 0) {
       const upcomingIds = (upcoming as { id: string; driver_id: string }[]).map((period) => period.id)
       const upcomingDriverIds = Array.from(
-        new Set((upcoming as { id: string; driver_id: string }[]).map((period) => period.driver_id))
+        new Set((upcoming as { id: string; driver_id: string }[]).map((period) => period.driver_id)),
       )
 
       await supabaseAdmin
@@ -192,7 +235,7 @@ export async function GET(request: NextRequest) {
 
     const { data: subscriptions, error: subscriptionError } = await supabaseAdmin
       .from('subscriptions')
-      .select('agency_id, plan, status, expires_at')
+      .select('agency_id, plan, status, expires_at, agencies(name, phone)')
       .eq('status', 'active')
       .not('expires_at', 'is', null)
 
@@ -206,6 +249,7 @@ export async function GET(request: NextRequest) {
         plan: string
         status: string
         expires_at: string | null
+        agencies?: { name?: string | null; phone?: string | null } | null
       }> | null) ?? []
 
     for (const subscription of activeSubscriptions) {
@@ -215,8 +259,8 @@ export async function GET(request: NextRequest) {
       const todayDate = new Date(`${today}T00:00:00+09:00`)
       const expiryDate = new Date(
         `${expiresAt.getFullYear()}-${String(expiresAt.getMonth() + 1).padStart(2, '0')}-${String(
-          expiresAt.getDate()
-        ).padStart(2, '0')}T00:00:00+09:00`
+          expiresAt.getDate(),
+        ).padStart(2, '0')}T00:00:00+09:00`,
       )
 
       const daysLeft = Math.round((expiryDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24))
@@ -231,15 +275,29 @@ export async function GET(request: NextRequest) {
 
       if (created) {
         subscriptionExpiryNotices += 1
+
+        const smsSent = await sendSubscriptionExpirySms({
+          phone: subscription.agencies?.phone ?? null,
+          agencyName: subscription.agencies?.name ?? '대리점',
+          plan: subscription.plan,
+          expiresAt: subscription.expires_at,
+          daysLeft,
+        })
+
+        if (smsSent) {
+          subscriptionExpirySms += 1
+        }
       }
     }
 
     return NextResponse.json({
       success: true,
       date: today,
-      notified,
+      renewalPushNotified,
+      renewalSmsNotified,
       activated,
       subscriptionExpiryNotices,
+      subscriptionExpirySms,
     })
   } catch (error) {
     return apiError(error)

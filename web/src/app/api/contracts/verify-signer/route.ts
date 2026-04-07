@@ -28,7 +28,7 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
-  const rl = rateLimitPublic(ip, 'verify-signer')
+  const rl = await rateLimitPublic(ip, 'verify-signer')
   if (rl) return rl
 
   try {

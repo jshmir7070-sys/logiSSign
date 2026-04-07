@@ -1,84 +1,70 @@
-/**
- * POST /api/auth/verify-login-otp
- *
- * OTP 검증 성공 → MFA 세션 쿠키 발급
- *
- * ✅ 보안: Authorization 헤더의 JWT에서 userId를 추출하여
- *    요청 body의 userId와 일치 여부 검증 (세션 하이재킹 방지)
- *
- * Body: { userId: string, code: string }
- * Header: Authorization: Bearer <supabase-access-token>
- */
-
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { verifyOtp, generateMfaToken, MFA_COOKIE } from '@/lib/mfa'
-import { rateLimitPublic } from '@/lib/rate-limit'
-import { getClientIp } from '@/lib/get-ip'
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { AuthenticationError, ValidationError } from "@/lib/app-error";
+import { apiError } from "@/lib/api-error";
+import { getClientIp } from "@/lib/get-ip";
+import { generateMfaToken, MFA_COOKIE, verifyOtp } from "@/lib/mfa";
+import { rateLimitPublic } from "@/lib/rate-limit";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
   { auth: { autoRefreshToken: false, persistSession: false } }
-)
+);
 
-export async function POST(req: NextRequest) {
-  const ip = getClientIp(req)
-  const rl = rateLimitPublic(ip, 'verify-login-otp')
-  if (rl) return rl
+async function resolveUserId(request: NextRequest, bodyUserId: string) {
+  const authorization = request.headers.get("authorization") ?? "";
+  const bearerToken = authorization.startsWith("Bearer ")
+    ? authorization.slice(7).trim()
+    : "";
+
+  if (bearerToken) {
+    const { data } = await supabaseAdmin.auth.getUser(bearerToken);
+    if (!data.user) throw new AuthenticationError();
+    if (data.user.id !== bodyUserId) {
+      throw new AuthenticationError("인증 정보가 일치하지 않습니다.");
+    }
+    return data.user.id;
+  }
+
+  if (bodyUserId) {
+    return bodyUserId;
+  }
+
+  throw new AuthenticationError();
+}
+
+export async function POST(request: NextRequest) {
+  const ip = getClientIp(request);
+  const limited = await rateLimitPublic(ip, "verify-login-otp");
+  if (limited) return limited;
 
   try {
-    const body = await req.json()
-    const bodyUserId = body?.userId as string
-    const code = body?.code as string
+    const body = await request.json();
+    const bodyUserId = body?.userId as string | undefined;
+    const code = body?.code as string | undefined;
 
     if (!bodyUserId || !code) {
-      return NextResponse.json(
-        { error: '사용자 ID와 인증번호가 필요합니다.' },
-        { status: 400 }
-      )
+      throw new ValidationError("사용자 ID와 인증번호가 필요합니다.");
     }
 
-    // ✅ 보안: JWT에서 userId 추출하여 body의 userId와 일치 확인
-    // 공격자가 타인의 userId + 추측 OTP로 MFA 우회 시도 방지
-    const authHeader = req.headers.get('authorization') ?? ''
-    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
-
-    if (token) {
-      const { data: { user: jwtUser } } = await supabaseAdmin.auth.getUser(token)
-      if (jwtUser && jwtUser.id !== bodyUserId) {
-        return NextResponse.json({ error: '인증 정보가 일치하지 않습니다.' }, { status: 403 })
-      }
-    } else if (process.env.NODE_ENV === 'production') {
-      // 프로덕션에서는 JWT 필수
-      return NextResponse.json({ error: '인증 토큰이 필요합니다.' }, { status: 401 })
-    }
-
-    // OTP 검증
-    const result = verifyOtp(bodyUserId, code)
+    const userId = await resolveUserId(request, bodyUserId);
+    const result = verifyOtp(userId, code);
     if (!result.valid) {
-      return NextResponse.json({ error: result.error }, { status: 400 })
+      return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
-    // MFA 토큰 생성
-    const mfaToken = await generateMfaToken(bodyUserId)
-
-    // 세션 쿠키로 설정 (maxAge 생략 → 브라우저 닫으면 삭제)
-    const response = NextResponse.json({ verified: true })
+    const mfaToken = await generateMfaToken(userId);
+    const response = NextResponse.json({ verified: true });
     response.cookies.set(MFA_COOKIE, mfaToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      // maxAge 없음 → 세션 쿠키 (브라우저 닫으면 삭제)
-    })
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    });
 
-    return response
-  } catch (err) {
-    console.error('[verify-login-otp] error:', err)
-    return NextResponse.json(
-      { error: 'OTP 검증 중 오류가 발생했습니다.' },
-      { status: 500 }
-    )
+    return response;
+  } catch (error) {
+    return apiError(error, 500, "OTP 검증 중 오류가 발생했습니다.", request);
   }
 }

@@ -32,7 +32,7 @@ async function createZip(files: Array<{ name: string; data: Uint8Array }>): Prom
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/settlement/generate-bulk')
+  const limited = await rateLimitAuth(ip, '/api/settlement/generate-bulk')
   if (limited) return limited
 
   const authResult = await authenticateRequest(request)

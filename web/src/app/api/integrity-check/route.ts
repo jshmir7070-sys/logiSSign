@@ -20,7 +20,7 @@ export const maxDuration = 300
 /** POST: 무결성 검사 실행 */
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/integrity-check')
+  const limited = await rateLimitAuth(ip, '/api/integrity-check')
   if (limited) return limited
 
   const supabase = await createServerSupabaseClient()

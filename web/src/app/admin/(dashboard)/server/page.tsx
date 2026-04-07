@@ -1,81 +1,83 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import Badge from '@/components/shared/Badge';
+import { useEffect, useState } from 'react'
+import Badge from '@/components/shared/Badge'
 
 interface ServiceHealth {
-  name: string;
-  status: 'normal' | 'warning' | 'error';
-  detail: string;
+  name: string
+  status: 'normal' | 'warning' | 'error'
+  detail: string
 }
 
 interface SentryIssueSummary {
-  id: string;
-  title: string;
-  level: string;
-  count: number;
-  lastSeen: string;
-  permalink: string;
-  project: string;
+  id: string
+  title: string
+  level: string
+  count: number
+  lastSeen: string
+  permalink: string
+  project: string
 }
 
 interface ServerStatusResponse {
-  services: ServiceHealth[];
-  dbStats: { tables: number; totalRows: number };
-  incidents: { id: string; event_type: string; severity: string; resource: string | null; created_at: string }[];
+  services: ServiceHealth[]
+  dbStats: { tables: number; totalRows: number }
+  incidents: { id: string; event_type: string; severity: string; resource: string | null; created_at: string }[]
   opsSummary: {
-    failedPayments: number;
-    pendingVirtualAccounts: number;
-    pendingContracts: number;
-    pendingDocuments: number;
-  };
-  recentPaymentFailures: { id: string; title: string; created_at: string; agency_name: string }[];
-  recentSentryIssues: SentryIssueSummary[];
-  sentryConfigured: boolean;
+    failedPayments: number
+    pendingVirtualAccounts: number
+    pendingContracts: number
+    pendingDocuments: number
+  }
+  recentPaymentFailures: { id: string; title: string; created_at: string; agency_name: string }[]
+  recentSentryIssues: SentryIssueSummary[]
+  sentryConfigured: boolean
 }
 
 const STATUS_COLOR: Record<ServiceHealth['status'], string> = {
   normal: 'text-tertiary',
   warning: 'text-amber-600',
   error: 'text-error',
-};
+}
 
 const STATUS_LABEL: Record<ServiceHealth['status'], string> = {
   normal: '정상',
   warning: '주의',
   error: '장애',
-};
+}
 
 export default function ServerPage() {
-  const [data, setData] = useState<ServerStatusResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<ServerStatusResponse | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
-      setLoading(true);
+      setLoading(true)
       try {
-        const response = await fetch('/api/admin/server-status');
-        const payload = await response.json();
+        const response = await fetch('/api/admin/server-status')
+        const payload = await response.json()
         if (!response.ok) {
-          throw new Error(payload.error || '서버 상태를 불러오지 못했습니다.');
+          throw new Error(payload.error || '서버 상태를 불러오지 못했습니다.')
         }
-        setData(payload);
+        setData(payload)
       } catch (error) {
-        alert(error instanceof Error ? error.message : '서버 상태를 불러오지 못했습니다.');
+        alert(error instanceof Error ? error.message : '서버 상태를 불러오지 못했습니다.')
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
     }
 
-    void load();
-  }, []);
+    void load()
+  }, [])
 
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="font-headline text-[26px] font-bold tracking-tight text-on-surface">서버 상태</h2>
+        <h2 className="font-headline text-[26px] font-bold tracking-tight text-on-surface">
+          서버 상태
+        </h2>
         <p className="mt-1 text-[14px] text-on-surface-variant">
-          핵심 서비스 운영 상태와 최근 장애 징후, 보안 이벤트를 한 화면에서 확인합니다.
+          주요 서비스의 운영 상태와 최근 장애 징후, 보안 이벤트를 한 화면에서 확인합니다.
         </p>
       </div>
 
@@ -125,7 +127,7 @@ export default function ServerPage() {
           </div>
           {data?.dbStats ? (
             <p className="mt-4 text-sm text-on-surface-variant">
-              집계 기준 테이블 {data.dbStats.tables}개, 총 레코드 {data.dbStats.totalRows.toLocaleString()}건
+              집계 기준 테이블 {data.dbStats.tables}개 · 총 레코드 {data.dbStats.totalRows.toLocaleString()}건
             </p>
           ) : null}
         </div>
@@ -136,7 +138,7 @@ export default function ServerPage() {
             <p className="mt-1 text-sm text-on-surface-variant">
               {data?.sentryConfigured
                 ? '최근 미해결 오류를 기준으로 확인합니다.'
-                : 'Sentry 설정이 연결되지 않았습니다.'}
+                : 'Sentry 설정이 아직 연결되지 않았습니다.'}
             </p>
           </div>
 
@@ -184,5 +186,5 @@ export default function ServerPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }

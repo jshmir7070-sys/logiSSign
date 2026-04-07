@@ -10,7 +10,7 @@ const supabaseAdmin = createAdminSupabaseClient()
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/documents/sign/finalize')
+  const limited = await rateLimitAuth(ip, '/api/documents/sign/finalize')
   if (limited) return limited
 
   const { auth, error: authError } = await authenticateRequest(request)

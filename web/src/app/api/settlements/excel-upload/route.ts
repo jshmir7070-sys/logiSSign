@@ -24,7 +24,7 @@ const supabaseAdmin = createClient(
  */
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/settlements/excel-upload')
+  const limited = await rateLimitAuth(ip, '/api/settlements/excel-upload')
   if (limited) return limited
 
   const { auth, error: authError } = await authenticateRequest(request)

@@ -68,15 +68,15 @@ const PLAN_META: Array<{
   description: string
 }> = [
   { id: 'basic', name: 'Basic', description: '기사 30명 규모에 적합한 기본 운영 플랜입니다.' },
-  { id: 'standard', name: 'Standard', description: '기사/정산/알림을 함께 운영하는 중형 플랜입니다.' },
+  { id: 'standard', name: 'Standard', description: '기사, 정산, 알림을 함께 운영하는 중형 플랜입니다.' },
   { id: 'pro', name: 'Pro', description: '대량 처리와 확장 운영에 적합한 고급 플랜입니다.' },
-  { id: 'enterprise', name: 'Enterprise', description: '대규모 운영과 별도 협의가 필요한 플랜입니다.' },
+  { id: 'enterprise', name: 'Enterprise', description: '대규모 운영과 별도 협의가 필요한 전용 플랜입니다.' },
 ]
 
 const BILLING_CYCLE_OPTIONS: { value: BillingCycle; label: string; badge?: string }[] = [
   { value: 'monthly', label: '월 결제' },
-  { value: '1year', label: '1년 선결제', badge: '20% 할인' },
-  { value: '2year', label: '2년 선결제', badge: '30% 할인' },
+  { value: '1year', label: '1년 연간권', badge: '20% 할인' },
+  { value: '2year', label: '2년 연간권', badge: '30% 할인' },
 ]
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
@@ -348,7 +348,7 @@ export default function BillingTab() {
 
   async function handleSwitchToPoint() {
     const confirmed = window.confirm(
-      '포인트형으로 전환하면 이후 전자계약/정산 생성은 포인트 차감 방식으로만 사용합니다. 계속하시겠습니까?',
+      '포인트형으로 전환하면 이후 전자계약과 정산 생성은 포인트 차감 방식으로만 사용할 수 있습니다. 계속하시겠습니까?',
     )
     if (!confirmed) return
 
@@ -453,7 +453,7 @@ export default function BillingTab() {
               </p>
               <p className="mt-2 text-xs text-on-surface-variant">
                 {planType === 'subscription'
-                  ? '구독형 플랜은 포인트를 차감하지 않고 플랜 한도 안에서 사용합니다.'
+                  ? '구독형 플랜은 포인트를 차감하지 않고 플랜 한도 내에서 사용합니다.'
                   : '포인트형은 사용한 기능만큼 포인트가 차감됩니다.'}
               </p>
             </div>
@@ -474,7 +474,7 @@ export default function BillingTab() {
               <p className="text-xs text-on-surface-variant">포인트 잔액</p>
               <p className="mt-2 text-xl font-bold text-on-surface">{fmtPoints(pointBalance?.balance ?? 0)}</p>
               <p className="mt-2 text-xs text-on-surface-variant">
-                플랜 사용 중이어도 기존 포인트는 유지되며 자동 차감되지 않습니다.
+                플랜 사용 중이더라도 기존 포인트는 유지되고 자동 차감되지 않습니다.
               </p>
             </div>
           </div>
@@ -483,7 +483,7 @@ export default function BillingTab() {
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
               <p className="text-sm font-bold text-amber-800">플랜 만료 예정 안내</p>
               <p className="mt-2 text-sm text-amber-700">
-                현재 플랜은 {expiryDays}일 뒤 만료됩니다. 만료 전에 카드 등록 상태와 다음 결제 일정을 확인해 주세요.
+                현재 플랜은 {expiryDays}일 후 만료됩니다. 만료 전에 카드 등록 상태와 다음 결제 일정을 확인해 주세요.
               </p>
             </div>
           ) : null}
@@ -570,8 +570,8 @@ export default function BillingTab() {
           <div className="rounded-2xl border border-primary/10 bg-primary/5 p-5">
             <p className="text-sm font-bold text-primary">구독형 플랜 결제 정책</p>
             <p className="mt-2 text-sm text-on-surface-variant">
-              구독형 플랜은 카드 결제만 사용할 수 있습니다. 포인트형에서 구독형으로 변경되면 기존 포인트는 그대로
-              유지되고, 구독 사용 중에는 포인트가 자동 차감되지 않습니다.
+              구독형 플랜은 카드 결제만 사용할 수 있습니다. 포인트형에서 구독형으로 변경되어도 기존 포인트는
+              그대로 유지되고, 구독 사용 중에는 포인트가 자동 차감되지 않습니다.
             </p>
           </div>
 
@@ -605,8 +605,8 @@ export default function BillingTab() {
                     {billingCycle === 'monthly'
                       ? '월 단위 결제'
                       : billingCycle === '1year'
-                        ? '1년 선결제'
-                        : '2년 선결제'}
+                        ? '1년 연간권'
+                        : '2년 연간권'}
                   </p>
                   <button
                     type="button"

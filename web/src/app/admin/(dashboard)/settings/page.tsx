@@ -1,6 +1,6 @@
-'use client';
+'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   DEFAULT_ADMIN_EMAIL_TEMPLATES,
   DEFAULT_ADMIN_GENERAL_SETTINGS,
@@ -8,36 +8,36 @@ import {
   type AdminEmailTemplate,
   type AdminGeneralSettings,
   type AdminPaymentSettings,
-} from '@/lib/admin-settings';
+} from '@/lib/admin-settings'
 import {
   EASY_PAY_PROVIDER_OPTIONS,
   PAYMENT_METHOD_OPTIONS,
   VIRTUAL_ACCOUNT_BANK_OPTIONS,
-} from '@/lib/payment-methods';
-import { FEATURE_LABELS } from '@/lib/plan-limits';
+} from '@/lib/payment-methods'
+import { FEATURE_LABELS } from '@/lib/plan-limits'
 
 interface PlanConfig {
-  plan: string;
-  label: string;
-  price_monthly: number;
-  max_drivers: number | null;
-  max_admin_accounts: number;
-  max_default_templates: number;
-  max_upload_templates: number;
-  features: Record<string, boolean>;
-  description: string | null;
-  sort_order: number;
+  plan: string
+  label: string
+  price_monthly: number
+  max_drivers: number | null
+  max_admin_accounts: number
+  max_default_templates: number
+  max_upload_templates: number
+  features: Record<string, boolean>
+  description: string | null
+  sort_order: number
 }
 
-type TabId = 'general' | 'plans' | 'payment' | 'email';
+type TabId = 'general' | 'plans' | 'payment' | 'email'
 
 const INPUT_CLASS =
-  'h-10 w-full rounded-xl border border-outline-variant/20 bg-surface px-3 text-sm text-on-surface';
+  'h-10 w-full rounded-xl border border-outline-variant/20 bg-surface px-3 text-sm text-on-surface'
 const TEXTAREA_CLASS =
-  'min-h-[120px] w-full rounded-xl border border-outline-variant/20 bg-surface px-3 py-3 text-sm text-on-surface';
+  'min-h-[120px] w-full rounded-xl border border-outline-variant/20 bg-surface px-3 py-3 text-sm text-on-surface'
 
 function formatKRW(value: number): string {
-  return `₩${value.toLocaleString('ko-KR')}`;
+  return `₩${value.toLocaleString('ko-KR')}`
 }
 
 function FeatureCheckbox({
@@ -45,144 +45,146 @@ function FeatureCheckbox({
   label,
   onChange,
 }: {
-  checked: boolean;
-  label: string;
-  onChange: (next: boolean) => void;
+  checked: boolean
+  label: string
+  onChange: (next: boolean) => void
 }) {
   return (
     <label className="flex items-center gap-2 rounded-lg bg-surface-container-low px-3 py-2 text-sm text-on-surface">
       <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
       <span>{label}</span>
     </label>
-  );
+  )
 }
 
 export default function AdminSettingsPage() {
-  const [activeTab, setActiveTab] = useState<TabId>('general');
-  const [loading, setLoading] = useState(true);
-  const [plansLoading, setPlansLoading] = useState(false);
-  const [savingSection, setSavingSection] = useState<TabId | null>(null);
+  const [activeTab, setActiveTab] = useState<TabId>('general')
+  const [loading, setLoading] = useState(true)
+  const [plansLoading, setPlansLoading] = useState(false)
+  const [savingSection, setSavingSection] = useState<TabId | null>(null)
 
-  const [general, setGeneral] = useState<AdminGeneralSettings>(DEFAULT_ADMIN_GENERAL_SETTINGS);
-  const [payment, setPayment] = useState<AdminPaymentSettings>(DEFAULT_ADMIN_PAYMENT_SETTINGS);
-  const [emailTemplates, setEmailTemplates] = useState<AdminEmailTemplate[]>(DEFAULT_ADMIN_EMAIL_TEMPLATES);
+  const [general, setGeneral] = useState<AdminGeneralSettings>(DEFAULT_ADMIN_GENERAL_SETTINGS)
+  const [payment, setPayment] = useState<AdminPaymentSettings>(DEFAULT_ADMIN_PAYMENT_SETTINGS)
+  const [emailTemplates, setEmailTemplates] = useState<AdminEmailTemplate[]>(DEFAULT_ADMIN_EMAIL_TEMPLATES)
 
-  const [plans, setPlans] = useState<PlanConfig[]>([]);
-  const [editingPlan, setEditingPlan] = useState<PlanConfig | null>(null);
-  const [savingPlan, setSavingPlan] = useState(false);
+  const [plans, setPlans] = useState<PlanConfig[]>([])
+  const [editingPlan, setEditingPlan] = useState<PlanConfig | null>(null)
+  const [savingPlan, setSavingPlan] = useState(false)
 
   const tabs: Array<{ id: TabId; label: string }> = [
     { id: 'general', label: '일반' },
     { id: 'plans', label: '플랜 관리' },
     { id: 'payment', label: '결제 설정' },
     { id: 'email', label: '이메일 템플릿' },
-  ];
+  ]
 
   const loadSettings = useCallback(async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const response = await fetch('/api/admin/settings');
+      const response = await fetch('/api/admin/settings')
       if (!response.ok) {
-        throw new Error('설정을 불러오지 못했습니다.');
+        throw new Error('설정을 불러오지 못했습니다.')
       }
-      const payload = await response.json();
-      setGeneral(payload.general ?? DEFAULT_ADMIN_GENERAL_SETTINGS);
-      setPayment(payload.payment ?? DEFAULT_ADMIN_PAYMENT_SETTINGS);
-      setEmailTemplates(payload.emailTemplates ?? DEFAULT_ADMIN_EMAIL_TEMPLATES);
+      const payload = await response.json()
+      setGeneral(payload.general ?? DEFAULT_ADMIN_GENERAL_SETTINGS)
+      setPayment(payload.payment ?? DEFAULT_ADMIN_PAYMENT_SETTINGS)
+      setEmailTemplates(payload.emailTemplates ?? DEFAULT_ADMIN_EMAIL_TEMPLATES)
     } catch (error) {
-      alert(error instanceof Error ? error.message : '설정을 불러오지 못했습니다.');
+      alert(error instanceof Error ? error.message : '설정을 불러오지 못했습니다.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, []);
+  }, [])
 
   const loadPlans = useCallback(async () => {
-    setPlansLoading(true);
+    setPlansLoading(true)
     try {
-      const response = await fetch('/api/admin/plan-configs');
+      const response = await fetch('/api/admin/plan-configs')
       if (!response.ok) {
-        throw new Error('플랜 설정을 불러오지 못했습니다.');
+        throw new Error('플랜 설정을 불러오지 못했습니다.')
       }
-      const payload = await response.json();
-      setPlans(payload.data ?? []);
+      const payload = await response.json()
+      setPlans(payload.data ?? [])
     } catch (error) {
-      alert(error instanceof Error ? error.message : '플랜 설정을 불러오지 못했습니다.');
+      alert(error instanceof Error ? error.message : '플랜 설정을 불러오지 못했습니다.')
     } finally {
-      setPlansLoading(false);
+      setPlansLoading(false)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    void loadSettings();
-  }, [loadSettings]);
+    void loadSettings()
+  }, [loadSettings])
 
   useEffect(() => {
     if (activeTab === 'plans' && plans.length === 0 && !plansLoading) {
-      void loadPlans();
+      void loadPlans()
     }
-  }, [activeTab, loadPlans, plans.length, plansLoading]);
+  }, [activeTab, loadPlans, plans.length, plansLoading])
 
   const saveSection = useCallback(
     async (
       tab: Extract<TabId, 'general' | 'payment' | 'email'>,
       value: AdminGeneralSettings | AdminPaymentSettings | AdminEmailTemplate[],
     ) => {
-      setSavingSection(tab);
+      setSavingSection(tab)
       try {
-        const section = tab === 'email' ? 'email_templates' : tab;
+        const section = tab === 'email' ? 'email_templates' : tab
         const response = await fetch('/api/admin/settings', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ section, value }),
-        });
-        const payload = await response.json();
+        })
+        const payload = await response.json()
         if (!response.ok) {
-          throw new Error(payload.error || '설정을 저장하지 못했습니다.');
+          throw new Error(payload.error || '설정을 저장하지 못했습니다.')
         }
-        alert('설정을 저장했습니다.');
+        alert('설정을 저장했습니다.')
       } catch (error) {
-        alert(error instanceof Error ? error.message : '설정을 저장하지 못했습니다.');
+        alert(error instanceof Error ? error.message : '설정을 저장하지 못했습니다.')
       } finally {
-        setSavingSection(null);
+        setSavingSection(null)
       }
     },
     [],
-  );
+  )
 
   const handleSavePlan = useCallback(async () => {
-    if (!editingPlan) return;
+    if (!editingPlan) return
 
-    setSavingPlan(true);
+    setSavingPlan(true)
     try {
       const response = await fetch('/api/admin/plan-configs', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editingPlan),
-      });
-      const payload = await response.json();
+      })
+      const payload = await response.json()
       if (!response.ok) {
-        throw new Error(payload.error || '플랜 저장에 실패했습니다.');
+        throw new Error(payload.error || '플랜 저장에 실패했습니다.')
       }
-      alert('플랜 설정을 저장했습니다.');
-      setEditingPlan(null);
-      await loadPlans();
+      alert('플랜 설정을 저장했습니다.')
+      setEditingPlan(null)
+      await loadPlans()
     } catch (error) {
-      alert(error instanceof Error ? error.message : '플랜 저장에 실패했습니다.');
+      alert(error instanceof Error ? error.message : '플랜 저장에 실패했습니다.')
     } finally {
-      setSavingPlan(false);
+      setSavingPlan(false)
     }
-  }, [editingPlan, loadPlans]);
+  }, [editingPlan, loadPlans])
 
-  const featureKeys = useMemo(() => Object.keys(FEATURE_LABELS), []);
+  const featureKeys = useMemo(() => Object.keys(FEATURE_LABELS), [])
 
   if (loading) {
-    return <p className="py-10 text-sm text-on-surface-variant">설정을 불러오는 중입니다...</p>;
+    return <p className="py-10 text-sm text-on-surface-variant">설정을 불러오는 중입니다...</p>
   }
 
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="font-headline text-[26px] font-bold tracking-tight text-on-surface">관리자 설정</h2>
+        <h2 className="font-headline text-[26px] font-bold tracking-tight text-on-surface">
+          관리자 설정
+        </h2>
         <p className="mt-1 text-[14px] text-on-surface-variant">
           플랫폼 기본 정보, 플랜 정책, 결제 수단, 안내 템플릿을 운영 기준으로 관리합니다.
         </p>
@@ -289,13 +291,13 @@ export default function AdminSettingsPage() {
           <div>
             <h3 className="font-headline text-[16px] font-bold text-on-surface">결제 정책</h3>
             <p className="mt-1 text-sm text-on-surface-variant">
-              사용자 웹에서 보이는 결제 수단과 구독 만료 알림 정책을 여기에서 결정합니다.
+              사용자 화면에 보이는 결제 수단과 구독 만료 알림 정책을 여기에서 결정합니다.
             </p>
           </div>
 
           <div className="grid gap-6 xl:grid-cols-3">
             <div>
-              <p className="mb-2 text-xs font-medium text-on-surface-variant">사용 가능 결제 수단</p>
+              <p className="mb-2 text-xs font-medium text-on-surface-variant">사용 가능한 결제 수단</p>
               <div className="space-y-2">
                 {PAYMENT_METHOD_OPTIONS.map((method) => (
                   <label key={method.value} className="flex items-center gap-2 rounded-xl bg-surface-container-low p-3">
@@ -321,7 +323,7 @@ export default function AdminSettingsPage() {
             </div>
 
             <div>
-              <p className="mb-2 text-xs font-medium text-on-surface-variant">간편결제 제공자</p>
+              <p className="mb-2 text-xs font-medium text-on-surface-variant">간편결제 제공사</p>
               <div className="space-y-2">
                 {EASY_PAY_PROVIDER_OPTIONS.map((provider) => (
                   <label key={provider.value} className="flex items-center gap-2 rounded-xl bg-surface-container-low p-3">
@@ -446,7 +448,7 @@ export default function AdminSettingsPage() {
                     setPayment((previous) => ({ ...previous, subscriptionCardOnly: event.target.checked }))
                   }
                 />
-                <span>구독형은 카드만 허용</span>
+                <span>구독형 카드 전용</span>
               </label>
               <label className="flex items-center gap-2 text-sm text-on-surface">
                 <input
@@ -751,5 +753,5 @@ export default function AdminSettingsPage() {
         </div>
       ) : null}
     </div>
-  );
+  )
 }

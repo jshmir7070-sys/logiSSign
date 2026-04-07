@@ -1,40 +1,32 @@
-import { createAdminSupabaseClient } from '@/lib/supabase'
-
-/**
- * 보안 이벤트 로깅 모듈
- * 인증 실패, 권한 거부, 데이터 변경 등을 security_logs 테이블에 기록
- */
+import { createAdminSupabaseClient } from "@/lib/supabase";
+import { logStructured } from "@/lib/request-context";
 
 export type SecurityEventType =
-  | 'auth_failure'        // 인증 실패
-  | 'auth_success'        // 인증 성공 (로그인)
-  | 'permission_denied'   // 권한 거부
-  | 'cron_access'         // CRON 접근 (성공/실패)
-  | 'data_modification'   // 민감 데이터 변경
-  | 'pii_access'          // PII 조회 (은행계좌, 주민번호, 연락처 등)
-  | 'rate_limit_hit'      // Rate limit 초과
-  | 'integrity_failure'   // 무결성 검사 실패
-  | 'suspicious_activity' // 의심스러운 활동
+  | "auth_failure"
+  | "auth_success"
+  | "permission_denied"
+  | "cron_access"
+  | "data_modification"
+  | "pii_access"
+  | "rate_limit_hit"
+  | "integrity_failure"
+  | "suspicious_activity";
 
 interface SecurityLogEntry {
-  event_type: SecurityEventType
-  actor_id?: string       // user ID (있으면)
-  actor_ip?: string
-  actor_user_agent?: string
-  resource?: string       // 대상 리소스 (테이블/엔드포인트)
-  resource_id?: string    // 대상 ID
-  details?: Record<string, unknown>
-  severity: 'info' | 'warning' | 'critical'
+  event_type: SecurityEventType;
+  actor_id?: string;
+  actor_ip?: string;
+  actor_user_agent?: string;
+  resource?: string;
+  resource_id?: string;
+  details?: Record<string, unknown>;
+  severity: "info" | "warning" | "critical";
 }
 
-/**
- * 보안 이벤트 기록
- * 실패해도 주요 로직에 영향 없음 (fire-and-forget)
- */
 export async function logSecurityEvent(entry: SecurityLogEntry): Promise<void> {
   try {
-    const supabase = createAdminSupabaseClient()
-    await supabase.from('security_logs').insert({
+    const supabase = createAdminSupabaseClient();
+    await supabase.from("security_logs").insert({
       event_type: entry.event_type,
       actor_id: entry.actor_id ?? null,
       actor_ip: entry.actor_ip ?? null,
@@ -43,95 +35,89 @@ export async function logSecurityEvent(entry: SecurityLogEntry): Promise<void> {
       resource_id: entry.resource_id ?? null,
       details: entry.details ?? {},
       severity: entry.severity,
-    })
-  } catch {
-    // 로깅 실패는 주요 로직에 영향 없음
-    console.error('[SecurityLog] 기록 실패:', entry.event_type)
+    });
+  } catch (error) {
+    logStructured("error", "security_log_write_failed", {
+      eventType: entry.event_type,
+      resource: entry.resource,
+      resourceId: entry.resource_id,
+      message: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 
-// ── 편의 함수 ──
-
 export function logAuthFailure(ip: string, endpoint: string, reason: string) {
   return logSecurityEvent({
-    event_type: 'auth_failure',
+    event_type: "auth_failure",
     actor_ip: ip,
     resource: endpoint,
     details: { reason },
-    severity: 'warning',
-  })
+    severity: "warning",
+  });
 }
 
 export function logPermissionDenied(userId: string, ip: string, endpoint: string) {
   return logSecurityEvent({
-    event_type: 'permission_denied',
+    event_type: "permission_denied",
     actor_id: userId,
     actor_ip: ip,
     resource: endpoint,
-    severity: 'warning',
-  })
+    severity: "warning",
+  });
 }
 
 export function logRateLimitHit(ip: string, endpoint: string) {
   return logSecurityEvent({
-    event_type: 'rate_limit_hit',
+    event_type: "rate_limit_hit",
     actor_ip: ip,
     resource: endpoint,
-    severity: 'warning',
-  })
+    severity: "warning",
+  });
 }
 
 export function logIntegrityFailure(contractId: string, reasons: string[]) {
   return logSecurityEvent({
-    event_type: 'integrity_failure',
-    resource: 'contracts',
+    event_type: "integrity_failure",
+    resource: "contracts",
     resource_id: contractId,
     details: { reasons },
-    severity: 'critical',
-  })
+    severity: "critical",
+  });
 }
 
-/**
- * PII 접근 기록 (은행계좌, 주민번호, 연락처 등)
- * 조회/수정 시 호출하여 접근 추적
- */
 export function logPiiAccess(opts: {
-  actorId: string
-  actorIp?: string
-  resource: string        // 테이블명 (drivers, agencies 등)
-  resourceId: string      // 대상 row ID
-  fields: string[]        // 접근한 PII 필드명 (bank_account, phone 등)
-  action: 'read' | 'update'
+  actorId: string;
+  actorIp?: string;
+  resource: string;
+  resourceId: string;
+  fields: string[];
+  action: "read" | "update";
 }) {
   return logSecurityEvent({
-    event_type: 'pii_access',
+    event_type: "pii_access",
     actor_id: opts.actorId,
     actor_ip: opts.actorIp,
     resource: opts.resource,
     resource_id: opts.resourceId,
     details: { fields: opts.fields, action: opts.action },
-    severity: 'info',
-  })
+    severity: "info",
+  });
 }
 
-/**
- * 민감 데이터 변경 기록
- * 은행계좌, 단가, 계약 조건 등 변경 시 호출
- */
 export function logDataModification(opts: {
-  actorId: string
-  actorIp?: string
-  resource: string
-  resourceId: string
-  changes: Record<string, { before: unknown; after: unknown }>
+  actorId: string;
+  actorIp?: string;
+  resource: string;
+  resourceId: string;
+  changes: Record<string, { before: unknown; after: unknown }>;
 }) {
   return logSecurityEvent({
-    event_type: 'data_modification',
+    event_type: "data_modification",
     actor_id: opts.actorId,
     actor_ip: opts.actorIp,
     resource: opts.resource,
     resource_id: opts.resourceId,
     details: { changes: opts.changes },
-    severity: 'warning',
-  })
+    severity: "warning",
+  });
 }

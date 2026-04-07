@@ -201,7 +201,7 @@ async function sendPushNotification(driverId: string, token: string): Promise<bo
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/settlements/send')
+  const limited = await rateLimitAuth(ip, '/api/settlements/send')
   if (limited) return limited
 
   const { auth, error: authError } = await authenticateRequest(request)

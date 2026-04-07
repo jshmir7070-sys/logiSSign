@@ -32,7 +32,7 @@ function pickLatestByAgency(rows: Array<Record<string, unknown>>) {
 
 export async function GET(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/admin/agencies')
+  const limited = await rateLimitAuth(ip, '/api/admin/agencies')
   if (limited) return limited
 
   const { auth, error } = await authenticateAdmin(request)

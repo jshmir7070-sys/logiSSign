@@ -18,7 +18,7 @@ import { getClientIp } from '@/lib/get-ip'
  */
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/ai/extract-document')
+  const limited = await rateLimitAuth(ip, '/api/ai/extract-document')
   if (limited) return limited
 
   const { auth, error: authError } = await authenticateAdmin(request)

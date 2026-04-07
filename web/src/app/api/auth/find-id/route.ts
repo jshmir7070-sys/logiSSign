@@ -51,7 +51,7 @@ function normalizePhone(phone: string): string {
 export async function POST(request: NextRequest) {
   // Rate limit
   const ip = getClientIp(request)
-  const limited = rateLimitPublic(ip, 'find-id')
+  const limited = await rateLimitPublic(ip, 'find-id')
   if (limited) return limited
 
   try {

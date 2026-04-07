@@ -18,7 +18,7 @@ export const maxDuration = 60
 /** POST /api/contracts/signed-pdf — 서명 완료 계약서 PDF 생성 */
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/contracts/signed-pdf')
+  const limited = await rateLimitAuth(ip, '/api/contracts/signed-pdf')
   if (limited) return limited
 
   const { auth, error } = await authenticateRequest(request)

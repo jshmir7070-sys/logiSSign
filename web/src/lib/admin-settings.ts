@@ -109,8 +109,8 @@ export const DEFAULT_ADMIN_EMAIL_TEMPLATES: AdminEmailTemplate[] = [
   {
     key: 'subscription_expiry_notice',
     name: '플랜 만료 안내',
-    subject: '이용 중인 플랜 만료일이 가까워지고 있습니다.',
-    body: '안녕하세요.\n이용 중인 플랜의 만료일이 가까워지고 있습니다. 결제 관리에서 카드 등록 상태와 다음 결제 일정을 확인해 주세요.',
+    subject: '이용 중인 플랜의 만료일이 가까워졌습니다.',
+    body: '안녕하세요.\n이용 중인 플랜의 만료일이 가까워졌습니다. 결제 관리에서 카드 등록 상태와 다음 결제 일정을 확인해 주세요.',
     isActive: true,
   },
 ]

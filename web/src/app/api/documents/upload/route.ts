@@ -27,7 +27,7 @@ const ALLOWED_EXTENSIONS = new Set(['.pdf', '.png', '.jpg', '.jpeg', '.doc', '.d
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/documents/upload')
+  const limited = await rateLimitAuth(ip, '/api/documents/upload')
   if (limited) return limited
 
   const { auth, error: authError } = await authenticateRequest(request)

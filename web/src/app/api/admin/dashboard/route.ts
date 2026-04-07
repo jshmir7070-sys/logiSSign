@@ -26,7 +26,7 @@ function monthLabel(key: string): string {
 
 export async function GET(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/admin/dashboard')
+  const limited = await rateLimitAuth(ip, '/api/admin/dashboard')
   if (limited) return limited
 
   const { auth, error } = await authenticateAdmin(request)

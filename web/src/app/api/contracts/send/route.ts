@@ -242,7 +242,7 @@ async function resolveSenderBindingData(agencyId: string): Promise<Record<string
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/contracts/send')
+  const limited = await rateLimitAuth(ip, '/api/contracts/send')
   if (limited) return limited
 
   const { auth, error: authError } = await authenticateRequest(request)

@@ -24,7 +24,7 @@ async function getExistingPaymentOrder(paymentId: string) {
 
 export async function GET(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/points')
+  const limited = await rateLimitAuth(ip, '/api/points')
   if (limited) return limited
 
   const { auth, error: authError } = await authenticateRequest(request)
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/points')
+  const limited = await rateLimitAuth(ip, '/api/points')
   if (limited) return limited
 
   const { auth, error: authError } = await authenticateRequest(request)

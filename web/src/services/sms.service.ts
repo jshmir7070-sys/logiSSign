@@ -1,6 +1,6 @@
 /**
  * Solapi SMS 발송 서비스
- * 사용처:
+ * 사용처
  * - 계약서 서명 요청 알림
  * - 정산서 발행 알림
  * - 문서 전송 알림
@@ -164,6 +164,6 @@ export async function sendRenewalSms(
 ): Promise<SmsResult> {
   return sendSms({
     to: driverPhone,
-    text: `[로지싸인] ${driverName}님 계약 만료일이 ${contractEndDate}로 다가왔습니다. 갱신 관련 문서를 앱에서 확인해 주세요.`,
+    text: `[로지싸인] ${driverName}님의 계약 만료일이 ${contractEndDate}로 다가오고 있습니다. 갱신 관련 문서를 앱에서 확인해 주세요.`,
   })
 }

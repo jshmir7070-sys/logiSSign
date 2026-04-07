@@ -51,7 +51,7 @@ type PlainRecord = Record<string, unknown>
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/contracts/bind')
+  const limited = await rateLimitAuth(ip, '/api/contracts/bind')
   if (limited) return limited
 
   const { auth, error: authError } = await authenticateRequest(request)

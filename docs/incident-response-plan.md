@@ -1,70 +1,63 @@
-# logiSSign 침해사고 대응계획
-> 버전: 1.0 | 시행일: 2026-04-04
+# logiSSign Incident Response Plan
 
----
+Version: 2.1  
+Effective date: 2026-04-07
 
-## 1. 목적
-개인정보 유출, 해킹, 서비스 장애 등 침해사고 발생 시 신속하고 체계적으로 대응하여 피해를 최소화한다.
+## 1. Purpose
 
-## 2. 대응 단계
+This document defines how to detect, classify, contain, recover from, and document incidents such as data exposure, account compromise, service outage, and payment failure.
 
-### 2.1 탐지 (Detection)
-| 탐지 수단 | 모니터링 대상 | 알림 방식 |
-|----------|-------------|----------|
-| Sentry | 서버/클라이언트 에러 | 실시간 이메일 |
-| security_logs | 인증 실패, 권한 위반, PII 접근 | DB 조회 |
-| Supabase Dashboard | DB 부하, 스토리지 이상 | 수동 점검 |
-| UptimeRobot | /api/health 상태 | SMS/이메일 |
-| CRON integrity-check | 데이터 무결성 | 주 1회 자동 |
+## 2. Detection channels
 
-### 2.2 분류 (Classification)
-| 등급 | 기준 | 대응 시간 |
-|------|------|----------|
-| **P1 (긴급)** | 개인정보 유출, DB 침투, 서비스 전면 장애 | 1시간 이내 |
-| **P2 (높음)** | 특정 기능 장애, 결제 오류, 인증 장애 | 4시간 이내 |
-| **P3 (보통)** | 성능 저하, 부분 기능 오류 | 24시간 이내 |
-| **P4 (낮음)** | UI 버그, 비핵심 기능 오류 | 72시간 이내 |
+- Sentry for runtime errors and exceptions
+- `security_logs` for auth failures, permission violations, PII access, and rate limit events
+- `/api/health` for baseline service health
+- GitHub Actions for dependency audit and backup workflow failures
 
-### 2.3 대응 (Response)
-#### P1 긴급 대응 절차
-1. **즉시 조치** (0~1시간)
-   - 해당 서비스/API 격리 (Vercel 배포 롤백)
-   - Supabase RLS 정책 강화 (전체 읽기 차단)
-   - 영향 범위 파악 (security_logs 분석)
+## 3. Severity levels
 
-2. **원인 분석** (1~4시간)
-   - 서버 로그 분석 (Sentry, Supabase Logs)
-   - 침입 경로 파악
-   - 유출 데이터 범위 확인
+### P1
 
-3. **통보** (24시간 이내)
-   - 개인정보보호위원회 신고 (72시간 이내 법정 의무)
-   - 영향받은 이용자 개별 통지 (이메일/SMS)
-   - 내부 보고서 작성
+- personal data exposure
+- provider admin account compromise
+- major service outage
+- integrity issue in payment or settlement data
 
-4. **복구** (4~24시간)
-   - 취약점 패치 배포
-   - 영향받은 세션 전체 만료
-   - 비밀번호 강제 변경 (필요 시)
+### P2
 
-5. **사후 조치** (1~2주)
-   - 재발 방지 대책 수립
-   - 보안 점검 재실시
-   - 대응 보고서 작성 및 보관 (3년)
+- partial outage of a core feature
+- large spike in authentication or payment failures
+- repeated failures in contract or settlement delivery
 
-## 3. 연락처
-| 역할 | 담당 | 연락처 |
-|------|------|--------|
-| 보안 담당자 | 플랫폼 운영팀 | admin@logissign.com |
-| 개인정보보호 책임자 | 대표 | - |
-| 개인정보보호위원회 | 정부 | privacy.go.kr / 02-2100-3000 |
-| KISA 침해사고 신고 | 한국인터넷진흥원 | 118 / boho.or.kr |
+### P3
 
-## 4. 훈련 계획
-- 분기 1회: 침해사고 모의 훈련
-- 연 1회: 전체 대응 절차 리뷰 및 업데이트
+- limited feature degradation
+- performance issue recoverable through operational action
 
-## 5. 문서 이력
-| 날짜 | 버전 | 변경 사항 |
-|------|------|----------|
-| 2026-04-04 | 1.0 | 초기 작성 |
+## 4. Standard response flow
+
+1. receive and triage the incident
+2. estimate impact and affected scope
+3. contain or isolate the issue
+4. investigate the root cause
+5. apply remediation or rollback
+6. verify recovery
+7. write the incident report and follow-up items
+
+## 5. Immediate actions for P1
+
+- disable or isolate affected access paths
+- revoke or expire relevant sessions and tokens
+- preserve logs and evidence
+- review whether legal or regulatory notification is required
+
+## 6. Recovery targets
+
+- RPO: within 24 hours
+- RTO: within 4 hours
+
+## 7. Post-incident follow-up
+
+- add prevention tasks for the same root cause
+- add monitoring or tests if needed
+- update operational documents and runbooks

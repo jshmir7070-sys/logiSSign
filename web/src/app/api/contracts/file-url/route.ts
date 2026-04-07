@@ -19,7 +19,7 @@ function isFileType(value: string): value is FileType {
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/contracts/file-url')
+  const limited = await rateLimitAuth(ip, '/api/contracts/file-url')
   if (limited) return limited
 
   const { auth, error: authError } = await authenticateRequest(request)

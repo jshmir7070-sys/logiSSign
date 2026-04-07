@@ -134,7 +134,7 @@ async function createPointSubscription(agencyId: string) {
     .maybeSingle()
 
   if (existingError) {
-    throw new Error(`포인트 플랜 설정을 준비하지 못했습니다: ${existingError.message}`)
+    throw new Error(`포인트형 플랜 설정을 준비하지 못했습니다. ${existingError.message}`)
   }
 
   const payload = {
@@ -157,20 +157,20 @@ async function createPointSubscription(agencyId: string) {
       .eq('id', existing.id)
 
     if (error) {
-      throw new Error(`포인트 플랜 설정에 실패했습니다: ${error.message}`)
+      throw new Error(`포인트형 플랜 설정에 실패했습니다: ${error.message}`)
     }
     return
   }
 
   const { error } = await supabaseAdmin.from('subscriptions').insert(payload as never)
   if (error) {
-    throw new Error(`포인트 플랜 설정에 실패했습니다: ${error.message}`)
+    throw new Error(`포인트형 플랜 설정에 실패했습니다: ${error.message}`)
   }
 }
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitPublic(ip, '/api/auth/signup')
+  const limited = await rateLimitPublic(ip, '/api/auth/signup')
   if (limited) return limited
 
   try {
@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
     if (selectedPlan === 'enterprise') {
       return NextResponse.json(
         { error: 'Enterprise 플랜은 별도 상담 후 가입할 수 있습니다.' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
       if (existingAgency) {
         return NextResponse.json(
           { error: '이미 등록된 사업자등록번호입니다.' },
-          { status: 409 }
+          { status: 409 },
         )
       }
     }
@@ -227,7 +227,7 @@ export async function POST(request: NextRequest) {
     if (createUserResult.error || !createUserResult.data.user) {
       return NextResponse.json(
         { error: createUserResult.error?.message ?? '회원 계정을 생성하지 못했습니다.' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -319,7 +319,7 @@ export async function POST(request: NextRequest) {
     console.error('[Signup] Unexpected error:', error)
     return apiError(
       error instanceof Error ? error.message : '회원가입 처리 중 오류가 발생했습니다.',
-      500
+      500,
     )
   }
 }

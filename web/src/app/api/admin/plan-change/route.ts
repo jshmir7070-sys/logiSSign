@@ -18,7 +18,7 @@ const VALID_PLANS = ['free', 'basic', 'standard', 'pro', 'enterprise']
  */
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/admin/plan-change')
+  const limited = await rateLimitAuth(ip, '/api/admin/plan-change')
   if (limited) return limited
 
   const { auth, error } = await authenticateAdmin(request)

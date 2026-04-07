@@ -1,44 +1,44 @@
-'use client';
+'use client'
 
-import { useEffect, useMemo, useState } from 'react';
-import dynamic from 'next/dynamic';
-import KpiCard from '@/components/admin/KpiCard';
+import { useEffect, useMemo, useState } from 'react'
+import dynamic from 'next/dynamic'
+import KpiCard from '@/components/admin/KpiCard'
 
-const MrrChart = dynamic(() => import('@/components/admin/charts/MrrChart'), { ssr: false });
+const MrrChart = dynamic(() => import('@/components/admin/charts/MrrChart'), { ssr: false })
 const PlanDistribution = dynamic(() => import('@/components/admin/charts/PlanDistribution'), {
   ssr: false,
-});
+})
 
 interface DashboardResponse {
   summary: {
-    totalAgencies: number;
-    activeAgencies: number;
-    inactiveAgencies: number;
-    totalDrivers: number;
-    linkedDrivers: number;
-    pushEnabledDrivers: number;
-    totalContracts: number;
-    pendingContracts: number;
-    totalSettlements: number;
-    pendingSettlements: number;
-    mrrEstimate: number;
-    pendingPayments: number;
-    failedPayments: number;
-  };
-  planCounts: Record<string, number>;
-  mrrHistory: { month: string; mrr: number }[];
-  recentAgencies: { id: string; name: string; plan: string; status: string; created_at: string }[];
+    totalAgencies: number
+    activeAgencies: number
+    inactiveAgencies: number
+    totalDrivers: number
+    linkedDrivers: number
+    pushEnabledDrivers: number
+    totalContracts: number
+    pendingContracts: number
+    totalSettlements: number
+    pendingSettlements: number
+    mrrEstimate: number
+    pendingPayments: number
+    failedPayments: number
+  }
+  planCounts: Record<string, number>
+  mrrHistory: { month: string; mrr: number }[]
+  recentAgencies: { id: string; name: string; plan: string; status: string; created_at: string }[]
   recentPaymentOrders: {
-    id: string;
-    status: string;
-    title: string;
-    created_at: string;
-    agencies?: { name?: string }[] | { name?: string } | null;
-  }[];
+    id: string
+    status: string
+    title: string
+    created_at: string
+    agencies?: { name?: string }[] | { name?: string } | null
+  }[]
 }
 
 function formatKRW(value: number): string {
-  return `₩${value.toLocaleString('ko-KR')}`;
+  return `₩${value.toLocaleString('ko-KR')}`
 }
 
 function getCurrentDate() {
@@ -47,41 +47,41 @@ function getCurrentDate() {
     month: '2-digit',
     day: '2-digit',
     weekday: 'short',
-  });
+  })
 }
 
 export default function AdminDashboardPage() {
-  const [data, setData] = useState<DashboardResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<DashboardResponse | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
-      setLoading(true);
+      setLoading(true)
       try {
-        const response = await fetch('/api/admin/dashboard');
-        const payload = await response.json();
+        const response = await fetch('/api/admin/dashboard')
+        const payload = await response.json()
         if (!response.ok) {
-          throw new Error(payload.error || '관리자 대시보드를 불러오지 못했습니다.');
+          throw new Error(payload.error || '관리자 대시보드를 불러오지 못했습니다.')
         }
-        setData(payload);
+        setData(payload)
       } catch (error) {
-        alert(error instanceof Error ? error.message : '관리자 대시보드를 불러오지 못했습니다.');
+        alert(error instanceof Error ? error.message : '관리자 대시보드를 불러오지 못했습니다.')
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
     }
 
-    void load();
-  }, []);
+    void load()
+  }, [])
 
-  const summary = data?.summary;
+  const summary = data?.summary
 
   const churnRate = useMemo(() => {
-    const total = summary?.totalAgencies ?? 0;
-    const inactive = summary?.inactiveAgencies ?? 0;
-    if (total === 0) return '0.0';
-    return ((inactive / total) * 100).toFixed(1);
-  }, [summary?.inactiveAgencies, summary?.totalAgencies]);
+    const total = summary?.totalAgencies ?? 0
+    const inactive = summary?.inactiveAgencies ?? 0
+    if (total === 0) return '0.0'
+    return ((inactive / total) * 100).toFixed(1)
+  }, [summary?.inactiveAgencies, summary?.totalAgencies])
 
   const planDistributionData = useMemo(
     () =>
@@ -89,12 +89,14 @@ export default function AdminDashboardPage() {
         .filter(([, count]) => count > 0)
         .map(([plan, count]) => ({ name: plan.toUpperCase(), value: count })),
     [data?.planCounts],
-  );
+  )
 
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="font-headline text-[26px] font-bold tracking-tight text-on-surface">관리자 대시보드</h2>
+        <h2 className="font-headline text-[26px] font-bold tracking-tight text-on-surface">
+          관리자 대시보드
+        </h2>
         <p className="mt-1 text-[14px] text-on-surface-variant">{getCurrentDate()}</p>
       </div>
 
@@ -156,7 +158,7 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <div className="rounded-2xl bg-surface-container-lowest p-6 shadow-ambient">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-headline text-[16px] font-bold text-on-surface">최근 대리점</h3>
+            <h3 className="font-headline text-[16px] font-bold text-on-surface">최근 가입 대리점</h3>
           </div>
           <div className="space-y-3">
             {(data?.recentAgencies ?? []).map((agency) => (
@@ -202,5 +204,5 @@ export default function AdminDashboardPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }

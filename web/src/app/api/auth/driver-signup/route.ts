@@ -191,7 +191,7 @@ async function updateDriverUserMetadata(params: {
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitPublic(ip, '/api/auth/driver-signup')
+  const limited = await rateLimitPublic(ip, '/api/auth/driver-signup')
   if (limited) return limited
 
   try {

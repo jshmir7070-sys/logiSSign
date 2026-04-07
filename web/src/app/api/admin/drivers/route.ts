@@ -8,7 +8,7 @@ const supabaseAdmin = createAdminSupabaseClient()
 
 export async function GET(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/admin/drivers')
+  const limited = await rateLimitAuth(ip, '/api/admin/drivers')
   if (limited) return limited
 
   const { auth, error } = await authenticateAdmin(request)

@@ -15,7 +15,7 @@ const supabaseAdmin = createClient(
  */
 export async function GET(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/admin/plan-configs')
+  const limited = await rateLimitAuth(ip, '/api/admin/plan-configs')
   if (limited) return limited
 
   const { auth, error } = await authenticateAdmin(request)
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/admin/plan-configs')
+  const limited = await rateLimitAuth(ip, '/api/admin/plan-configs')
   if (limited) return limited
 
   const { auth, error } = await authenticateAdmin(request)

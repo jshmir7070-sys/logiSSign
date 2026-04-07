@@ -1,22 +1,73 @@
-import { NextResponse } from 'next/server'
+import { NextResponse } from "next/server";
+import { AppError, isAppError } from "@/lib/app-error";
+import { REQUEST_ID_HEADER, getRequestId, logStructured } from "@/lib/request-context";
 
-/**
- * API 에러 응답 헬퍼
- * 프로덕션에서는 내부 에러 상세를 숨기고, 개발환경에서만 노출합니다.
- */
+type RequestLike = Headers | Pick<Request, "headers"> | null | undefined;
+
+function resolveRequestId(source?: RequestLike): string {
+  if (!source) return getRequestId();
+  if (source instanceof Headers) return getRequestId(source);
+  return getRequestId(source);
+}
+
 export function apiError(
   err: unknown,
-  status: number = 500,
-  fallbackMessage: string = '서버 오류가 발생했습니다'
+  status = 500,
+  fallbackMessage = "서버 오류가 발생했습니다",
+  requestOrHeaders?: RequestLike
 ): NextResponse {
-  const message = err instanceof Error ? err.message : String(err)
+  const requestId = resolveRequestId(requestOrHeaders);
+  const appError = isAppError(err) ? err : null;
+  const effectiveStatus = appError?.status ?? status;
 
-  // 서버 로그에는 항상 상세 기록
-  console.error(`[API Error] ${message}`, err)
+  const publicMessage =
+    appError?.expose === true
+      ? appError.message
+      : process.env.NODE_ENV === "development"
+        ? err instanceof Error
+          ? err.message
+          : String(err)
+        : fallbackMessage;
 
-  // 클라이언트 응답
-  const clientMessage =
-    process.env.NODE_ENV === 'development' ? message : fallbackMessage
+  logStructured("error", "api_error", {
+    requestId,
+    status: effectiveStatus,
+    code: appError?.code ?? "internal_error",
+    message: err instanceof Error ? err.message : String(err),
+    details: appError?.details,
+  });
 
-  return NextResponse.json({ error: clientMessage }, { status })
+  const response = NextResponse.json(
+    {
+      error: publicMessage,
+      code: appError?.code ?? "internal_error",
+      requestId,
+    },
+    { status: effectiveStatus }
+  );
+
+  response.headers.set(REQUEST_ID_HEADER, requestId);
+  return response;
+}
+
+export function jsonError(
+  message: string,
+  options: {
+    status?: number;
+    code?: AppError["code"];
+    requestOrHeaders?: RequestLike;
+    details?: Record<string, unknown>;
+  } = {}
+): NextResponse {
+  return apiError(
+    new AppError(message, {
+      status: options.status,
+      code: options.code,
+      expose: true,
+      details: options.details,
+    }),
+    options.status,
+    message,
+    options.requestOrHeaders
+  );
 }

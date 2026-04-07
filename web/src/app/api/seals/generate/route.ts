@@ -18,7 +18,7 @@ import { getClientIp } from '@/lib/get-ip'
  */
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/seals/generate')
+  const limited = await rateLimitAuth(ip, '/api/seals/generate')
   if (limited) return limited
 
   const { auth, error: authError } = await authenticateRequest(request)
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/seals/generate-preview')
+  const limited = await rateLimitAuth(ip, '/api/seals/generate-preview')
   if (limited) return limited
 
   const { auth, error: authError } = await authenticateRequest(request)

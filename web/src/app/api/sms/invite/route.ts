@@ -22,7 +22,7 @@ const supabaseAdmin = createClient(
  */
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/sms/invite')
+  const limited = await rateLimitAuth(ip, '/api/sms/invite')
   if (limited) return limited
 
   // 인증 확인

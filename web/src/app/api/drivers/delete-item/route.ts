@@ -17,7 +17,7 @@ const supabaseAdmin = createClient(
  */
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimitAuth(ip, '/api/drivers/delete-item')
+  const limited = await rateLimitAuth(ip, '/api/drivers/delete-item')
   if (limited) return limited
 
   const { auth, error: authError } = await authenticateRequest(request)
