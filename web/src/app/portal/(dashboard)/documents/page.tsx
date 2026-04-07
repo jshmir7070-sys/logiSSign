@@ -468,7 +468,7 @@ export default function DocumentsPage() {
           onClick={() => setPreviewDoc(null)}
         >
           <div
-            className="w-full max-w-6xl max-h-[88vh] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+            className="w-full max-w-[1040px] max-h-[88vh] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant/15">
@@ -489,13 +489,15 @@ export default function DocumentsPage() {
               </button>
             </div>
 
-            <div className="flex-1 min-h-0 bg-slate-100 p-6">
-              <div className="h-full rounded-2xl overflow-hidden bg-white border border-outline-variant/15">
-                <iframe
-                  src={`${previewDoc.file_url}#toolbar=0&navpanes=0`}
-                  title={previewDoc.title}
-                  className="h-full w-full"
-                />
+            <div className="flex-1 min-h-0 overflow-auto bg-slate-100 p-6">
+              <div className="mx-auto w-full max-w-[720px]">
+                <div className="aspect-[210/297] rounded-2xl overflow-hidden bg-white border border-outline-variant/15 shadow-sm">
+                  <iframe
+                    src={`${previewDoc.file_url}#toolbar=0&navpanes=0&view=FitH`}
+                    title={previewDoc.title}
+                    className="h-full w-full"
+                  />
+                </div>
               </div>
             </div>
 

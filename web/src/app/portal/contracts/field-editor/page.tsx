@@ -141,6 +141,30 @@ const RECEIVER_FIELD_PRESETS: FieldPreset[] = [
   { label: '계약일', fieldType: 'date' },
 ]
 
+const GUIDE_STORAGE_KEY = 'contract-field-editor-guide-v1'
+const GUIDE_STEPS = [
+  {
+    title: '문서 불러오기',
+    description: '내 컴퓨터 또는 내 문서함에서 실제 계약서를 먼저 불러옵니다.',
+  },
+  {
+    title: '발송인 자동 항목',
+    description: '대리점명, 대표자명, 도장처럼 자동으로 채워질 항목을 먼저 추가합니다.',
+  },
+  {
+    title: '기사 입력 항목',
+    description: '서명, 도장, 이름, 주소, 날짜 등 기사가 직접 입력할 필드를 넣습니다.',
+  },
+  {
+    title: '순서와 위치 정리',
+    description: '오른쪽 패널에서 입력 순서를 정하고, 문서 위에서 드래그해 위치를 맞춥니다.',
+  },
+  {
+    title: '저장 후 발송 준비',
+    description: '저장하면 템플릿으로 바로 사용 가능하며 기사에게 보낼 계약서로 이어집니다.',
+  },
+]
+
 /* ── 메인 ── */
 
 export default function ContractFieldEditorPageWrapper() {
@@ -186,6 +210,8 @@ function ContractFieldEditorPage() {
   const [docBoxItems, setDocBoxItems] = useState<{ name: string; path: string; url: string }[]>([])
   const [selectedDocBoxItem, setSelectedDocBoxItem] = useState<{ name: string; path: string; url: string } | null>(null)
   const [loadingDocBox, setLoadingDocBox] = useState(false)
+  const [previewZoom, setPreviewZoom] = useState(1)
+  const [showGuide, setShowGuide] = useState(false)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -353,6 +379,19 @@ function ContractFieldEditorPage() {
       window.removeEventListener('keydown', handleEscape)
     }
   }, [contextMenu])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const seenGuide = window.localStorage.getItem(GUIDE_STORAGE_KEY)
+    if (!seenGuide) setShowGuide(true)
+  }, [])
+
+  const closeGuide = useCallback((persist = true) => {
+    setShowGuide(false)
+    if (persist && typeof window !== 'undefined') {
+      window.localStorage.setItem(GUIDE_STORAGE_KEY, 'seen')
+    }
+  }, [])
 
 
   // ── 파일 업로드 ──
@@ -620,6 +659,15 @@ function ContractFieldEditorPage() {
   const receiverFields = fields.filter(f => f.field_owner === 'receiver')
   const contextMenuField = contextMenu ? fields.find(f => f._id === contextMenu.fieldId) : null
   const contextMenuPresets = getFieldPresets(contextMenuField)
+  const currentGuideStep = !pdfUrl
+    ? 0
+    : senderFields.length === 0
+      ? 1
+      : receiverFields.length === 0
+        ? 2
+        : !hasUnsavedChanges
+          ? 4
+          : 3
 
   if (loading) {
     return (
@@ -686,6 +734,36 @@ function ContractFieldEditorPage() {
             <p className="text-center text-xs text-neutral-400 font-korean mt-8">
               지원: PDF, DOCX, JPG, PNG &nbsp;&middot;&nbsp; HWP는 PDF 변환 후 업로드
             </p>
+            <div className="mt-6 rounded-2xl border border-blue-100 bg-white/90 p-5 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-bold text-neutral-800 font-korean">처음 만드는 순서</p>
+                  <p className="mt-1 text-xs text-neutral-500 font-korean">
+                    실제 계약서를 보면서 따라 만들 수 있게 순서대로 안내해 드립니다.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowGuide(true)}
+                  className="shrink-0 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 font-korean"
+                >
+                  자세히 보기
+                </button>
+              </div>
+              <div className="mt-4 grid grid-cols-1 gap-2">
+                {GUIDE_STEPS.slice(0, 4).map((step, index) => (
+                  <div key={step.title} className="flex items-start gap-3 rounded-xl bg-slate-50 px-3 py-2.5">
+                    <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-neutral-800 font-korean">{step.title}</p>
+                      <p className="mt-0.5 text-[11px] text-neutral-500 font-korean">{step.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
             {uploading && (
               <div className="mt-6 flex items-center justify-center gap-2">
                 <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
@@ -767,13 +845,15 @@ function ContractFieldEditorPage() {
                             <p className="text-base font-bold text-neutral-800 font-korean">{selectedDocBoxItem.name}</p>
                             <p className="text-xs text-neutral-400 font-korean mt-1">미리보기 후 이 문서로 바로 템플릿을 만들 수 있습니다.</p>
                           </div>
-                          <div className="flex-1 min-h-0 p-5 bg-slate-100">
-                            <div className="h-full rounded-2xl overflow-hidden bg-white border border-neutral-200">
-                              <iframe
-                                src={`${selectedDocBoxItem.url}#toolbar=0&navpanes=0`}
-                                className="h-full w-full"
-                                title={selectedDocBoxItem.name}
-                              />
+                          <div className="flex-1 min-h-0 overflow-auto p-5 bg-slate-100">
+                            <div className="mx-auto w-full max-w-[720px]">
+                              <div className="aspect-[210/297] rounded-2xl overflow-hidden bg-white border border-neutral-200 shadow-sm">
+                                <iframe
+                                  src={`${selectedDocBoxItem.url}#toolbar=0&navpanes=0&view=FitH`}
+                                  className="h-full w-full"
+                                  title={selectedDocBoxItem.name}
+                                />
+                              </div>
                             </div>
                           </div>
                           <div className="px-6 py-4 border-t border-neutral-100 flex justify-end gap-3">
@@ -805,6 +885,59 @@ function ContractFieldEditorPage() {
             </div>
           </div>
         )}
+
+        {showGuide && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 p-4" onClick={() => closeGuide(true)}>
+            <div
+              className="w-full max-w-2xl rounded-3xl bg-white shadow-2xl overflow-hidden"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5 text-white">
+                <p className="text-xl font-bold font-korean">템플릿 만들기 사용 안내</p>
+                <p className="mt-1 text-sm text-white/80 font-korean">
+                  실제 서류를 보면서 바로 익힐 수 있도록 순서대로 안내합니다.
+                </p>
+              </div>
+              <div className="space-y-4 p-6">
+                {GUIDE_STEPS.map((step, index) => (
+                  <div key={step.title} className="flex items-start gap-4 rounded-2xl border border-neutral-100 bg-slate-50 p-4">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-neutral-800 font-korean">{step.title}</p>
+                      <p className="mt-1 text-xs leading-5 text-neutral-500 font-korean">{step.description}</p>
+                    </div>
+                  </div>
+                ))}
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-xs font-bold text-amber-700 font-korean">실제 문서를 보며 익히는 팁</p>
+                  <ul className="mt-2 space-y-1.5 text-xs leading-5 text-amber-700/90 font-korean">
+                    <li>문서 확대/축소 버튼으로 글자가 잘 보이는 크기에서 배치하세요.</li>
+                    <li>텍스트/날짜 필드는 우클릭하면 이름, 주소, 전화번호 같은 빠른 라벨을 바로 적용할 수 있습니다.</li>
+                    <li>오른쪽의 입력 순서를 조정하면 기사 앱 입력 순서도 그대로 맞춰집니다.</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 border-t border-neutral-100 px-6 py-4">
+                <button
+                  type="button"
+                  onClick={() => closeGuide(false)}
+                  className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-neutral-600 hover:bg-slate-200 font-korean"
+                >
+                  나중에 다시 보기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => closeGuide(true)}
+                  className="rounded-xl bg-blue-600 px-5 py-2 text-sm font-bold text-white hover:bg-blue-700 font-korean"
+                >
+                  확인하고 시작하기
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -832,6 +965,39 @@ function ContractFieldEditorPage() {
           <span className="text-sm font-bold text-neutral-800 font-korean truncate max-w-[280px]">{title || '템플릿 만들기'}</span>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowGuide(true)}
+            className="px-3 py-1.5 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg font-korean transition-colors"
+          >
+            사용 가이드
+          </button>
+          <div className="flex items-center gap-1 rounded-lg border border-neutral-200 bg-neutral-50 px-1 py-1">
+            <button
+              type="button"
+              onClick={() => setPreviewZoom((prev) => Math.max(0.8, Number((prev - 0.1).toFixed(1))))}
+              className="h-7 w-7 rounded-md text-sm text-neutral-500 hover:bg-white hover:text-neutral-800"
+              title="문서 축소"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              onClick={() => setPreviewZoom(1)}
+              className="min-w-[56px] rounded-md px-2 py-1 text-[11px] font-bold text-neutral-600 hover:bg-white font-korean"
+              title="문서 크기 초기화"
+            >
+              {Math.round(previewZoom * 100)}%
+            </button>
+            <button
+              type="button"
+              onClick={() => setPreviewZoom((prev) => Math.min(1.5, Number((prev + 0.1).toFixed(1))))}
+              className="h-7 w-7 rounded-md text-sm text-neutral-500 hover:bg-white hover:text-neutral-800"
+              title="문서 확대"
+            >
+              +
+            </button>
+          </div>
           <span className="text-[10px] text-neutral-400 font-korean">
             발송인 <span className="font-bold text-rose-500">{senderFields.length}</span> &middot; 수신자 <span className="font-bold text-blue-600">{receiverFields.length}</span>
           </span>
@@ -850,6 +1016,39 @@ function ContractFieldEditorPage() {
             {saving ? '저장 중...' : hasUnsavedChanges ? '저장하기' : '저장됨'}
           </button>
         </div>
+      </div>
+
+      <div className="flex items-center gap-2 overflow-x-auto border-b border-neutral-200 bg-white px-4 py-2 shrink-0">
+        {GUIDE_STEPS.map((step, index) => {
+          const active = currentGuideStep === index
+          const done = currentGuideStep > index
+          return (
+            <div
+              key={step.title}
+              className={`min-w-[170px] rounded-xl border px-3 py-2 transition-colors ${
+                active
+                  ? 'border-blue-300 bg-blue-50'
+                  : done
+                    ? 'border-emerald-200 bg-emerald-50'
+                    : 'border-neutral-200 bg-neutral-50'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${
+                  active ? 'bg-blue-600 text-white' : done ? 'bg-emerald-600 text-white' : 'bg-white text-neutral-500 border border-neutral-200'
+                }`}>
+                  {index + 1}
+                </div>
+                <p className={`text-xs font-bold font-korean ${active ? 'text-blue-700' : done ? 'text-emerald-700' : 'text-neutral-700'}`}>
+                  {step.title}
+                </p>
+              </div>
+              <p className="mt-1 text-[10px] leading-4 text-neutral-500 font-korean">
+                {step.description}
+              </p>
+            </div>
+          )
+        })}
       </div>
 
       {/* ══ 메인 ══ */}
@@ -968,7 +1167,7 @@ function ContractFieldEditorPage() {
           <div
             ref={containerRef}
             className="relative bg-white shadow-2xl rounded"
-            style={{ width: '100%', maxWidth: 850 }}
+            style={{ width: '100%', maxWidth: Math.round(850 * previewZoom) }}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
@@ -1351,6 +1550,59 @@ function ContractFieldEditorPage() {
                 {preset.label}
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {showGuide && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 p-4" onClick={() => closeGuide(true)}>
+          <div
+            className="w-full max-w-2xl rounded-3xl bg-white shadow-2xl overflow-hidden"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5 text-white">
+              <p className="text-xl font-bold font-korean">템플릿 만들기 사용 안내</p>
+              <p className="mt-1 text-sm text-white/80 font-korean">
+                실제 서류를 보면서 순서대로 따라 만들 수 있도록 구성했습니다.
+              </p>
+            </div>
+            <div className="space-y-4 p-6">
+              {GUIDE_STEPS.map((step, index) => (
+                <div key={step.title} className="flex items-start gap-4 rounded-2xl border border-neutral-100 bg-slate-50 p-4">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">
+                    {index + 1}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-neutral-800 font-korean">{step.title}</p>
+                    <p className="mt-1 text-xs leading-5 text-neutral-500 font-korean">{step.description}</p>
+                  </div>
+                </div>
+              ))}
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-xs font-bold text-amber-700 font-korean">바로 체감되는 편집 팁</p>
+                <ul className="mt-2 space-y-1.5 text-xs leading-5 text-amber-700/90 font-korean">
+                  <li>상단의 확대/축소 버튼으로 실제 서류를 읽기 좋은 크기로 맞춘 뒤 배치하세요.</li>
+                  <li>필드 위에서 우클릭하면 이름, 주소, 전화번호 같은 빠른 라벨을 즉시 적용할 수 있습니다.</li>
+                  <li>오른쪽의 입력 순서를 바꾸면 기사 앱의 입력 순서도 같은 순서로 열립니다.</li>
+                </ul>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 border-t border-neutral-100 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => closeGuide(false)}
+                className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-neutral-600 hover:bg-slate-200 font-korean"
+              >
+                나중에 다시 보기
+              </button>
+              <button
+                type="button"
+                onClick={() => closeGuide(true)}
+                className="rounded-xl bg-blue-600 px-5 py-2 text-sm font-bold text-white hover:bg-blue-700 font-korean"
+              >
+                확인하고 계속 만들기
+              </button>
+            </div>
           </div>
         </div>
       )}
