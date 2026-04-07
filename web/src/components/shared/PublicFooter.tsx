@@ -24,7 +24,7 @@ export default function PublicFooter({ dark = false }: { dark?: boolean }) {
             </div>
             <div className={`text-xs ${textMain} space-y-1 leading-relaxed`}>
               <p><strong>상호:</strong> 라이트 &nbsp;|&nbsp; <strong>대표자:</strong> 주상하</p>
-              <p><strong>사업자등록번호:</strong> 819-16-01461</p>
+              <p><strong>사업자등록번호:</strong> 819-16-01461 &nbsp;|&nbsp; <strong>통신판매업신고:</strong> 2026-경기시흥-0821</p>
               <p><strong>주소:</strong> 경기도 시흥시 목감남서로5, 406호</p>
               <p><strong>전화:</strong> 010-5695-8838 &nbsp;|&nbsp; <strong>이메일:</strong> jshmir77@naver.com</p>
             </div>

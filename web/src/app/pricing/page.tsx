@@ -377,7 +377,7 @@ export default function PricingPage() {
       <footer className="bg-[#0a0f1e] py-12">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-xs text-gray-500 space-y-1 mb-4 leading-relaxed">
-            <p>상호: 라이트 | 대표자: 주상하 | 사업자등록번호: 819-16-01461</p>
+            <p>상호: 라이트 | 대표자: 주상하 | 사업자등록번호: 819-16-01461 | 통신판매업신고: 2026-경기시흥-0821</p>
             <p>주소: 경기도 시흥시 목감남서로5, 406호 | 전화: 010-5695-8838 | 이메일: jshmir77@naver.com</p>
           </div>
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">

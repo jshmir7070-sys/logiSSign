@@ -247,7 +247,7 @@ export default function HomePage() {
         {/* Footer */}
         <footer className="footer fade-in" style={{ animationDelay: '1.3s' }}>
           <div style={{ marginBottom: '12px', fontSize: '11px', color: '#475569', lineHeight: '1.6' }}>
-            <p>상호: 라이트 | 대표자: 주상하 | 사업자등록번호: 819-16-01461</p>
+            <p>상호: 라이트 | 대표자: 주상하 | 사업자등록번호: 819-16-01461 | 통신판매업신고: 2026-경기시흥-0821</p>
             <p>주소: 경기도 시흥시 목감남서로5, 406호 | 전화: 010-5695-8838</p>
             <p>이메일: jshmir77@naver.com</p>
           </div>

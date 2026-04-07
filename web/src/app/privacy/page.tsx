@@ -127,7 +127,7 @@ export default function PrivacyPage() {
       <footer className="border-t border-gray-200 mt-16">
         <div className="max-w-4xl mx-auto px-6 py-8">
           <div className="text-xs text-gray-400 space-y-1 mb-4 leading-relaxed">
-            <p>상호: 라이트 | 대표자: 주상하 | 사업자등록번호: 819-16-01461</p>
+            <p>상호: 라이트 | 대표자: 주상하 | 사업자등록번호: 819-16-01461 | 통신판매업신고: 2026-경기시흥-0821</p>
             <p>주소: 경기도 시흥시 목감남서로5, 406호 | 전화: 010-5695-8838 | 이메일: jshmir77@naver.com</p>
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500">
