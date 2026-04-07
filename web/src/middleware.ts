@@ -20,6 +20,7 @@ const PUBLIC_ROUTES = [
   "/pricing",
   "/terms",
   "/privacy",
+  "/refund",
   "/admin/login",
   "/admin/verify-otp",
   "/portal/login",
