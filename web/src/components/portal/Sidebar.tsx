@@ -61,7 +61,7 @@ const navItems: NavItem[] = [
       { label: '새 계약서 발송', href: '/portal/contracts/new', featureKey: 'contracts' },
       { label: '계약서 목록', href: '/portal/contracts', featureKey: 'contracts' },
       { label: '템플릿 만들기', href: '/portal/contracts/templates', featureKey: 'contracts.templates' },
-      { label: '문서함', href: '/portal/documents', featureKey: 'contracts' },
+      { label: '내 문서함', href: '/portal/documents', featureKey: 'contracts' },
       { label: '문서/서류전송', href: '/portal/documents/send', featureKey: 'contracts' },
       { label: '변경이력', href: '/portal/amendments', featureKey: 'contracts' },
     ],

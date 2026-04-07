@@ -90,7 +90,7 @@ export default function NewContractPage() {
     // 문서함 조회
     supabase
       .from('document_files')
-      .select('id, title')
+      .select('id, title, status')
       .eq('agency_id', agencyId)
       .in('status', ['draft', 'ready'])
       .order('created_at', { ascending: false })
@@ -101,7 +101,9 @@ export default function NewContractPage() {
             .from('document_sign_fields')
             .select('id', { count: 'exact', head: true })
             .eq('document_file_id', doc.id);
-          docs.push({ id: doc.id, title: doc.title, field_count: count ?? 0 });
+          const fieldCount = count ?? 0;
+          if (doc.status === 'draft' && fieldCount === 0) continue;
+          docs.push({ id: doc.id, title: doc.title, field_count: fieldCount });
         }
         setDocuments(docs);
       });

@@ -147,6 +147,9 @@ export default function DocumentSendCenterPage() {
           .eq('document_file_id', doc.id);
         const fieldCount = count ?? 0;
         const normalizedStatus = doc.status === 'draft' && fieldCount > 0 ? 'ready' : doc.status;
+        if (fieldCount === 0 || normalizedStatus === 'draft') {
+          continue;
+        }
         docs.push({
           id: doc.id,
           title: doc.title,
@@ -622,15 +625,15 @@ export default function DocumentSendCenterPage() {
 
         <section className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 space-y-5">
           <div>
-            <h2 className="text-base font-headline font-semibold text-on-surface font-korean">3. 일반 문서 선택</h2>
+            <h2 className="text-base font-headline font-semibold text-on-surface font-korean">3. 내 문서함 문서 선택</h2>
             <p className="text-xs text-on-surface-variant font-korean mt-1">
-              업로드한 서류를 선택 기사에게 그대로 전송합니다.
+              내 문서함에 저장된 계약 서류만 선택해서 기사에게 보냅니다.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {documents.length === 0 ? (
               <div className="rounded-xl bg-surface-container-low px-4 py-8 text-center text-sm text-on-surface-variant font-korean md:col-span-2">
-                전송 가능한 일반 문서가 없습니다.
+                전송 가능한 내 문서함 문서가 없습니다.
               </div>
             ) : (
               documents.map((doc) => {

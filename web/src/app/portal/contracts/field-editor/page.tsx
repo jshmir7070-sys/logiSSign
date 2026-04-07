@@ -184,6 +184,7 @@ function ContractFieldEditorPage() {
   // 내 문서함
   const [showDocBox, setShowDocBox] = useState(false)
   const [docBoxItems, setDocBoxItems] = useState<{ name: string; path: string; url: string }[]>([])
+  const [selectedDocBoxItem, setSelectedDocBoxItem] = useState<{ name: string; path: string; url: string } | null>(null)
   const [loadingDocBox, setLoadingDocBox] = useState(false)
 
   const containerRef = useRef<HTMLDivElement>(null)
@@ -411,10 +412,22 @@ function ContractFieldEditorPage() {
           }
         }
       }
-      // 문서함 파일들 (삭제된 문서 제외)
+      const fieldCountMap = new Map<string, number>()
+      if (docFiles && docFiles.length > 0) {
+        const { data: fieldRows } = await supabase
+          .from('document_sign_fields')
+          .select('document_file_id')
+          .in('document_file_id', docFiles.map((doc) => doc.id))
+        for (const row of fieldRows ?? []) {
+          fieldCountMap.set(row.document_file_id, (fieldCountMap.get(row.document_file_id) ?? 0) + 1)
+        }
+      }
+
+      // 문서함 파일들 (삭제된 문서와 저장되지 않은 draft 제외)
       if (docFiles) {
         for (const doc of docFiles as { id: string; title: string; file_url: string; status: string }[]) {
-          if (doc.file_url && doc.status !== 'deleted') {
+          const fieldCount = fieldCountMap.get(doc.id) ?? 0
+          if (doc.file_url && doc.status !== 'deleted' && !(doc.status === 'draft' && fieldCount === 0)) {
             const storagePath = doc.file_url.startsWith('http') ? doc.file_url.split('/documents/')[1] : doc.file_url
             if (storagePath) {
               const { data: signed } = await supabase.storage.from('documents').createSignedUrl(decodeURIComponent(storagePath), 3600)
@@ -424,6 +437,7 @@ function ContractFieldEditorPage() {
         }
       }
       setDocBoxItems(items)
+      setSelectedDocBoxItem(items[0] ?? null)
     } catch (err) {
       console.error('문서함 로드 실패:', err)
     }
@@ -435,6 +449,7 @@ function ContractFieldEditorPage() {
     if (!templateId) return
     setUploading(true)
     setShowDocBox(false)
+    setSelectedDocBoxItem(null)
     try {
       // 선택한 PDF를 다운로드 후 contracts 버킷에 복사
       const res = await fetch(item.url)
@@ -684,44 +699,107 @@ function ContractFieldEditorPage() {
 
         {/* ── 내 문서함 모달 ── */}
         {showDocBox && (
-          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowDocBox(false)}>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[70vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div
+            className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setShowDocBox(false)
+              setSelectedDocBoxItem(null)
+            }}
+          >
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
                 <h3 className="text-base font-bold text-neutral-800 font-korean">내 문서함</h3>
-                <button onClick={() => setShowDocBox(false)} className="text-neutral-400 hover:text-neutral-700">
+                <button
+                  onClick={() => {
+                    setShowDocBox(false)
+                    setSelectedDocBoxItem(null)
+                  }}
+                  className="text-neutral-400 hover:text-neutral-700"
+                >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto p-4">
+              <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[340px_1fr]">
                 {loadingDocBox ? (
-                  <div className="flex items-center justify-center py-12">
+                  <div className="lg:col-span-2 flex items-center justify-center py-12">
                     <div className="w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
                     <span className="ml-2 text-sm text-neutral-500 font-korean">문서 목록 불러오는 중...</span>
                   </div>
                 ) : docBoxItems.length === 0 ? (
-                  <div className="text-center py-12">
+                  <div className="lg:col-span-2 text-center py-12">
                     <div className="text-3xl mb-3">📁</div>
                     <p className="text-sm text-neutral-500 font-korean">업로드된 문서가 없습니다</p>
                     <p className="text-xs text-neutral-400 font-korean mt-1">&quot;내 컴퓨터&quot;에서 파일을 먼저 업로드하세요</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    {docBoxItems.map((item, idx) => (
-                      <button key={idx} onClick={() => handleSelectDocBoxItem(item)}
-                        className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-purple-50 transition-colors text-left group">
-                        <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2">
-                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
-                          </svg>
+                  <>
+                    <div className="border-r border-neutral-100 overflow-y-auto p-4 bg-slate-50/60">
+                      <div className="grid grid-cols-2 gap-3">
+                        {docBoxItems.map((item, idx) => {
+                          const selected = selectedDocBoxItem?.path === item.path
+                          return (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => setSelectedDocBoxItem(item)}
+                              className={`rounded-2xl border p-3 text-left transition-all ${selected ? 'border-blue-400 bg-blue-50 shadow-sm' : 'border-neutral-200 bg-white hover:border-blue-200 hover:bg-blue-50/40'}`}
+                            >
+                              <div className="aspect-[3/4] rounded-xl overflow-hidden border border-neutral-100 bg-white">
+                                <iframe
+                                  src={`${item.url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                                  className="h-full w-full pointer-events-none"
+                                  style={{ transform: 'scale(0.88)', transformOrigin: 'top center' }}
+                                  title={item.name}
+                                />
+                              </div>
+                              <p className="mt-2 text-xs font-semibold text-neutral-700 font-korean line-clamp-2">{item.name}</p>
+                              <p className="text-[11px] text-neutral-400 font-korean">PDF 문서</p>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="min-h-0 flex flex-col">
+                      {selectedDocBoxItem ? (
+                        <>
+                          <div className="px-6 py-4 border-b border-neutral-100">
+                            <p className="text-base font-bold text-neutral-800 font-korean">{selectedDocBoxItem.name}</p>
+                            <p className="text-xs text-neutral-400 font-korean mt-1">미리보기 후 이 문서로 바로 템플릿을 만들 수 있습니다.</p>
+                          </div>
+                          <div className="flex-1 min-h-0 p-5 bg-slate-100">
+                            <div className="h-full rounded-2xl overflow-hidden bg-white border border-neutral-200">
+                              <iframe
+                                src={`${selectedDocBoxItem.url}#toolbar=0&navpanes=0`}
+                                className="h-full w-full"
+                                title={selectedDocBoxItem.name}
+                              />
+                            </div>
+                          </div>
+                          <div className="px-6 py-4 border-t border-neutral-100 flex justify-end gap-3">
+                            <button
+                              type="button"
+                              onClick={() => window.open(selectedDocBoxItem.url, '_blank')}
+                              className="px-4 py-2 rounded-xl bg-neutral-100 text-sm text-neutral-700 hover:bg-neutral-200 font-korean"
+                            >
+                              원본 보기
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSelectDocBoxItem(selectedDocBoxItem)}
+                              className="px-5 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 font-korean"
+                            >
+                              템플릿 만들기
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex-1 flex items-center justify-center text-sm text-neutral-400 font-korean">
+                          왼쪽에서 문서를 선택해 주세요.
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-neutral-700 font-korean truncate">{item.name}</p>
-                          <p className="text-[11px] text-neutral-400 font-korean">PDF 문서</p>
-                        </div>
-                        <span className="text-xs text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity font-korean">선택</span>
-                      </button>
-                    ))}
-                  </div>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
             </div>

@@ -1,10 +1,8 @@
-'use client'
+﻿'use client'
 
 /**
- * 문서 서명 필드 배치 에디터
- *
- * PDF 미리보기 위에 서명/도장/체크/날짜/텍스트 필드를
- * 드래그&드롭으로 배치한 뒤 저장한다.
+ * 臾몄꽌 ?쒕챸 ?꾨뱶 諛곗튂 ?먮뵒?? *
+ * PDF 誘몃━蹂닿린 ?꾩뿉 ?쒕챸/?꾩옣/泥댄겕/?좎쭨/?띿뒪???꾨뱶瑜? * ?쒕옒洹??쒕∼?쇰줈 諛곗튂??????ν븳??
  *
  * URL: /portal/documents/field-editor?docId=xxxx
  */
@@ -20,13 +18,17 @@ import {
   saveSignFields,
 } from '@/services/document-sign-field.service'
 
-/* ══════════════════════ 타입 ══════════════════════ */
+/* ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧 ????먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧 */
 
 interface LocalField extends SignFieldInput {
-  _id: string   // 클라이언트 임시 ID
+  _id: string   // ?대씪?댁뼵???꾩떆 ID
 }
 
-/* ══════════════════════ 메인 컴포넌트 ══════════════════════ */
+function isPlaceholderDocumentTitle(title: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.pdf$/i.test(title.trim())
+}
+
+/* ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧 硫붿씤 而댄룷?뚰듃 ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧 */
 
 export default function FieldEditorPage() {
   const searchParams = useSearchParams()
@@ -46,13 +48,13 @@ export default function FieldEditorPage() {
 
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // ── 데이터 로드 ──
+  // ?? ?곗씠??濡쒕뱶 ??
   useEffect(() => {
     if (!docId) return
     ;(async () => {
       const supabase = createBrowserSupabaseClient()
 
-      // 문서 정보
+      // 臾몄꽌 ?뺣낫
       const { data: doc } = await supabase
         .from('document_files')
         .select('title, file_url')
@@ -61,7 +63,7 @@ export default function FieldEditorPage() {
 
       if (doc) {
         setDocTitle(doc.title)
-        // file_url에 Storage path가 저장됨 → signed URL 생성
+        // file_url??Storage path媛 ??λ맖 ??signed URL ?앹꽦
         const storagePath = doc.file_url as string
         if (storagePath && !storagePath.startsWith('http')) {
           const { data: signedData } = await supabase.storage
@@ -69,7 +71,7 @@ export default function FieldEditorPage() {
             .createSignedUrl(storagePath, 3600)
           setPdfUrl(signedData?.signedUrl ?? '')
         } else if (storagePath) {
-          // 이전 방식 (full URL 저장된 경우)
+          // ?댁쟾 諛⑹떇 (full URL ??λ맂 寃쎌슦)
           const pathPart = storagePath.split('/documents/')[1]
           if (pathPart) {
             const { data: signedData } = await supabase.storage
@@ -82,7 +84,7 @@ export default function FieldEditorPage() {
         }
       }
 
-      // 기존 필드
+      // 湲곗〈 ?꾨뱶
       const existing = await getSignFields(docId)
       setFields(existing.map(f => ({
         _id: f.id,
@@ -102,7 +104,7 @@ export default function FieldEditorPage() {
     })()
   }, [docId])
 
-  // ── 필드 추가 ──
+  // ?? ?꾨뱶 異붽? ??
   const addField = useCallback((type: SignFieldType) => {
     const meta = FIELD_TYPE_META[type]
     const newField: LocalField = {
@@ -121,15 +123,15 @@ export default function FieldEditorPage() {
     setSelectedId(newField._id)
   }, [currentPage, fields.length])
 
-  // ── 필드 복제 ──
+  // ?? ?꾨뱶 蹂듭젣 ??
   const duplicateField = useCallback((id: string) => {
     const source = fields.find(f => f._id === id)
     if (!source) return
     const cloned: LocalField = {
       ...source,
       _id: `new_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      label: `${source.label || FIELD_TYPE_META[source.field_type].label} (복사)`,
-      // 살짝 오프셋을 줘서 겹치지 않게
+      label: `${source.label || FIELD_TYPE_META[source.field_type].label} (蹂듭궗)`,
+      // ?댁쭩 ?ㅽ봽?뗭쓣 以섏꽌 寃뱀튂吏 ?딄쾶
       x: Math.min(95, source.x + 2),
       y: Math.min(95, source.y + 2),
       sort_order: fields.length,
@@ -138,18 +140,18 @@ export default function FieldEditorPage() {
     setSelectedId(cloned._id)
   }, [fields])
 
-  // ── 필드 삭제 ──
+  // ?? ?꾨뱶 ??젣 ??
   const removeField = useCallback((id: string) => {
     setFields(prev => prev.filter(f => f._id !== id))
     if (selectedId === id) setSelectedId(null)
   }, [selectedId])
 
-  // ── 필드 속성 수정 ──
+  // ?? ?꾨뱶 ?띿꽦 ?섏젙 ??
   const updateField = useCallback((id: string, patch: Partial<LocalField>) => {
     setFields(prev => prev.map(f => f._id === id ? { ...f, ...patch } : f))
   }, [])
 
-  // ── 마우스 드래그 ──
+  // ?? 留덉슦???쒕옒洹???
   const handleMouseDown = useCallback((e: React.MouseEvent, fieldId: string) => {
     e.preventDefault()
     e.stopPropagation()
@@ -179,9 +181,18 @@ export default function FieldEditorPage() {
     setDragging(null)
   }, [])
 
-  // ── 저장 ──
+  // ?? ?????
   const handleSave = useCallback(async () => {
     if (!docId) return
+    const trimmedTitle = docTitle.trim()
+    if (!trimmedTitle) {
+      alert('\uBB38\uC11C \uC774\uB984\uC744 \uC785\uB825\uD55C \uB4A4 \uC800\uC7A5\uD574 \uC8FC\uC138\uC694.')
+      return
+    }
+    if (isPlaceholderDocumentTitle(trimmedTitle)) {
+      alert('\uBB38\uC11C \uC774\uB984\uC774 \uC784\uC2DC \uD30C\uC77C\uBA85\uC73C\uB85C \uBCF4\uC785\uB2C8\uB2E4. \uC2E4\uC81C \uBB38\uC11C \uC774\uB984\uC73C\uB85C \uBC14\uAFBC \uB4A4 \uC800\uC7A5\uD574 \uC8FC\uC138\uC694.')
+      return
+    }
     setSaving(true)
     const inputs: SignFieldInput[] = fields.map((f, i) => ({
       field_type: f.field_type,
@@ -197,69 +208,90 @@ export default function FieldEditorPage() {
     }))
     const { error } = await saveSignFields(docId, inputs)
 
-    // 필드 저장 성공 시 문서 상태를 'ready'로 변경
+    // ?꾨뱶 ????깃났 ??臾몄꽌 ?곹깭瑜?'ready'濡?蹂寃?
     if (!error) {
       const supabase = createBrowserSupabaseClient()
-      await supabase.from('document_files').update({ status: 'ready' }).eq('id', docId)
+      await supabase
+        .from('document_files')
+        .update({ title: trimmedTitle, status: 'ready' })
+        .eq('id', docId)
     }
 
     setSaving(false)
     if (error) {
-      alert(`저장 실패: ${error}`)
+      alert(`????ㅽ뙣: ${error}`)
     } else {
-      alert('필드 배치가 저장되었습니다.')
+      alert('필드가 저장되었습니다. 내 문서함으로 이동합니다.')
+      router.push('/portal/documents')
     }
-  }, [docId, fields])
+  }, [docId, docTitle, fields, router])
 
-  // ── 현재 페이지 필드만 표시 ──
+  // ?? ?꾩옱 ?섏씠吏 ?꾨뱶留??쒖떆 ??
   const pageFields = fields.filter(f => f.page_number === currentPage)
   const selectedField = fields.find(f => f._id === selectedId)
 
   if (loading) {
-    return <div className="flex items-center justify-center h-96 text-on-surface-variant/60 font-korean">로딩 중...</div>
+    return <div className="flex items-center justify-center h-96 text-on-surface-variant/60 font-korean">濡쒕뵫 以?..</div>
   }
 
   return (
     <div className="flex h-[calc(100vh-4rem)] gap-0 -mx-8 -mt-8" style={{ width: 'calc(100% + 4rem)' }}>
-      {/* ══════ 좌측: PDF 미리보기 + 필드 오버레이 ══════ */}
+      {/* ?먥븧?먥븧?먥븧 醫뚯륫: PDF 誘몃━蹂닿린 + ?꾨뱶 ?ㅻ쾭?덉씠 ?먥븧?먥븧?먥븧 */}
       <div className="flex-1 flex flex-col bg-neutral-100 overflow-hidden">
-        {/* 상단 바 */}
+        {/* ?곷떒 諛?*/}
         <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-outline-variant/20">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
               className="text-sm text-on-surface-variant/60 hover:text-on-surface font-korean"
             >
-              ← 뒤로
+              {'\uB4A4\uB85C'}
             </button>
-            <h1 className="text-sm font-bold text-on-surface font-korean truncate max-w-xs">
-              {docTitle || '문서 필드 배치'}
-            </h1>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm font-bold text-on-surface font-korean shrink-0">
+                {'\uBB38\uC11C \uC774\uB984'}
+              </span>
+              <input
+                type="text"
+                value={docTitle}
+                onChange={(event) => setDocTitle(event.target.value)}
+                placeholder={'\uBB38\uC11C \uC774\uB984\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694'}
+                className="h-9 w-72 max-w-full rounded-lg border border-outline-variant/30 bg-white px-3 text-sm text-on-surface outline-none focus:ring-2 focus:ring-amber-300/50 font-korean"
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* 줌 */}
-            <button onClick={() => setZoom(z => Math.max(50, z - 10))} className="px-2 py-1 text-xs rounded border border-outline-variant/30 hover:bg-surface-variant/30">−</button>
-            <span className="text-xs font-data text-on-surface-variant w-10 text-center">{zoom}%</span>
-            <button onClick={() => setZoom(z => Math.min(200, z + 10))} className="px-2 py-1 text-xs rounded border border-outline-variant/30 hover:bg-surface-variant/30">+</button>
-            <span className="mx-1 text-outline-variant/30">|</span>
-            {/* 페이지 네비 */}
             <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              onClick={() => setZoom((value) => Math.max(50, value - 10))}
+              className="px-2 py-1 text-xs rounded border border-outline-variant/30 hover:bg-surface-variant/30"
+            >
+              -
+            </button>
+            <span className="text-xs font-data text-on-surface-variant w-10 text-center">{zoom}%</span>
+            <button
+              onClick={() => setZoom((value) => Math.min(200, value + 10))}
+              className="px-2 py-1 text-xs rounded border border-outline-variant/30 hover:bg-surface-variant/30"
+            >
+              +
+            </button>
+            <span className="mx-1 text-outline-variant/30">|</span>
+            <button
+              onClick={() => setCurrentPage((value) => Math.max(1, value - 1))}
               disabled={currentPage <= 1}
               className="px-2 py-1 text-xs rounded border border-outline-variant/30 disabled:opacity-30"
             >
-              ◀
+              {'\uC774\uC804'}
             </button>
             <span className="text-xs font-korean text-on-surface-variant">
               {currentPage} / {totalPages}
             </span>
             <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              onClick={() => setCurrentPage((value) => Math.min(totalPages, value + 1))}
               disabled={currentPage >= totalPages}
               className="px-2 py-1 text-xs rounded border border-outline-variant/30 disabled:opacity-30"
             >
-              ▶
+              {'\uB2E4\uC74C'}
             </button>
           </div>
 
@@ -268,11 +300,11 @@ export default function FieldEditorPage() {
             disabled={saving}
             className="px-4 py-2 bg-amber-500 text-white text-sm font-bold font-korean rounded-lg hover:bg-amber-600 disabled:opacity-50"
           >
-            {saving ? '저장 중...' : '필드 저장'}
+            {saving ? '\uC800\uC7A5 \uC911...' : '\uD544\uB4DC \uC800\uC7A5'}
           </button>
         </div>
 
-        {/* PDF + 오버레이 */}
+        {/* PDF + ?ㅻ쾭?덉씠 */}
         <div className="flex-1 overflow-auto p-4 flex justify-center">
           <div style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}>
           <div
@@ -284,7 +316,7 @@ export default function FieldEditorPage() {
             onMouseLeave={handleMouseUp}
             onClick={() => setSelectedId(null)}
           >
-            {/* PDF 배경 (iframe 또는 이미지) */}
+            {/* PDF 諛곌꼍 (iframe ?먮뒗 ?대?吏) */}
             {pdfUrl && (
               <iframe
                 src={`${pdfUrl}#page=${currentPage}`}
@@ -293,7 +325,7 @@ export default function FieldEditorPage() {
               />
             )}
 
-            {/* 필드 오버레이 */}
+            {/* ?꾨뱶 ?ㅻ쾭?덉씠 */}
             {pageFields.map(field => {
               const meta = FIELD_TYPE_META[field.field_type]
               const isSelected = selectedId === field._id
@@ -321,11 +353,11 @@ export default function FieldEditorPage() {
                     duplicateField(field._id)
                   }}
                 >
-                  {/* 아이콘만 표시 (텍스트 제거) */}
+                  {/* ?꾩씠肄섎쭔 ?쒖떆 (?띿뒪???쒓굅) */}
                   <span style={{ color: meta.color, fontSize: '0.7rem', opacity: 0.7 }}>
                     {meta.icon}
                   </span>
-                  {/* 리사이즈 핸들 (선택된 필드만) */}
+                  {/* 由ъ궗?댁쫰 ?몃뱾 (?좏깮???꾨뱶留? */}
                   {isSelected && (
                     <div
                       className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize"
@@ -364,11 +396,11 @@ export default function FieldEditorPage() {
           </div>
       </div>
 
-      {/* ══════ 우측: 도구 패널 ══════ */}
+      {/* ?먥븧?먥븧?먥븧 ?곗륫: ?꾧뎄 ?⑤꼸 ?먥븧?먥븧?먥븧 */}
       <div className="w-64 bg-white border-l border-outline-variant/20 flex flex-col shrink-0">
-        {/* 필드 추가 버튼들 */}
+        {/* ?꾨뱶 異붽? 踰꾪듉??*/}
         <div className="p-4 border-b border-outline-variant/20">
-          <h2 className="text-xs font-bold text-on-surface-variant/60 mb-3 font-korean">필드 추가</h2>
+          <h2 className="text-xs font-bold text-on-surface-variant/60 mb-3 font-korean">?꾨뱶 異붽?</h2>
           <div className="grid grid-cols-2 gap-2">
             {(Object.keys(FIELD_TYPE_META) as SignFieldType[]).map(type => {
               const meta = FIELD_TYPE_META[type]
@@ -387,15 +419,14 @@ export default function FieldEditorPage() {
           </div>
         </div>
 
-        {/* 배치된 필드 목록 */}
+        {/* 諛곗튂???꾨뱶 紐⑸줉 */}
         <div className="flex-1 overflow-auto p-4">
           <h2 className="text-xs font-bold text-on-surface-variant/60 mb-2 font-korean">
-            배치된 필드 ({fields.length}개)
+            諛곗튂???꾨뱶 ({fields.length}媛?
           </h2>
           {fields.length === 0 ? (
             <p className="text-xs text-on-surface-variant/40 font-korean">
-              왼쪽 위의 버튼으로 필드를 추가하세요
-            </p>
+              ?쇱そ ?꾩쓽 踰꾪듉?쇰줈 ?꾨뱶瑜?異붽??섏꽭??            </p>
           ) : (
             <div className="space-y-1.5">
               {fields.map((f) => {
@@ -418,17 +449,15 @@ export default function FieldEditorPage() {
                       <button
                         onClick={(e) => { e.stopPropagation(); duplicateField(f._id) }}
                         className="text-blue-400 hover:text-blue-600 p-0.5"
-                        title="복제"
+                        title="蹂듭젣"
                       >
-                        ⧉
-                      </button>
+                        樹?                      </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); removeField(f._id) }}
                         className="text-red-400 hover:text-red-600 p-0.5"
-                        title="삭제"
+                        title="??젣"
                       >
-                        ✕
-                      </button>
+                        ??                      </button>
                     </div>
                   </div>
                 )
@@ -437,13 +466,13 @@ export default function FieldEditorPage() {
           )}
         </div>
 
-        {/* 선택된 필드 속성 편집 */}
+        {/* ?좏깮???꾨뱶 ?띿꽦 ?몄쭛 */}
         {selectedField && (
           <div className="p-4 border-t border-outline-variant/20 space-y-3">
-            <h2 className="text-xs font-bold text-on-surface-variant/60 font-korean">필드 속성</h2>
+            <h2 className="text-xs font-bold text-on-surface-variant/60 font-korean">?꾨뱶 ?띿꽦</h2>
 
             <label className="block">
-              <span className="text-[0.65rem] text-on-surface-variant/60 font-korean">라벨</span>
+              <span className="text-[0.65rem] text-on-surface-variant/60 font-korean">?쇰꺼</span>
               <input
                 type="text"
                 value={selectedField.label ?? ''}
@@ -474,7 +503,7 @@ export default function FieldEditorPage() {
                 />
               </label>
               <label className="block">
-                <span className="text-[0.65rem] text-on-surface-variant/60 font-korean">너비 (%)</span>
+                <span className="text-[0.65rem] text-on-surface-variant/60 font-korean">?덈퉬 (%)</span>
                 <input
                   type="number"
                   min={1} max={50} step={0.5}
@@ -484,7 +513,7 @@ export default function FieldEditorPage() {
                 />
               </label>
               <label className="block">
-                <span className="text-[0.65rem] text-on-surface-variant/60 font-korean">높이 (%)</span>
+                <span className="text-[0.65rem] text-on-surface-variant/60 font-korean">?믪씠 (%)</span>
                 <input
                   type="number"
                   min={1} max={50} step={0.5}
@@ -502,22 +531,22 @@ export default function FieldEditorPage() {
                 onChange={e => updateField(selectedField._id, { required: e.target.checked })}
                 className="rounded"
               />
-              <span className="text-xs font-korean text-on-surface-variant">필수 항목</span>
+              <span className="text-xs font-korean text-on-surface-variant">?꾩닔 ??ぉ</span>
             </label>
 
-            {/* 복제 + 삭제 버튼 */}
+            {/* 蹂듭젣 + ??젣 踰꾪듉 */}
             <div className="flex gap-2 pt-1">
               <button
                 onClick={() => duplicateField(selectedField._id)}
                 className="flex-1 px-3 py-1.5 text-xs font-korean rounded-lg border border-blue-300 text-blue-600 hover:bg-blue-50 transition-colors"
               >
-                ⧉ 복제
+                樹?蹂듭젣
               </button>
               <button
                 onClick={() => removeField(selectedField._id)}
                 className="flex-1 px-3 py-1.5 text-xs font-korean rounded-lg border border-red-300 text-red-500 hover:bg-red-50 transition-colors"
               >
-                ✕ 삭제
+                ????젣
               </button>
             </div>
           </div>
@@ -526,3 +555,4 @@ export default function FieldEditorPage() {
     </div>
   )
 }
+
