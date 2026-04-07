@@ -165,7 +165,8 @@ export function isPaidPlan(plan: PlanType | string): boolean {
 
 /** Free 플랜 = 포인트 차감형 */
 export function isPointBased(plan: string | undefined): boolean {
-  return (plan || 'free') === 'free'
+  const normalizedPlan = (plan || 'free').toLowerCase()
+  return normalizedPlan === 'free' || normalizedPlan === 'point'
 }
 
 export function getPlanLimits(plan: string | undefined): PlanLimits {

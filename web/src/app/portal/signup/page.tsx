@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
@@ -18,11 +18,13 @@ import { createBrowserSupabaseClient } from '@/lib/supabase'
 
 type PlanMode = 'free' | 'subscription'
 type BillingCycle = 'monthly' | '1year' | '2year'
+type PaymentSchedule = 'one_time' | 'recurring'
 
 type FormState = {
   planMode: PlanMode
   plan: PlanType
   billing: BillingCycle
+  paymentSchedule: PaymentSchedule
   ownerName: string
   personalAddress: string
   personalAddressDetail: string
@@ -95,6 +97,7 @@ export default function PortalSignupPage() {
     planMode: 'free',
     plan: 'free',
     billing: 'monthly',
+    paymentSchedule: 'one_time',
     ownerName: '',
     personalAddress: '',
     personalAddressDetail: '',
@@ -141,7 +144,8 @@ export default function PortalSignupPage() {
         requestedBilling === 'monthly' || requestedBilling === '1year' || requestedBilling === '2year'
           ? requestedBilling
           : previous.billing,
-      paymentMethod: requestedMode === 'subscription' || requestedPlan ? 'CARD' : previous.paymentMethod,
+      paymentSchedule:
+        requestedMode === 'subscription' || requestedPlan ? previous.paymentSchedule : 'one_time',
     }))
   }, [])
 
@@ -153,13 +157,31 @@ export default function PortalSignupPage() {
     return getSubscriptionPrice(form.plan, form.billing)
   }, [form.billing, form.plan, form.planMode])
 
+  const isRecurringSubscription =
+    form.planMode === 'subscription' && form.billing === 'monthly' && form.paymentSchedule === 'recurring'
+
   function updateForm(patch: Partial<FormState>) {
-    setForm((previous) => ({
-      ...previous,
-      ...patch,
-      ...(patch.planMode === 'subscription' ? { paymentMethod: 'CARD' as AgencyPaymentMethod } : {}),
-      ...(patch.email !== undefined ? { emailChecked: false } : {}),
-    }))
+    setForm((previous) => {
+      const next = {
+        ...previous,
+        ...patch,
+        ...(patch.email !== undefined ? { emailChecked: false } : {}),
+      }
+
+      const nextPlanMode = patch.planMode ?? previous.planMode
+      const nextBilling = patch.billing ?? previous.billing
+      const nextPaymentSchedule = patch.paymentSchedule ?? previous.paymentSchedule
+
+      if (nextPlanMode === 'subscription' && nextBilling === 'monthly' && nextPaymentSchedule === 'recurring') {
+        next.paymentMethod = 'CARD'
+      }
+
+      if (patch.planMode === 'free') {
+        next.paymentSchedule = 'one_time'
+      }
+
+      return next
+    })
 
     if (patch.email !== undefined) {
       setEmailCheckMsg(null)
@@ -312,7 +334,11 @@ export default function PortalSignupPage() {
           paymentId: `signup_${signupData.agencyId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           orderName: `logiSSign ${form.plan.toUpperCase()} 플랜`,
           amount,
-          method: 'CARD',
+          method: isRecurringSubscription ? 'CARD' : form.paymentMethod,
+          easyPayProvider:
+            !isRecurringSubscription && form.paymentMethod === 'EASY_PAY' ? form.easyPayProvider : undefined,
+          virtualAccountBankCode:
+            !isRecurringSubscription && form.paymentMethod === 'VIRTUAL_ACCOUNT' ? form.virtualAccountBank : undefined,
           redirectUrl: `${window.location.origin}/portal/settings?tab=billing`,
           customer: {
             customerId: signupData.agencyId,
@@ -331,7 +357,10 @@ export default function PortalSignupPage() {
             plan: form.plan,
             billing: form.billing,
             amount,
-            paymentMethod: 'CARD',
+            paymentMethod: isRecurringSubscription ? 'CARD' : form.paymentMethod,
+            easyPayProvider:
+              !isRecurringSubscription && form.paymentMethod === 'EASY_PAY' ? form.easyPayProvider : undefined,
+            paymentSchedule: isRecurringSubscription ? 'recurring' : 'one_time',
           }),
         })
 
@@ -413,7 +442,7 @@ export default function PortalSignupPage() {
               >
                 <p className="text-sm font-bold text-on-surface">구독형 플랜</p>
                 <p className="mt-1 text-xs text-on-surface-variant">
-                  구독형 플랜은 카드 결제만 지원하며, 카드 등록과 변경도 구독형 플랜 이용 중에만 가능합니다.
+                  월 결제는 한 달 이용과 월 정기구독 중에서 선택할 수 있습니다. 월 정기구독만 카드 등록과 자동 갱신을 사용합니다.
                 </p>
               </button>
             </div>
@@ -444,7 +473,12 @@ export default function PortalSignupPage() {
                     <button
                       key={cycle.value}
                       type="button"
-                      onClick={() => updateForm({ billing: cycle.value })}
+                      onClick={() =>
+                        updateForm({
+                          billing: cycle.value,
+                          paymentSchedule: cycle.value === 'monthly' ? form.paymentSchedule : 'one_time',
+                        })
+                      }
                       className={`relative rounded-2xl border p-4 text-left ${
                         form.billing === cycle.value ? 'border-primary bg-primary/5' : 'border-outline-variant/20'
                       }`}
@@ -459,6 +493,38 @@ export default function PortalSignupPage() {
                     </button>
                   ))}
                 </div>
+                {form.billing === 'monthly' ? (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => updateForm({ paymentSchedule: 'one_time' })}
+                      className={`rounded-2xl border p-4 text-left ${
+                        form.paymentSchedule === 'one_time'
+                          ? 'border-primary bg-primary/5'
+                          : 'border-outline-variant/20'
+                      }`}
+                    >
+                      <p className="text-sm font-semibold text-on-surface">한 달 이용</p>
+                      <p className="mt-1 text-xs text-on-surface-variant">
+                        이번 달만 결제하고 이용합니다. 카드, 간편결제, 계좌이체, 가상계좌를 선택할 수 있습니다.
+                      </p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateForm({ paymentSchedule: 'recurring' })}
+                      className={`rounded-2xl border p-4 text-left ${
+                        form.paymentSchedule === 'recurring'
+                          ? 'border-primary bg-primary/5'
+                          : 'border-outline-variant/20'
+                      }`}
+                    >
+                      <p className="text-sm font-semibold text-on-surface">월 정기구독</p>
+                      <p className="mt-1 text-xs text-on-surface-variant">
+                        매달 자동 갱신되는 구독입니다. 월 정기구독은 카드 결제와 카드 등록만 지원합니다.
+                      </p>
+                    </button>
+                  </div>
+                ) : null}
               </>
             ) : null}
 
@@ -674,6 +740,16 @@ export default function PortalSignupPage() {
                             : '2년 선결제 (30% 할인)'
                       }
                     />
+                    <SummaryRow
+                      label="이용 방식"
+                      value={
+                        form.billing === 'monthly'
+                          ? isRecurringSubscription
+                            ? '월 정기구독'
+                            : '한 달 이용'
+                          : '기간권 이용'
+                      }
+                    />
                     {form.billing !== 'monthly' ? (
                       <div className="flex items-center justify-between gap-4 text-sm">
                         <span className="text-on-surface-variant">정가</span>
@@ -707,24 +783,86 @@ export default function PortalSignupPage() {
               <section className="space-y-4 rounded-3xl bg-surface-container-lowest p-7 shadow-ambient">
                 <h2 className="font-headline text-lg font-bold text-on-surface">결제 수단</h2>
                 <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
-                  <p className="text-sm font-semibold text-on-surface">구독형은 카드 결제만 가능합니다.</p>
+                  <p className="text-sm font-semibold text-on-surface">
+                    {isRecurringSubscription ? '월 정기구독은 카드 결제만 가능합니다.' : '결제를 누르면 바로 PortOne 결제 화면으로 이동합니다.'}
+                  </p>
                   <p className="mt-1 text-xs text-on-surface-variant">
-                    카드 등록과 변경도 구독형 플랜 이용 중에만 가능하며, 다른 결제 수단은 가입 화면에 노출되지
-                    않습니다.
+                    {isRecurringSubscription
+                      ? '카드 등록과 변경은 월 정기구독 이용 중에만 가능하며, 자동 갱신은 등록된 카드로 처리됩니다.'
+                      : '한 달 이용 또는 기간권은 카드, 간편결제, 계좌이체, 가상계좌 중 원하는 수단으로 결제할 수 있습니다.'}
                   </p>
                 </div>
-                <label className="block rounded-2xl border border-primary bg-primary/5 p-4">
+                {isRecurringSubscription ? (
+                  <label className="block rounded-2xl border border-primary bg-primary/5 p-4">
                   <div className="flex items-start gap-3">
                     <input type="radio" name="paymentMethod" className="mt-1 accent-primary" checked readOnly />
                     <div>
                       <p className="text-sm font-semibold text-on-surface">결제</p>
                       <p className="mt-1 text-xs text-on-surface-variant">
-                        최초 가입 결제는 카드 승인을 통해 진행되고, 이후 등록된 카드 상태에 따라 만료 및 갱신을
-                        안내합니다.
+                        월 정기구독은 카드 등록 후 자동 갱신되는 방식으로 진행됩니다.
                       </p>
                     </div>
                   </div>
-                </label>
+                  </label>
+                ) : (
+                  <>
+                    {PAYMENT_METHOD_OPTIONS.map((option) => (
+                      <label
+                        key={option.value}
+                        className={`block rounded-2xl border p-4 ${
+                          form.paymentMethod === option.value ? 'border-primary bg-primary/5' : 'border-outline-variant/20'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="radio"
+                            name="paymentMethod"
+                            className="mt-1 accent-primary"
+                            checked={form.paymentMethod === option.value}
+                            onChange={() => updateForm({ paymentMethod: option.value })}
+                          />
+                          <div>
+                            <p className="text-sm font-semibold text-on-surface">{option.label}</p>
+                            <p className="mt-1 text-xs text-on-surface-variant">{option.description}</p>
+                          </div>
+                        </div>
+                      </label>
+                    ))}
+
+                    {form.paymentMethod === 'EASY_PAY' ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        {EASY_PAY_PROVIDER_OPTIONS.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => updateForm({ easyPayProvider: option.value })}
+                            className={`h-10 rounded-xl text-sm font-medium ${
+                              form.easyPayProvider === option.value
+                                ? 'bg-primary text-white'
+                                : 'bg-surface-container-low text-on-surface-variant'
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {form.paymentMethod === 'VIRTUAL_ACCOUNT' ? (
+                      <select
+                        value={form.virtualAccountBank}
+                        onChange={(event) => updateForm({ virtualAccountBank: event.target.value })}
+                        className={INPUT_CLASS}
+                      >
+                        {VIRTUAL_ACCOUNT_BANK_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : null}
+                  </>
+                )}
               </section>
             ) : (
               <section className="space-y-4 rounded-3xl bg-surface-container-lowest p-7 shadow-ambient">
@@ -802,7 +940,7 @@ export default function PortalSignupPage() {
               {submitting
                 ? '처리 중입니다...'
                 : form.planMode === 'subscription'
-                  ? '가입 및 결제 진행'
+                  ? '결제'
                   : '무료 가입 완료'}
             </button>
           </aside>

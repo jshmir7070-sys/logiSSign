@@ -96,9 +96,10 @@ export const paymentChargeSchema = z.object({
   billing: z.enum(['monthly', '1year', '2year']),
 })
 
-const planPaymentMethodSchema = z.literal('CARD')
+const planPaymentMethodSchema = z.enum(['CARD', 'EASY_PAY', 'TRANSFER', 'VIRTUAL_ACCOUNT'])
 const pointPaymentMethodSchema = z.enum(['CARD', 'EASY_PAY', 'TRANSFER', 'VIRTUAL_ACCOUNT'])
 const easyPayProviderSchema = z.enum(['KAKAOPAY', 'NAVERPAY', 'TOSSPAY', 'PAYCO']).optional()
+const paymentScheduleSchema = z.enum(['one_time', 'recurring'])
 
 export const paymentRecordPlanSchema = z.object({
   action: z.literal('record-plan-payment'),
@@ -108,6 +109,7 @@ export const paymentRecordPlanSchema = z.object({
   amount: z.number().int().positive(),
   paymentMethod: planPaymentMethodSchema,
   easyPayProvider: easyPayProviderSchema.optional(),
+  paymentSchedule: paymentScheduleSchema.default('one_time'),
 })
 
 export const paymentRecordPointSchema = z.object({

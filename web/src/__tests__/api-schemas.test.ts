@@ -31,6 +31,37 @@ describe('API 입력 스키마', () => {
       expect(data?.action).toBe('record-plan-payment')
     })
 
+    it('플랜 1회성 간편결제 요청을 검증한다', () => {
+      const { data, error } = validateInput(paymentSchema, {
+        action: 'record-plan-payment',
+        paymentId: 'pay_124',
+        plan: 'basic',
+        billing: 'monthly',
+        amount: 49900,
+        paymentMethod: 'EASY_PAY',
+        easyPayProvider: 'KAKAOPAY',
+        paymentSchedule: 'one_time',
+      })
+
+      expect(error).toBeNull()
+      expect(data?.action).toBe('record-plan-payment')
+    })
+
+    it('플랜 월 정기구독 플래그를 검증한다', () => {
+      const { data, error } = validateInput(paymentSchema, {
+        action: 'record-plan-payment',
+        paymentId: 'pay_125',
+        plan: 'pro',
+        billing: 'monthly',
+        amount: 149000,
+        paymentMethod: 'CARD',
+        paymentSchedule: 'recurring',
+      })
+
+      expect(error).toBeNull()
+      expect(data?.action).toBe('record-plan-payment')
+    })
+
     it('포인트 충전 결제 기록 요청을 검증한다', () => {
       const { data, error } = validateInput(paymentSchema, {
         action: 'record-point-payment',

@@ -22,7 +22,7 @@ export const PAYMENT_METHOD_OPTIONS: PaymentMethodOption[] = [
   {
     value: 'CARD',
     label: '결제',
-    description: '신용카드 또는 체크카드로 즉시 승인되는 1회성 결제입니다.',
+    description: '신용카드 또는 체크카드로 바로 결제합니다.',
   },
   {
     value: 'EASY_PAY',

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import { createBrowserSupabaseClient } from '@/lib/supabase'
@@ -18,6 +18,7 @@ import { requestAgencyBillingKey, requestAgencyPayment } from '@/lib/portone-cli
 
 type BillingTabMode = 'overview' | 'plan' | 'charge'
 type BillingCycle = 'monthly' | '1year' | '2year'
+type PlanPaymentSchedule = 'one_time' | 'recurring'
 
 type PointBalanceData = {
   balance: number
@@ -119,6 +120,10 @@ export default function BillingTab() {
   const [processingKey, setProcessingKey] = useState<string | null>(null)
   const [planType, setPlanType] = useState<'subscription' | 'free'>('subscription')
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly')
+  const [planPaymentSchedule, setPlanPaymentSchedule] = useState<PlanPaymentSchedule>('one_time')
+  const [planPaymentMethod, setPlanPaymentMethod] = useState<AgencyPaymentMethod>('CARD')
+  const [planEasyPayProvider, setPlanEasyPayProvider] = useState<AgencyEasyPayProvider>('KAKAOPAY')
+  const [planVirtualAccountBank, setPlanVirtualAccountBank] = useState('KOOKMIN_BANK')
   const [paymentMethod, setPaymentMethod] = useState<AgencyPaymentMethod>('CARD')
   const [easyPayProvider, setEasyPayProvider] = useState<AgencyEasyPayProvider>('KAKAOPAY')
   const [virtualAccountBank, setVirtualAccountBank] = useState('KOOKMIN_BANK')
@@ -209,6 +214,19 @@ export default function BillingTab() {
   const planExpiryNoticeDays = paymentSettings?.subscriptionExpiryNoticeDays ?? [7, 3, 1]
   const isExpiryNoticeVisible =
     expiryDays !== null && expiryDays >= 0 && planExpiryNoticeDays.includes(expiryDays)
+  const isRecurringPlanPayment = billingCycle === 'monthly' && planPaymentSchedule === 'recurring'
+
+  useEffect(() => {
+    if (billingCycle !== 'monthly' && planPaymentSchedule !== 'one_time') {
+      setPlanPaymentSchedule('one_time')
+    }
+  }, [billingCycle, planPaymentSchedule])
+
+  useEffect(() => {
+    if (isRecurringPlanPayment && planPaymentMethod !== 'CARD') {
+      setPlanPaymentMethod('CARD')
+    }
+  }, [isRecurringPlanPayment, planPaymentMethod])
 
   async function reloadBillingState() {
     setLoading(true)
@@ -242,7 +260,7 @@ export default function BillingTab() {
   async function handlePlanPurchase(plan: Extract<PlanType, 'basic' | 'standard' | 'pro' | 'enterprise'>) {
     if (!agencyId) return
 
-    if (paymentSettings?.subscriptionCardOnly && paymentMethod !== 'CARD') {
+    if (isRecurringPlanPayment && paymentSettings?.subscriptionCardOnly && planPaymentMethod !== 'CARD') {
       window.alert('구독형 플랜은 카드 결제만 사용할 수 있습니다.')
       return
     }
@@ -257,7 +275,10 @@ export default function BillingTab() {
         paymentId,
         orderName: `logiSSign ${plan.toUpperCase()} 플랜`,
         amount,
-        method: 'CARD',
+        method: isRecurringPlanPayment ? 'CARD' : planPaymentMethod,
+        easyPayProvider: !isRecurringPlanPayment && planPaymentMethod === 'EASY_PAY' ? planEasyPayProvider : undefined,
+        virtualAccountBankCode:
+          !isRecurringPlanPayment && planPaymentMethod === 'VIRTUAL_ACCOUNT' ? planVirtualAccountBank : undefined,
         customer: {
           customerId: agencyId,
           fullName: companyName || ownerName,
@@ -274,7 +295,9 @@ export default function BillingTab() {
           plan,
           billing: billingCycle,
           amount,
-          paymentMethod: 'CARD',
+          paymentMethod: isRecurringPlanPayment ? 'CARD' : planPaymentMethod,
+          easyPayProvider: !isRecurringPlanPayment && planPaymentMethod === 'EASY_PAY' ? planEasyPayProvider : undefined,
+          paymentSchedule: isRecurringPlanPayment ? 'recurring' : 'one_time',
         }),
       })
       const payload = await response.json()
@@ -568,10 +591,13 @@ export default function BillingTab() {
       {tab === 'plan' ? (
         <div className="space-y-6 rounded-2xl bg-surface-container-lowest p-8 shadow-ambient">
           <div className="rounded-2xl border border-primary/10 bg-primary/5 p-5">
-            <p className="text-sm font-bold text-primary">구독형 플랜 결제 정책</p>
+            <p className="text-sm font-bold text-primary">플랜 결제 안내</p>
             <p className="mt-2 text-sm text-on-surface-variant">
-              구독형 플랜은 카드 결제만 사용할 수 있습니다. 포인트형에서 구독형으로 변경되어도 기존 포인트는
-              그대로 유지되고, 구독 사용 중에는 포인트가 자동 차감되지 않습니다.
+              월 결제는 한 달 이용과 월 정기구독 중에서 선택할 수 있습니다. 월 정기구독만 카드 결제와 카드 등록을
+              지원하며, 한 달 이용과 기간권은 카드, 간편결제, 계좌이체, 가상계좌를 사용할 수 있습니다.
+            </p>
+            <p className="mt-3 text-sm text-on-surface-variant">
+              포인트형에서 구독형으로 변경되어도 기존 포인트는 그대로 유지되며, 구독 사용 중에는 포인트가 자동 차감되지 않습니다.
             </p>
           </div>
 
@@ -580,7 +606,12 @@ export default function BillingTab() {
               <button
                 key={option.value}
                 type="button"
-                onClick={() => setBillingCycle(option.value)}
+                onClick={() => {
+                  setBillingCycle(option.value)
+                  if (option.value !== 'monthly') {
+                    setPlanPaymentSchedule('one_time')
+                  }
+                }}
                 className={`rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${
                   billingCycle === option.value
                     ? 'border-primary bg-primary/10 text-primary'
@@ -591,6 +622,124 @@ export default function BillingTab() {
                 {option.badge ? <span className="ml-2 text-xs">{option.badge}</span> : null}
               </button>
             ))}
+          </div>
+
+          {billingCycle === 'monthly' ? (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setPlanPaymentSchedule('one_time')}
+                className={`rounded-2xl border p-4 text-left ${
+                  planPaymentSchedule === 'one_time'
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-outline-variant/20 bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'
+                }`}
+              >
+                <p className="text-sm font-semibold">한 달 이용</p>
+                <p className="mt-1 text-xs">카드, 간편결제, 계좌이체, 가상계좌 중 원하는 수단으로 한 번만 결제합니다.</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPlanPaymentSchedule('recurring')}
+                className={`rounded-2xl border p-4 text-left ${
+                  planPaymentSchedule === 'recurring'
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-outline-variant/20 bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'
+                }`}
+              >
+                <p className="text-sm font-semibold">월 정기구독</p>
+                <p className="mt-1 text-xs">매달 자동 갱신되는 구독입니다. 월 정기구독은 카드 결제와 카드 등록만 지원합니다.</p>
+              </button>
+            </div>
+          ) : null}
+
+          <div className="space-y-4 rounded-2xl border border-outline-variant/15 bg-surface-container-low p-5">
+            <p className="text-sm font-semibold text-on-surface">플랜 결제 수단</p>
+            <p className="text-xs text-on-surface-variant">
+              {isRecurringPlanPayment
+                ? '월 정기구독은 카드 결제만 가능합니다.'
+                : '한 달 이용과 기간권은 카드, 간편결제, 계좌이체, 가상계좌 중 원하는 수단으로 결제할 수 있습니다.'}
+            </p>
+
+            {isRecurringPlanPayment ? (
+              <label className="block rounded-xl border border-primary bg-primary/5 p-4">
+                <div className="flex items-start gap-3">
+                  <input type="radio" checked readOnly className="mt-1 accent-primary" />
+                  <div>
+                    <p className="text-sm font-semibold text-on-surface">결제</p>
+                    <p className="mt-1 text-xs text-on-surface-variant">월 정기구독은 등록된 카드로 자동 갱신됩니다.</p>
+                  </div>
+                </div>
+              </label>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {PAYMENT_METHOD_OPTIONS.filter((option) => paymentSettings?.enabledMethods.includes(option.value) ?? true).map(
+                    (option) => (
+                      <label
+                        key={option.value}
+                        className={`rounded-xl border-2 p-4 transition-colors ${
+                          planPaymentMethod === option.value
+                            ? 'border-primary bg-primary/5'
+                            : 'border-outline-variant/15 hover:border-outline-variant/40'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="radio"
+                            name="plan-payment-method"
+                            className="mt-1 accent-primary"
+                            checked={planPaymentMethod === option.value}
+                            onChange={() => setPlanPaymentMethod(option.value)}
+                          />
+                          <div>
+                            <p className="text-sm font-bold text-on-surface">{option.label}</p>
+                            <p className="mt-1 text-xs text-on-surface-variant">{option.description}</p>
+                          </div>
+                        </div>
+                      </label>
+                    ),
+                  )}
+                </div>
+
+                {planPaymentMethod === 'EASY_PAY' ? (
+                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                    {EASY_PAY_PROVIDER_OPTIONS.filter(
+                      (provider) => paymentSettings?.enabledEasyPayProviders.includes(provider.value) ?? true,
+                    ).map((provider) => (
+                      <button
+                        key={provider.value}
+                        type="button"
+                        onClick={() => setPlanEasyPayProvider(provider.value)}
+                        className={`h-10 rounded-xl text-sm font-semibold transition-colors ${
+                          planEasyPayProvider === provider.value
+                            ? 'bg-primary text-white'
+                            : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
+                        }`}
+                      >
+                        {provider.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+
+                {planPaymentMethod === 'VIRTUAL_ACCOUNT' ? (
+                  <select
+                    value={planVirtualAccountBank}
+                    onChange={(event) => setPlanVirtualAccountBank(event.target.value)}
+                    className="h-11 w-full rounded-xl border border-outline-variant/20 bg-surface-container-low px-4 text-sm text-on-surface outline-none focus:ring-2 focus:ring-primary/30"
+                  >
+                    {VIRTUAL_ACCOUNT_BANK_OPTIONS.filter(
+                      (bank) => paymentSettings?.enabledVirtualAccountBanks.includes(bank.value) ?? true,
+                    ).map((bank) => (
+                      <option key={bank.value} value={bank.value}>
+                        {bank.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+              </>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">

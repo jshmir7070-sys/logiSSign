@@ -151,7 +151,7 @@ async function updateAgencyUsersPlan(agencyId: string, plan: string) {
   }
 }
 
-async function createPointSubscription(agencyId: string) {
+async function createFreePlanSubscription(agencyId: string) {
   const now = new Date().toISOString()
   const { data: existing, error: existingError } = await supabaseAdmin
     .from('subscriptions')
@@ -167,7 +167,7 @@ async function createPointSubscription(agencyId: string) {
 
   const payload = {
     agency_id: agencyId,
-    plan: 'point',
+    plan: 'free',
     billing_cycle: 'monthly',
     amount: 0,
     monthly_amount: 0,
@@ -221,7 +221,8 @@ export async function POST(request: NextRequest) {
     const selectedPlan: SignupPlanType =
       planMode === 'free' ? 'free' : body.plan === 'free' || body.plan === 'point' ? 'basic' : body.plan
     const initialPlan = planMode === 'free' ? 'free' : 'free'
-    // DB column plan_type kept as 'point' for backward compatibility when using point-based free plan
+    // plan_type is the payment model, not the exposed plan name.
+    // Free agencies still use the point-charged model, but the persisted plan stays "free".
     const initialPlanType = planMode === 'free' ? 'point' : 'subscription'
     const businessNumber = normalizeBusinessNumber(body.businessNumber)
 
@@ -322,7 +323,7 @@ export async function POST(request: NextRequest) {
       }
 
       if (planMode === 'free') {
-        await createPointSubscription(createdAgencyId)
+        await createFreePlanSubscription(createdAgencyId)
         await getPointBalance(createdAgencyId)
         await updateAgencyUsersPlan(createdAgencyId, 'free')
       }

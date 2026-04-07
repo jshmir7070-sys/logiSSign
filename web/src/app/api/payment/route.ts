@@ -341,7 +341,16 @@ export async function POST(request: NextRequest) {
     }
 
     if (body.action === 'record-plan-payment') {
-      if (body.paymentMethod !== 'CARD') {
+      const isRecurringPlanPayment = body.paymentSchedule === 'recurring'
+
+      if (isRecurringPlanPayment && body.billing !== 'monthly') {
+        return NextResponse.json(
+          { error: '월 정기구독은 월 결제 상품에서만 사용할 수 있습니다.' },
+          { status: 400 },
+        )
+      }
+
+      if (isRecurringPlanPayment && body.paymentMethod !== 'CARD') {
         return NextResponse.json(
           { error: '구독형 플랜 결제는 카드 결제만 사용할 수 있습니다.' },
           { status: 400 },
@@ -413,6 +422,7 @@ export async function POST(request: NextRequest) {
         portone_payload: normalized.payload,
         metadata: {
           monthlyAmount: Math.round(body.amount / getBillingMonths(body.billing)),
+          paymentSchedule: body.paymentSchedule,
         },
         updated_at: new Date().toISOString(),
       })
