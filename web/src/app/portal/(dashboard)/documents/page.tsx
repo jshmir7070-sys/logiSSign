@@ -36,29 +36,45 @@ export default function DocumentsPage() {
       .order('created_at', { ascending: false });
 
     if (data) {
-      // 각 문서의 필드 수 조회 + draft인데 필드 있으면 자동 ready
-      const docs: DocumentFile[] = [];
-      for (const doc of data) {
-        const { count } = await supabase
+      // 모든 문서의 필드 수 + signed URL을 병렬로 조회 (N+1 → 일괄)
+      const docIds = data.map(d => d.id);
+      const [fieldCountsRes, ...signedUrlResults] = await Promise.all([
+        // 한 번의 쿼리로 모든 필드 수 조회
+        supabase
           .from('document_sign_fields')
-          .select('id', { count: 'exact', head: true })
-          .eq('document_file_id', doc.id);
-        const fieldCount = count ?? 0;
+          .select('document_file_id')
+          .in('document_file_id', docIds),
+        // signed URL 병렬 생성
+        ...data.map(doc => {
+          const url = (doc as Record<string, unknown>).file_url as string;
+          if (url && !url.startsWith('http')) {
+            return supabase.storage.from('documents').createSignedUrl(url, 3600);
+          }
+          return Promise.resolve({ data: null });
+        }),
+      ]);
+
+      // 필드 수 맵 생성
+      const fieldCountMap = new Map<string, number>();
+      for (const row of (fieldCountsRes.data ?? [])) {
+        fieldCountMap.set(row.document_file_id, (fieldCountMap.get(row.document_file_id) ?? 0) + 1);
+      }
+
+      // draft → ready 자동 업데이트 (병렬)
+      const updatePromises: PromiseLike<unknown>[] = [];
+      const docs: DocumentFile[] = data.map((doc, i) => {
+        const fieldCount = fieldCountMap.get(doc.id) ?? 0;
         let status = (doc as Record<string, unknown>).status as string;
         if (status === 'draft' && fieldCount > 0) {
           status = 'ready';
-          await supabase.from('document_files').update({ status: 'ready' }).eq('id', doc.id);
+          updatePromises.push(supabase.from('document_files').update({ status: 'ready' }).eq('id', doc.id).then(() => {}));
         }
-        let viewUrl = (doc as Record<string, unknown>).file_url as string;
-        if (viewUrl && !viewUrl.startsWith('http')) {
-          const { data: signedData } = await supabase.storage
-            .from('documents')
-            .createSignedUrl(viewUrl, 3600);
-          viewUrl = signedData?.signedUrl ?? viewUrl;
-        }
+        const signedRes = signedUrlResults[i] as { data: { signedUrl: string } | null };
+        const viewUrl = signedRes?.data?.signedUrl ?? (doc as Record<string, unknown>).file_url as string;
+        return { ...doc, file_url: viewUrl, field_count: fieldCount, status } as DocumentFile;
+      });
 
-        docs.push({ ...doc, file_url: viewUrl, field_count: fieldCount, status } as DocumentFile);
-      }
+      if (updatePromises.length > 0) await Promise.all(updatePromises);
       setDocuments(docs);
     }
     setLoading(false);

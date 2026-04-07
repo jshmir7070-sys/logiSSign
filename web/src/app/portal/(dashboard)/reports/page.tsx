@@ -1,10 +1,31 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-} from 'recharts';
+
+const RechartsChart = dynamic(() =>
+  import('recharts').then((mod) => {
+    const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } = mod;
+    function Chart({ data }: { data: { month: string; revenue: number; expense: number }[] }) {
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+            <YAxis tickFormatter={(v: number) => `${(v / 10000).toFixed(0)}만`} tick={{ fontSize: 11 }} />
+            <Tooltip formatter={((v: number) => `₩${v.toLocaleString('ko-KR')}`) as never} />
+            <Legend />
+            <Bar dataKey="revenue" name="매출" fill="#004ac6" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="expense" name="지출" fill="#ff6b6b" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      );
+    }
+    return Chart;
+  }),
+  { ssr: false, loading: () => <div className="h-full flex items-center justify-center"><span className="text-sm text-on-surface-variant">차트 로딩 중...</span></div> }
+);
 
 function formatKRW(n: number) { return `₩${n.toLocaleString('ko-KR')}` }
 
@@ -105,17 +126,7 @@ export default function ReportsPage() {
             {loading ? (
               <div className="h-full flex items-center justify-center"><span className="text-sm text-on-surface-variant font-korean">불러오는 중...</span></div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthly}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                  <YAxis tickFormatter={(v: number) => `${(v / 10000).toFixed(0)}만`} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={((v: number) => formatKRW(v)) as never} />
-                  <Legend />
-                  <Bar dataKey="revenue" name="매출" fill="#004ac6" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="expense" name="지출" fill="#ff6b6b" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <RechartsChart data={monthly} />
             )}
           </div>
         </div>

@@ -21,17 +21,7 @@ function PortalDashboardInner({ children }: { children: React.ReactNode }) {
     }
   }, [plan]);
 
-  // ✅ 보안: 브라우저 뒤로가기/이력으로 캐시된 페이지 접속 방지
-  useEffect(() => {
-    const handlePageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) {
-        // bfcache에서 복원된 페이지 → 새로고침 강제
-        window.location.reload();
-      }
-    };
-    window.addEventListener('pageshow', handlePageShow);
-    return () => window.removeEventListener('pageshow', handlePageShow);
-  }, []);
+  // 미들웨어에서 세션 검증 + no-cache 헤더로 충분 — bfcache 리로드 제거 (성능 개선)
 
   return (
     <div className="min-h-screen bg-surface">

@@ -246,7 +246,11 @@ export async function middleware(request: NextRequest) {
   }
 
   setActivityCookie(response);
-  addRequestIdHeader(addNoCacheHeaders(response), requestId);
+  addRequestIdHeader(response, requestId);
+  // API 라우트는 캐시 헤더 개별 설정 — HTML 페이지만 no-cache 적용
+  if (!isApiRoute) {
+    addNoCacheHeaders(response);
+  }
   return response;
 }
 

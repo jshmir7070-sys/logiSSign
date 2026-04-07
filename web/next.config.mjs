@@ -2,6 +2,17 @@ import { withSentryConfig } from '@sentry/nextjs'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // 이미지 최적화
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    remotePatterns: [
+      { protocol: 'https', hostname: '*.supabase.co' },
+    ],
+  },
+  // 번들 최적화
+  experimental: {
+    optimizePackageImports: ['recharts', '@supabase/supabase-js', 'date-fns', 'lucide-react'],
+  },
   async headers() {
     return [
       {

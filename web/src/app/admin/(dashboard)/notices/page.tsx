@@ -51,7 +51,8 @@ export default function NoticesPage() {
       const { data, error } = await supabase
         .from('notices')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(100);
 
       if (!error && data) {
         setNotices(data);
