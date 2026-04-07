@@ -16,6 +16,7 @@ interface LoginFormState {
 interface OtpState {
   show: boolean;
   userId: string;
+  accessToken: string;
   maskedPhone: string;
   digits: string[];
   error: string | null;
@@ -37,6 +38,7 @@ export default function PortalLoginPage() {
   const [otp, setOtp] = useState<OtpState>({
     show: false,
     userId: "",
+    accessToken: "",
     maskedPhone: "",
     digits: ["", "", "", "", "", ""],
     error: null,
@@ -85,10 +87,11 @@ export default function PortalLoginPage() {
 
       // MFA: OTP 발송
       const userId = data.user!.id;
+      const accessToken = data.session?.access_token || '';
       try {
         const otpRes = await fetch("/api/auth/send-login-otp", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${accessToken}` },
           body: JSON.stringify({ userId }),
         });
         const otpData = await otpRes.json();
@@ -103,6 +106,7 @@ export default function PortalLoginPage() {
         setOtp({
           show: true,
           userId,
+          accessToken,
           maskedPhone: otpData.maskedPhone || "",
           digits: ["", "", "", "", "", ""],
           error: null,
@@ -188,7 +192,7 @@ export default function PortalLoginPage() {
     try {
       const res = await fetch("/api/auth/send-login-otp", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${otp.accessToken}` },
         body: JSON.stringify({ userId: otp.userId }),
       });
       const data = await res.json();

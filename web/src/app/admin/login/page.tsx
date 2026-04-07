@@ -22,6 +22,7 @@ interface OtpState {
   isVerifying: boolean;
   resendCooldown: number;
   expireTimer: number;
+  accessToken: string;
 }
 
 export default function AdminLoginPage() {
@@ -31,7 +32,7 @@ export default function AdminLoginPage() {
   });
   const [otp, setOtp] = useState<OtpState>({
     show: false, userId: "", maskedPhone: "", digits: ["", "", "", "", "", ""],
-    error: null, isVerifying: false, resendCooldown: 0, expireTimer: 180,
+    error: null, isVerifying: false, resendCooldown: 0, expireTimer: 180, accessToken: '',
   });
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -61,12 +62,13 @@ export default function AdminLoginPage() {
       }
 
       const userId = data.user!.id;
+      const accessToken = data.session?.access_token || '';
       try {
-        const otpRes = await fetch("/api/auth/send-login-otp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId }) });
+        const otpRes = await fetch("/api/auth/send-login-otp", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${accessToken}` }, body: JSON.stringify({ userId }) });
         const otpData = await otpRes.json();
         if (otpData.skip) { router.push("/admin/dashboard"); return; }
         setForm((prev) => ({ ...prev, isLoading: false }));
-        setOtp({ show: true, userId, maskedPhone: otpData.maskedPhone || "", digits: ["", "", "", "", "", ""], error: null, isVerifying: false, resendCooldown: 0, expireTimer: 180 });
+        setOtp({ show: true, userId, accessToken, maskedPhone: otpData.maskedPhone || "", digits: ["", "", "", "", "", ""], error: null, isVerifying: false, resendCooldown: 0, expireTimer: 180 });
       } catch { router.push("/admin/dashboard"); }
     } catch {
       setForm((prev) => ({ ...prev, isLoading: false, error: "로그인 중 오류가 발생했습니다." }));
@@ -106,7 +108,7 @@ export default function AdminLoginPage() {
   const handleResend = async () => {
     setOtp((p) => ({ ...p, expireTimer: 180, error: null }));
     try {
-      const res = await fetch("/api/auth/send-login-otp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: otp.userId }) });
+      const res = await fetch("/api/auth/send-login-otp", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${otp.accessToken}` }, body: JSON.stringify({ userId: otp.userId }) });
       const data = await res.json();
       if (!res.ok) setOtp((p) => ({ ...p, error: data.error || "재발송 실패" }));
     } catch { setOtp((p) => ({ ...p, error: "재발송 중 오류" })); }
