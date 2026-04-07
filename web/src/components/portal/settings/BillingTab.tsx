@@ -130,6 +130,7 @@ export default function BillingTab() {
   const [pointBalance, setPointBalance] = useState<PointBalanceData | null>(null)
   const [pointTransactions, setPointTransactions] = useState<PointTx[]>([])
   const [packages, setPackages] = useState<PointPackage[]>([])
+  const [selectedPointPackageId, setSelectedPointPackageId] = useState<string | null>(null)
   const [latestOrder, setLatestOrder] = useState<LatestPaymentOrder | null>(null)
   const [subscription, setSubscription] = useState<SubscriptionSnapshot | null>(null)
   const [paymentSettings, setPaymentSettings] = useState<AdminPaymentSettings | null>(null)
@@ -209,12 +210,29 @@ export default function BillingTab() {
     () => PLAN_META.find((plan) => plan.id === currentPlan),
     [currentPlan],
   )
+  const selectedPointPackage = useMemo(
+    () => packages.find((pkg) => pkg.id === selectedPointPackageId) ?? packages[0] ?? null,
+    [packages, selectedPointPackageId],
+  )
 
   const expiryDays = useMemo(() => daysUntil(subscription?.expires_at), [subscription?.expires_at])
   const planExpiryNoticeDays = paymentSettings?.subscriptionExpiryNoticeDays ?? [7, 3, 1]
   const isExpiryNoticeVisible =
     expiryDays !== null && expiryDays >= 0 && planExpiryNoticeDays.includes(expiryDays)
   const isRecurringPlanPayment = billingCycle === 'monthly' && planPaymentSchedule === 'recurring'
+
+  useEffect(() => {
+    if (packages.length === 0) {
+      if (selectedPointPackageId !== null) {
+        setSelectedPointPackageId(null)
+      }
+      return
+    }
+
+    if (!selectedPointPackageId || !packages.some((pkg) => pkg.id === selectedPointPackageId)) {
+      setSelectedPointPackageId(packages[0].id)
+    }
+  }, [packages, selectedPointPackageId])
 
   useEffect(() => {
     if (billingCycle !== 'monthly' && planPaymentSchedule !== 'one_time') {
@@ -852,7 +870,16 @@ export default function BillingTab() {
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
             {packages.map((pkg) => (
-              <div key={pkg.id} className="rounded-2xl border border-outline-variant/15 p-5">
+              <button
+                key={pkg.id}
+                type="button"
+                onClick={() => setSelectedPointPackageId(pkg.id)}
+                className={`rounded-2xl border p-5 text-left transition-colors ${
+                  selectedPointPackage?.id === pkg.id
+                    ? 'border-primary bg-primary/5'
+                    : 'border-outline-variant/15 hover:border-outline-variant/40'
+                }`}
+              >
                 <p className="text-lg font-bold text-on-surface">{pkg.name}</p>
                 <p className="mt-3 text-2xl font-bold text-primary">
                   {fmtPoints(pkg.points + (pkg.bonus_points ?? 0))}
@@ -861,16 +888,42 @@ export default function BillingTab() {
                   기본 {fmtPoints(pkg.points)} / 보너스 {fmtPoints(pkg.bonus_points ?? 0)}
                 </p>
                 <p className="mt-4 text-lg font-semibold text-on-surface">{fmtKRW(pkg.price)}</p>
-                <button
-                  type="button"
-                  onClick={() => void handlePointCharge(pkg)}
-                  disabled={processingKey === `point:${pkg.id}`}
-                  className="mt-5 h-11 w-full rounded-xl bg-primary text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-60"
-                >
-                  {processingKey === `point:${pkg.id}` ? '충전 진행 중...' : '포인트 충전'}
-                </button>
-              </div>
+                <p className="mt-5 text-sm font-medium text-primary">
+                  {selectedPointPackage?.id === pkg.id ? '선택된 상품' : '상품 선택'}
+                </p>
+              </button>
             ))}
+          </div>
+
+          <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-5">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-sm font-bold text-on-surface">선택한 상품</p>
+                <p className="mt-2 text-lg font-semibold text-on-surface">
+                  {selectedPointPackage ? selectedPointPackage.name : '상품을 선택해 주세요.'}
+                </p>
+                {selectedPointPackage ? (
+                  <p className="mt-1 text-sm text-on-surface-variant">
+                    {fmtPoints(selectedPointPackage.points + (selectedPointPackage.bonus_points ?? 0))} /{' '}
+                    {fmtKRW(selectedPointPackage.price)}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-sm text-on-surface-variant">
+                    먼저 포인트 상품을 선택한 뒤 결제를 진행해 주세요.
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => selectedPointPackage && void handlePointCharge(selectedPointPackage)}
+                disabled={!selectedPointPackage || processingKey === `point:${selectedPointPackage.id}`}
+                className="h-11 rounded-xl bg-primary px-6 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-60"
+              >
+                {selectedPointPackage && processingKey === `point:${selectedPointPackage.id}`
+                  ? '결제 진행 중...'
+                  : '선택한 상품 결제'}
+              </button>
+            </div>
           </div>
 
           <div className="rounded-2xl border border-outline-variant/15 p-5">

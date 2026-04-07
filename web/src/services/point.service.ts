@@ -314,5 +314,14 @@ export async function getPointPackages() {
     .eq('is_active', true)
     .order('sort_order')
 
-  return data ?? []
+  const uniquePackages = new Map<string, Record<string, unknown>>()
+
+  for (const pkg of data ?? []) {
+    const key = [pkg.name, pkg.points, pkg.bonus_points ?? 0, pkg.price].join(':')
+    if (!uniquePackages.has(key)) {
+      uniquePackages.set(key, pkg)
+    }
+  }
+
+  return Array.from(uniquePackages.values())
 }
