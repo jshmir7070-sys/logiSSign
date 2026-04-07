@@ -152,6 +152,80 @@ export default function PricingPage() {
             })}
           </div>
           <p className="text-center text-xs text-on-surface-variant/50 mt-5">연간 결제 시 20~40% 할인. Enterprise는 별도 문의.</p>
+
+          {/* ── 상세 비교표 ── */}
+          <div className="mt-16 overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="border-b-2 border-outline-variant/20">
+                  <th className="text-left py-3 px-4 text-on-surface-variant font-medium w-[160px]"></th>
+                  <th className="text-center py-3 px-4 font-bold text-on-surface">Free</th>
+                  <th className="text-center py-3 px-4 font-bold text-on-surface">Basic</th>
+                  <th className="text-center py-3 px-4 font-bold text-primary bg-primary/5 rounded-t-xl">Standard</th>
+                  <th className="text-center py-3 px-4 font-bold text-on-surface">Pro</th>
+                  <th className="text-center py-3 px-4 font-bold text-on-surface">Enterprise</th>
+                </tr>
+              </thead>
+              <tbody className="text-on-surface-variant">
+                <tr className="border-b border-outline-variant/10">
+                  <td className="py-3 px-4 font-medium text-on-surface">유형</td>
+                  <td className="py-3 px-4 text-center">포인트 충전형</td>
+                  <td className="py-3 px-4 text-center">구독</td>
+                  <td className="py-3 px-4 text-center bg-primary/5">구독</td>
+                  <td className="py-3 px-4 text-center">구독</td>
+                  <td className="py-3 px-4 text-center">구독</td>
+                </tr>
+                <tr className="border-b border-outline-variant/10">
+                  <td className="py-3 px-4 font-medium text-on-surface">월 요금</td>
+                  <td className="py-3 px-4 text-center font-bold">₩0</td>
+                  <td className="py-3 px-4 text-center font-bold">{fmtKRW(49900)}</td>
+                  <td className="py-3 px-4 text-center font-bold bg-primary/5 text-primary">{fmtKRW(99000)}</td>
+                  <td className="py-3 px-4 text-center font-bold">{fmtKRW(199000)}</td>
+                  <td className="py-3 px-4 text-center font-bold">별도 문의</td>
+                </tr>
+                <tr className="border-b border-outline-variant/10">
+                  <td className="py-3 px-4 font-medium text-on-surface">기사 수</td>
+                  <td className="py-3 px-4 text-center">5명</td>
+                  <td className="py-3 px-4 text-center">30명</td>
+                  <td className="py-3 px-4 text-center bg-primary/5">80명</td>
+                  <td className="py-3 px-4 text-center">150명</td>
+                  <td className="py-3 px-4 text-center">무제한</td>
+                </tr>
+                <tr className="border-b border-outline-variant/10">
+                  <td className="py-3 px-4 font-medium text-on-surface">관리자</td>
+                  <td className="py-3 px-4 text-center">대표만</td>
+                  <td className="py-3 px-4 text-center">2명</td>
+                  <td className="py-3 px-4 text-center bg-primary/5">5명</td>
+                  <td className="py-3 px-4 text-center">5명</td>
+                  <td className="py-3 px-4 text-center">99명</td>
+                </tr>
+                <tr className="border-b border-outline-variant/10">
+                  <td className="py-3 px-4 font-medium text-on-surface">월 계약서</td>
+                  <td className="py-3 px-4 text-center">포인트 차감</td>
+                  <td className="py-3 px-4 text-center">60건</td>
+                  <td className="py-3 px-4 text-center bg-primary/5">160건</td>
+                  <td className="py-3 px-4 text-center">300건</td>
+                  <td className="py-3 px-4 text-center">무제한</td>
+                </tr>
+                <tr className="border-b border-outline-variant/10">
+                  <td className="py-3 px-4 font-medium text-on-surface">기능 사용</td>
+                  <td className="py-3 px-4 text-center">포인트 차감</td>
+                  <td className="py-3 px-4 text-center">포함</td>
+                  <td className="py-3 px-4 text-center bg-primary/5">포함</td>
+                  <td className="py-3 px-4 text-center">포함</td>
+                  <td className="py-3 px-4 text-center">포함</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 font-medium text-on-surface">기사 초과</td>
+                  <td className="py-3 px-4 text-center">{fmt(EXTRA_DRIVER_MONTHLY_POINTS)}P/명</td>
+                  <td className="py-3 px-4 text-center">{fmt(EXTRA_DRIVER_MONTHLY_POINTS)}P/명</td>
+                  <td className="py-3 px-4 text-center bg-primary/5">{fmt(EXTRA_DRIVER_MONTHLY_POINTS)}P/명</td>
+                  <td className="py-3 px-4 text-center">{fmt(EXTRA_DRIVER_MONTHLY_POINTS)}P/명</td>
+                  <td className="py-3 px-4 text-center">-</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 

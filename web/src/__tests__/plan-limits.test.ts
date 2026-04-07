@@ -14,10 +14,10 @@ describe('plan-limits', () => {
       expect(isPaidPlan('free')).toBe(false)
     })
 
-    it('treats point and subscription plans as paid', () => {
-      expect(isPaidPlan('point')).toBe(true)
+    it('treats subscription plans as paid', () => {
       expect(isPaidPlan('basic')).toBe(true)
       expect(isPaidPlan('standard')).toBe(true)
+      expect(isPaidPlan('pro')).toBe(true)
       expect(isPaidPlan('enterprise')).toBe(true)
     })
   })
@@ -30,7 +30,7 @@ describe('plan-limits', () => {
       expect(limits.maxAdminAccounts).toBe(5)
       expect(limits.maxDefaultTemplates).toBe(999)
       expect(limits.maxUploadTemplates).toBe(999)
-      expect(limits.monthlyFreeContracts).toBe(300)
+      expect(limits.monthlyFreeContracts).toBe(160)
     })
 
     it('falls back to free limits for undefined', () => {
@@ -39,7 +39,7 @@ describe('plan-limits', () => {
       expect(limits.maxDrivers).toBe(5)
       expect(limits.maxDefaultTemplates).toBe(999)
       expect(limits.maxUploadTemplates).toBe(999)
-      expect(limits.monthlyFreeContracts).toBe(60)
+      expect(limits.monthlyFreeContracts).toBe(0)
     })
 
     it('falls back to free limits for an invalid value', () => {
@@ -70,7 +70,7 @@ describe('plan-limits', () => {
     it('keeps free as the most restrictive driver tier', () => {
       expect(PLAN_LIMITS.free.maxDrivers).toBe(5)
       expect(PLAN_LIMITS.free.maxDrivers).toBeLessThan(PLAN_LIMITS.basic.maxDrivers!)
-      expect(PLAN_LIMITS.free.monthlyFreeContracts).toBe(60)
+      expect(PLAN_LIMITS.free.monthlyFreeContracts).toBe(0)
     })
 
     it('keeps enterprise as the most permissive driver tier', () => {

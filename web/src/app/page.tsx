@@ -218,7 +218,7 @@ export default function HomePage() {
             <div className="price-card">
               <span className="price-name">무료</span>
               <span className="price-val">₩0</span>
-              <span className="price-desc">10명 이하</span>
+              <span className="price-desc">5명</span>
             </div>
             <div className="price-card">
               <span className="price-name">Basic</span>
@@ -239,7 +239,7 @@ export default function HomePage() {
             <div className="price-card">
               <span className="price-name">Enterprise</span>
               <span className="price-val">별도 문의</span>
-              <span className="price-desc">150명 이상</span>
+              <span className="price-desc">무제한</span>
             </div>
           </div>
         </div>

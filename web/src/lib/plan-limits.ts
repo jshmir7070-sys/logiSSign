@@ -61,7 +61,7 @@ const PLAN_ORDER: PlanType[] = ['free', 'basic', 'standard', 'pro', 'enterprise'
 export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
   free: {
     maxDrivers: 5,
-    maxAdminAccounts: 0,
+    maxAdminAccounts: 1,           // 대표만
     maxDefaultTemplates: 999,
     maxUploadTemplates: 999,
     monthlyFreeContracts: 0,       // 전부 포인트 차감
@@ -130,11 +130,11 @@ export const PLAN_DISCOUNTS: Record<string, number> = {
 }
 
 export const PLAN_HIGHLIGHTS: Record<PlanType, string[]> = {
-  free: ['기사 5명', '모든 기능 사용 가능', '포인트 충전형', '가입 축하 5,000P 제공'],
-  basic: ['기사 30명 포함', '월 60건 계약서 무료', '정산서 빌더', '세금계산서 지원'],
-  standard: ['기사 80명 포함', '월 160건 계약서 무료', '매출 리포트', '실시간 알림'],
-  pro: ['기사 150명 포함', '월 300건 계약서 무료', 'API 연동', '대량 처리'],
-  enterprise: ['기사 무제한', '전자계약 무제한', '전담 매니저', '맞춤형 정산'],
+  free: ['기사 5명', '관리자: 대표만', '포인트 충전형', '기능 사용 시 포인트 차감', '기사 초과 시 2,200P/명/월'],
+  basic: ['기사 30명', '관리자 2명', '월 계약서 60건 포함', '기능 사용 포함', '기사 초과 시 2,200P/명/월'],
+  standard: ['기사 80명', '관리자 5명', '월 계약서 160건 포함', '기능 사용 포함', '기사 초과 시 2,200P/명/월'],
+  pro: ['기사 150명', '관리자 5명', '월 계약서 300건 포함', '기능 사용 포함', '기사 초과 시 2,200P/명/월'],
+  enterprise: ['기사 무제한', '관리자 99명', '계약서 무제한', '기능 사용 포함', '전담 매니저'],
 }
 
 export function getSubscriptionPrice(plan: PlanType, billing: string = 'monthly'): number {
