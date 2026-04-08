@@ -13,6 +13,9 @@ const pageTitles: Record<string, string> = {
   '/admin/server': '서버 상태',
   '/admin/settings': '설정',
   '/admin/guide': '운영 가이드',
+  '/admin/templates': '계약서 템플릿',
+  '/admin/audit-log': '감사 로그',
+  '/admin/drivers': '기사 현황',
 }
 
 export default function TopBar() {
@@ -38,7 +41,10 @@ export default function TopBar() {
           />
         </div>
 
-        <button type="button" className="relative flex h-9 w-9 items-center justify-center rounded-xl transition-colors hover:bg-surface-container-low">
+        <button
+          type="button"
+          className="relative flex h-9 w-9 items-center justify-center rounded-xl transition-colors hover:bg-surface-container-low"
+        >
           <span
             className="material-symbols-outlined text-[20px] text-on-surface-variant"
             style={{ fontVariationSettings: "'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20" }}
@@ -48,7 +54,7 @@ export default function TopBar() {
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-error" />
         </button>
 
-        <UserMenu initials="A" name="Super Admin" email="admin@precision.io" redirectTo="/admin/login" />
+        <UserMenu initials="관" name="플랫폼 관리자" redirectTo="/admin/login" />
       </div>
     </header>
   )

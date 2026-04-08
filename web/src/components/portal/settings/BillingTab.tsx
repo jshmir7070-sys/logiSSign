@@ -99,6 +99,14 @@ function fmtPoints(n: number): string {
   return `${fmt(n)}P`
 }
 
+function openEnterpriseInquiry() {
+  if (typeof window === 'undefined') return
+
+  const subject = encodeURIComponent('logiSSign Enterprise 플랜 문의')
+  const body = encodeURIComponent('안녕하세요. Enterprise 플랜 도입 상담을 요청드립니다.')
+  window.location.href = `mailto:contact@logissign.com?subject=${subject}&body=${body}`
+}
+
 function formatDate(dateString: string | null | undefined) {
   if (!dateString) return '-'
   return new Date(dateString).toLocaleDateString('ko-KR')
@@ -763,25 +771,38 @@ export default function BillingTab() {
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             {PLAN_META.map((plan) => {
               const amount = getSubscriptionPrice(plan.id, billingCycle)
+              const isEnterprise = plan.id === 'enterprise'
               return (
                 <div key={plan.id} className="rounded-2xl border border-outline-variant/15 p-5">
                   <p className="text-lg font-bold text-on-surface">{plan.name}</p>
                   <p className="mt-2 text-sm text-on-surface-variant">{plan.description}</p>
-                  <p className="mt-4 text-2xl font-bold text-primary">{fmtKRW(amount)}</p>
+                  <p className="mt-4 text-2xl font-bold text-primary">{isEnterprise ? '문의' : fmtKRW(amount)}</p>
                   <p className="mt-1 text-xs text-on-surface-variant">
-                    {billingCycle === 'monthly'
-                      ? '월 단위 결제'
-                      : billingCycle === '1year'
-                        ? '1년 연간권'
-                        : '2년 연간권'}
+                    {isEnterprise
+                      ? '도입 규모와 운영 조건에 맞춰 별도 협의합니다.'
+                      : billingCycle === 'monthly'
+                        ? '월 단위 결제'
+                        : billingCycle === '1year'
+                          ? '1년 연간권'
+                          : '2년 연간권'}
                   </p>
                   <button
                     type="button"
-                    onClick={() => void handlePlanPurchase(plan.id)}
-                    disabled={processingKey === `plan:${plan.id}`}
+                    onClick={() => {
+                      if (isEnterprise) {
+                        openEnterpriseInquiry()
+                        return
+                      }
+                      void handlePlanPurchase(plan.id)
+                    }}
+                    disabled={!isEnterprise && processingKey === `plan:${plan.id}`}
                     className="mt-5 h-11 w-full rounded-xl bg-primary text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-60"
                   >
-                    {processingKey === `plan:${plan.id}` ? '결제 진행 중...' : `${plan.name} 결제`}
+                    {isEnterprise
+                      ? '문의하기'
+                      : processingKey === `plan:${plan.id}`
+                        ? '결제 진행 중...'
+                        : `${plan.name} 결제`}
                   </button>
                 </div>
               )

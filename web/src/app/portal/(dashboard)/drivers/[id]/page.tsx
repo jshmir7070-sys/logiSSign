@@ -63,6 +63,48 @@ interface DriverDetail {
   principals: { name: string } | null
 }
 
+async function getFallbackDriverDetail(
+  supabase: ReturnType<typeof createBrowserSupabaseClient>,
+  driverId: string,
+): Promise<DriverDetail | null> {
+  const { data: driverRow, error } = await supabase
+    .from('drivers')
+    .select(`
+      id, name, phone, employee_code, delivery_area, camp_name, address, email, status,
+      is_business_owner, vat_included, fresh_incentive_pct, extra_incentive_pct, tax_type,
+      business_reg_number, representative_name, business_address, business_type, business_category,
+      vehicle_number, vehicle_type, vehicle_year, vehicle_vin, vehicle_mileage,
+      vehicle_owner, vehicle_rent_monthly, vehicle_deposit, vehicle_insurance_by,
+      rate_mode, flat_rate, rate_percentage, custom_values
+    `)
+    .eq('id', driverId)
+    .maybeSingle()
+
+  if (error || !driverRow) {
+    return null
+  }
+
+  const { data: principalLinks } = await supabase
+    .from('driver_principals')
+    .select('principals(name)')
+    .eq('driver_id', driverId)
+    .eq('status', 'active')
+    .limit(1)
+
+  const principalName = (
+    principalLinks?.[0] as { principals?: { name?: string } | null } | undefined
+  )?.principals?.name
+
+  return {
+    ...driverRow,
+    birth_date: null,
+    bank_name: null,
+    bank_account: null,
+    bank_holder: null,
+    principals: principalName ? { name: principalName } : null,
+  } as DriverDetail
+}
+
 export default function DriverDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -115,6 +157,26 @@ export default function DriverDetailPage() {
         extra_incentive_pct: d.extra_incentive_pct,
         tax_type: d.tax_type || (d.is_business_owner ? 'vat_invoice' : 'withholding_3_3'),
       });
+    } else {
+      const fallbackDriver = await getFallbackDriverDetail(supabase, id);
+      if (!fallbackDriver) {
+        setError(detailResult?.error || '기사 정보를 찾을 수 없습니다.');
+        setLoading(false);
+        return;
+      }
+
+      setDriver(fallbackDriver);
+      setBizSettings({
+        is_business_owner: fallbackDriver.is_business_owner,
+        vat_included: fallbackDriver.vat_included,
+        fresh_incentive_pct: fallbackDriver.fresh_incentive_pct,
+        extra_incentive_pct: fallbackDriver.extra_incentive_pct,
+        tax_type:
+          fallbackDriver.tax_type || (fallbackDriver.is_business_owner ? 'vat_invoice' : 'withholding_3_3'),
+      });
+      setError(
+        detailResult?.error || '기사 상세 일부를 불러오지 못해 기본 정보만 표시합니다.'
+      );
     }
 
     // 원청사 field_config에서 route_same 설정 조회

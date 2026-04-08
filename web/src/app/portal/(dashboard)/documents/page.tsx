@@ -117,7 +117,7 @@ export default function DocumentsPage() {
   };
 
   const handleCreateTemplateFromDoc = (doc: DocumentFile) => {
-    router.push(`/portal/documents/field-editor?docId=${doc.id}&from=documents`);
+    router.push(`/portal/contracts/field-editor?docId=${doc.id}&from=documents`);
   };
 
   const statusLabel = (status: string) => {
@@ -292,7 +292,7 @@ export default function DocumentsPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => router.push(`/portal/documents/field-editor?docId=${previewDoc.id}`)}
+                  onClick={() => router.push(`/portal/contracts/field-editor?docId=${previewDoc.id}&from=documents`)}
                   className="h-10 px-4 rounded-xl bg-primary/10 text-primary text-sm font-semibold font-korean hover:bg-primary/20 transition-colors"
                 >
                   필드 편집

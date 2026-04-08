@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import KpiCard from '@/components/admin/KpiCard'
 
-const MrrChart = dynamic(() => import('@/components/admin/charts/MrrChart'), { ssr: false })
+const MonthlyRevenueChart = dynamic(() => import('@/components/admin/charts/MrrChart'), { ssr: false })
 const PlanDistribution = dynamic(() => import('@/components/admin/charts/PlanDistribution'), {
   ssr: false,
 })
@@ -35,6 +35,14 @@ interface DashboardResponse {
     created_at: string
     agencies?: { name?: string }[] | { name?: string } | null
   }[]
+}
+
+const PLAN_LABELS: Record<string, string> = {
+  free: '무료형',
+  basic: '베이직',
+  standard: '스탠다드',
+  pro: '프로',
+  enterprise: '엔터프라이즈',
 }
 
 function formatKRW(value: number): string {
@@ -87,7 +95,15 @@ export default function AdminDashboardPage() {
     () =>
       Object.entries(data?.planCounts ?? {})
         .filter(([, count]) => count > 0)
-        .map(([plan, count]) => ({ name: plan.toUpperCase(), value: count })),
+        .map(([plan, count]) => ({ name: PLAN_LABELS[plan] ?? plan, value: count })),
+    [data?.planCounts],
+  )
+
+  const planDistributionSummary = useMemo(
+    () =>
+      Object.entries(data?.planCounts ?? {})
+        .map(([plan, count]) => `${PLAN_LABELS[plan] ?? plan} ${count}`)
+        .join(' / '),
     [data?.planCounts],
   )
 
@@ -101,8 +117,8 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           label="활성 고객사"
-          value={loading ? '...' : `${summary?.activeAgencies ?? 0}개`}
-          change={`전체 ${summary?.totalAgencies ?? 0}개 중`}
+          value={loading ? '...' : `${summary?.activeAgencies ?? 0}곳`}
+          change={`전체 ${summary?.totalAgencies ?? 0}곳 중`}
           changeType="up"
           accentColor="#2563eb"
           icon="apartment"
@@ -126,7 +142,7 @@ export default function AdminDashboardPage() {
         <KpiCard
           label="이탈률"
           value={loading ? '...' : `${churnRate}%`}
-          change={`비활성 ${summary?.inactiveAgencies ?? 0}개`}
+          change={`비활성 ${summary?.inactiveAgencies ?? 0}곳`}
           changeType={Number(churnRate) > 0 ? 'down' : 'up'}
           accentColor="#565e74"
           icon="trending_down"
@@ -135,20 +151,16 @@ export default function AdminDashboardPage() {
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <div className="min-h-[320px] rounded-2xl bg-surface-container-lowest p-6 shadow-ambient">
-          <h3 className="mb-1 font-headline text-[16px] font-bold text-on-surface">MRR 추이</h3>
+          <h3 className="mb-1 font-headline text-[16px] font-bold text-on-surface">월 반복 매출 추이</h3>
           <p className="mb-6 text-[13px] text-on-surface-variant">
-            최근 6개월 기준 예상 반복 매출 추정치를 확인합니다.
+            최근 6개월 기준으로 예상 월 반복 매출 흐름을 확인합니다.
           </p>
-          <MrrChart data={data?.mrrHistory ?? []} />
+          <MonthlyRevenueChart data={data?.mrrHistory ?? []} />
         </div>
 
         <div className="min-h-[320px] rounded-2xl bg-surface-container-lowest p-6 shadow-ambient">
           <h3 className="mb-1 font-headline text-[16px] font-bold text-on-surface">플랜 분포</h3>
-          <p className="mb-6 text-[13px] text-on-surface-variant">
-            Free {data?.planCounts.free ?? 0} / Basic {data?.planCounts.basic ?? 0} / Standard{' '}
-            {data?.planCounts.standard ?? 0} / Pro {data?.planCounts.pro ?? 0} / Enterprise{' '}
-            {data?.planCounts.enterprise ?? 0}
-          </p>
+          <p className="mb-6 text-[13px] text-on-surface-variant">{planDistributionSummary || '플랜 데이터가 없습니다.'}</p>
           <PlanDistribution data={planDistributionData} />
         </div>
       </div>
@@ -165,7 +177,7 @@ export default function AdminDashboardPage() {
                   <div>
                     <p className="font-medium text-on-surface">{agency.name}</p>
                     <p className="mt-1 text-xs text-on-surface-variant">
-                      {agency.plan.toUpperCase()} · {new Date(agency.created_at).toLocaleDateString('ko-KR')}
+                      {PLAN_LABELS[agency.plan] ?? agency.plan} · {new Date(agency.created_at).toLocaleDateString('ko-KR')}
                     </p>
                   </div>
                   <span className="text-xs font-medium text-on-surface-variant">{agency.status}</span>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { isDefaultAdminPassword, requiresAdminPasswordSetup } from "@/lib/admin-password-policy";
 import { createBrowserSupabaseClient } from "@/lib/supabase";
 
 interface LoginFormState {
@@ -16,6 +17,7 @@ interface LoginFormState {
 interface OtpState {
   show: boolean;
   userId: string;
+  redirectPath: string;
   maskedPhone: string;
   digits: string[];
   error: string | null;
@@ -31,7 +33,7 @@ export default function AdminLoginPage() {
     email: "", password: "", isLoading: false, error: null, showPassword: false,
   });
   const [otp, setOtp] = useState<OtpState>({
-    show: false, userId: "", maskedPhone: "", digits: ["", "", "", "", "", ""],
+    show: false, userId: "", redirectPath: "", maskedPhone: "", digits: ["", "", "", "", "", ""],
     error: null, isVerifying: false, resendCooldown: 0, expireTimer: 180, accessToken: '',
   });
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -61,15 +63,28 @@ export default function AdminLoginPage() {
         return;
       }
 
+      const shouldForcePasswordSetup =
+        requiresAdminPasswordSetup(data.user) || isDefaultAdminPassword(form.password);
+
+      if (shouldForcePasswordSetup) {
+        await supabase.auth.updateUser({
+          data: {
+            ...(data.user?.user_metadata ?? {}),
+            must_change_password: true,
+          },
+        });
+      }
+
       const userId = data.user!.id;
       const accessToken = data.session?.access_token || '';
+      const redirectPath = shouldForcePasswordSetup ? "/admin/setup-password?required=1" : "/admin/dashboard";
       try {
         const otpRes = await fetch("/api/auth/send-login-otp", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${accessToken}` }, body: JSON.stringify({ userId }) });
         const otpData = await otpRes.json();
-        if (otpData.skip) { router.push("/admin/dashboard"); return; }
+        if (otpData.skip) { router.push(redirectPath); return; }
         setForm((prev) => ({ ...prev, isLoading: false }));
-        setOtp({ show: true, userId, accessToken, maskedPhone: otpData.maskedPhone || "", digits: ["", "", "", "", "", ""], error: null, isVerifying: false, resendCooldown: 0, expireTimer: 180 });
-      } catch { router.push("/admin/dashboard"); }
+        setOtp({ show: true, userId, redirectPath, accessToken, maskedPhone: otpData.maskedPhone || "", digits: ["", "", "", "", "", ""], error: null, isVerifying: false, resendCooldown: 0, expireTimer: 180 });
+      } catch { router.push(redirectPath); }
     } catch {
       setForm((prev) => ({ ...prev, isLoading: false, error: "로그인 중 오류가 발생했습니다." }));
     }
@@ -101,7 +116,7 @@ export default function AdminLoginPage() {
       const res = await fetch("/api/auth/verify-login-otp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: otp.userId, code }) });
       const data = await res.json();
       if (!res.ok) { setOtp((p) => ({ ...p, isVerifying: false, error: data.error || "인증 실패", digits: ["", "", "", "", "", ""] })); otpRefs.current[0]?.focus(); return; }
-      window.location.replace("/admin/dashboard");
+      window.location.replace(otp.redirectPath || "/admin/dashboard");
     } catch { setOtp((p) => ({ ...p, isVerifying: false, error: "인증 처리 중 오류" })); }
   };
 
@@ -126,7 +141,7 @@ export default function AdminLoginPage() {
           <h1 className="font-headline text-4xl font-bold text-white tracking-tight mb-2">&nbsp;</h1>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 mb-6">
             <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span className="text-xs font-medium text-white/80 tracking-wider uppercase">Super Admin</span>
+            <span className="text-xs font-medium text-white/80 tracking-wider">플랫폼 관리자</span>
           </div>
           <p className="font-korean text-lg text-white/50">SaaS 플랫폼 전체 관리 시스템</p>
           <span className="text-white/20 text-sm font-data tracking-widest mt-12">v2.0</span>

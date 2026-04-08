@@ -177,7 +177,7 @@ export default function ContractTemplatesPage() {
         return;
       }
 
-      router.push(`/portal/documents/field-editor?docId=${result.id}&draft=1&from=templates`);
+      router.push(`/portal/contracts/field-editor?docId=${result.id}&draft=1&from=templates`);
     } catch (error) {
       console.error('문서 초안 생성 실패:', error);
       alert('문서 초안을 생성하지 못했습니다.');

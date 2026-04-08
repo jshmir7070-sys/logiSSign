@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { csrfCheck } from "@/lib/csrf";
+import { requiresAdminPasswordSetup } from "@/lib/admin-password-policy";
 import { getFeatureForRoute, hasFeature } from "@/lib/plan-limits";
 import { MFA_COOKIE, verifyMfaToken } from "@/lib/mfa";
 import {
@@ -138,6 +139,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const isAdminRoute = pathname.startsWith("/admin");
+  const isAdminApiRoute = pathname.startsWith("/api/admin");
   const isPortalRoute = pathname.startsWith("/portal");
   const isApiRoute = pathname.startsWith("/api");
   const hasBearerToken = request.headers.get("authorization")?.startsWith("Bearer ") ?? false;
@@ -224,10 +226,36 @@ export async function middleware(request: NextRequest) {
     return redirect;
   }
 
+  if (
+    (isAdminRoute || isAdminApiRoute) &&
+    role === "provider_admin" &&
+    requiresAdminPasswordSetup(user)
+  ) {
+    if (isAdminRoute && pathname !== "/admin/setup-password") {
+      const redirect = NextResponse.redirect(new URL("/admin/setup-password?required=1", request.url));
+      addRequestIdHeader(addNoCacheHeaders(redirect), requestId);
+      return redirect;
+    }
+
+    if (isAdminApiRoute) {
+      const passwordResponse = NextResponse.json(
+        { error: "비밀번호를 먼저 변경해 주세요.", requestId },
+        { status: 403 }
+      );
+      addRequestIdHeader(passwordResponse, requestId);
+      return passwordResponse;
+    }
+  }
+
   if (isPortalRoute && role !== "agency_admin") {
     const redirect =
       role === "provider_admin"
-        ? NextResponse.redirect(new URL("/admin/dashboard", request.url))
+        ? NextResponse.redirect(
+            new URL(
+              requiresAdminPasswordSetup(user) ? "/admin/setup-password?required=1" : "/admin/dashboard",
+              request.url
+            )
+          )
         : NextResponse.redirect(new URL("/portal/login", request.url));
     addRequestIdHeader(addNoCacheHeaders(redirect), requestId);
     return redirect;

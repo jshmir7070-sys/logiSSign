@@ -69,8 +69,8 @@ export default function Sidebar() {
           </span>
         </div>
         <div className="min-w-0">
-          <p className="truncate font-body text-[13px] font-medium text-white/90">관리자 프로필</p>
-          <p className="truncate font-body text-[11px] text-white/40">admin@precision.io</p>
+          <p className="truncate font-body text-[13px] font-medium text-white/90">플랫폼 관리자</p>
+          <p className="truncate font-body text-[11px] text-white/40">운영 계정</p>
         </div>
       </div>
     </aside>

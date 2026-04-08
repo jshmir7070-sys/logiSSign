@@ -30,7 +30,12 @@
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase'
-import { type SignFieldType, FIELD_TYPE_META } from '@/services/document-sign-field.service'
+import {
+  type SignFieldType,
+  FIELD_TYPE_META,
+  getSignFields as getDocumentSignFields,
+  saveSignFields as saveDocumentSignFields,
+} from '@/services/document-sign-field.service'
 import * as pdfjsLib from 'pdfjs-dist'
 
 // PDF.js worker 설정 (로컬 파일 — CSP 차단 방지)
@@ -69,6 +74,14 @@ interface FieldPreset {
   label: string
   bindingVar?: string
   fieldType: 'text' | 'date'
+}
+
+function isPlaceholderDocumentTitle(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.pdf$/i.test(value.trim())
+}
+
+function buildSafeFileName(originalName: string) {
+  return originalName.replace(/[^a-zA-Z0-9._-]/g, '_')
 }
 
 /* ── 발송인(대리점) 바인딩 변수 ── */
@@ -186,6 +199,10 @@ function ContractFieldEditorPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const templateId = searchParams.get('templateId') ?? ''
+  const docId = searchParams.get('docId') ?? ''
+  const isDraftSession = searchParams.get('draft') === '1'
+  const returnTarget = searchParams.get('from') === 'templates' ? '/portal/contracts/templates' : '/portal/documents'
+  const isDocumentMode = Boolean(docId)
 
   const [title, setTitle] = useState('')
   const [pdfUrl, setPdfUrl] = useState('')
@@ -212,32 +229,78 @@ function ContractFieldEditorPage() {
   const [loadingDocBox, setLoadingDocBox] = useState(false)
   const [previewZoom, setPreviewZoom] = useState(1)
   const [showGuide, setShowGuide] = useState(false)
+  const [documentStoragePath, setDocumentStoragePath] = useState('')
 
   const containerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pdfDocRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null)
+  const cleanedUpRef = useRef(false)
+  const savedRef = useRef(false)
 
   const normalizeFieldOrder = useCallback((nextFields: LocalField[]) => (
     nextFields.map((field, index) => ({ ...field, sort_order: index }))
   ), [])
 
-  const serializeFieldsSnapshot = useCallback((nextFields: LocalField[]) => (
-    JSON.stringify(nextFields.map((field, index) => ({
-      field_type: field.field_type,
-      field_owner: field.field_owner,
-      page_number: field.page_number,
-      x: field.x,
-      y: field.y,
-      width: field.width,
-      height: field.height,
-      label: field.label,
-      required: field.required,
-      sort_order: index,
-      default_value: field.default_value,
-      binding_var: field.binding_var,
-    })))
+  const serializeEditorSnapshot = useCallback((nextTitle: string, nextFields: LocalField[]) => (
+    JSON.stringify({
+      title: nextTitle.trim(),
+      fields: nextFields.map((field, index) => ({
+        field_type: field.field_type,
+        field_owner: field.field_owner,
+        page_number: field.page_number,
+        x: field.x,
+        y: field.y,
+        width: field.width,
+        height: field.height,
+        label: field.label,
+        required: field.required,
+        sort_order: index,
+        default_value: field.default_value,
+        binding_var: field.binding_var,
+      })),
+    })
   ), [])
+
+  const cleanupDraft = useCallback(async (keepalive = false) => {
+    if (!isDocumentMode || !isDraftSession || !docId || cleanedUpRef.current || savedRef.current) return
+    cleanedUpRef.current = true
+
+    try {
+      await fetch(`/api/documents/draft?docId=${docId}`, {
+        method: 'DELETE',
+        keepalive,
+      })
+    } catch (error) {
+      console.error('임시 문서 정리 실패:', error)
+    }
+  }, [docId, isDocumentMode, isDraftSession])
+
+  const loadAgencySeals = useCallback(async (agencyId?: string | null) => {
+    const supabase = createBrowserSupabaseClient()
+    let targetAgencyId = agencyId ?? null
+
+    if (!targetAgencyId) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      targetAgencyId = (user?.app_metadata?.agency_id as string | undefined) ?? null
+    }
+
+    if (!targetAgencyId) {
+      setAgencySeals([])
+      return
+    }
+
+    const { data: seals } = await supabase
+      .from('seals')
+      .select('id, seal_image_url, seal_data_uri, name_text, category, is_default')
+      .eq('owner_type', 'agency')
+      .eq('owner_id', targetAgencyId)
+      .order('is_default', { ascending: false })
+
+    if (seals) setAgencySeals(seals as SealRecord[])
+  }, [])
 
   // ── PDF 캔버스 렌더링 ──
   const renderPdfPage = useCallback(async (pageNum: number) => {
@@ -285,9 +348,65 @@ function ContractFieldEditorPage() {
 
   // ── 데이터 로드 ──
   useEffect(() => {
-    if (!templateId) return
+    if (!templateId && !docId) {
+      setLoading(false)
+      return
+    }
+
     ;(async () => {
       const supabase = createBrowserSupabaseClient()
+
+      if (isDocumentMode) {
+        const { data: doc } = await supabase
+          .from('document_files')
+          .select('title, file_url, agency_id')
+          .eq('id', docId)
+          .single()
+
+        if (doc) {
+          const currentTitle = ((doc as Record<string, unknown>).title as string) || ''
+          setTitle(currentTitle)
+
+          const storagePath = ((doc as Record<string, unknown>).file_url as string) || ''
+          setDocumentStoragePath(storagePath && !storagePath.startsWith('http') ? storagePath : '')
+          if (storagePath) {
+            if (storagePath.startsWith('http')) {
+              setPdfUrl(storagePath)
+            } else {
+              const { data: signed } = await supabase.storage.from('documents').createSignedUrl(storagePath, 3600)
+              setPdfUrl(signed?.signedUrl ?? '')
+            }
+          }
+
+          const existing = await getDocumentSignFields(docId)
+          const loaded = normalizeFieldOrder(
+            [...existing]
+              .sort((a, b) => (
+                (a.sort_order - b.sort_order) || (a.page_number - b.page_number) || (a.y - b.y) || (a.x - b.x)
+              ))
+              .map((field, index) => ({
+                _id: field.id,
+                field_type: field.field_type,
+                field_owner: 'receiver' as FieldOwner,
+                page_number: field.page_number,
+                x: field.x,
+                y: field.y,
+                width: field.width,
+                height: field.height,
+                label: field.label ?? undefined,
+                required: field.required,
+                sort_order: index,
+                default_value: field.default_value ?? undefined,
+              })),
+          )
+          setFields(loaded)
+          setSavedFields(serializeEditorSnapshot(currentTitle, loaded))
+          await loadAgencySeals((doc as Record<string, unknown>).agency_id as string | null)
+        }
+
+        setLoading(false)
+        return
+      }
 
       // 1) 템플릿 정보
       const { data: tmpl } = await supabase
@@ -317,52 +436,48 @@ function ContractFieldEditorPage() {
             _id: `f_${i}_${Date.now()}`,
           })))
           setFields(loaded)
-          setSavedFields(serializeFieldsSnapshot(loaded))
+          setSavedFields(serializeEditorSnapshot(t.title as string || '', loaded))
         }
 
         // 2) 대리점 도장 목록 조회
         const agencyId = t.agency_id as string
-        if (agencyId) {
-          const { data: seals } = await supabase
-            .from('seals')
-            .select('id, seal_image_url, seal_data_uri, name_text, category, is_default')
-            .eq('owner_type', 'agency')
-            .eq('owner_id', agencyId)
-            .order('is_default', { ascending: false })
-          if (seals) setAgencySeals(seals as SealRecord[])
-        } else {
-        // agency_id 없으면 현재 고객사 계정 기준 조회
-          const { data: { user } } = await supabase.auth.getUser()
-          const aid = user?.app_metadata?.agency_id as string
-          if (aid) {
-            const { data: seals } = await supabase
-              .from('seals')
-              .select('id, seal_image_url, seal_data_uri, name_text, category, is_default')
-              .eq('owner_type', 'agency')
-              .eq('owner_id', aid)
-              .order('is_default', { ascending: false })
-            if (seals) setAgencySeals(seals as SealRecord[])
-          }
-        }
+        await loadAgencySeals(agencyId)
       }
       setLoading(false)
     })()
-  }, [templateId, normalizeFieldOrder, serializeFieldsSnapshot])
+  }, [docId, isDocumentMode, loadAgencySeals, normalizeFieldOrder, serializeEditorSnapshot, templateId])
 
   // ── 변경 감지 ──
   useEffect(() => {
-    const currentSnapshot = serializeFieldsSnapshot(fields)
+    const currentSnapshot = serializeEditorSnapshot(title, fields)
     setHasUnsavedChanges(currentSnapshot !== savedFields)
-  }, [fields, savedFields, serializeFieldsSnapshot])
+  }, [fields, savedFields, serializeEditorSnapshot, title])
 
   // ── 브라우저 닫기/새로고침 시 경고 ──
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges) { e.preventDefault(); e.returnValue = '' }
     }
+    const handlePageHide = () => {
+      if (isDocumentMode && isDraftSession && !savedRef.current) {
+        void cleanupDraft(true)
+      }
+    }
     window.addEventListener('beforeunload', handler)
-    return () => window.removeEventListener('beforeunload', handler)
-  }, [hasUnsavedChanges])
+    window.addEventListener('pagehide', handlePageHide)
+    return () => {
+      window.removeEventListener('beforeunload', handler)
+      window.removeEventListener('pagehide', handlePageHide)
+    }
+  }, [cleanupDraft, hasUnsavedChanges, isDocumentMode, isDraftSession])
+
+  useEffect(() => (
+    () => {
+      if (isDocumentMode && isDraftSession && !savedRef.current) {
+        void cleanupDraft(true)
+      }
+    }
+  ), [cleanupDraft, isDocumentMode, isDraftSession])
 
   useEffect(() => {
     if (!contextMenu) return
@@ -395,8 +510,62 @@ function ContractFieldEditorPage() {
 
 
   // ── 파일 업로드 ──
+  const persistPdfBlob = useCallback(async (pdfBlob: Blob, sourceName: string) => {
+    const supabase = createBrowserSupabaseClient()
+
+    if (isDocumentMode) {
+      if (!docId) return { error: '문서 정보가 올바르지 않습니다.' }
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      const agencyId = (user?.app_metadata?.agency_id as string | undefined) ?? ''
+      if (!agencyId) return { error: '고객사 정보를 확인하지 못했습니다.' }
+
+      const fileName = sourceName.toLowerCase().endsWith('.pdf')
+        ? sourceName
+        : `${sourceName.replace(/\.[^.]+$/, '')}.pdf`
+      const path = documentStoragePath || `${agencyId}/edited/${docId}_${Date.now()}_${buildSafeFileName(fileName)}`
+      const { error: uploadErr } = await supabase.storage
+        .from('documents')
+        .upload(path, pdfBlob, { upsert: true, contentType: 'application/pdf' })
+      if (uploadErr) return { error: uploadErr.message }
+
+      const { error: updateErr } = await supabase
+        .from('document_files')
+        .update({
+          file_url: path,
+          file_name: fileName,
+          file_size: pdfBlob.size,
+          mime_type: 'application/pdf',
+        })
+        .eq('id', docId)
+      if (updateErr) return { error: updateErr.message }
+
+      setDocumentStoragePath(path)
+      const { data: signed } = await supabase.storage.from('documents').createSignedUrl(path, 3600)
+      setPdfUrl(signed?.signedUrl ?? '')
+      return { error: null }
+    }
+
+    if (!templateId) return { error: '템플릿 정보가 올바르지 않습니다.' }
+    const path = `templates/${templateId}.pdf`
+    const { error: uploadErr } = await supabase.storage
+      .from('contracts')
+      .upload(path, pdfBlob, { upsert: true, contentType: 'application/pdf' })
+    if (uploadErr) return { error: uploadErr.message }
+
+    const { error: updateErr } = await supabase
+      .from('contract_templates')
+      .update({ template_pdf_url: path, template_type: 'pdf' })
+      .eq('id', templateId)
+    if (updateErr) return { error: updateErr.message }
+
+    const { data: signed } = await supabase.storage.from('contracts').createSignedUrl(path, 3600)
+    setPdfUrl(signed?.signedUrl ?? '')
+    return { error: null }
+  }, [docId, documentStoragePath, isDocumentMode, templateId])
+
   const handleUploadFile = useCallback(async (file: File) => {
-    if (!templateId) return
     setUploading(true)
     try {
       const ext = (file.name.split('.').pop() || '').toLowerCase()
@@ -414,16 +583,15 @@ function ContractFieldEditorPage() {
         for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i)
         pdfBlob = new Blob([bytes], { type: 'application/pdf' })
       }
-      const supabase = createBrowserSupabaseClient()
-      const path = `templates/${templateId}.pdf`
-      const { error: uploadErr } = await supabase.storage.from('contracts').upload(path, pdfBlob, { upsert: true, contentType: 'application/pdf' })
-      if (uploadErr) { alert('업로드 실패: ' + uploadErr.message); setUploading(false); return }
-      await supabase.from('contract_templates').update({ template_pdf_url: path, template_type: 'pdf' }).eq('id', templateId)
-      const { data: signed } = await supabase.storage.from('contracts').createSignedUrl(path, 3600)
-      setPdfUrl(signed?.signedUrl ?? '')
+      const saveResult = await persistPdfBlob(pdfBlob, file.name)
+      if (saveResult.error) {
+        alert('업로드 실패: ' + saveResult.error)
+        setUploading(false)
+        return
+      }
     } catch { alert('업로드 중 오류가 발생했습니다') }
     setUploading(false)
-  }, [templateId])
+  }, [persistPdfBlob])
 
   // ── 내 문서함 로드 ──
   const handleOpenDocBox = useCallback(async () => {
@@ -485,23 +653,21 @@ function ContractFieldEditorPage() {
 
   // 내 문서함에서 선택 → 해당 PDF를 현재 템플릿에 적용
   const handleSelectDocBoxItem = useCallback(async (item: { name: string; path: string; url: string }) => {
-    if (!templateId) return
     setUploading(true)
     setShowDocBox(false)
     setSelectedDocBoxItem(null)
     try {
-      // 선택한 PDF를 다운로드 후 contracts 버킷에 복사
       const res = await fetch(item.url)
       const blob = await res.blob()
-      const supabase = createBrowserSupabaseClient()
-      const path = `templates/${templateId}.pdf`
-      await supabase.storage.from('contracts').upload(path, blob, { upsert: true, contentType: 'application/pdf' })
-      await supabase.from('contract_templates').update({ template_pdf_url: path, template_type: 'pdf' }).eq('id', templateId)
-      const { data: signed } = await supabase.storage.from('contracts').createSignedUrl(path, 3600)
-      setPdfUrl(signed?.signedUrl ?? '')
+      const saveResult = await persistPdfBlob(blob, item.name)
+      if (saveResult.error) {
+        alert('문서 불러오기 실패: ' + saveResult.error)
+        setUploading(false)
+        return
+      }
     } catch { alert('문서 불러오기 실패') }
     setUploading(false)
-  }, [templateId])
+  }, [persistPdfBlob])
 
   // ── 필드 CRUD ──
   const addField = useCallback((type: SignFieldType, owner: FieldOwner, bindingVar?: string, label?: string) => {
@@ -628,6 +794,58 @@ function ContractFieldEditorPage() {
 
   // ── 저장 ──
   const handleSave = useCallback(async () => {
+    if (isDocumentMode) {
+      if (!docId) return
+      const trimmedTitle = title.trim()
+      if (!trimmedTitle) {
+        alert('문서 이름을 입력한 뒤 저장해 주세요.')
+        return
+      }
+      if (isPlaceholderDocumentTitle(trimmedTitle)) {
+        alert('문서 이름이 임시 파일명으로 보입니다. 실제 문서 이름으로 바꾼 뒤 저장해 주세요.')
+        return
+      }
+
+      setSaving(true)
+      const normalizedFields = normalizeFieldOrder(fields)
+      setFields(normalizedFields)
+      const signFields = normalizedFields.map((field, index) => ({
+        field_type: field.field_type,
+        page_number: field.page_number,
+        x: field.x,
+        y: field.y,
+        width: field.width,
+        height: field.height,
+        label: field.label,
+        required: field.required,
+        sort_order: index,
+        default_value: field.default_value,
+      }))
+
+      const { error } = await saveDocumentSignFields(docId, signFields)
+      if (!error) {
+        const supabase = createBrowserSupabaseClient()
+        await supabase
+          .from('document_files')
+          .update({ title: trimmedTitle, status: 'ready' })
+          .eq('id', docId)
+      }
+
+      setSaving(false)
+      if (error) {
+        alert('저장 실패: ' + error)
+        return
+      }
+
+      savedRef.current = true
+      setTitle(trimmedTitle)
+      setSavedFields(serializeEditorSnapshot(trimmedTitle, normalizedFields))
+      setHasUnsavedChanges(false)
+      alert('필드가 저장되었습니다. 내 문서함으로 이동합니다.')
+      router.push('/portal/documents')
+      return
+    }
+
     if (!templateId) return
     setSaving(true)
     const normalizedFields = normalizeFieldOrder(fields)
@@ -646,11 +864,24 @@ function ContractFieldEditorPage() {
     if (error) {
       alert('저장 실패: ' + error.message)
     } else {
-      setSavedFields(serializeFieldsSnapshot(normalizedFields))
+      setSavedFields(serializeEditorSnapshot(title, normalizedFields))
       setHasUnsavedChanges(false)
       alert('필드 배치가 저장되었습니다.')
     }
-  }, [templateId, fields, normalizeFieldOrder, serializeFieldsSnapshot])
+  }, [docId, fields, isDocumentMode, normalizeFieldOrder, router, serializeEditorSnapshot, templateId, title])
+
+  const handleExit = useCallback(async () => {
+    if (hasUnsavedChanges || (isDocumentMode && isDraftSession)) {
+      const confirmed = confirm('저장하지 않은 변경사항이 있습니다. 저장하지 않고 나가시겠습니까?')
+      if (!confirmed) return
+    }
+
+    if (isDocumentMode && isDraftSession && !savedRef.current) {
+      await cleanupDraft()
+    }
+
+    router.push(isDocumentMode ? returnTarget : '/portal/contracts/templates')
+  }, [cleanupDraft, hasUnsavedChanges, isDocumentMode, isDraftSession, returnTarget, router])
 
   const pageFields = fields.filter(f => f.page_number === currentPage)
   const selectedField = fields.find(f => f._id === selectedId)
@@ -687,12 +918,12 @@ function ContractFieldEditorPage() {
     return (
       <div className="min-h-screen w-screen flex flex-col bg-gradient-to-br from-slate-50 to-blue-50/30">
         <div className="flex items-center px-6 h-14 border-b border-neutral-200/60 bg-white/80 backdrop-blur shrink-0">
-          <button onClick={() => router.push('/portal/contracts/templates')}
+          <button onClick={() => { void handleExit() }}
             className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-800 font-korean transition-colors">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             돌아가기
           </button>
-          <div className="ml-4 text-sm font-bold text-neutral-700 font-korean">{title || '템플릿 만들기'}</div>
+          <div className="ml-4 text-sm font-bold text-neutral-700 font-korean">{title || (isDocumentMode ? '문서 필드 편집' : '템플릿 만들기')}</div>
         </div>
         <div className="flex-1 overflow-y-auto py-8">
           <div className="w-full max-w-4xl mx-auto px-6">
@@ -869,7 +1100,7 @@ function ContractFieldEditorPage() {
                               onClick={() => handleSelectDocBoxItem(selectedDocBoxItem)}
                               className="px-5 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 font-korean"
                             >
-                              템플릿 만들기
+                              {isDocumentMode ? '문서 적용' : '템플릿 만들기'}
                             </button>
                           </div>
                         </>
@@ -951,18 +1182,23 @@ function ContractFieldEditorPage() {
       {/* ══ 상단 바 ══ */}
       <div className="flex items-center justify-between px-4 h-12 bg-white border-b border-neutral-200 shrink-0 shadow-sm z-10">
         <div className="flex items-center gap-3">
-          <button onClick={() => {
-              if (hasUnsavedChanges) {
-                if (!confirm('저장하지 않은 변경사항이 있습니다. 저장하지 않고 나가시겠습니까?')) return
-              }
-              router.push('/portal/contracts/templates')
-            }}
+          <button onClick={() => { void handleExit() }}
             className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-800 font-korean">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             뒤로
           </button>
           <div className="w-px h-5 bg-neutral-200" />
-          <span className="text-sm font-bold text-neutral-800 font-korean truncate max-w-[280px]">{title || '템플릿 만들기'}</span>
+          {isDocumentMode ? (
+            <input
+              type="text"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="문서 이름을 입력해 주세요"
+              className="h-9 w-[360px] max-w-[40vw] rounded-lg border border-neutral-200 bg-white px-3 text-sm font-bold text-neutral-800 outline-none focus:ring-2 focus:ring-blue-200 font-korean"
+            />
+          ) : (
+            <span className="text-sm font-bold text-neutral-800 font-korean truncate max-w-[280px]">{title || '템플릿 만들기'}</span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button

@@ -35,7 +35,7 @@ export default function PlanDistribution({ data }: PlanDistributionProps) {
             ))}
           </Pie>
           <Tooltip
-            formatter={(value, name) => [`${value}개`, name]}
+            formatter={(value, name) => [`${value}곳`, name]}
             contentStyle={{
               backgroundColor: '#fff',
               border: 'none',
@@ -50,7 +50,7 @@ export default function PlanDistribution({ data }: PlanDistributionProps) {
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <div className="text-center">
           <p className="font-data text-2xl font-bold text-on-surface">{total}</p>
-          <p className="text-[11px] font-body text-on-surface-variant">Total</p>
+          <p className="text-[11px] font-body text-on-surface-variant">전체 고객사</p>
         </div>
       </div>
     </div>
