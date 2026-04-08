@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -27,7 +27,7 @@ import { colors, spacing, typography, borderRadius, shadows } from '../../consta
 
 type Notice = Row<'notices'>;
 
-/* ── 배너/팝업 타입 ── */
+/* 배너/팝업 타입 */
 interface BannerItem {
   id: string;
   type: 'popup' | 'banner';
@@ -40,8 +40,8 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const STATUS_MAP = {
   draft: { label: '미정산', color: colors.error },
-  sent: { label: '확인중', color: '#d97706' },
-  confirmed: { label: '정산완료', color: colors.tertiary },
+  sent: { label: '확인 중', color: '#d97706' },
+  confirmed: { label: '정산 완료', color: colors.tertiary },
 } as const;
 
 type QuickItem = {
@@ -53,9 +53,9 @@ type QuickItem = {
 
 const QUICK_ITEMS: QuickItem[] = [
   { id: '1', icon: 'receipt-long', label: '정산서', route: '/(tabs)/settlement' },
-  { id: '2', icon: 'description', label: '세금계산서', route: '/(tabs)/settlement' },
+  { id: '2', icon: 'description', label: '세금계산서', route: '/tax-invoices' },
   { id: '3', icon: 'campaign', label: '공지사항', route: '/(tabs)/notice' },
-  { id: '4', icon: 'edit-document', label: '계약서', route: '/(tabs)/contracts' },
+  { id: '4', icon: 'edit-document', label: '전자계약', route: '/(tabs)/contracts' },
 ];
 
 export default function HomeScreen() {
@@ -96,8 +96,8 @@ export default function HomeScreen() {
           is_active: true,
         }));
 
-      const stripBanners = items.filter(b => b.type === 'banner');
-      const popup = items.find(b => b.type === 'popup');
+      const stripBanners = items.filter((b) => b.type === 'banner');
+      const popup = items.find((b) => b.type === 'popup');
 
       setBanners(stripBanners);
       if (popup) {
@@ -120,7 +120,9 @@ export default function HomeScreen() {
     }
   }, [driver?.id]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -128,7 +130,6 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [loadData]);
 
-  // 최신 정산 금액 (없으면 0)
   const latestAmount = settlements[0]?.net_amount ?? 0;
   const latestBase = settlements[0]?.base_amount ?? 0;
   const latestIncentive = settlements[0]?.incentive_amount ?? 0;
@@ -142,12 +143,8 @@ export default function HomeScreen() {
           <Text style={styles.settlementMonth}>{item.year_month}</Text>
           <Text style={styles.settlementAmount}>{formatKRW(item.net_amount)}</Text>
         </View>
-        <View
-          style={[styles.statusBadge, { backgroundColor: statusInfo.color + '18' }]}
-        >
-          <Text style={[styles.statusText, { color: statusInfo.color }]}>
-            {statusInfo.label}
-          </Text>
+        <View style={[styles.statusBadge, { backgroundColor: statusInfo.color + '18' }]}>
+          <Text style={[styles.statusText, { color: statusInfo.color }]}>{statusInfo.label}</Text>
         </View>
       </View>
     );
@@ -162,7 +159,6 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <GradientView style={styles.heroCard}>
-          {/* 운영사 로고 + 상호 */}
           {driver?.agency_name && (
             <View style={styles.agencyRow}>
               {driver?.agency_logo_url ? (
@@ -171,9 +167,7 @@ export default function HomeScreen() {
               <Text style={styles.agencyName}>{driver.agency_name}</Text>
             </View>
           )}
-          <Text style={styles.heroGreeting}>
-            {driver?.name ?? '기사'}님, 안녕하세요
-          </Text>
+          <Text style={styles.heroGreeting}>{driver?.name ?? '기사'}님, 안녕하세요</Text>
           <Text style={styles.heroLabel}>최근 정산액</Text>
           <Text style={styles.heroAmount}>{formatKRW(latestAmount)}</Text>
 
@@ -190,7 +184,6 @@ export default function HomeScreen() {
           </View>
         </GradientView>
 
-        {/* ── 띠배너 (홈 상단) ── */}
         {banners.length > 0 && (
           <ScrollView
             horizontal
@@ -209,11 +202,7 @@ export default function HomeScreen() {
                 }}
                 style={styles.bannerCard}
               >
-                <Image
-                  source={{ uri: banner.image_url }}
-                  style={styles.bannerImage}
-                  resizeMode="cover"
-                />
+                <Image source={{ uri: banner.image_url }} style={styles.bannerImage} resizeMode="cover" />
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -224,15 +213,11 @@ export default function HomeScreen() {
             <TouchableOpacity
               key={item.id}
               style={styles.quickItem}
-              onPress={() => router.push(item.route as '/(tabs)/settlement')}
+              onPress={() => router.push(item.route as never)}
               activeOpacity={0.7}
             >
               <View style={styles.quickIconContainer}>
-                <MaterialIcons
-                  name={item.icon}
-                  size={24}
-                  color={colors.primary}
-                />
+                <MaterialIcons name={item.icon} size={24} color={colors.primary} />
               </View>
               <Text style={styles.quickLabel}>{item.label}</Text>
             </TouchableOpacity>
@@ -295,7 +280,7 @@ export default function HomeScreen() {
           )}
         </View>
       </ScrollView>
-      {/* ── 팝업 광고 모달 ── */}
+
       <Modal visible={showPopup} transparent animationType="fade" onRequestClose={() => setShowPopup(false)}>
         <View style={styles.popupOverlay}>
           <View style={styles.popupContainer}>
@@ -309,11 +294,7 @@ export default function HomeScreen() {
                   setShowPopup(false);
                 }}
               >
-                <Image
-                  source={{ uri: popupBanner.image_url }}
-                  style={styles.popupImage}
-                  resizeMode="contain"
-                />
+                <Image source={{ uri: popupBanner.image_url }} style={styles.popupImage} resizeMode="contain" />
               </TouchableOpacity>
             )}
             <View style={styles.popupButtons}>
@@ -322,7 +303,7 @@ export default function HomeScreen() {
                   if (popupBanner) {
                     try {
                       await SecureStore.setItemAsync(`popup_dismiss_${popupBanner.id}`, String(Date.now()));
-                    } catch { /* ignore */ }
+                    } catch {}
                   }
                   setShowPopup(false);
                 }}
@@ -530,7 +511,6 @@ const styles = StyleSheet.create({
     color: colors.outline,
     marginLeft: spacing.sm,
   },
-  /* ── 띠배너 ── */
   bannerScroll: {
     marginTop: spacing.lg,
   },
@@ -548,7 +528,6 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: borderRadius.lg,
   },
-  /* ── 팝업 광고 ── */
   popupOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',

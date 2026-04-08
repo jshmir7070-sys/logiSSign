@@ -34,6 +34,10 @@ export default function FieldEditorPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const docId = searchParams.get('docId') ?? ''
+  const isDraftSession = searchParams.get('draft') === '1'
+  const returnTarget = searchParams.get('from') === 'templates'
+    ? '/portal/contracts/templates'
+    : '/portal/documents'
 
   const [docTitle, setDocTitle] = useState('')
   const [pdfUrl, setPdfUrl] = useState('')
@@ -45,8 +49,44 @@ export default function FieldEditorPage() {
   const [totalPages, _setTotalPages] = useState(1)
   const [zoom, setZoom] = useState(100)
   const [dragging, setDragging] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [savedSnapshot, setSavedSnapshot] = useState('')
 
   const containerRef = useRef<HTMLDivElement>(null)
+  const cleanedUpRef = useRef(false)
+  const savedRef = useRef(false)
+
+  const createSnapshot = useCallback((title: string, nextFields: LocalField[]) => (
+    JSON.stringify({
+      title: title.trim(),
+      fields: nextFields.map((field, index) => ({
+        field_type: field.field_type,
+        page_number: field.page_number,
+        x: field.x,
+        y: field.y,
+        width: field.width,
+        height: field.height,
+        label: field.label ?? '',
+        required: field.required,
+        sort_order: index,
+        default_value: field.default_value ?? '',
+      })),
+    })
+  ), [])
+
+  const cleanupDraft = useCallback(async (keepalive = false) => {
+    if (!isDraftSession || !docId || cleanedUpRef.current || savedRef.current) return
+    cleanedUpRef.current = true
+
+    try {
+      await fetch(`/api/documents/draft?docId=${docId}`, {
+        method: 'DELETE',
+        keepalive,
+      })
+    } catch (error) {
+      console.error('임시 문서 정리 실패:', error)
+    }
+  }, [docId, isDraftSession])
 
   // ?? ?곗씠??濡쒕뱶 ??
   useEffect(() => {
@@ -99,10 +139,57 @@ export default function FieldEditorPage() {
         sort_order: f.sort_order,
         default_value: f.default_value ?? undefined,
       })))
+      setSavedSnapshot(createSnapshot(doc?.title ?? '', existing.map(f => ({
+        _id: f.id,
+        field_type: f.field_type,
+        page_number: f.page_number,
+        x: f.x,
+        y: f.y,
+        width: f.width,
+        height: f.height,
+        label: f.label ?? undefined,
+        required: f.required,
+        sort_order: f.sort_order,
+        default_value: f.default_value ?? undefined,
+      }))))
 
       setLoading(false)
     })()
-  }, [docId])
+  }, [docId, createSnapshot])
+
+  useEffect(() => {
+    if (loading) return
+    setHasUnsavedChanges(createSnapshot(docTitle, fields) !== savedSnapshot)
+  }, [createSnapshot, docTitle, fields, loading, savedSnapshot])
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedChanges && !isDraftSession) return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+
+    const handlePageHide = () => {
+      if (isDraftSession && !savedRef.current) {
+        void cleanupDraft(true)
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('pagehide', handlePageHide)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('pagehide', handlePageHide)
+    }
+  }, [cleanupDraft, hasUnsavedChanges, isDraftSession])
+
+  useEffect(() => (
+    () => {
+      if (isDraftSession && !savedRef.current) {
+        void cleanupDraft(true)
+      }
+    }
+  ), [cleanupDraft, isDraftSession])
 
   // ?? ?꾨뱶 異붽? ??
   const addField = useCallback((type: SignFieldType) => {
@@ -221,10 +308,26 @@ export default function FieldEditorPage() {
     if (error) {
       alert(`????ㅽ뙣: ${error}`)
     } else {
+      savedRef.current = true
+      setSavedSnapshot(createSnapshot(trimmedTitle, fields))
+      setHasUnsavedChanges(false)
       alert('필드가 저장되었습니다. 내 문서함으로 이동합니다.')
       router.push('/portal/documents')
     }
-  }, [docId, docTitle, fields, router])
+  }, [docId, docTitle, fields, router, createSnapshot])
+
+  const handleExit = useCallback(async () => {
+    if (hasUnsavedChanges || isDraftSession) {
+      const confirmed = confirm('저장하지 않은 변경사항이 있습니다. 저장하지 않고 나가시겠습니까?')
+      if (!confirmed) return
+    }
+
+    if (isDraftSession && !savedRef.current) {
+      await cleanupDraft()
+    }
+
+    router.push(returnTarget)
+  }, [cleanupDraft, hasUnsavedChanges, isDraftSession, returnTarget, router])
 
   // ?? ?꾩옱 ?섏씠吏 ?꾨뱶留??쒖떆 ??
   const pageFields = fields.filter(f => f.page_number === currentPage)
@@ -242,7 +345,9 @@ export default function FieldEditorPage() {
         <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-outline-variant/20">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => router.back()}
+              onClick={() => {
+                void handleExit()
+              }}
               className="text-sm text-on-surface-variant/60 hover:text-on-surface font-korean"
             >
               {'\uB4A4\uB85C'}

@@ -145,9 +145,9 @@ export default function AdminDashboardPage() {
         <div className="min-h-[320px] rounded-2xl bg-surface-container-lowest p-6 shadow-ambient">
           <h3 className="mb-1 font-headline text-[16px] font-bold text-on-surface">플랜 분포</h3>
           <p className="mb-6 text-[13px] text-on-surface-variant">
-            Free {data?.planCounts.free ?? 0} / Point {data?.planCounts.point ?? 0} / Basic{' '}
-            {data?.planCounts.basic ?? 0} / Standard {data?.planCounts.standard ?? 0} / Pro{' '}
-            {data?.planCounts.pro ?? 0}
+            Free {data?.planCounts.free ?? 0} / Basic {data?.planCounts.basic ?? 0} / Standard{' '}
+            {data?.planCounts.standard ?? 0} / Pro {data?.planCounts.pro ?? 0} / Enterprise{' '}
+            {data?.planCounts.enterprise ?? 0}
           </p>
           <PlanDistribution data={planDistributionData} />
         </div>

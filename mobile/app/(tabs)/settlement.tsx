@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,7 @@ import {
   type SettlementWithPrincipal,
 } from '../../services/settlement.service';
 import Badge from '../../components/common/Badge';
-import { colors, spacing, typography, borderRadius, shadows } from '../../constants/theme';
+import { borderRadius, colors, shadows, spacing, typography } from '../../constants/theme';
 
 export default function SettlementScreen() {
   const router = useRouter();
@@ -37,7 +37,9 @@ export default function SettlementScreen() {
     setLoading(false);
   }, [driver?.id]);
 
-  useEffect(() => { loadSettlements(); }, [loadSettlements]);
+  useEffect(() => {
+    void loadSettlements();
+  }, [loadSettlements]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -55,18 +57,14 @@ export default function SettlementScreen() {
         onPress={() => router.push(`/settlement/${item.id}` as never)}
         activeOpacity={0.7}
       >
-        {/* 헤더: 월, 상태 */}
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderLeft}>
             <Text style={styles.cardMonth}>{item.year_month}</Text>
             <Badge label={statusLabel(item.status)} variant={statusVariant(item.status)} />
           </View>
-          {item.principals?.name && (
-            <Text style={styles.principalTag}>{item.principals.name}</Text>
-          )}
+          {item.principals?.name && <Text style={styles.principalTag}>{item.principals.name}</Text>}
         </View>
 
-        {/* 수입 내역 — 전체 항목 표시 */}
         <View style={styles.sectionBlock}>
           <Text style={styles.sectionLabel}>수입</Text>
           <DetailRow label="배송 건수" value={`${item.delivery_count}건`} />
@@ -76,7 +74,7 @@ export default function SettlementScreen() {
           )}
           {(() => {
             const fi = Number((item as unknown as Record<string, unknown>).fresh_incentive ?? 0);
-            return fi > 0 ? <DetailRow label="프레쉬백" value={`+${formatKRW(fi)}`} positive /> : null;
+            return fi > 0 ? <DetailRow label="프레시백" value={`+${formatKRW(fi)}`} positive /> : null;
           })()}
           {(() => {
             const ei = Number((item as unknown as Record<string, unknown>).extra_incentive ?? 0);
@@ -86,7 +84,6 @@ export default function SettlementScreen() {
           <DetailRow label="총 수입" value={formatKRW(item.total_amount)} bold />
         </View>
 
-        {/* 차감 내역 */}
         {(deductionEntries.length > 0 || item.total_deduction > 0) && (
           <View style={styles.sectionBlock}>
             <Text style={styles.sectionLabel}>차감</Text>
@@ -101,7 +98,6 @@ export default function SettlementScreen() {
           </View>
         )}
 
-        {/* 최종 지급액 */}
         <View style={styles.finalBlock}>
           <Text style={styles.finalLabel}>최종 지급액</Text>
           <Text style={styles.finalValue}>{formatKRW(item.net_amount)}</Text>
@@ -131,8 +127,10 @@ export default function SettlementScreen() {
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <MaterialIcons name="receipt-long" size={48} color={colors.outline} />
-              <Text style={styles.emptyText}>정산 내역이 없습니다</Text>
-              <Text style={styles.emptySubText}>대리점에서 정산서를 발행하면 여기에 표시됩니다</Text>
+              <Text style={styles.emptyText}>정산 이력이 없습니다</Text>
+              <Text style={styles.emptySubText}>
+                대리점에서 정산서를 발행하면 여기에서 바로 확인할 수 있습니다.
+              </Text>
             </View>
           }
         />
@@ -141,19 +139,32 @@ export default function SettlementScreen() {
   );
 }
 
-/* ── 행 컴포넌트 ── */
-function DetailRow({ label, value, positive, negative, bold }: {
-  label: string; value: string; positive?: boolean; negative?: boolean; bold?: boolean;
+function DetailRow({
+  label,
+  value,
+  positive,
+  negative,
+  bold,
+}: {
+  label: string;
+  value: string;
+  positive?: boolean;
+  negative?: boolean;
+  bold?: boolean;
 }) {
   return (
     <View style={detailStyles.row}>
       <Text style={[detailStyles.label, bold && detailStyles.bold]}>{label}</Text>
-      <Text style={[
-        detailStyles.value,
-        bold && detailStyles.bold,
-        positive && { color: colors.tertiary },
-        negative && { color: colors.error },
-      ]}>{value}</Text>
+      <Text
+        style={[
+          detailStyles.value,
+          bold && detailStyles.bold,
+          positive && { color: colors.tertiary },
+          negative && { color: colors.error },
+        ]}
+      >
+        {value}
+      </Text>
     </View>
   );
 }
@@ -165,7 +176,6 @@ const detailStyles = StyleSheet.create({
   bold: { fontWeight: '700' },
 });
 
-/* ── 스타일 ── */
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
   header: { paddingHorizontal: spacing.lg, paddingVertical: spacing.lg },
@@ -201,19 +211,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: colors.outlineVariant + '40',
+    borderTopColor: `${colors.outlineVariant}40`,
   },
   sectionLabel: {
     ...typography.labelMedium,
     color: colors.onSurfaceVariant,
     marginBottom: spacing.xs,
     fontWeight: '600',
-  },
-  separator: {
-    height: 1,
-    backgroundColor: colors.outlineVariant,
-    opacity: 0.5,
-    marginBottom: spacing.sm,
   },
   separatorThin: {
     height: 1,
@@ -226,7 +230,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.xs,
     borderTopWidth: 1.5,
-    borderTopColor: colors.primary + '30',
+    borderTopColor: `${colors.primary}30`,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -240,5 +244,5 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   emptyText: { ...typography.bodyMedium, color: colors.outline },
-  emptySubText: { ...typography.bodySmall, color: colors.outlineVariant },
+  emptySubText: { ...typography.bodySmall, color: colors.outlineVariant, textAlign: 'center' },
 });

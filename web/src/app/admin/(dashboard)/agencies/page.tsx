@@ -135,7 +135,7 @@ export default function AgenciesPage() {
       <div>
         <h2 className="font-headline text-[26px] font-bold tracking-tight text-on-surface">고객사 관리</h2>
         <p className="mt-1 text-[14px] text-on-surface-variant">
-          고객사별 플랜, 소속 기사 수, 앱 활성화 현황, 결제 상태를 확인하고 플랜을 조정합니다.
+          고객사별 플랜, 소속 기사 수, 앱 사용 현황, 결제 상태를 확인하고 플랜을 조정합니다.
         </p>
       </div>
 
@@ -172,8 +172,8 @@ export default function AgenciesPage() {
                 <th className="px-5 py-4">고객사</th>
                 <th className="px-5 py-4">플랜</th>
                 <th className="px-5 py-4">기사 수</th>
-                <th className="px-5 py-4">앱 활성화</th>
-                <th className="px-5 py-4">월 기준 요금</th>
+                <th className="px-5 py-4">앱 활성 수</th>
+                <th className="px-5 py-4">월 기준 금액</th>
                 <th className="px-5 py-4">결제 상태</th>
                 <th className="px-5 py-4">최근 결제</th>
                 <th className="px-5 py-4">가입일</th>
@@ -190,19 +190,21 @@ export default function AgenciesPage() {
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-5 py-12 text-center text-on-surface-variant">
-                    조건에 맞는 고객사이 없습니다.
+                    조건에 맞는 고객사가 없습니다.
                   </td>
                 </tr>
               ) : (
                 filtered.map((agency) => (
                   <tr
                     key={agency.id}
-                    className="border-t border-outline-variant/10 cursor-pointer hover:bg-surface-container-low/50 transition-colors"
-                    onClick={() => window.open(
-                      `/admin/agency-view/${agency.id}`,
-                      `agency_${agency.id}`,
-                      'popup=yes,width=1600,height=1000,scrollbars=yes',
-                    )}
+                    className="cursor-pointer border-t border-outline-variant/10 transition-colors hover:bg-surface-container-low/50"
+                    onClick={() =>
+                      window.open(
+                        `/admin/agency-view/${agency.id}`,
+                        `agency_${agency.id}`,
+                        'popup=yes,width=1600,height=1000,scrollbars=yes',
+                      )
+                    }
                   >
                     <td className="px-5 py-4">
                       <p className="font-medium text-on-surface">{agency.name}</p>
@@ -243,7 +245,8 @@ export default function AgenciesPage() {
                     <td className="px-5 py-4 text-right">
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={(event) => {
+                          event.stopPropagation()
                           setChangingAgency(agency)
                           setNewPlan(agency.plan)
                           setReason('')

@@ -1,9 +1,15 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { type ReactNode, useState } from 'react';
-import { type PlanFeature, hasFeature, PLAN_LABELS as PLAN_LABEL_MAP, getMinimumPlan, isPointBased } from '@/lib/plan-limits';
+import {
+  type PlanFeature,
+  getMinimumPlan,
+  hasFeature,
+  isPointBased,
+  PLAN_LABELS as PLAN_LABEL_MAP,
+} from '@/lib/plan-limits';
 import { toastWarning } from '@/components/shared/Toast';
 
 interface NavChild {
@@ -21,7 +27,7 @@ interface NavItem {
 }
 
 const LockIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-white/30 shrink-0">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 text-white/30">
     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
     <path d="M7 11V7a5 5 0 0110 0v4" />
   </svg>
@@ -58,12 +64,12 @@ const navItems: NavItem[] = [
     href: '/portal/contracts',
     featureKey: 'contracts',
     children: [
-      { label: '새 계약서 발송', href: '/portal/contracts/new', featureKey: 'contracts' },
+      { label: '신규 계약 발송', href: '/portal/contracts/new', featureKey: 'contracts' },
       { label: '계약서 목록', href: '/portal/contracts', featureKey: 'contracts' },
       { label: '템플릿 만들기', href: '/portal/contracts/templates', featureKey: 'contracts.templates' },
       { label: '내 문서함', href: '/portal/documents', featureKey: 'contracts' },
-      { label: '문서/서류전송', href: '/portal/documents/send', featureKey: 'contracts' },
-      { label: '변경이력', href: '/portal/amendments', featureKey: 'contracts' },
+      { label: '문서/서류 전송', href: '/portal/documents/send', featureKey: 'contracts' },
+      { label: '변경 이력', href: '/portal/amendments', featureKey: 'contracts' },
     ],
   },
   {
@@ -76,10 +82,10 @@ const navItems: NavItem[] = [
     href: '/portal/settlements/generate',
     featureKey: 'settlements.basic',
     children: [
-      { label: '거래처 관리', href: '/portal/principals', featureKey: 'settlements.basic' },
-      { label: '원장 업로드 정산', href: '/portal/settlements/upload', featureKey: 'settlements.upload' },
-      { label: '정산서 일괄생성', href: '/portal/settlements/generate', featureKey: 'settlements.basic' },
-      { label: '정산서 양식 편집', href: '/portal/settlements/builder', featureKey: 'settlements.builder' },
+      { label: '거래처/정산 기준 관리', href: '/portal/principals', featureKey: 'settlements.basic' },
+      { label: '정산 업로드', href: '/portal/settlements/upload', featureKey: 'settlements.upload' },
+      { label: '정산 생성', href: '/portal/settlements/generate', featureKey: 'settlements.basic' },
+      { label: '정산 직접 편집', href: '/portal/settlements/builder', featureKey: 'settlements.builder' },
       { label: '생성 이력', href: '/portal/settlements/history', featureKey: 'settlements.basic' },
       { label: '세금계산서', href: '/portal/tax-invoices', featureKey: 'settlements.tax' },
     ],
@@ -125,7 +131,15 @@ const navItems: NavItem[] = [
   },
 ];
 
-export default function Sidebar({ plan, ownerName, pointBalance }: { plan?: string; ownerName?: string; pointBalance?: number }) {
+export default function Sidebar({
+  plan,
+  ownerName,
+  pointBalance,
+}: {
+  plan?: string;
+  ownerName?: string;
+  pointBalance?: number;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [expandedItem, setExpandedItem] = useState<string | null>('정산 관리');
@@ -141,13 +155,13 @@ export default function Sidebar({ plan, ownerName, pointBalance }: { plan?: stri
   };
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-[240px] bg-sidebar flex flex-col z-40">
+    <aside className="fixed left-0 top-0 bottom-0 z-40 flex w-[240px] flex-col bg-sidebar">
       <div className="px-6 pt-6 pb-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.png" alt="logiSSign" className="w-[200px] object-contain" />
       </div>
 
-      <nav className="flex-1 px-3 overflow-y-auto">
+      <nav className="flex-1 overflow-y-auto px-3">
         <ul className="flex flex-col gap-1">
           {navItems.map((item) => {
             const active = isParentActive(item);
@@ -166,23 +180,33 @@ export default function Sidebar({ plan, ownerName, pointBalance }: { plan?: stri
                         }
                         setExpandedItem(expanded ? null : item.label);
                       }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-label transition-colors ${
+                      className={`w-full rounded-xl px-3 py-2.5 text-sm font-label transition-colors ${
                         locked
-                          ? 'text-white/30 cursor-not-allowed'
+                          ? 'cursor-not-allowed text-white/30'
                           : active
                             ? 'bg-primary-container text-white'
-                            : 'text-white/60 hover:text-white/90 hover:bg-white/5'
+                            : 'text-white/60 hover:bg-white/5 hover:text-white/90'
                       }`}
                     >
-                      <span className={locked ? 'text-white/20' : active ? 'text-white' : 'text-white/50'}>{item.icon}</span>
-                      <span className="flex-1 text-left font-korean">{item.label}</span>
-                      {locked ? (
-                        <LockIcon />
-                      ) : (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className={`transition-transform ${expanded ? 'rotate-180' : ''}`}>
-                          <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
-                        </svg>
-                      )}
+                      <span className="flex items-center gap-3">
+                        <span className={locked ? 'text-white/20' : active ? 'text-white' : 'text-white/50'}>
+                          {item.icon}
+                        </span>
+                        <span className="flex-1 text-left font-korean">{item.label}</span>
+                        {locked ? (
+                          <LockIcon />
+                        ) : (
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            className={`transition-transform ${expanded ? 'rotate-180' : ''}`}
+                          >
+                            <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
+                          </svg>
+                        )}
+                      </span>
                     </button>
                     {expanded && !locked && (
                       <ul className="mt-1 ml-8 flex flex-col gap-0.5">
@@ -194,7 +218,7 @@ export default function Sidebar({ plan, ownerName, pointBalance }: { plan?: stri
                               <li key={child.href}>
                                 <button
                                   onClick={() => handleLockedClick(child.featureKey!)}
-                                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-label text-white/25 cursor-not-allowed"
+                                  className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-label text-white/25"
                                 >
                                   <span className="font-korean">{child.label}</span>
                                   <LockIcon />
@@ -207,8 +231,8 @@ export default function Sidebar({ plan, ownerName, pointBalance }: { plan?: stri
                             <li key={child.href}>
                               <Link
                                 href={child.href}
-                                className={`block px-3 py-2 rounded-lg text-xs font-label transition-colors ${
-                                  isActive(child.href) ? 'text-white bg-white/10' : 'text-white/50 hover:text-white/80'
+                                className={`block rounded-lg px-3 py-2 text-xs font-label transition-colors ${
+                                  isActive(child.href) ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white/80'
                                 }`}
                               >
                                 <span className="font-korean">{child.label}</span>
@@ -222,7 +246,7 @@ export default function Sidebar({ plan, ownerName, pointBalance }: { plan?: stri
                 ) : locked ? (
                   <button
                     onClick={() => handleLockedClick(item.featureKey!)}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-label text-white/30 cursor-not-allowed"
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-label text-white/30"
                   >
                     <span className="text-white/20">{item.icon}</span>
                     <span className="flex-1 text-left font-korean">{item.label}</span>
@@ -231,8 +255,8 @@ export default function Sidebar({ plan, ownerName, pointBalance }: { plan?: stri
                 ) : (
                   <Link
                     href={item.href}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-label transition-colors ${
-                      active ? 'bg-primary-container text-white' : 'text-white/60 hover:text-white/90 hover:bg-white/5'
+                    className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-label transition-colors ${
+                      active ? 'bg-primary-container text-white' : 'text-white/60 hover:bg-white/5 hover:text-white/90'
                     }`}
                   >
                     <span className={active ? 'text-white' : 'text-white/50'}>{item.icon}</span>
@@ -247,14 +271,17 @@ export default function Sidebar({ plan, ownerName, pointBalance }: { plan?: stri
 
       {isPointBased(plan) && pointBalance !== undefined && (
         <div className="mx-4 mb-2">
-          <Link href="/portal/settings?tab=billing" className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+          <Link
+            href="/portal/settings?tab=billing"
+            className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2.5 transition-colors hover:bg-white/10"
+          >
             <div className="flex items-center gap-2">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-amber-400">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.94s4.18 1.36 4.18 3.85c0 1.89-1.44 2.96-3.12 3.19z" />
               </svg>
-              <span className="text-white/60 text-xs font-korean">잔여 포인트</span>
+              <span className="text-xs text-white/60 font-korean">보유 포인트</span>
             </div>
-            <span className={`text-sm font-data font-bold ${pointBalance > 1000 ? 'text-amber-400' : 'text-error'}`}>
+            <span className={`text-sm font-bold font-data ${pointBalance > 1000 ? 'text-amber-400' : 'text-error'}`}>
               {pointBalance.toLocaleString('ko-KR')}P
             </span>
           </Link>
@@ -263,12 +290,12 @@ export default function Sidebar({ plan, ownerName, pointBalance }: { plan?: stri
 
       <div className="px-4 py-5">
         <div className="flex items-center gap-3 px-2">
-          <div className="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center">
-            <span className="text-white text-xs font-bold">{ownerName ? ownerName.charAt(0) : 'U'}</span>
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-container">
+            <span className="text-xs font-bold text-white">{ownerName ? ownerName.charAt(0) : 'U'}</span>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-white/40 text-[10px] font-label">{PLAN_LABEL_MAP[(plan || 'free') as keyof typeof PLAN_LABEL_MAP] || 'Free'} 고객사</p>
-            <p className="text-white text-sm font-korean truncate">{ownerName || '-'}</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] text-white/40 font-label">운영 계정</p>
+            <p className="truncate text-sm text-white font-korean">{ownerName || '-'}</p>
           </div>
         </div>
       </div>

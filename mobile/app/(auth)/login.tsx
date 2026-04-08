@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import {
   Alert,
   Image,
@@ -97,7 +97,7 @@ export default function LoginScreen() {
             disabled={isSubmitting}
             activeOpacity={0.7}
           >
-            <Text style={styles.registerButtonText}>초대코드로 가입하기</Text>
+            <Text style={styles.registerButtonText}>초대 코드로 가입하기</Text>
           </TouchableOpacity>
 
           <View style={styles.linkRow}>

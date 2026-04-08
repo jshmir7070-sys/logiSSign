@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 
@@ -48,7 +48,7 @@ export default function VerifyIdentityPage() {
         }
 
         setStatus('success')
-        setMessage('본인인증이 완료되었습니다. 앱으로 돌아가 주세요.')
+        setMessage('본인인증이 완료되었습니다. 잠시 후 이전 화면으로 돌아갑니다.')
 
         window.setTimeout(() => {
           window.close()
@@ -79,10 +79,10 @@ export default function VerifyIdentityPage() {
           >
             {status === 'success' ? '완료' : status === 'error' ? '오류' : '진행'}
           </div>
-          <h1 className="font-headline text-[24px] font-bold text-on-surface">대표자 본인인증</h1>
-          <p className="mt-3 text-sm leading-6 text-on-surface-variant font-korean">{message}</p>
+          <h1 className="font-headline text-[24px] font-bold text-on-surface">휴대폰 본인인증</h1>
+          <p className="mt-3 font-korean text-sm leading-6 text-on-surface-variant">{message}</p>
           {status !== 'success' ? (
-            <p className="mt-4 text-xs text-on-surface-variant font-korean">
+            <p className="mt-4 font-korean text-xs text-on-surface-variant">
               인증이 끝나면 결과를 자동으로 확인합니다.
             </p>
           ) : null}

@@ -12,8 +12,15 @@ export type DriverTaxType = 'individual' | 'business' | 'vat_invoice' | 'withhol
 export type DocumentType = 'license' | 'vehicle_registration' | 'cargo_license' | 'bankbook' | 'insurance' | 'id_card' | 'business_reg' | 'other';
 export type PackageType = 'normal' | 'large' | 'frozen' | string;
 export type SettlementStatus = 'draft' | 'sent' | 'confirmed';
-export type InvoiceType = 'tax' | 'cash_receipt' | 'none';
+export type InvoiceType =
+  | 'tax'
+  | 'cash_receipt'
+  | 'none'
+  | 'vat_invoice'
+  | 'withholding_3_3'
+  | 'manual_reverse';
 export type InvoiceStatus = 'pending' | 'issued' | 'cancelled';
+export type TaxInvoiceSendChannel = 'push' | 'sms' | 'none';
 export type ContractStatus = 'draft' | 'sent' | 'viewed' | 'signed' | 'expired';
 export type NoticeCreatedByType = 'provider' | 'agency';
 export type NoticeTargetType = 'all' | 'agency';
@@ -438,6 +445,32 @@ export interface Database {
           pdf_url?: string | null;
         };
         Update: Partial<Database['public']['Tables']['tax_invoices']['Insert']>;
+        Relationships: [];
+      };
+      tax_invoice_send_logs: {
+        Row: {
+          id: string;
+          tax_invoice_id: string;
+          agency_id: string;
+          driver_id: string | null;
+          channel: TaxInvoiceSendChannel;
+          success: boolean;
+          reason: string | null;
+          sent_by_user_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          tax_invoice_id: string;
+          agency_id: string;
+          driver_id?: string | null;
+          channel?: TaxInvoiceSendChannel;
+          success?: boolean;
+          reason?: string | null;
+          sent_by_user_id?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['tax_invoice_send_logs']['Insert']>;
         Relationships: [];
       };
       contract_templates: {

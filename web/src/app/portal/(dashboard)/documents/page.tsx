@@ -19,10 +19,6 @@ function shouldHideUnsavedDraft(status: string, fieldCount: number) {
   return status === 'draft' && fieldCount === 0;
 }
 
-function stripPdfExtension(title: string) {
-  return title.replace(/\.pdf$/i, '').trim();
-}
-
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString('ko-KR');
 }
@@ -32,8 +28,6 @@ export default function DocumentsPage() {
   const [documents, setDocuments] = useState<DocumentFile[]>([]);
   const [previewDoc, setPreviewDoc] = useState<DocumentFile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [agencyId, setAgencyId] = useState<string | null>(null);
-  const [creatingTemplateId, setCreatingTemplateId] = useState<string | null>(null);
 
   const loadDocuments = useCallback(async (aid: string) => {
     const supabase = createBrowserSupabaseClient();
@@ -107,7 +101,6 @@ export default function DocumentsPage() {
         return;
       }
 
-      setAgencyId(aid);
       await loadDocuments(aid);
     })();
   }, [loadDocuments]);
@@ -123,76 +116,8 @@ export default function DocumentsPage() {
     setPreviewDoc((current) => (current?.id === id ? null : current));
   };
 
-  const handleCreateTemplateFromDoc = async (doc: DocumentFile) => {
-    if (!agencyId) return;
-    setCreatingTemplateId(doc.id);
-
-    try {
-      const supabase = createBrowserSupabaseClient();
-      const { data: template, error: templateError } = await supabase
-        .from('contract_templates')
-        .insert({
-          agency_id: agencyId,
-          title: `${stripPdfExtension(doc.title)} 템플릿`,
-          content: '(PDF 템플릿)',
-          template_type: 'pdf',
-        })
-        .select('id')
-        .single();
-
-      if (templateError || !template) {
-        alert('템플릿을 생성하지 못했습니다.');
-        return;
-      }
-
-      const { data: sourceDoc, error: sourceError } = await supabase
-        .from('document_files')
-        .select('file_url')
-        .eq('id', doc.id)
-        .single();
-
-      if (sourceError || !sourceDoc?.file_url) {
-        alert('원본 문서 경로를 찾지 못했습니다.');
-        return;
-      }
-
-      const sourcePath = sourceDoc.file_url.startsWith('http')
-        ? decodeURIComponent(sourceDoc.file_url.split('/documents/')[1] ?? '')
-        : sourceDoc.file_url;
-
-      if (!sourcePath) {
-        alert('원본 문서 경로를 확인할 수 없습니다.');
-        return;
-      }
-
-      const { data: sourceSigned } = await supabase.storage.from('documents').createSignedUrl(sourcePath, 3600);
-      if (!sourceSigned?.signedUrl) {
-        alert('원본 문서를 불러오지 못했습니다.');
-        return;
-      }
-
-      const downloadResponse = await fetch(sourceSigned.signedUrl);
-      const pdfBlob = await downloadResponse.blob();
-      const targetPath = `templates/${template.id}.pdf`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('contracts')
-        .upload(targetPath, pdfBlob, { upsert: true, contentType: 'application/pdf' });
-
-      if (uploadError) {
-        alert(`템플릿 PDF 저장 실패: ${uploadError.message}`);
-        return;
-      }
-
-      await supabase
-        .from('contract_templates')
-        .update({ template_pdf_url: targetPath, template_type: 'pdf' })
-        .eq('id', template.id);
-
-      router.push(`/portal/contracts/field-editor?templateId=${template.id}`);
-    } finally {
-      setCreatingTemplateId(null);
-    }
+  const handleCreateTemplateFromDoc = (doc: DocumentFile) => {
+    router.push(`/portal/documents/field-editor?docId=${doc.id}&from=documents`);
   };
 
   const statusLabel = (status: string) => {
@@ -375,10 +300,9 @@ export default function DocumentsPage() {
                 <button
                   type="button"
                   onClick={() => handleCreateTemplateFromDoc(previewDoc)}
-                  disabled={creatingTemplateId === previewDoc.id}
-                  className="h-10 px-5 rounded-xl bg-power-gradient text-white text-sm font-semibold font-korean disabled:opacity-50"
+                  className="h-10 px-5 rounded-xl bg-power-gradient text-white text-sm font-semibold font-korean"
                 >
-                  {creatingTemplateId === previewDoc.id ? '템플릿 생성 중...' : '템플릿 만들기'}
+                  템플릿 만들기
                 </button>
               </div>
             </div>

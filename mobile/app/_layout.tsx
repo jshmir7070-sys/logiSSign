@@ -10,6 +10,19 @@ import {
 } from '../services/push.service';
 import { colors } from '../constants/theme';
 
+function resolveNotificationRoute(
+  route: string,
+  params?: Record<string, unknown>,
+): string {
+  let resolved = route;
+
+  Object.entries(params ?? {}).forEach(([key, value]) => {
+    resolved = resolved.replace(`[${key}]`, encodeURIComponent(String(value)));
+  });
+
+  return resolved;
+}
+
 export default function RootLayout() {
   const { session, isLoading, driver } = useAuth();
   const segments = useSegments();
@@ -48,10 +61,11 @@ export default function RootLayout() {
         (response) => {
           const nav = getNavigationFromNotification(response);
           if (nav) {
-            const SAFE_ROUTES = ['/contract/', '/document/', '/settlement/', '/notice/', '/(tabs)', '/amendment/', '/seal'];
-            const isSafeRoute = SAFE_ROUTES.some(prefix => nav.route.startsWith(prefix));
+            const resolvedRoute = resolveNotificationRoute(nav.route, nav.params);
+            const SAFE_ROUTES = ['/contract/', '/document/', '/settlement/', '/notice/', '/(tabs)', '/amendment/', '/seal', '/tax-invoices'];
+            const isSafeRoute = SAFE_ROUTES.some(prefix => resolvedRoute.startsWith(prefix));
             if (isSafeRoute) {
-              router.push(nav.route as never);
+              router.push(resolvedRoute as never);
             }
           }
         }

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
@@ -262,7 +262,7 @@ export default function PortalSignupPage() {
         <div className="mb-8 text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-light.png" alt="logiSSign" className="mx-auto mb-5 w-[260px] object-contain" />
-          <h1 className="font-headline text-[30px] font-bold text-on-surface">운영사 회원가입</h1>
+          <h1 className="font-headline text-[30px] font-bold text-on-surface">회원가입</h1>
           <p className="mt-2 text-sm text-on-surface-variant">
             계정을 만든 뒤 다음 단계에서 무료 시작 또는 유료 플랜을 선택할 수 있습니다.
           </p>
@@ -430,7 +430,7 @@ export default function PortalSignupPage() {
               className={INPUT_CLASS}
               value={form.businessEmail}
               onChange={(event) => updateForm({ businessEmail: event.target.value })}
-              placeholder="사업자 이메일"
+              placeholder="사업장 이메일"
             />
 
             <SectionTitle>3. 약관 동의</SectionTitle>
@@ -468,12 +468,12 @@ export default function PortalSignupPage() {
 
           <aside className="space-y-6">
             <section className="rounded-3xl bg-surface-container-lowest p-7 shadow-ambient">
-              <h2 className="font-headline text-lg font-bold text-on-surface">가입 후 진행 순서</h2>
+              <h2 className="font-headline text-lg font-bold text-on-surface">가입 진행 순서</h2>
               <div className="mt-5 space-y-3">
                 <GuideItem
                   index="1"
                   title="운영사 계정 생성"
-                  description="개인 정보와 사업자 정보를 입력하고 본인인증을 완료해 계정을 만듭니다."
+                  description="개인 정보와 사업자 정보를 입력하고 본인인증을 완료하면 운영사 계정을 만들 수 있습니다."
                 />
                 <GuideItem
                   index="2"
@@ -482,8 +482,8 @@ export default function PortalSignupPage() {
                 />
                 <GuideItem
                   index="3"
-                  title="로그인 후 시작"
-                  description="플랜 선택이 끝나면 로그인 페이지로 이동하며, 로그인 후 바로 운영을 시작할 수 있습니다."
+                  title="로그인 후 사용 시작"
+                  description="플랜 선택이 끝나면 로그인 페이지로 이동하고, 로그인 후 바로 운영을 시작할 수 있습니다."
                 />
               </div>
             </section>
@@ -491,8 +491,7 @@ export default function PortalSignupPage() {
             <section className="rounded-3xl bg-surface-container-lowest p-7 shadow-ambient">
               <h2 className="font-headline text-lg font-bold text-on-surface">안내</h2>
               <div className="mt-5 rounded-2xl bg-primary/5 p-4 text-sm leading-6 text-on-surface-variant">
-                회원가입만 먼저 완료하고, 다음 단계에서 무료 플랜 또는 유료 플랜을 선택하게 됩니다.
-                결제는 가입 페이지가 아니라 별도 플랜 선택 페이지에서 진행됩니다.
+                회원가입을 먼저 완료한 뒤, 다음 단계에서 무료 플랜 또는 유료 플랜을 고르게 됩니다. 결제는 가입 페이지가 아니라 별도 플랜 선택 페이지에서 진행됩니다.
               </div>
             </section>
 

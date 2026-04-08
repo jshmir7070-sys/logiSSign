@@ -190,6 +190,8 @@ export function getNavigationFromNotification(
       return { route: '/documents' };
     case 'education':
       return { route: '/(tabs)/education' };
+    case 'tax_invoice':
+      return { route: '/tax-invoices/[id]', params: { id: data.id } };
     default:
       return null;
   }

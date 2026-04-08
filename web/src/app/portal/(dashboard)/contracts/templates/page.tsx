@@ -1,12 +1,11 @@
 ﻿'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Badge from '@/components/shared/Badge';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
 import {
   getContractTemplates,
-  createContractTemplate,
   deleteContractTemplate,
   type ContractTemplate,
 } from '@/services/contract.service';
@@ -37,6 +36,7 @@ export default function ContractTemplatesPage() {
   const [userRole, setUserRole] = useState<string>('agency_admin');
   const [creatingPdf, setCreatingPdf] = useState(false);
   const [templatePreviewUrls, setTemplatePreviewUrls] = useState<Record<string, string>>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     async function load() {
@@ -160,22 +160,33 @@ export default function ContractTemplatesPage() {
     setTemplatesLocked(false);
   }
 
-  async function handleCreatePdfTemplate() {
-    if (!agencyId) return;
+  async function handleCreatePdfTemplate(file: File) {
     setCreatingPdf(true);
-    const result = await createContractTemplate({
-      agency_id: agencyId,
-      title: `PDF 템플릿 ${new Date().toLocaleDateString('ko-KR')}`,
-      content: '(PDF 템플릿)',
-    });
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
 
-    if (result.data) {
-      router.push(`/portal/contracts/field-editor?templateId=${result.data.id}`);
-      return;
+      const response = await fetch('/api/documents/draft', {
+        method: 'POST',
+        body: formData,
+      });
+      const result = await response.json();
+
+      if (!response.ok || !result.id) {
+        alert(result.error || '문서 초안을 생성하지 못했습니다.');
+        return;
+      }
+
+      router.push(`/portal/documents/field-editor?docId=${result.id}&draft=1&from=templates`);
+    } catch (error) {
+      console.error('문서 초안 생성 실패:', error);
+      alert('문서 초안을 생성하지 못했습니다.');
+    } finally {
+      setCreatingPdf(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
-
-    alert('PDF 템플릿을 생성하지 못했습니다.');
-    setCreatingPdf(false);
   }
 
   const getTemplatePreviewUrl = (template: ContractTemplate) => templatePreviewUrls[template.id] ?? null;
@@ -200,12 +211,24 @@ export default function ContractTemplatesPage() {
         {paid && !templatesLocked && isAdmin && canUploadMore ? (
           <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={handleCreatePdfTemplate}
+              onClick={() => fileInputRef.current?.click()}
               disabled={creatingPdf}
               className="h-10 px-5 rounded-xl bg-surface-container-high text-on-surface font-label text-sm font-semibold hover:bg-surface-container-highest transition-all flex items-center gap-2 font-korean disabled:opacity-50"
             >
               내 컴퓨터 문서 가져오기
             </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) {
+                  void handleCreatePdfTemplate(file);
+                }
+              }}
+            />
           </div>
         ) : paid && templatesLocked && isAdmin ? (
           <button

@@ -253,10 +253,22 @@ CREATE TABLE tax_invoices (
   supply_amount INTEGER NOT NULL,
   tax_amount INTEGER NOT NULL,
   total_amount INTEGER NOT NULL,
-  invoice_type TEXT CHECK (invoice_type IN ('tax','cash_receipt','none','vat_invoice','withholding_3_3')) DEFAULT 'tax',
+  invoice_type TEXT CHECK (invoice_type IN ('tax','cash_receipt','none','vat_invoice','withholding_3_3','manual_reverse')) DEFAULT 'tax',
   status TEXT CHECK (status IN ('pending','issued','cancelled')) DEFAULT 'pending',
   issued_at TIMESTAMPTZ,
   pdf_url TEXT
+);
+
+CREATE TABLE tax_invoice_send_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tax_invoice_id UUID NOT NULL REFERENCES tax_invoices(id) ON DELETE CASCADE,
+  agency_id UUID NOT NULL REFERENCES agencies(id) ON DELETE CASCADE,
+  driver_id UUID REFERENCES drivers(id) ON DELETE SET NULL,
+  channel TEXT NOT NULL CHECK (channel IN ('push','sms','none')) DEFAULT 'none',
+  success BOOLEAN NOT NULL DEFAULT false,
+  reason TEXT,
+  sent_by_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- 계약서 템플릿
@@ -358,6 +370,7 @@ ALTER TABLE driver_deductions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE driver_incentives ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settlements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tax_invoices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tax_invoice_send_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contracts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contract_signatures ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notices ENABLE ROW LEVEL SECURITY;
@@ -460,6 +473,16 @@ CREATE POLICY "tax_invoices_agency" ON tax_invoices
     agency_id = (auth.jwt()->'app_metadata'->>'agency_id')::uuid
   );
 
+CREATE POLICY "tax_invoice_send_logs_agency_read" ON tax_invoice_send_logs
+  FOR SELECT USING (
+    agency_id = (auth.jwt()->'app_metadata'->>'agency_id')::uuid
+  );
+
+CREATE POLICY "tax_invoice_send_logs_driver_read" ON tax_invoice_send_logs
+  FOR SELECT USING (
+    driver_id IN (SELECT id FROM drivers WHERE user_id = auth.uid())
+  );
+
 -- 계약서: 기사 본인 것만
 CREATE POLICY "contracts_driver" ON contracts
   FOR SELECT USING (
@@ -550,6 +573,8 @@ CREATE INDEX idx_notices_agency ON notices(agency_id);
 CREATE INDEX idx_notices_published ON notices(status, published_at DESC);
 CREATE INDEX idx_subscriptions_agency ON subscriptions(agency_id);
 CREATE INDEX idx_tax_invoices_agency ON tax_invoices(agency_id, year_month);
+CREATE INDEX idx_tax_invoice_send_logs_invoice_created ON tax_invoice_send_logs(tax_invoice_id, created_at DESC);
+CREATE INDEX idx_tax_invoice_send_logs_agency_created ON tax_invoice_send_logs(agency_id, created_at DESC);
 
 -- ============================================================
 -- Storage Buckets (run via Supabase dashboard or API)
