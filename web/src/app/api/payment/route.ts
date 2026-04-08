@@ -127,7 +127,7 @@ async function getLatestSubscription(agencyId: string) {
     .maybeSingle()
 
   if (error) {
-    throw new Error(`구독 정보를 조회하지 못했습니다. ${error.message}`)
+    throw new Error(`구독 정보를 조회하지 못했습니다: ${error.message}`)
   }
 
   return data
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         return NextResponse.json(
-          { error: `카드 등록 정보를 저장하지 못했습니다. ${error.message}` },
+          { error: `카드 등록 정보를 저장하지 못했습니다: ${error.message}` },
           { status: 500 },
         )
       }
@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            '자동 정기결제는 현재 사용하지 않습니다. 카드 등록은 만료 안내와 수동 결제 전환을 위한 용도로만 지원합니다.',
+            '자동 정기결제는 현재 사용하지 않습니다. 카드 등록은 만료 안내와 구독 전환을 위한 용도로만 지원합니다.',
         },
         { status: 410 },
       )
@@ -489,7 +489,7 @@ export async function POST(request: NextRequest) {
         new_plan: body.plan,
         changed_by: auth.userId,
         change_type: 'self_upgrade',
-        reason: `1회성 플랜 결제 (${body.billing})`,
+        reason: `${isRecurringPlanPayment ? '월 정기구독' : '플랜 결제'} (${body.billing})`,
       })
 
       return NextResponse.json({

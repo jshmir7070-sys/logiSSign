@@ -40,13 +40,13 @@ const PLANS: Array<{
   {
     id: 'standard',
     name: 'Standard',
-    description: '기사 80명 규모와 정산/알림 운영에 적합합니다.',
+    description: '기사 80명 규모의 정산·알림 운영에 적합합니다.',
     highlight: '전자계약 160건 포함',
   },
   {
     id: 'pro',
     name: 'Pro',
-    description: '기사 150명 이상과 대량 처리 운영에 적합합니다.',
+    description: '기사 150명 이상 대량 운영에 적합한 플랜입니다.',
     highlight: '전자계약 300건 포함',
   },
 ]
@@ -57,13 +57,19 @@ const BILLING_OPTIONS: Array<{
   description: string
   discount?: string
 }> = [
-  { value: 'monthly', label: '월 결제', description: '매월 결제를 진행합니다.' },
+  { value: 'monthly', label: '월 결제', description: '매월 한 번 결제합니다.' },
   { value: '1year', label: '1년 선결제', description: '1년치 비용을 한 번에 결제합니다.', discount: '20% 할인' },
   { value: '2year', label: '2년 선결제', description: '2년치 비용을 한 번에 결제합니다.', discount: '30% 할인' },
 ]
 
 function formatKRW(value: number): string {
   return `₩${value.toLocaleString('ko-KR')}`
+}
+
+function getBillingLabel(value: BillingCycle): string {
+  if (value === 'monthly') return '월 결제'
+  if (value === '1year') return '1년 선결제'
+  return '2년 선결제'
 }
 
 export default function PortalPlanSelectPage() {
@@ -253,7 +259,7 @@ export default function PortalPlanSelectPage() {
       }
 
       if (payload.status === 'pending') {
-        alert(
+        window.alert(
           [
             '가입이 완료되었습니다.',
             '결제가 입금 대기 상태로 등록되었습니다.',
@@ -314,9 +320,7 @@ export default function PortalPlanSelectPage() {
                       <p className="mt-4 text-2xl font-bold text-on-surface">
                         {plan.id === 'free' ? '무료' : formatKRW(monthlyPrice)}
                       </p>
-                      {plan.id !== 'free' ? (
-                        <p className="mt-1 text-xs text-on-surface-variant">월 기준 금액</p>
-                      ) : null}
+                      {plan.id !== 'free' ? <p className="mt-1 text-xs text-on-surface-variant">월 기준 금액</p> : null}
                     </button>
                   )
                 })}
@@ -343,9 +347,7 @@ export default function PortalPlanSelectPage() {
                         >
                           <p className="text-sm font-semibold text-on-surface">{option.label}</p>
                           <p className="mt-1 text-xs text-on-surface-variant">{option.description}</p>
-                          {option.discount ? (
-                            <p className="mt-3 text-xs font-semibold text-error">{option.discount}</p>
-                          ) : null}
+                          {option.discount ? <p className="mt-3 text-xs font-semibold text-error">{option.discount}</p> : null}
                         </button>
                       ))}
                     </div>
@@ -356,9 +358,7 @@ export default function PortalPlanSelectPage() {
                           type="button"
                           onClick={() => setPaymentSchedule('one_time')}
                           className={`rounded-2xl border p-4 text-left ${
-                            paymentSchedule === 'one_time'
-                              ? 'border-primary bg-primary/5'
-                              : 'border-outline-variant/20'
+                            paymentSchedule === 'one_time' ? 'border-primary bg-primary/5' : 'border-outline-variant/20'
                           }`}
                         >
                           <p className="text-sm font-semibold text-on-surface">한 달 이용</p>
@@ -370,14 +370,12 @@ export default function PortalPlanSelectPage() {
                           type="button"
                           onClick={() => setPaymentSchedule('recurring')}
                           className={`rounded-2xl border p-4 text-left ${
-                            paymentSchedule === 'recurring'
-                              ? 'border-primary bg-primary/5'
-                              : 'border-outline-variant/20'
+                            paymentSchedule === 'recurring' ? 'border-primary bg-primary/5' : 'border-outline-variant/20'
                           }`}
                         >
                           <p className="text-sm font-semibold text-on-surface">월 정기구독</p>
                           <p className="mt-1 text-xs text-on-surface-variant">
-                            매달 자동 갱신됩니다. 월 정기구독은 카드 결제만 지원합니다.
+                            매월 자동 갱신됩니다. 월 정기구독은 카드 결제만 가능합니다.
                           </p>
                         </button>
                       </div>
@@ -429,9 +427,7 @@ export default function PortalPlanSelectPage() {
                             type="button"
                             onClick={() => setEasyPayProvider(option.value)}
                             className={`h-10 rounded-xl text-sm font-medium ${
-                              easyPayProvider === option.value
-                                ? 'bg-primary text-white'
-                                : 'bg-surface text-on-surface-variant'
+                              easyPayProvider === option.value ? 'bg-primary text-white' : 'bg-surface text-on-surface-variant'
                             }`}
                           >
                             {option.label}
@@ -468,15 +464,15 @@ export default function PortalPlanSelectPage() {
                 <div className="mt-5 space-y-3 text-sm">
                   <div className="flex items-center justify-between gap-4">
                     <span className="text-on-surface-variant">선택 플랜</span>
-                    <span className="font-semibold text-on-surface">{selectedPlan === 'free' ? '무료 시작' : selectedPlan.toUpperCase()}</span>
+                    <span className="font-semibold text-on-surface">
+                      {selectedPlan === 'free' ? '무료 시작' : selectedPlan.toUpperCase()}
+                    </span>
                   </div>
                   {selectedPlan !== 'free' ? (
                     <>
                       <div className="flex items-center justify-between gap-4">
                         <span className="text-on-surface-variant">결제 주기</span>
-                        <span className="font-semibold text-on-surface">
-                          {billing === 'monthly' ? '월 결제' : billing === '1year' ? '1년 선결제' : '2년 선결제'}
-                        </span>
+                        <span className="font-semibold text-on-surface">{getBillingLabel(billing)}</span>
                       </div>
                       <div className="flex items-center justify-between gap-4">
                         <span className="text-on-surface-variant">이용 방식</span>
@@ -491,7 +487,7 @@ export default function PortalPlanSelectPage() {
                     </>
                   ) : (
                     <div className="rounded-2xl bg-primary/5 p-4 text-xs leading-5 text-on-surface-variant">
-                      무료 플랜으로 바로 시작할 수 있습니다. 이후 로그인 후 언제든 원하는 플랜으로 전환할 수 있습니다.
+                      무료 플랜으로 바로 시작할 수 있습니다. 이후 로그인 후 원하는 플랜으로 전환할 수도 있습니다.
                     </div>
                   )}
                 </div>
@@ -525,10 +521,7 @@ export default function PortalPlanSelectPage() {
                     : '결제 후 로그인하기'}
               </button>
 
-              <Link
-                href="/portal/login"
-                className="block text-center text-sm font-medium text-on-surface-variant underline"
-              >
+              <Link href="/portal/login" className="block text-center text-sm font-medium text-on-surface-variant underline">
                 나중에 로그인 페이지로 이동
               </Link>
             </aside>

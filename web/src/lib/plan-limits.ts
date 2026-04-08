@@ -1,9 +1,6 @@
 /**
- * 플랜별 기능과 사용 한도를 정의한다.
- * 모든 플랜 정책 계산은 이 파일을 기준으로 한다.
- *
- * ─ Free: 포인트 충전형 (모든 기능 사용 가능, 전부 포인트 차감)
- * ─ Basic ~ Enterprise: 구독형 (기능 포인트 차감 없음, 할당 기사 초과 시만 포인트 차감)
+ * 플랜별 기능과 사용 한도를 정의합니다.
+ * Free 플랜은 포인트 차감형, Basic 이상은 구독형으로 동작합니다.
  */
 
 export type PlanType = 'free' | 'basic' | 'standard' | 'pro' | 'enterprise'
@@ -26,10 +23,10 @@ export interface PlanLimits {
   maxAdminAccounts: number
   maxDefaultTemplates: number
   maxUploadTemplates: number
-  /** null = 무제한, 0 = 포인트 차감 */
+  /** null = 무제한, 0 = 포인트 차감형 */
   monthlyFreeContracts: number | null
   features: Record<PlanFeature, boolean>
-  /** true = 기능 사용 시 포인트 차감 (Free), false = 구독 포함 (Basic+) */
+  /** true = 기능 사용 시 포인트 차감, false = 구독 포함 */
   pointBased: boolean
 }
 
@@ -47,13 +44,11 @@ const ALL_FEATURES: Record<PlanFeature, boolean> = {
   settings: true,
 }
 
-/** Basic: 리포트 제외 */
 const BASIC_FEATURES: Record<PlanFeature, boolean> = {
   ...ALL_FEATURES,
   reports: false,
 }
 
-/** Standard+: 모든 기능 */
 const FULL_FEATURES: Record<PlanFeature, boolean> = { ...ALL_FEATURES }
 
 const PLAN_ORDER: PlanType[] = ['free', 'basic', 'standard', 'pro', 'enterprise']
@@ -61,11 +56,11 @@ const PLAN_ORDER: PlanType[] = ['free', 'basic', 'standard', 'pro', 'enterprise'
 export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
   free: {
     maxDrivers: 5,
-    maxAdminAccounts: 1,           // 대표만
+    maxAdminAccounts: 1,
     maxDefaultTemplates: 999,
     maxUploadTemplates: 999,
-    monthlyFreeContracts: 0,       // 전부 포인트 차감
-    features: ALL_FEATURES,        // 모든 기능 열림 (포인트 차감)
+    monthlyFreeContracts: 0,
+    features: ALL_FEATURES,
     pointBased: true,
   },
   basic: {
@@ -100,7 +95,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     maxAdminAccounts: 99,
     maxDefaultTemplates: 999,
     maxUploadTemplates: 999,
-    monthlyFreeContracts: null,    // 무제한
+    monthlyFreeContracts: null,
     features: FULL_FEATURES,
     pointBased: false,
   },
@@ -130,16 +125,17 @@ export const PLAN_DISCOUNTS: Record<string, number> = {
 }
 
 export const PLAN_HIGHLIGHTS: Record<PlanType, string[]> = {
-  free: ['기사 5명', '관리자: 대표만', '포인트 충전형', '기능 사용 시 포인트 차감', '기사 초과 시 2,200P/명/월'],
-  basic: ['기사 30명', '관리자 2명', '월 계약서 60건 포함', '기능 사용 포함', '기사 초과 시 2,200P/명/월'],
-  standard: ['기사 80명', '관리자 5명', '월 계약서 160건 포함', '기능 사용 포함', '기사 초과 시 2,200P/명/월'],
-  pro: ['기사 150명', '관리자 5명', '월 계약서 300건 포함', '기능 사용 포함', '기사 초과 시 2,200P/명/월'],
-  enterprise: ['기사 무제한', '관리자 99명', '계약서 무제한', '기능 사용 포함', '전담 매니저'],
+  free: ['기사 5명', '관리자 1명', '포인트 충전형', '기능 사용 시 포인트 차감', '기사 초과 시 2,200P/명'],
+  basic: ['기사 30명', '관리자 2명', '전자계약 60건 포함', '기능 사용 포함', '기사 초과 시 2,200P/명'],
+  standard: ['기사 80명', '관리자 5명', '전자계약 160건 포함', '기능 사용 포함', '기사 초과 시 2,200P/명'],
+  pro: ['기사 150명', '관리자 5명', '전자계약 300건 포함', '기능 사용 포함', '기사 초과 시 2,200P/명'],
+  enterprise: ['기사 무제한', '관리자 99명', '계약 건수 무제한', '기능 사용 포함', '전담 매니저'],
 }
 
 export function getSubscriptionPrice(plan: PlanType, billing: string = 'monthly'): number {
   const monthly = PLAN_PRICES[plan] ?? 0
   if (monthly === 0) return 0
+
   const discount = PLAN_DISCOUNTS[billing] ?? 0
   const months = billing === '1year' ? 12 : billing === '2year' ? 24 : billing === '3year' ? 36 : 1
   return Math.round(monthly * (1 - discount / 100) * months)
@@ -163,7 +159,6 @@ export function isPaidPlan(plan: PlanType | string): boolean {
   return plan !== 'free'
 }
 
-/** Free 플랜 = 포인트 차감형 */
 export function isPointBased(plan: string | undefined): boolean {
   const normalizedPlan = (plan || 'free').toLowerCase()
   return normalizedPlan === 'free' || normalizedPlan === 'point'
@@ -171,7 +166,6 @@ export function isPointBased(plan: string | undefined): boolean {
 
 export function getPlanLimits(plan: string | undefined): PlanLimits {
   let key = (plan || 'free') as PlanType
-  // 기존 'point' 플랜 하위호환 → free로 매핑
   if (key === ('point' as PlanType)) key = 'free'
   return PLAN_LIMITS[key] ?? PLAN_LIMITS.free
 }
@@ -191,6 +185,7 @@ export function getMinimumPlan(feature: PlanFeature): PlanType {
 export function isPlanAtLeast(current: string | undefined, required: PlanType): boolean {
   let currentKey = (current || 'free') as PlanType
   if (currentKey === ('point' as PlanType)) currentKey = 'free'
+
   const currentIdx = PLAN_ORDER.indexOf(currentKey)
   const requiredIdx = PLAN_ORDER.indexOf(required)
   if (currentIdx === -1) return false
@@ -213,7 +208,7 @@ export const POINT_COSTS: Record<PointAction, { cost: number; label: string; des
   settlement_generate: { cost: 700, label: '정산서 생성', desc: '기사 5명당 1회 정산서 생성' },
   settlement_pdf: { cost: 0, label: '정산 PDF', desc: '정산 PDF 다운로드' },
   driver_register: { cost: 0, label: '기사 등록', desc: '기사 신규 등록' },
-  driver_extra: { cost: 2200, label: '추가 기사 앱 사용', desc: '플랜 한도 초과 기사 1명 월 추가 포인트' },
+  driver_extra: { cost: 2200, label: '추가 기사 사용', desc: '플랜 한도 초과 기사 1명당 추가 포인트' },
   excel_upload: { cost: 2500, label: '정산 업로드', desc: '정산 엑셀 1회 업로드 처리' },
   tax_invoice: { cost: 0, label: '세금계산서', desc: '세금계산서 발행 기능' },
   report_generate: { cost: 0, label: '리포트 생성', desc: '매출 리포트 생성' },

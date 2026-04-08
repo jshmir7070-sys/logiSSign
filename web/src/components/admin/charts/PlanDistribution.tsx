@@ -1,12 +1,6 @@
 'use client'
 
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-} from 'recharts'
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts'
 
 interface PlanDistributionDatum {
   name: string
@@ -23,7 +17,7 @@ export default function PlanDistribution({ data }: PlanDistributionProps) {
   const total = data.reduce((sum, row) => sum + row.value, 0)
 
   return (
-    <div className="h-[200px] relative">
+    <div className="relative h-[200px]">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
@@ -53,9 +47,9 @@ export default function PlanDistribution({ data }: PlanDistributionProps) {
           />
         </PieChart>
       </ResponsiveContainer>
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-2xl font-data font-bold text-on-surface">{total}</p>
+          <p className="font-data text-2xl font-bold text-on-surface">{total}</p>
           <p className="text-[11px] font-body text-on-surface-variant">Total</p>
         </div>
       </div>
