@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Sidebar from '@/components/portal/Sidebar';
 import UserMenu from '@/components/shared/UserMenu';
 import TopStatusBar from '@/components/portal/TopStatusBar';
@@ -7,6 +8,8 @@ import { ToastContainer } from '@/components/shared/Toast';
 import { PlanProvider, usePlan } from '@/contexts/PlanContext';
 import { isPointBased } from '@/lib/plan-limits';
 import { useEffect, useState } from 'react';
+
+const CsChatbot = dynamic(() => import('@/components/portal/CsChatbot'), { ssr: false });
 
 function PortalDashboardInner({ children }: { children: React.ReactNode }) {
   const { plan, ownerName, companyName, email } = usePlan();
@@ -61,6 +64,7 @@ function PortalDashboardInner({ children }: { children: React.ReactNode }) {
         </div>
       </main>
 
+      <CsChatbot />
       <ToastContainer />
     </div>
   );

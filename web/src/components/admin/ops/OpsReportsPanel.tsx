@@ -10,6 +10,7 @@ const WeeklyBarChart = dynamic(() => import('@/components/admin/charts/WeeklyBar
 
 interface WeeklyItem {
   day: string
+  date: string
   revenue: number
   users: number
   errors: number
@@ -22,6 +23,11 @@ interface KpiData {
   activeAgencies: { value: number }
   errorRate: { value: string }
   uptime: { value: string }
+  linkedDrivers?: { value: number }
+}
+
+function formatCurrency(value: number): string {
+  return `₩${value.toLocaleString('ko-KR')}`
 }
 
 export default function OpsReportsPanel() {
@@ -32,19 +38,16 @@ export default function OpsReportsPanel() {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const [weeklyRes, kpiRes] = await Promise.all([
-        fetch('/api/admin/ops/weekly'),
-        fetch('/api/admin/ops/kpi'),
-      ])
+      const [weeklyRes, kpiRes] = await Promise.all([fetch('/api/admin/ops/weekly'), fetch('/api/admin/ops/kpi')])
+
       if (weeklyRes.ok) {
         const payload = await weeklyRes.json()
         setWeekly(payload.weeklyData ?? [])
       }
+
       if (kpiRes.ok) {
         setKpi(await kpiRes.json())
       }
-    } catch {
-      // silent
     } finally {
       setLoading(false)
     }
@@ -55,7 +58,11 @@ export default function OpsReportsPanel() {
   }, [loadData])
 
   const now = new Date()
-  const dateStr = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`
+  const dateLabel = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`
+  const weeklyRevenue = weekly.reduce((sum, item) => sum + item.revenue, 0)
+  const weeklyUsers = weekly.reduce((sum, item) => sum + item.users, 0)
+  const weeklyErrors = weekly.reduce((sum, item) => sum + item.errors, 0)
+  const weeklyPayments = weekly.reduce((sum, item) => sum + item.payments, 0)
 
   if (loading) {
     return (
@@ -68,51 +75,71 @@ export default function OpsReportsPanel() {
 
   return (
     <div className="space-y-6">
-      {/* Weekly Charts */}
       <div className="rounded-2xl bg-surface-container-lowest p-6 shadow-ambient">
-        <h3 className="mb-4 font-headline text-[16px] font-bold text-on-surface">주간 트렌드</h3>
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <h3 className="font-headline text-[16px] font-bold text-on-surface">주간 운영 리포트</h3>
+        <p className="mt-1 text-[13px] text-on-surface-variant">
+          매출, 신규 고객사, 결제, 경고 로그를 한 번에 비교해 운영 흐름을 확인합니다.
+        </p>
+
+        <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-4">
           <div>
-            <p className="mb-2 font-body text-[12px] text-on-surface-variant">주간 매출</p>
+            <p className="mb-2 text-[12px] text-on-surface-variant">주간 예상 매출</p>
             <WeeklyBarChart
               data={weekly}
               dataKey="revenue"
               color="#10B981"
-              formatValue={(v) => `${(v / 10000).toFixed(0)}만`}
+              formatValue={(value) => `${Math.round(value / 10000)}만`}
             />
           </div>
           <div>
-            <p className="mb-2 font-body text-[12px] text-on-surface-variant">신규 가입</p>
+            <p className="mb-2 text-[12px] text-on-surface-variant">주간 신규 고객사</p>
             <WeeklyBarChart data={weekly} dataKey="users" color="#3B82F6" />
           </div>
           <div>
-            <p className="mb-2 font-body text-[12px] text-on-surface-variant">오류 건수</p>
+            <p className="mb-2 text-[12px] text-on-surface-variant">주간 결제 주문</p>
+            <WeeklyBarChart data={weekly} dataKey="payments" color="#F59E0B" />
+          </div>
+          <div>
+            <p className="mb-2 text-[12px] text-on-surface-variant">주간 경고 로그</p>
             <WeeklyBarChart data={weekly} dataKey="errors" color="#EF4444" />
           </div>
         </div>
       </div>
 
-      {/* Daily AI Report */}
       <div className="rounded-2xl bg-surface-container-lowest p-6 shadow-ambient">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-headline text-[16px] font-bold text-on-surface">AI 일일 보고서</h3>
-          <span className="font-body text-[11px] text-on-surface-variant">{dateStr} 자동 생성</span>
+          <h3 className="font-headline text-[16px] font-bold text-on-surface">운영 요약 보고서</h3>
+          <span className="text-[11px] text-on-surface-variant">{dateLabel} 기준 자동 집계</span>
         </div>
-        <div className="whitespace-pre-wrap rounded-xl bg-surface-container-low p-5 font-body text-[13px] leading-7 text-on-surface">
-{`SS로직스 / 로지사인 일일 운영 보고
 
-■ 핵심 KPI
-  • 매출(MRR): ₩${kpi ? kpi.revenue.value.toLocaleString() : '-'}
-  • 신규 가입: ${kpi?.newUsers.value ?? '-'}건
-  • 활성 배달대행사: ${kpi?.activeAgencies.value ?? '-'}개
-  • 오류율: ${kpi?.errorRate.value ?? '-'}% | 업타임: ${kpi?.uptime.value ?? '-'}%
+        <div className="rounded-2xl bg-surface-container-low p-5 text-[13px] leading-7 text-on-surface">
+          <p className="font-semibold text-on-surface">오늘 운영 요약</p>
+          <ul className="mt-3 space-y-2 text-on-surface-variant">
+            <li>예상 월 매출은 {formatCurrency(kpi?.revenue.value ?? 0)} 수준으로 집계되었습니다.</li>
+            <li>최근 7일 신규 고객사는 총 {weeklyUsers}곳, 활성 고객사는 현재 {kpi?.activeAgencies.value ?? 0}곳입니다.</li>
+            <li>최근 7일 결제 주문은 {weeklyPayments}건, 경고 로그는 {weeklyErrors}건입니다.</li>
+            <li>연결된 소속 기사는 {kpi?.linkedDrivers?.value ?? 0}명이며, 추정 가용성은 {kpi?.uptime.value ?? '-'}%입니다.</li>
+            <li>계약 완료율 기준 위험 지표는 {kpi?.errorRate.value ?? '-'}%입니다.</li>
+          </ul>
+        </div>
+      </div>
 
-■ 주간 요약
-  • 7일간 신규 가입: ${weekly.reduce((s, w) => s + w.users, 0)}건
-  • 7일간 오류 합계: ${weekly.reduce((s, w) => s + w.errors, 0)}건
-  • 7일간 결제 건수: ${weekly.reduce((s, w) => s + w.payments, 0)}건
-
-이 보고서는 AI가 실제 데이터 기반으로 자동 생성했습니다.`}
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-4">
+        <div className="rounded-2xl bg-surface-container-lowest p-5 shadow-ambient">
+          <p className="text-xs text-on-surface-variant">주간 예상 매출 합계</p>
+          <p className="mt-2 font-data text-2xl font-bold text-on-surface">{formatCurrency(weeklyRevenue)}</p>
+        </div>
+        <div className="rounded-2xl bg-surface-container-lowest p-5 shadow-ambient">
+          <p className="text-xs text-on-surface-variant">주간 신규 고객사</p>
+          <p className="mt-2 font-data text-2xl font-bold text-on-surface">{weeklyUsers}곳</p>
+        </div>
+        <div className="rounded-2xl bg-surface-container-lowest p-5 shadow-ambient">
+          <p className="text-xs text-on-surface-variant">주간 결제 주문</p>
+          <p className="mt-2 font-data text-2xl font-bold text-on-surface">{weeklyPayments}건</p>
+        </div>
+        <div className="rounded-2xl bg-surface-container-lowest p-5 shadow-ambient">
+          <p className="text-xs text-on-surface-variant">주간 경고 로그</p>
+          <p className="mt-2 font-data text-2xl font-bold text-on-surface">{weeklyErrors}건</p>
         </div>
       </div>
     </div>

@@ -27,8 +27,6 @@ export default function OpsDepartmentsPanel() {
         const payload = await response.json()
         setDepartments(payload.departments ?? [])
       }
-    } catch {
-      // silent
     } finally {
       setLoading(false)
     }
@@ -41,8 +39,8 @@ export default function OpsDepartmentsPanel() {
   if (loading) {
     return (
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
-          <div key={i} className="h-[220px] animate-pulse rounded-2xl bg-surface-container-lowest shadow-ambient" />
+        {[1, 2, 3, 4, 5, 6].map((index) => (
+          <div key={index} className="h-[220px] animate-pulse rounded-2xl bg-surface-container-lowest shadow-ambient" />
         ))}
       </div>
     )
@@ -50,54 +48,54 @@ export default function OpsDepartmentsPanel() {
 
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-      {departments.map((dept) => {
-        const metricEntries = Object.entries(dept.metrics).filter(([k]) => k !== 'topIssue')
+      {departments.map((department) => {
+        const metricEntries = Object.entries(department.metrics).filter(([key]) => key !== '주요 이슈')
 
         return (
           <div
-            key={dept.id}
+            key={department.id}
             className="relative overflow-hidden rounded-2xl bg-surface-container-lowest p-5 shadow-ambient"
           >
-            <div className="absolute left-0 right-0 top-0 h-[3px]" style={{ backgroundColor: dept.color }} />
+            <div className="absolute left-0 right-0 top-0 h-[3px]" style={{ backgroundColor: department.color }} />
 
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div
                   className="flex h-10 w-10 items-center justify-center rounded-xl"
-                  style={{ backgroundColor: `${dept.color}14` }}
+                  style={{ backgroundColor: `${department.color}14` }}
                 >
                   <span
                     className="material-symbols-outlined text-[22px]"
                     style={{
-                      color: dept.color,
+                      color: department.color,
                       fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 22",
                     }}
                   >
-                    {dept.icon}
+                    {department.icon}
                   </span>
                 </div>
                 <div>
-                  <p className="font-headline text-[14px] font-bold text-on-surface">{dept.name}</p>
-                  <p className="font-body text-[10px] text-on-surface-variant">{dept.agent}</p>
+                  <p className="font-headline text-[14px] font-bold text-on-surface">{department.name}</p>
+                  <p className="text-[10px] text-on-surface-variant">{department.agent}</p>
                 </div>
               </div>
-              <span className="rounded-lg bg-tertiary/[0.08] px-2 py-1 font-body text-[10px] font-medium text-tertiary">
-                정상
+              <span className="rounded-lg bg-tertiary/[0.08] px-2 py-1 text-[10px] font-medium text-tertiary">
+                실시간
               </span>
             </div>
 
             <div className="mb-3 grid grid-cols-2 gap-2">
-              {metricEntries.map(([key, val]) => (
+              {metricEntries.map(([key, value]) => (
                 <div key={key} className="rounded-lg bg-surface-container-low px-3 py-2">
-                  <p className="font-body text-[10px] capitalize text-on-surface-variant">{key}</p>
-                  <p className="font-data text-[14px] font-semibold text-on-surface">{String(val)}</p>
+                  <p className="text-[10px] text-on-surface-variant">{key}</p>
+                  <p className="font-data text-[14px] font-semibold text-on-surface">{String(value)}</p>
                 </div>
               ))}
             </div>
 
-            <div className="flex items-center justify-between border-t border-outline-variant/15 pt-3">
-              <span className="font-body text-[10px] text-on-surface-variant">
-                주요 이슈: {String(dept.metrics.topIssue ?? '-')}
+            <div className="border-t border-outline-variant/15 pt-3">
+              <span className="text-[11px] text-on-surface-variant">
+                주요 이슈: {String(department.metrics['주요 이슈'] ?? '-')}
               </span>
             </div>
           </div>

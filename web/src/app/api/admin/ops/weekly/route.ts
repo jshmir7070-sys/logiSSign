@@ -35,47 +35,57 @@ export async function GET(request: NextRequest) {
     const weekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6)
     const weekAgoISO = weekAgo.toISOString()
 
-    const [agenciesRes, securityLogsRes, paymentsRes] = await Promise.all([
+    const [agenciesRes, securityLogsRes, paymentsRes, taxSendLogsRes] = await Promise.all([
       supabaseAdmin.from('agencies').select('id, plan, monthly_fee, created_at').gte('created_at', weekAgoISO),
-      supabaseAdmin.from('security_logs').select('id, severity, created_at').gte('created_at', weekAgoISO).in('severity', ['warning', 'critical']),
+      supabaseAdmin
+        .from('security_logs')
+        .select('id, severity, created_at')
+        .gte('created_at', weekAgoISO)
+        .in('severity', ['warning', 'critical']),
       supabaseAdmin.from('agency_payment_orders').select('id, status, amount, created_at').gte('created_at', weekAgoISO),
+      supabaseAdmin
+        .from('tax_invoice_send_logs')
+        .select('id, success, created_at')
+        .gte('created_at', weekAgoISO)
+        .eq('success', false),
     ])
 
     const agencies = (agenciesRes.data ?? []) as Array<Record<string, unknown>>
     const logs = (securityLogsRes.data ?? []) as Array<Record<string, unknown>>
     const payments = (paymentsRes.data ?? []) as Array<Record<string, unknown>>
+    const failedTaxSends = (taxSendLogsRes.data ?? []) as Array<Record<string, unknown>>
 
     const weeklyData = Array.from({ length: 7 }, (_, index) => {
       const date = new Date(weekAgo.getFullYear(), weekAgo.getMonth(), weekAgo.getDate() + index)
-      const dateStr = date.toISOString().slice(0, 10)
-      const dayLabel = DAY_LABELS[date.getDay()]
+      const dateKey = date.toISOString().slice(0, 10)
 
-      const dayAgencies = agencies.filter((agency) => String(agency.created_at ?? '').slice(0, 10) === dateStr)
-      const dayRevenue = dayAgencies.reduce((sum, agency) => {
+      const dailyAgencies = agencies.filter((agency) => String(agency.created_at ?? '').slice(0, 10) === dateKey)
+      const dailyRevenue = dailyAgencies.reduce((sum, agency) => {
         const fee =
           typeof agency.monthly_fee === 'number' && agency.monthly_fee > 0
             ? agency.monthly_fee
-            : PLAN_FEES[((agency.plan as string) || 'free').toLowerCase()] ?? 0
+            : PLAN_FEES[String(agency.plan ?? 'free').toLowerCase()] ?? 0
         return sum + fee
       }, 0)
 
-      const dayErrors = logs.filter((log) => String(log.created_at ?? '').slice(0, 10) === dateStr).length
-      const dayPayments = payments.filter((payment) => String(payment.created_at ?? '').slice(0, 10) === dateStr).length
+      const dailyLogCount = logs.filter((log) => String(log.created_at ?? '').slice(0, 10) === dateKey).length
+      const dailyTaxSendFailures = failedTaxSends.filter((log) => String(log.created_at ?? '').slice(0, 10) === dateKey).length
+      const dailyPaymentCount = payments.filter((payment) => String(payment.created_at ?? '').slice(0, 10) === dateKey).length
 
       return {
-        day: dayLabel,
-        date: dateStr,
-        revenue: dayRevenue,
-        users: dayAgencies.length,
-        errors: dayErrors,
-        payments: dayPayments,
+        day: DAY_LABELS[date.getDay()],
+        date: dateKey,
+        revenue: dailyRevenue,
+        users: dailyAgencies.length,
+        errors: dailyLogCount + dailyTaxSendFailures,
+        payments: dailyPaymentCount,
       }
     })
 
     return NextResponse.json({ weeklyData })
   } catch (fetchError) {
     return NextResponse.json(
-      { error: fetchError instanceof Error ? fetchError.message : '주간 데이터를 불러오지 못했습니다.' },
+      { error: fetchError instanceof Error ? fetchError.message : '주간 운영 데이터를 불러오지 못했습니다.' },
       { status: 500 },
     )
   }

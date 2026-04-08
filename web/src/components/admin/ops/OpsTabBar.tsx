@@ -9,7 +9,7 @@ interface TabItem {
 }
 
 const TABS: TabItem[] = [
-  { id: 'dashboard', label: '요약', icon: 'dashboard' },
+  { id: 'dashboard', label: '운영 요약', icon: 'dashboard' },
   { id: 'weekly', label: '주간 추이', icon: 'stacked_line_chart' },
   { id: 'incidents', label: '이슈 현황', icon: 'warning' },
   { id: 'departments', label: '부서별 현황', icon: 'groups' },
@@ -29,8 +29,9 @@ export default function OpsTabBar({ activeTab, onTabChange }: OpsTabBarProps) {
         return (
           <button
             key={tab.id}
+            type="button"
             onClick={() => onTabChange(tab.id)}
-            className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 font-body text-[13px] font-medium transition-all duration-200 ${
+            className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-[13px] font-medium transition-all duration-200 ${
               isActive ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant hover:bg-surface-container-low'
             }`}
           >
