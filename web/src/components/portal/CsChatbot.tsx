@@ -208,29 +208,6 @@ export default function CsChatbot() {
         </div>
       </div>
 
-      {/* Category Selector (selected state) */}
-      <div className="flex items-center gap-1.5 overflow-x-auto border-b border-outline-variant/15 px-3 py-2">
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat.id}
-            onClick={() => handleCategorySelect(cat)}
-            className={`flex items-center gap-1 whitespace-nowrap rounded-lg px-2 py-1.5 font-body text-[10px] transition-colors ${
-              selectedCategory === cat.id
-                ? 'bg-primary/[0.08] font-semibold text-primary'
-                : 'text-on-surface-variant hover:bg-surface-container-low'
-            }`}
-          >
-            <span
-              className="material-symbols-outlined text-[13px]"
-              style={{ fontVariationSettings: "'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 13" }}
-            >
-              {cat.icon}
-            </span>
-            {cat.label}
-          </button>
-        ))}
-      </div>
-
       {/* Messages */}
       <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-3">
         {/* Category Cards (initial state) */}

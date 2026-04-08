@@ -29,23 +29,19 @@ function ProgressBar({
   const color = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-emerald-500';
 
   return (
-    <div className="w-14 h-1.5 rounded-full bg-outline-variant/20 overflow-hidden">
+    <div className="h-1.5 w-14 overflow-hidden rounded-full bg-outline-variant/20">
       <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
     </div>
   );
 }
 
 function StatusTile({
-  label,
   value,
-  hint,
   onClick,
   highlight = false,
   icon,
 }: {
-  label: string;
   value: string;
-  hint?: string;
   onClick: () => void;
   highlight?: boolean;
   icon: ReactNode;
@@ -54,7 +50,7 @@ function StatusTile({
     <button
       type="button"
       onClick={onClick}
-      className={`group flex min-w-[160px] shrink-0 items-center gap-3 rounded-[22px] border px-3.5 py-2.5 text-left transition-all active:scale-[0.98] ${
+      className={`group flex min-w-[112px] shrink-0 items-center gap-3 rounded-[22px] border px-3 py-2.5 transition-all active:scale-[0.98] ${
         highlight
           ? 'border-amber-200/70 bg-amber-50/90 shadow-[0_10px_24px_-18px_rgba(217,119,6,0.65)] hover:bg-amber-100/90'
           : 'border-white/70 bg-white/85 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.45)] hover:-translate-y-0.5 hover:bg-white'
@@ -69,11 +65,7 @@ function StatusTile({
       >
         {icon}
       </span>
-      <div className="min-w-0">
-        <p className="truncate text-[11px] text-on-surface-variant font-korean">{label}</p>
-        <p className="mt-0.5 text-sm font-bold text-on-surface font-data">{value}</p>
-        {hint ? <p className="mt-1 truncate text-[10px] text-on-surface-variant/80 font-korean">{hint}</p> : null}
-      </div>
+      <span className="truncate text-[13px] font-bold text-on-surface font-data">{value}</span>
     </button>
   );
 }
@@ -104,39 +96,37 @@ function BillingGuideModal({
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-xl mx-4 rounded-3xl bg-surface-container-lowest shadow-2xl overflow-hidden">
-        <div className="px-6 py-5 border-b border-outline-variant/15 flex items-start justify-between">
+      <div className="relative mx-4 w-full max-w-xl overflow-hidden rounded-3xl bg-surface-container-lowest shadow-2xl">
+        <div className="flex items-start justify-between border-b border-outline-variant/15 px-6 py-5">
           <div>
-            <h2 className="text-lg font-bold text-on-surface font-korean">이용 현황 안내</h2>
-            <p className="text-sm text-on-surface-variant mt-1 font-korean">
-              결제 정책은 정기결제가 아니라 1회성 결제와 카드 등록 기반입니다. 포인트형과
-              구독형을 결제 관리에서 전환할 수 있습니다.
+            <h2 className="font-korean text-lg font-bold text-on-surface">이용 현황 안내</h2>
+            <p className="mt-1 font-korean text-sm text-on-surface-variant">
+              현재 플랜, 이번 달 전자계약 사용량, 등록 기사 수, 포인트 잔액을 한눈에 확인할 수 있습니다.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-xl hover:bg-surface-container-high text-on-surface-variant"
+            className="h-9 w-9 rounded-xl text-on-surface-variant hover:bg-surface-container-high"
           >
             닫기
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-5 p-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
-              <p className="text-xs text-on-surface-variant font-korean">현재 플랜</p>
-              <p className="text-lg font-bold text-on-surface mt-1">{planLabel}</p>
-              <p className="text-xs text-on-surface-variant mt-2 font-korean">
-                결제 관리에서 포인트형과 구독형을 전환할 수 있습니다.
+              <p className="font-korean text-xs text-on-surface-variant">현재 플랜</p>
+              <p className="mt-1 text-lg font-bold text-on-surface">{planLabel}</p>
+              <p className="mt-2 font-korean text-xs text-on-surface-variant">
+                결제 관리는 설정의 결제 관리에서 확인할 수 있습니다.
               </p>
             </div>
             <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
-              <p className="text-xs text-on-surface-variant font-korean">이번 달 계약 사용량</p>
-              <p className="text-lg font-bold text-on-surface mt-1 font-data">
+              <p className="font-korean text-xs text-on-surface-variant">이번 달 전자계약 사용량</p>
+              <p className="mt-1 font-data text-lg font-bold text-on-surface">
                 {monthlyUsed}
-                <span className="text-sm text-on-surface-variant font-normal">
-                  {' '}
+                <span className="ml-1 text-sm font-normal text-on-surface-variant">
                   / {monthlyFree === null ? '무제한' : fmt(monthlyFree)}
                 </span>
               </p>
@@ -145,11 +135,10 @@ function BillingGuideModal({
               </div>
             </div>
             <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
-              <p className="text-xs text-on-surface-variant font-korean">등록 기사 수</p>
-              <p className="text-lg font-bold text-on-surface mt-1 font-data">
+              <p className="font-korean text-xs text-on-surface-variant">등록 기사 수</p>
+              <p className="mt-1 font-data text-lg font-bold text-on-surface">
                 {driverCount}
-                <span className="text-sm text-on-surface-variant font-normal">
-                  {' '}
+                <span className="ml-1 text-sm font-normal text-on-surface-variant">
                   / {maxDrivers === null ? '무제한' : fmt(maxDrivers)}
                 </span>
               </p>
@@ -159,13 +148,12 @@ function BillingGuideModal({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-amber-200/60 bg-amber-50 p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 rounded-2xl border border-amber-200/60 bg-amber-50 p-4">
             <div>
-              <p className="text-xs text-amber-700 font-korean">포인트 잔액</p>
-              <p className="text-2xl font-bold text-amber-800 font-data mt-1">{fmt(pointBalance)}P</p>
-              <p className="text-xs text-amber-700/80 mt-1 font-korean">
-                포인트형 사용 중일 때만 계약, 정산, 추가 기능 사용 시 포인트가 차감됩니다.
-                구독형 이용 중에는 포인트를 차감하지 않습니다.
+              <p className="font-korean text-xs text-amber-700">포인트 잔액</p>
+              <p className="mt-1 font-data text-2xl font-bold text-amber-800">{fmt(pointBalance)}P</p>
+              <p className="mt-1 font-korean text-xs text-amber-700/80">
+                포인트형 이용 중에는 계약, 정산, 추가 기능 사용 시 포인트가 차감됩니다.
               </p>
             </div>
             <button
@@ -174,20 +162,20 @@ function BillingGuideModal({
                 onClose();
                 router.push('/portal/settings?tab=billing');
               }}
-              className="h-11 px-5 rounded-xl bg-primary text-white text-sm font-bold font-korean hover:bg-primary/90 transition-colors"
+              className="h-11 rounded-xl bg-primary px-5 font-korean text-sm font-bold text-white transition-colors hover:bg-primary/90"
             >
               결제 관리 열기
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <button
               type="button"
               onClick={() => {
                 onClose();
                 router.push('/portal/contracts/new');
               }}
-              className="h-11 rounded-xl bg-surface-container-high text-on-surface text-sm font-semibold font-korean hover:bg-surface-container-highest transition-colors"
+              className="h-11 rounded-xl bg-surface-container-high font-korean text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-highest"
             >
               계약서 발송
             </button>
@@ -197,7 +185,7 @@ function BillingGuideModal({
                 onClose();
                 router.push('/portal/drivers');
               }}
-              className="h-11 rounded-xl bg-surface-container-high text-on-surface text-sm font-semibold font-korean hover:bg-surface-container-highest transition-colors"
+              className="h-11 rounded-xl bg-surface-container-high font-korean text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-highest"
             >
               기사 관리
             </button>
@@ -207,7 +195,7 @@ function BillingGuideModal({
                 onClose();
                 router.push('/portal/settings?tab=billing');
               }}
-              className="h-11 rounded-xl bg-power-gradient text-white text-sm font-bold font-korean hover:shadow-md transition-shadow"
+              className="h-11 rounded-xl bg-power-gradient font-korean text-sm font-bold text-white transition-shadow hover:shadow-md"
             >
               결제 설정 확인
             </button>
@@ -282,17 +270,14 @@ export default function TopStatusBar({ pointBalance, onPointBalanceChange }: Top
         <button
           type="button"
           onClick={() => setShowGuide(true)}
-          className="shrink-0 rounded-[22px] bg-gradient-to-br from-primary to-[#2963ff] px-4 py-2.5 text-left text-white shadow-[0_16px_32px_-24px_rgba(0,74,198,0.85)] transition-transform hover:-translate-y-0.5 active:scale-[0.98]"
-          title="현재 결제와 이용 현황 보기"
+          className="shrink-0 rounded-[22px] bg-gradient-to-br from-primary to-[#2963ff] px-5 py-2.5 text-left text-white shadow-[0_16px_32px_-24px_rgba(0,74,198,0.85)] transition-transform hover:-translate-y-0.5 active:scale-[0.98]"
+          title="현재 플랜과 이용 현황 보기"
         >
-          <span className="block text-[10px] font-medium text-white/70 font-korean">현재 플랜</span>
-          <span className="mt-0.5 block text-sm font-bold">{planLabel}</span>
+          <span className="block text-sm font-bold">{planLabel}</span>
         </button>
 
         <StatusTile
-          label="전자계약"
-          value={`${monthlyUsed}/${limits.monthlyFreeContracts === null ? '무제한' : fmt(limits.monthlyFreeContracts)}`}
-          hint="이번 달 사용량"
+          value={`${monthlyUsed}/${limits.monthlyFreeContracts === null ? '∞' : fmt(limits.monthlyFreeContracts)}`}
           onClick={() => setShowGuide(true)}
           icon={
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -303,9 +288,7 @@ export default function TopStatusBar({ pointBalance, onPointBalanceChange }: Top
         />
 
         <StatusTile
-          label="기사"
-          value={`${driverCount}/${limits.maxDrivers === null ? '무제한' : fmt(limits.maxDrivers)}`}
-          hint="등록 기사 수"
+          value={`${driverCount}/${limits.maxDrivers === null ? '∞' : fmt(limits.maxDrivers)}`}
           onClick={() => setShowGuide(true)}
           icon={
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -318,9 +301,7 @@ export default function TopStatusBar({ pointBalance, onPointBalanceChange }: Top
         />
 
         <StatusTile
-          label="포인트"
           value={`${fmt(localPointBalance)}P`}
-          hint="1회성 결제 잔액"
           onClick={() => router.push('/portal/settings?tab=billing')}
           highlight
           icon={
