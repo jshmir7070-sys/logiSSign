@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePlan } from '@/contexts/PlanContext'
 
@@ -152,11 +153,15 @@ export default function CsChatbot() {
         <span className="pointer-events-none absolute -top-1.5 -right-1.5 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white bg-[#111827] px-1.5 text-[10px] font-bold tracking-[0.18em] text-white">
           AI
         </span>
-        <span
-          className="material-symbols-outlined relative z-10 text-[30px]"
-          style={{ fontVariationSettings: "'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 30" }}
-        >
-          smart_toy
+        <span className="relative z-10 overflow-hidden rounded-[18px]">
+          <Image
+            src="/chatbot/chatbot-icon.png"
+            alt="고객지원 챗봇"
+            width={42}
+            height={42}
+            className="h-[42px] w-[42px] object-cover"
+            priority
+          />
         </span>
       </button>
     )
@@ -167,11 +172,14 @@ export default function CsChatbot() {
       {/* Header */}
       <div className="flex items-center justify-between bg-primary px-4 py-3">
         <div className="flex items-center gap-3">
-          <span
-            className="material-symbols-outlined text-[22px] text-on-primary"
-            style={{ fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 22" }}
-          >
-            smart_toy
+          <span className="overflow-hidden rounded-2xl bg-white/10 p-1">
+            <Image
+              src="/chatbot/chatbot-icon.png"
+              alt="고객지원 챗봇"
+              width={32}
+              height={32}
+              className="h-8 w-8 object-cover"
+            />
           </span>
           <div>
             <p className="font-headline text-[14px] font-bold text-on-primary">고객지원 센터</p>
