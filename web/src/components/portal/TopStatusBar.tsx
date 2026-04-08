@@ -50,22 +50,24 @@ function StatusTile({
     <button
       type="button"
       onClick={onClick}
-      className={`group flex min-w-[112px] shrink-0 items-center gap-3 rounded-[22px] border px-3 py-2.5 transition-all active:scale-[0.98] ${
+      className={`group flex shrink-0 items-center gap-2 rounded-xl px-2.5 py-1.5 text-sm transition-colors active:scale-[0.98] ${
         highlight
-          ? 'border-amber-200/70 bg-amber-50/90 shadow-[0_10px_24px_-18px_rgba(217,119,6,0.65)] hover:bg-amber-100/90'
-          : 'border-white/70 bg-white/85 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.45)] hover:-translate-y-0.5 hover:bg-white'
+          ? 'text-amber-700 hover:bg-amber-50'
+          : 'text-on-surface hover:bg-white/70'
       }`}
     >
       <span
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
           highlight
             ? 'bg-amber-100 text-amber-700'
-            : 'bg-surface-container-low text-on-surface-variant group-hover:bg-surface-container'
+            : 'bg-white/80 text-on-surface-variant group-hover:bg-white'
         }`}
       >
         {icon}
       </span>
-      <span className="truncate text-[13px] font-bold text-on-surface font-data">{value}</span>
+      <span className={`truncate font-bold font-data ${highlight ? 'text-amber-700' : 'text-on-surface'}`}>
+        {value}
+      </span>
     </button>
   );
 }
@@ -266,14 +268,14 @@ export default function TopStatusBar({ pointBalance, onPointBalanceChange }: Top
 
   return (
     <>
-      <div className="flex min-w-0 items-center gap-2 overflow-x-auto rounded-[28px] bg-surface-container-low/70 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] ring-1 ring-black/5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto rounded-[24px] bg-white/65 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] ring-1 ring-black/5 backdrop-blur [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <button
           type="button"
           onClick={() => setShowGuide(true)}
-          className="shrink-0 rounded-[22px] bg-gradient-to-br from-primary to-[#2963ff] px-5 py-2.5 text-left text-white shadow-[0_16px_32px_-24px_rgba(0,74,198,0.85)] transition-transform hover:-translate-y-0.5 active:scale-[0.98]"
+          className="shrink-0 rounded-xl px-3 py-1.5 text-left text-sm font-bold text-primary transition-colors hover:bg-white/70 active:scale-[0.98]"
           title="현재 플랜과 이용 현황 보기"
         >
-          <span className="block text-sm font-bold">{planLabel}</span>
+          <span className="block">{planLabel}</span>
         </button>
 
         <StatusTile

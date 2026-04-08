@@ -181,12 +181,7 @@ export default function CsChatbot() {
               className="h-8 w-8 object-cover"
             />
           </span>
-          <div>
-            <p className="font-headline text-[14px] font-bold text-on-primary">고객지원 센터</p>
-            <p className="font-body text-[10px] text-on-primary/70">
-              {meta?.isDedicatedSupport ? '전담 에이전트 응답' : 'AI 에이전트 응답'}
-            </p>
-          </div>
+          <p className="font-headline text-[14px] font-bold text-on-primary">고객지원 센터</p>
         </div>
         <div className="flex items-center gap-2">
           {meta?.isDedicatedSupport && (
@@ -225,10 +220,7 @@ export default function CsChatbot() {
                 >
                   {cat.icon}
                 </span>
-                <div>
-                  <p className="font-body text-[12px] font-semibold text-on-surface">{cat.label}</p>
-                  <p className="font-body text-[10px] text-on-surface-variant">{cat.desc}</p>
-                </div>
+                <p className="font-body text-[12px] font-semibold text-on-surface">{cat.label}</p>
               </button>
             ))}
           </div>
@@ -315,11 +307,6 @@ export default function CsChatbot() {
             전송
           </button>
         </div>
-        <p className="mt-1.5 font-body text-[9px] text-on-surface-variant/50">
-          {meta?.isDedicatedSupport
-            ? `${companyName} 전담 에이전트 · 기사 ${meta.driverCount}명 · 우선 처리`
-            : 'AI 에이전트가 24시간 응답합니다'}
-        </p>
       </div>
     </div>
   )
