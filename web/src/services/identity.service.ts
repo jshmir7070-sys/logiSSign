@@ -1,205 +1,91 @@
-import { createServerSupabaseClient } from '@/lib/supabase'
-
 /**
- * 본인인증 서비스 (PASS + 카카오 인증 지원)
+ * 본인인증 서비스 — PortOne V2 Identity Verification
  *
  * 계약서 전자서명 시 본인 확인용
  * 전자서명법상 법적 효력 있는 본인인증
  *
- * 연동 방식:
- *  - PASS: 통신사(SKT/KT/LGU+) 본인확인 + 민간인증서
- *  - 카카오: 카카오톡 내 간편인증
- *  - 둘 다 표준창(WebView) 방식으로 연동
+ * PortOne V2 API:
+ *   GET https://api.portone.io/identity-verifications/{id}
+ *   Authorization: PortOne {secret}
  *
  * 필요 환경변수:
- *  IDENTITY_PROVIDER_ID   — 본인인증 서비스 제공업체 ID
- *  IDENTITY_API_KEY       — API Key
- *  IDENTITY_CALLBACK_URL  — 인증 완료 콜백 URL
- *
- * 연동 업체 옵션:
- *  1. 다날 (danal.co.kr) — PASS + 카카오 동시 지원, 중소기업 친화적
- *  2. KG이니시스 — 대형 서비스용
- *  3. NHN KCP — 결제 연동과 함께 사용 시 유리
+ *   PORTONE_V2_SECRET — PortOne V2 API 시크릿 키
  */
-
-export type IdentityProvider = 'pass' | 'kakao'
-
-export interface IdentityVerificationRequest {
-  /** 인증 수단 */
-  provider: IdentityProvider
-  /** 인증 목적 */
-  purpose: 'contract_sign' | 'signup'
-  /** 기사 정보 (사전 입력용) */
-  name?: string
-  phone?: string
-  birthDate?: string
-  /** 관련 계약서 ID */
-  contractId?: string
-}
 
 export interface IdentityVerificationResult {
   /** 인증 성공 여부 */
   verified: boolean
   /** 인증 실패 시 에러 */
   error: string | null
-  /** 인증 완료 데이터 */
-  data: {
-    /** 인증된 실명 */
-    name: string
-    /** 인증된 전화번호 */
-    phone: string
-    /** 인증된 생년월일 */
-    birthDate: string
-    /** 인증 수단 */
-    provider: IdentityProvider
-    /** 인증 고유 ID (업체 발급) */
-    certId: string
-    /** CI (Connecting Information) — 동일인 판별 키 */
-    ci: string
-    /** DI (Duplication Information) — 서비스 내 중복 확인 키 */
-    di: string
-    /** 인증 시각 */
-    verifiedAt: string
-  } | null
 }
 
 /**
- * 본인인증 세션 생성
- * 프론트에서 WebView를 열어 인증 페이지를 보여줌
- * 인증 완료 시 callback URL로 결과 전달
+ * PortOne V2 본인인증 결과 검증
  *
- * ⚠️ 실제 연동 시 다날/KG이니시스 등의 SDK에 맞게 교체 필요
+ * certId를 사용하여 PortOne V2 API에서 본인인증 상태를 확인합니다.
+ *
+ * 개발 모드 바이패스:
+ *   PORTONE_V2_SECRET이 미설정이고 NODE_ENV !== 'production'이면
+ *   certId 존재 자체로 인증 성공 처리합니다.
  */
-export async function createVerificationSession(
-  request: IdentityVerificationRequest
-): Promise<{
-  sessionId: string
-  verificationUrl: string
-  error: string | null
-}> {
-  const apiKey = process.env.IDENTITY_API_KEY
-  const providerId = process.env.IDENTITY_PROVIDER_ID
-  const _callbackUrl = process.env.IDENTITY_CALLBACK_URL
+export async function verifyIdentity(
+  certId: string
+): Promise<IdentityVerificationResult> {
+  if (!certId) {
+    return { verified: false, error: '본인인증 ID(certId)가 필요합니다.' }
+  }
 
-  if (!apiKey || !providerId) {
-    // 프로덕션에서 API 키 미설정 시 차단
-    if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEV_IDENTITY !== 'true') {
-      console.error('[Identity] 프로덕션에서 본인인증 API 키가 설정되지 않았습니다')
-      return {
-        sessionId: '',
-        verificationUrl: '',
-        error: '본인인증 서비스가 설정되지 않았습니다. 관리자에게 문의하세요.',
-      }
-    }
-    console.warn('[Identity] API 키 미설정 — 개발 모드 (인증 스킵)')
+  const portoneSecret = process.env.PORTONE_V2_SECRET
+
+  // 개발 모드 바이패스: 시크릿 미설정 + 비프로덕션 환경
+  if (!portoneSecret && process.env.NODE_ENV !== 'production') {
+    console.warn('[Identity] PORTONE_V2_SECRET 미설정 — 개발 모드 바이패스 (certId 존재로 인증 처리)')
+    return { verified: true, error: null }
+  }
+
+  if (!portoneSecret) {
+    console.error('[Identity] 프로덕션에서 PORTONE_V2_SECRET이 설정되지 않았습니다')
     return {
-      sessionId: `dev_${Date.now()}`,
-      verificationUrl: '',
-      error: null,
+      verified: false,
+      error: '본인인증 서비스가 설정되지 않았습니다. 관리자에게 문의하세요.',
     }
   }
 
   try {
-    // 실제 구현 시 다날 API 호출 예시:
-    // POST https://api.danal.co.kr/auth/v1/session
-    // { providerId, provider: request.provider, callbackUrl, ... }
-
-    const sessionId = crypto.randomUUID()
-    const verificationUrl = `https://auth.example.com/verify?session=${sessionId}&provider=${request.provider}`
-
-    return { sessionId, verificationUrl, error: null }
-  } catch (err) {
-    return {
-      sessionId: '',
-      verificationUrl: '',
-      error: err instanceof Error ? err.message : '인증 세션 생성 실패',
-    }
-  }
-}
-
-/**
- * 본인인증 결과 확인
- * 콜백으로 받은 sessionId로 인증 결과 조회
- */
-export async function getVerificationResult(
-  sessionId: string
-): Promise<IdentityVerificationResult> {
-  const apiKey = process.env.IDENTITY_API_KEY
-
-  if (!apiKey) {
-    // 프로덕션에서 차단
-    if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEV_IDENTITY !== 'true') {
-      return { verified: false, error: '본인인증 서비스가 설정되지 않았습니다', data: null }
-    }
-    // 개발 모드: dev_ 세션만 허용
-    if (sessionId.startsWith('dev_')) {
-      return {
-        verified: true,
-        error: null,
-        data: {
-          name: '개발테스트',
-          phone: '01000000000',
-          birthDate: '19900101',
-          provider: 'pass',
-          certId: sessionId,
-          ci: 'dev_ci_' + sessionId,
-          di: 'dev_di_' + sessionId,
-          verifiedAt: new Date().toISOString(),
+    const response = await fetch(
+      `https://api.portone.io/identity-verifications/${encodeURIComponent(certId)}`,
+      {
+        headers: {
+          Authorization: `PortOne ${portoneSecret}`,
+          'Content-Type': 'application/json',
         },
       }
-    }
-  }
+    )
 
-  try {
-    // 실제 구현 시 다날 API 호출:
-    // GET https://api.danal.co.kr/auth/v1/result?sessionId=xxx
+    if (!response.ok) {
+      const statusText = response.statusText || String(response.status)
+      console.error(`[Identity] PortOne API 응답 오류: ${response.status} ${statusText}`)
+      return {
+        verified: false,
+        error: '본인인증 검증에 실패했습니다. 다시 시도해주세요.',
+      }
+    }
+
+    const data = await response.json()
+
+    if (data.status === 'VERIFIED') {
+      return { verified: true, error: null }
+    }
 
     return {
       verified: false,
-      error: '본인인증 서비스 미연동',
-      data: null,
+      error: '본인인증이 완료되지 않았습니다. 인증 후 다시 시도해주세요.',
     }
   } catch (err) {
+    console.error('[Identity] PortOne 본인인증 검증 실패:', err)
     return {
       verified: false,
-      error: err instanceof Error ? err.message : '인증 결과 조회 실패',
-      data: null,
+      error: err instanceof Error ? err.message : '본인인증 검증 중 오류가 발생했습니다.',
     }
   }
-}
-
-/**
- * 계약서 서명 시 본인인증 결과를 contract_signatures에 저장
- */
-export async function saveVerificationToSignature(
-  contractId: string,
-  result: IdentityVerificationResult
-): Promise<void> {
-  if (!result.verified || !result.data) return
-
-  const sanitizedVerificationData = {
-    name: result.data.name,
-    phone: result.data.phone,
-    birthDate: result.data.birthDate,
-    provider: result.data.provider,
-    certId: result.data.certId,
-    verifiedAt: result.data.verifiedAt,
-  }
-
-  const supabase = await createServerSupabaseClient()
-  const { data: signature } = await supabase
-    .from('contract_signatures')
-    .select('id')
-    .eq('contract_id', contractId)
-    .single()
-
-  if (!signature) return
-
-  await supabase
-    .from('contract_signatures')
-    .update({
-      verified_at: new Date().toISOString(),
-      verification_data: sanitizedVerificationData,
-    })
-    .eq('id', signature.id)
 }

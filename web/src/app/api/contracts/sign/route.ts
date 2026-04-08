@@ -4,6 +4,7 @@ import { apiError } from '@/lib/api-error'
 import { getClientIp } from '@/lib/get-ip'
 import { rateLimitAuth } from '@/lib/rate-limit'
 import { generateSignedPdf } from '@/services/signed-pdf.service'
+import { bridgeContractToSettlement } from '@/services/contract-settlement-bridge.service'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -118,9 +119,19 @@ export async function POST(request: NextRequest) {
           // 포트원 키 없으면 certId 존재 자체로 기록 (개발 환경)
           identityVerified = true
         }
-      } catch {
-        // 검증 실패해도 서명은 진행 (certId 기록)
-        console.warn('[ContractSign] Identity verification check failed for certId:', certId)
+      } catch (verifyErr) {
+        console.error('[ContractSign] Identity verification failed for certId:', certId, verifyErr)
+        return NextResponse.json(
+          { error: '본인인증 검증에 실패했습니다. 다시 시도해주세요.' },
+          { status: 422 }
+        )
+      }
+
+      if (!identityVerified) {
+        return NextResponse.json(
+          { error: '본인인증이 완료되지 않았습니다. 인증 후 다시 시도해주세요.' },
+          { status: 422 }
+        )
       }
     }
 
@@ -197,12 +208,21 @@ export async function POST(request: NextRequest) {
 
     const pdfResult = await generateSignedPdf(contractId)
 
+    // 10. 계약서→정산 브릿지: 단가/공제/계약기간 자동 연결
+    let bridgeResult = null
+    try {
+      bridgeResult = await bridgeContractToSettlement(contractId, driverId)
+    } catch (bridgeErr) {
+      console.warn('[ContractSign] Settlement bridge failed (non-blocking):', bridgeErr)
+    }
+
     return NextResponse.json({
       signed: true,
       identityVerified,
       signedPdfUrl: pdfResult.url,
       pdfGenerated: !!pdfResult.url,
       warning: pdfResult.error,
+      settlement: bridgeResult,
     })
   } catch (err) {
     console.error('[ContractSign] Unexpected error:', err)
