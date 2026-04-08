@@ -10,7 +10,7 @@ import { createSignedStorageUrl } from '@/lib/storage-reference'
 import { deductPoints, hasEnoughPoints } from '@/services/point.service'
 import { buildRenderableSettlementTemplate, buildSettlementDriverData, type SettlementPdfSource } from '@/services/settlement-rendering.service'
 import { generateSettlementPdf } from '@/services/settlement-pdf.service'
-import { sendSettlementReminderSms } from '@/services/sms.service'
+import { sendSms } from '@/services/sms.service'
 import { DEFAULT_TEMPLATE, type SettlementMeta, type SettlementTemplate } from '@/types/settlement-template'
 
 const supabaseAdmin = createClient(
@@ -281,38 +281,97 @@ export async function POST(request: NextRequest) {
 
     const { data: agency } = await supabaseAdmin
       .from('agencies')
-      .select('plan')
+      .select('plan, name')
       .eq('id', agencyId)
       .single()
 
     const agencyPlan = (agency?.plan ?? 'free') as PlanType
+    const agencyName = (agency?.name as string) ?? '대리점'
     const isSubscription = isPaidPlan(agencyPlan) && !isPointBased(agencyPlan)
 
     const generatedPdfCount = await generateSettlementPdfs(agencyId, settlementRows)
 
-    const notifiedDriverIds = new Set<string>()
-    const failedDriverIds = new Set<string>()
+    // --- Fire push + SMS simultaneously per driver using Promise.allSettled ---
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://logissign.com'
+
+    const pushResults: Array<{ driverId: string; sent: boolean }> = []
+    const smsResults: Array<{ driverId: string; sent: boolean }> = []
+
+    const notificationPromises: Promise<void>[] = []
 
     for (const driverId of driverIds) {
       const driver = contactMap.get(driverId)
       if (!driver) continue
 
-      let delivered = false
+      const yearMonth =
+        settlementRows.find((s) => s.driver_id === driver.id)?.year_month ?? ''
+      const settlementLink = `${baseUrl}/portal/settlements?ym=${encodeURIComponent(yearMonth)}`
+
+      const channelPromises: Array<Promise<{ channel: 'push' | 'sms'; sent: boolean }>> = []
+
+      // Push notification for drivers with a push token
       if (driver.push_token) {
-        delivered = await sendPushNotification(driver.id, driver.push_token)
+        channelPromises.push(
+          sendPushNotification(driver.id, driver.push_token).then((ok) => ({
+            channel: 'push' as const,
+            sent: ok,
+          })),
+        )
       }
 
-      if (!delivered && driver.phone) {
-        const yearMonth =
-          settlementRows.find((settlement) => settlement.driver_id === driver.id)?.year_month ?? ''
-        const smsResult = await sendSettlementReminderSms(driver.phone, yearMonth)
-        delivered = smsResult.sent
+      // SMS to ALL drivers with a phone number (simultaneous, not fallback)
+      if (driver.phone) {
+        const smsText =
+          `[${agencyName}] ${yearMonth} 정산서가 도착했습니다. 확인: ${settlementLink}`
+        channelPromises.push(
+          sendSms({ to: driver.phone, text: smsText }).then((r) => ({
+            channel: 'sms' as const,
+            sent: r.sent,
+          })),
+        )
       }
 
-      if (delivered) {
-        notifiedDriverIds.add(driver.id)
+      if (channelPromises.length > 0) {
+        notificationPromises.push(
+          Promise.allSettled(channelPromises).then((results) => {
+            for (const result of results) {
+              if (result.status === 'fulfilled') {
+                const { channel, sent } = result.value
+                if (channel === 'push') pushResults.push({ driverId, sent })
+                if (channel === 'sms') smsResults.push({ driverId, sent })
+              } else {
+                // Promise rejected — log and record as failure
+                console.error(`[SettlementSend] Notification error for driver ${driverId}:`, result.reason)
+              }
+            }
+          }),
+        )
+      }
+    }
+
+    // Wait for all drivers' notifications to complete
+    await Promise.allSettled(notificationPromises)
+
+    // Log delivery summary
+    const pushSentCount = pushResults.filter((r) => r.sent).length
+    const pushFailedCount = pushResults.filter((r) => !r.sent).length
+    const smsSentCount = smsResults.filter((r) => r.sent).length
+    const smsFailedCount = smsResults.filter((r) => !r.sent).length
+    console.info(
+      `[SettlementSend] Push: ${pushSentCount} sent / ${pushFailedCount} failed | SMS: ${smsSentCount} sent / ${smsFailedCount} failed`,
+    )
+
+    // A driver is "notified" if at least one channel succeeded
+    const notifiedDriverIds = new Set<string>()
+    const failedDriverIds = new Set<string>()
+
+    for (const driverId of driverIds) {
+      const pushOk = pushResults.some((r) => r.driverId === driverId && r.sent)
+      const smsOk = smsResults.some((r) => r.driverId === driverId && r.sent)
+      if (pushOk || smsOk) {
+        notifiedDriverIds.add(driverId)
       } else {
-        failedDriverIds.add(driver.id)
+        failedDriverIds.add(driverId)
       }
     }
 
@@ -366,11 +425,10 @@ export async function POST(request: NextRequest) {
       sent: sentSettlementIds.length,
       driverCount: notifiedDriverCount,
       generatedPdfCount,
-      pushSent: Array.from(notifiedDriverIds).filter((driverId) => Boolean(contactMap.get(driverId)?.push_token))
-        .length,
-      smsSent: Array.from(notifiedDriverIds).filter(
-        (driverId) => !contactMap.get(driverId)?.push_token && Boolean(contactMap.get(driverId)?.phone),
-      ).length,
+      pushSent: pushSentCount,
+      pushFailed: pushFailedCount,
+      smsSent: smsSentCount,
+      smsFailed: smsFailedCount,
       failedDrivers: Array.from(failedDriverIds),
       pointDeducted,
       draftRetained: validIds.filter((id) => !sentSettlementIds.includes(id)).length,
