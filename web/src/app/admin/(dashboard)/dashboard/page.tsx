@@ -39,6 +39,7 @@ interface DashboardResponse {
 
 const PLAN_LABELS: Record<string, string> = {
   free: '무료형',
+  point: '포인트형',
   basic: '베이직',
   standard: '스탠다드',
   pro: '프로',
@@ -160,7 +161,9 @@ export default function AdminDashboardPage() {
 
         <div className="min-h-[320px] rounded-2xl bg-surface-container-lowest p-6 shadow-ambient">
           <h3 className="mb-1 font-headline text-[16px] font-bold text-on-surface">플랜 분포</h3>
-          <p className="mb-6 text-[13px] text-on-surface-variant">{planDistributionSummary || '플랜 데이터가 없습니다.'}</p>
+          <p className="mb-6 text-[13px] text-on-surface-variant">
+            {planDistributionSummary || '플랜 데이터가 없습니다.'}
+          </p>
           <PlanDistribution data={planDistributionData} />
         </div>
       </div>

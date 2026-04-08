@@ -1,6 +1,6 @@
 'use client'
 
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts'
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 
 interface PlanDistributionDatum {
   name: string

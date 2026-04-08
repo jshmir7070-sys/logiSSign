@@ -23,7 +23,7 @@ export default function TopBar() {
   const title = pageTitles[pathname ?? ''] ?? '관리자'
 
   return (
-    <header className="fixed left-[240px] right-0 top-0 z-40 flex h-16 items-center justify-between bg-white/80 px-8 backdrop-blur-[20px]">
+    <header className="fixed left-[240px] right-0 top-0 z-40 flex h-16 items-center justify-between bg-white/85 px-8 backdrop-blur-[20px]">
       <h1 className="font-headline text-[18px] font-bold tracking-tight text-on-surface">{title}</h1>
 
       <div className="flex items-center gap-4">
@@ -44,6 +44,7 @@ export default function TopBar() {
         <button
           type="button"
           className="relative flex h-9 w-9 items-center justify-center rounded-xl transition-colors hover:bg-surface-container-low"
+          aria-label="알림"
         >
           <span
             className="material-symbols-outlined text-[20px] text-on-surface-variant"
