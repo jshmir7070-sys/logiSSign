@@ -340,7 +340,7 @@ export default function DashboardPage() {
       {/* Floating Action Button */}
       <Link
         href="/portal/settlements/generate"
-        className="fixed bottom-8 right-8 bg-power-gradient text-white px-6 py-3.5 rounded-2xl shadow-card font-label font-semibold text-sm hover:shadow-lg transition-shadow flex items-center gap-2"
+        className="hidden"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
           <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />

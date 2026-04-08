@@ -54,19 +54,25 @@ function StatusTile({
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center gap-2 px-3 py-1.5 rounded-xl transition-colors ${
+      className={`group flex min-w-[160px] shrink-0 items-center gap-3 rounded-[22px] border px-3.5 py-2.5 text-left transition-all active:scale-[0.98] ${
         highlight
-          ? 'bg-amber-50 border border-amber-200/60 hover:bg-amber-100'
-          : 'bg-surface-container-low hover:bg-surface-container-high'
+          ? 'border-amber-200/70 bg-amber-50/90 shadow-[0_10px_24px_-18px_rgba(217,119,6,0.65)] hover:bg-amber-100/90'
+          : 'border-white/70 bg-white/85 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.45)] hover:-translate-y-0.5 hover:bg-white'
       }`}
     >
-      <span className={highlight ? 'text-amber-700' : 'text-on-surface-variant'}>{icon}</span>
-      <div className="text-left">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[11px] text-on-surface-variant font-korean">{label}</span>
-          <span className="text-xs font-bold text-on-surface font-data">{value}</span>
-        </div>
-        {hint ? <p className="text-[10px] text-on-surface-variant/80 font-korean">{hint}</p> : null}
+      <span
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
+          highlight
+            ? 'bg-amber-100 text-amber-700'
+            : 'bg-surface-container-low text-on-surface-variant group-hover:bg-surface-container'
+        }`}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <p className="truncate text-[11px] text-on-surface-variant font-korean">{label}</p>
+        <p className="mt-0.5 text-sm font-bold text-on-surface font-data">{value}</p>
+        {hint ? <p className="mt-1 truncate text-[10px] text-on-surface-variant/80 font-korean">{hint}</p> : null}
       </div>
     </button>
   );
@@ -272,14 +278,15 @@ export default function TopStatusBar({ pointBalance, onPointBalanceChange }: Top
 
   return (
     <>
-      <div className="flex items-center gap-3 select-none">
+      <div className="flex min-w-0 items-center gap-2 overflow-x-auto rounded-[28px] bg-surface-container-low/70 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] ring-1 ring-black/5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <button
           type="button"
           onClick={() => setShowGuide(true)}
-          className="px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-xs font-bold font-korean hover:bg-primary/15 transition-colors"
+          className="shrink-0 rounded-[22px] bg-gradient-to-br from-primary to-[#2963ff] px-4 py-2.5 text-left text-white shadow-[0_16px_32px_-24px_rgba(0,74,198,0.85)] transition-transform hover:-translate-y-0.5 active:scale-[0.98]"
           title="현재 결제와 이용 현황 보기"
         >
-          {planLabel}
+          <span className="block text-[10px] font-medium text-white/70 font-korean">현재 플랜</span>
+          <span className="mt-0.5 block text-sm font-bold">{planLabel}</span>
         </button>
 
         <StatusTile

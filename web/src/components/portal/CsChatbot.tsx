@@ -145,21 +145,25 @@ export default function CsChatbot() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-on-primary shadow-float transition-transform hover:scale-105"
+        className="group fixed bottom-8 right-8 z-50 flex h-[68px] w-[68px] items-center justify-center rounded-[24px] bg-[linear-gradient(145deg,#004ac6,#5f7bff)] text-on-primary shadow-[0_28px_48px_-26px_rgba(0,74,198,0.95)] transition-all hover:-translate-y-1 hover:shadow-[0_34px_56px_-28px_rgba(0,74,198,0.95)] active:scale-[0.96]"
         aria-label="고객지원 챗봇 열기"
       >
+        <span className="absolute inset-[1px] rounded-[23px] bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.28),_rgba(255,255,255,0.02)_62%)]" />
+        <span className="pointer-events-none absolute -top-1.5 -right-1.5 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white bg-[#111827] px-1.5 text-[10px] font-bold tracking-[0.18em] text-white">
+          AI
+        </span>
         <span
-          className="material-symbols-outlined text-[24px]"
-          style={{ fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}
+          className="material-symbols-outlined relative z-10 text-[30px]"
+          style={{ fontVariationSettings: "'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 30" }}
         >
-          support_agent
+          smart_toy
         </span>
       </button>
     )
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex h-[580px] w-[420px] flex-col overflow-hidden rounded-2xl border border-outline-variant/20 bg-white shadow-float">
+    <div className="fixed bottom-8 right-8 z-50 flex h-[min(620px,calc(100vh-112px))] w-[min(396px,calc(100vw-24px))] flex-col overflow-hidden rounded-[28px] border border-outline-variant/20 bg-white shadow-[0_36px_70px_-32px_rgba(15,23,42,0.55)]">
       {/* Header */}
       <div className="flex items-center justify-between bg-primary px-4 py-3">
         <div className="flex items-center gap-3">
@@ -167,7 +171,7 @@ export default function CsChatbot() {
             className="material-symbols-outlined text-[22px] text-on-primary"
             style={{ fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 22" }}
           >
-            support_agent
+            smart_toy
           </span>
           <div>
             <p className="font-headline text-[14px] font-bold text-on-primary">고객지원 센터</p>
