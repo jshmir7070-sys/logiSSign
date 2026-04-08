@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       changes, effectiveDate,
     } = validated
 
-    // 인증된 사용자의 agencyId 사용 (요청 body의 agencyId 무시)
+  // 인증된 고객사 계정의 agencyId 사용 (요청 body의 agencyId 무시)
     const agencyId = auth!.agencyId
     if (!agencyId) {
       return NextResponse.json({ error: '대리점 정보가 없습니다' }, { status: 403 })

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
@@ -293,7 +293,7 @@ export default function AdminSettingsPage() {
           <div>
             <h3 className="font-headline text-[16px] font-bold text-on-surface">결제 정책</h3>
             <p className="mt-1 text-sm text-on-surface-variant">
-              사용자 화면에 노출할 결제 수단과 구독 만료 알림 정책을 여기서 설정합니다.
+              고객사 화면에 노출할 결제 수단과 구독 만료 알림 정책을 여기서 설정합니다.
             </p>
           </div>
 
@@ -773,3 +773,4 @@ export default function AdminSettingsPage() {
     </div>
   )
 }
+

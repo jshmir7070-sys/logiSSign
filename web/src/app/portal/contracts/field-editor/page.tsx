@@ -331,7 +331,7 @@ function ContractFieldEditorPage() {
             .order('is_default', { ascending: false })
           if (seals) setAgencySeals(seals as SealRecord[])
         } else {
-          // agency_id 없으면 현재 사용자 기준 조회
+        // agency_id 없으면 현재 고객사 계정 기준 조회
           const { data: { user } } = await supabase.auth.getUser()
           const aid = user?.app_metadata?.agency_id as string
           if (aid) {

@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     const code = body?.code as string | undefined
 
     if (!bodyUserId || !code) {
-      throw new ValidationError('사용자 ID와 인증번호가 필요합니다.')
+      throw new ValidationError('계정 ID와 인증번호가 필요합니다.')
     }
 
     const userId = await resolveUserId(request, bodyUserId)

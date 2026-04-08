@@ -41,7 +41,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       });
 
       if (error) {
-        // 사용자 친화적 에러 메시지
+      // 기사 친화적 에러 메시지
         if (error.message.includes('Invalid login')) {
           return { error: '이메일 또는 비밀번호가 올바르지 않습니다.' };
         }

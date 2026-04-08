@@ -23,7 +23,7 @@ if (SENTRY_DSN) {
       // 브라우저 확장 프로그램 에러
       'ResizeObserver loop',
       'Non-Error promise rejection',
-      // 네트워크 에러 (사용자 환경)
+  // 네트워크 에러 (클라이언트 환경)
       'Failed to fetch',
       'Load failed',
       'NetworkError',

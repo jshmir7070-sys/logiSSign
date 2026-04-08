@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   const { auth, error: authError } = await authenticateRequest(request)
   if (authError) return authError
 
-  // 인증된 사용자의 agencyId 사용 (쿼리 파라미터 무시)
+  // 인증된 고객사 계정의 agencyId 사용 (쿼리 파라미터 무시)
   const agencyId = auth!.agencyId
   if (!agencyId) {
     return NextResponse.json({ data: [], error: '대리점 정보가 없습니다' }, { status: 403 })

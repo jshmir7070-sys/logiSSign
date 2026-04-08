@@ -13,7 +13,7 @@ export const maxDuration = 60
  * 지원 형식:
  * - 이미지 (JPG, PNG, BMP, GIF, TIFF, WebP) → PDF 페이지로 변환
  * - DOCX → mammoth로 HTML 추출 → PDF 생성
- * - HWP/HWPX → 원본 저장 + 사용자에게 PDF 변환 안내
+ * - HWP/HWPX → 원본 저장 + 고객사에 PDF 변환 안내
  *
  * FormData: { file: File }
  * Response: { pdfBuffer: base64, originalName, convertedFrom }

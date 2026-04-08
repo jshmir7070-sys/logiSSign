@@ -1,4 +1,4 @@
-import {
+﻿import {
   EASY_PAY_PROVIDER_OPTIONS,
   PAYMENT_METHOD_OPTIONS,
   VIRTUAL_ACCOUNT_BANK_OPTIONS,
@@ -46,6 +46,7 @@ export const ADMIN_SETTINGS_KEYS = {
   general: 'general',
   payment: 'payment',
   emailTemplates: 'email_templates',
+  guideChecklist: 'guide_checklist',
 } as const
 
 export const DEFAULT_ADMIN_GENERAL_SETTINGS: AdminGeneralSettings = {

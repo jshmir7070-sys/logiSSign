@@ -31,9 +31,9 @@ export async function GET(request: NextRequest) {
   if (error || !auth) return error!
 
   try {
-    // 사용자 기본 정보
+  // 계정 기본 정보
     const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(auth.userId)
-    if (!user) return NextResponse.json({ error: '사용자 없음' }, { status: 404 })
+    if (!user) return NextResponse.json({ error: '계정 정보가 없습니다.' }, { status: 404 })
 
     // 대리점 정보
     const { data: agency } = await supabaseAdmin

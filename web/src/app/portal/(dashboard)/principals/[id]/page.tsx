@@ -1055,8 +1055,8 @@ export default function PrincipalDetailPage() {
                   {(() => {
                     const ds = fieldConfig.deduction_section;
                     const tags: { label: string; detail: string }[] = [];
-                    if (ds.employment_insurance.enabled) tags.push({ label: '고용보험', detail: ds.employment_insurance.split_mode === 'split_50_50' ? '50:50' : '사용자100%' });
-                    if (ds.industrial_insurance.enabled) tags.push({ label: '산재보험', detail: ds.industrial_insurance.split_mode === 'split_50_50' ? '50:50' : '사용자100%' });
+                    if (ds.employment_insurance.enabled) tags.push({ label: '고용보험', detail: ds.employment_insurance.split_mode === 'split_50_50' ? '50:50' : '고객사100%' });
+                    if (ds.industrial_insurance.enabled) tags.push({ label: '산재보험', detail: ds.industrial_insurance.split_mode === 'split_50_50' ? '50:50' : '고객사100%' });
                     if (ds.cargo_accident.enabled) tags.push({ label: '화물사고', detail: ({ actual_cost: '실비', fixed_amount: '고정액', percentage: '%차감' } as Record<string,string>)[ds.cargo_accident.mode] });
                     if (ds.vehicle_rental.enabled) tags.push({ label: '차량임대료', detail: '월고정' });
                     if (ds.waybill.enabled) {

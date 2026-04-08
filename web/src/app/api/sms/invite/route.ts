@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     const { driverPhone, driverName, driverCode } = body
     let inviteCode = body.inviteCode
     let agencyName = body.agencyName
-    // ✅ 보안: 클라이언트가 보낸 agencyId 대신 인증된 사용자의 agencyId 사용
+  // ✅ 보안: 클라이언트가 보낸 agencyId 대신 인증된 고객사 계정의 agencyId 사용
     const agencyId = auth.agencyId
 
     // agencyId로 초대코드/대리점명 자동 조회

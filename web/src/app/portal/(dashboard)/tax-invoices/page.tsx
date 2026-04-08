@@ -248,12 +248,54 @@ export default function TaxInvoicesPage() {
   }, [sendLogs]);
 
   const recentSendLogs = useMemo(() => sendLogs.slice(0, 10), [sendLogs]);
+  const sendLogStats = useMemo(() => {
+    const successLogs = sendLogs.filter((log) => log.success);
+    const pushSuccessCount = successLogs.filter((log) => log.channel === 'push').length;
+    const smsSuccessCount = successLogs.filter((log) => log.channel === 'sms').length;
+    const failureCount = sendLogs.filter((log) => !log.success).length;
+    const latestSentAt = sendLogs[0]?.created_at ?? null;
+
+    return {
+      total: sendLogs.length,
+      success: successLogs.length,
+      pushSuccessCount,
+      smsSuccessCount,
+      failureCount,
+      latestSentAt,
+    };
+  }, [sendLogs]);
 
   const summaryCards = [
     { title: '공급가액 합계', value: formatKRW(summary?.totalSupply ?? 0), color: 'text-primary' },
     { title: '세액 합계', value: formatKRW(summary?.totalTax ?? 0), color: 'text-on-surface-variant' },
     { title: '총 합계', value: formatKRW(summary?.totalAmount ?? 0), color: 'text-tertiary' },
     { title: '발행 진행', value: `${summary?.issuedCount ?? 0} / ${summary?.invoiceCount ?? 0}건`, color: 'text-on-surface' },
+  ];
+  const sendStatCards = [
+    {
+      title: '전송 이력',
+      value: `${sendLogStats.total}건`,
+      description: sendLogStats.latestSentAt ? `최근 ${formatDate(sendLogStats.latestSentAt)}` : '전송 이력이 없습니다.',
+      color: 'text-primary',
+    },
+    {
+      title: '전송 성공',
+      value: `${sendLogStats.success}건`,
+      description: `실패 ${sendLogStats.failureCount}건`,
+      color: 'text-tertiary',
+    },
+    {
+      title: '앱 푸시 성공',
+      value: `${sendLogStats.pushSuccessCount}건`,
+      description: '앱 알림으로 도착',
+      color: 'text-on-surface',
+    },
+    {
+      title: '문자 전송 성공',
+      value: `${sendLogStats.smsSuccessCount}건`,
+      description: '문자 fallback 포함',
+      color: 'text-on-surface-variant',
+    },
   ];
 
   const inputCls = 'w-full h-10 px-3 rounded-xl bg-surface-container-low text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30';
@@ -458,6 +500,16 @@ export default function TaxInvoicesPage() {
           <div key={card.title} className="bg-surface-container-lowest rounded-2xl shadow-ambient p-5">
             <p className="text-xs font-label text-on-surface-variant font-korean">{card.title}</p>
             <p className={`mt-2 text-xl font-data font-bold ${card.color}`}>{loading ? '...' : card.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        {sendStatCards.map((card) => (
+          <div key={card.title} className="bg-surface-container-lowest rounded-2xl shadow-ambient p-5">
+            <p className="text-xs font-label text-on-surface-variant font-korean">{card.title}</p>
+            <p className={`mt-2 text-xl font-data font-bold ${card.color}`}>{card.value}</p>
+            <p className="mt-1 text-xs text-on-surface-variant font-korean">{card.description}</p>
           </div>
         ))}
       </div>

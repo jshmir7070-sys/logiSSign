@@ -62,8 +62,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '필수 필드가 누락되었습니다' }, { status: 400 })
     }
 
-    // 3. 로그인 사용자 = 요청 기사인지 확인
-    //    모바일 사용자의 app_metadata 또는 user_metadata에서 driver_id 확인
+    // 3. 로그인 계정 = 요청 기사인지 확인
+    //    모바일 기사 계정의 app_metadata 또는 user_metadata에서 driver_id 확인
     // ✅ 보안: app_metadata만 사용 (user_metadata는 클라이언트가 수정 가능하므로 신뢰 불가)
     const metaDriverId = user.app_metadata?.driver_id
     if (metaDriverId && metaDriverId !== driverId) {

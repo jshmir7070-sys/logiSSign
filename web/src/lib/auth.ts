@@ -11,7 +11,7 @@ interface SessionUser {
 }
 
 /**
- * 서버 컴포넌트에서 현재 인증 사용자 가져오기
+ * 서버 컴포넌트에서 현재 인증 계정 가져오기
  */
 export async function getSessionUser(): Promise<SessionUser | null> {
   const supabase = await createServerSupabaseClient()

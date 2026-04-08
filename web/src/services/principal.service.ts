@@ -104,7 +104,7 @@ export const PICKUP_RATE_OPTIONS: { value: RateMode; label: string; desc: string
   { value: 'percentage', label: '집하매출 × 요율 (수수료% 차감)', desc: '집하 매출액에서 수수료율을 차감' },
 ]
 
-/** 커스텀 수입 항목 (사용자 자유 추가) */
+/** 커스텀 수입 항목 (고객사 자유 추가) */
 export interface CustomIncomeItem {
   id: string
   name: string            // 예: "프레쉬백", "지역할증"
@@ -112,7 +112,7 @@ export interface CustomIncomeItem {
   default_value: number   // 기본값 (기사별 override 가능)
 }
 
-/** 커스텀 차감 항목 (사용자 자유 추가) */
+/** 커스텀 차감 항목 (고객사 자유 추가) */
 export interface CustomDeductionItem {
   id: string
   name: string              // 예: "차량임대료", "반품 송장"
@@ -182,8 +182,8 @@ export interface DeductionSectionConfig {
 /* ── 차감항목 상수 ── */
 
 export const INSURANCE_SPLIT_OPTIONS: { value: InsuranceSplitMode; label: string; desc: string }[] = [
-  { value: 'split_50_50', label: '기사 50% : 사용자 50%', desc: '쿠팡 대리점 등 — 기사와 사업주가 반반 부담' },
-  { value: 'employer_100', label: '기사 0% : 사용자 100%', desc: '일반 택배 대리점 — 사회적합의금 지원으로 기사 부담 없음' },
+  { value: 'split_50_50', label: '기사 50% : 고객사 50%', desc: '쿠팡 대리점 등 — 기사와 사업주가 반반 부담' },
+  { value: 'employer_100', label: '기사 0% : 고객사 100%', desc: '일반 택배 대리점 — 사회적합의금 지원으로 기사 부담 없음' },
 ]
 
 export const CARGO_ACCIDENT_OPTIONS: { value: CargoAccidentMode; label: string; desc: string }[] = [

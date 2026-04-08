@@ -44,7 +44,7 @@ export interface GenerateVariantsOptions {
   size?: number              // px (default 200)
   representativeName?: string  // 법인도장 중앙에 표시할 대표자명 (자동으로 +인)
   useHanja?: boolean           // true면 한자 변환 후 렌더링
-  hanjaOverride?: string       // 사용자가 직접 선택한 한자 (우선 사용)
+  hanjaOverride?: string       // 담당자가 직접 선택한 한자 (우선 사용)
   showDot?: boolean            // 개인도장 글자 사이 점(·) 표시 (기본: true)
   fontSizeScale?: number       // 글씨 크기 배율 (0.5~1.5, 기본 1.0)
   letterSpacingScale?: number  // 글자 간격 배율 (0.5~1.5, 기본 1.0)
@@ -124,7 +124,7 @@ const SEAL_COLOR_DARK = '#9A1F1F'
 /**
  * 한글 음절 → 대표 한자 매핑 (성씨 + 일반 이름자 포함)
  * 동음이의어가 많으므로 가장 보편적인 한자를 기본값으로 사용.
- * 사용자가 직접 선택할 수 있도록 다중 후보도 제공.
+ * 담당자가 직접 선택할 수 있도록 다중 후보도 제공.
  */
 const HANGUL_TO_HANJA: Record<string, string[]> = {
   '강': ['姜', '康', '强'], '고': ['高', '古', '顧'], '곽': ['郭'], '구': ['具', '丘', '邱'],
@@ -257,7 +257,7 @@ export function hangulToHanja(name: string): string {
 }
 
 /**
- * 한글 글자 → 한자 후보 목록 반환 (UI에서 사용자 선택용)
+ * 한글 글자 → 한자 후보 목록 반환 (UI에서 담당자 선택용)
  */
 export function getHanjaCandidates(char: string): string[] {
   return HANGUL_TO_HANJA[char] ?? []
@@ -390,7 +390,7 @@ export function generateSealVariants(options: GenerateVariantsOptions): SealVari
   const { name, category, size = 200, representativeName, useHanja = false, hanjaOverride, showDot = true, fontSizeScale = 1.0, letterSpacingScale = 1.0, selectedFontIdx } = options
   const variants: SealVariant[] = []
 
-  // 한자 변환: 사용자 직접 지정 > 자동 변환 > 한글 원문
+  // 한자 변환: 담당자 직접 지정 > 자동 변환 > 한글 원문
   const displayName = hanjaOverride
     ? hanjaOverride
     : useHanja

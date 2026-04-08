@@ -124,7 +124,7 @@ async function updateAgencyUsersPlan(agencyId: string, plan: string) {
   while (true) {
     const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage })
     if (error) {
-      throw new Error(`대리점 사용자 플랜 동기화에 실패했습니다: ${error.message}`)
+    throw new Error(`대리점 고객사 플랜 동기화에 실패했습니다: ${error.message}`)
     }
 
     const users = data?.users ?? []
@@ -139,7 +139,7 @@ async function updateAgencyUsersPlan(agencyId: string, plan: string) {
       })
 
       if (updateError) {
-        throw new Error(`사용자 플랜 갱신에 실패했습니다: ${updateError.message}`)
+    throw new Error(`고객사 플랜 갱신에 실패했습니다: ${updateError.message}`)
       }
     }
 
