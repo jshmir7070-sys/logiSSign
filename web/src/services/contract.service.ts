@@ -13,6 +13,8 @@ export interface ContractTemplate {
   content: string
   is_active: boolean
   created_at: string
+  category?: string | null
+  is_system?: boolean | null
   template_type?: string | null
   template_pdf_url?: string | null
   principals?: { name: string } | null

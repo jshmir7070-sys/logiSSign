@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>logiSSign Design System Preview</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
+<style>
+  :root {
+    --primary: #7B2FF7;
+    --primary-hover: #6B1FE7;
+    --bg: #FFFFFF;
+    --surface: #F8F9FA;
+    --mobile-bg: #F5F5F5;
+    --text-primary: #1A1A1A;
+    --text-secondary: #6B7280;
+    --border: #E5E7EB;
+    --success: #10B981;
+    --warning: #F59E0B;
+    --error: #EF4444;
+    --info: #3B82F6;
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--text-primary);
+    background: var(--bg);
+    line-height: 1.5;
+  }
+
+  .preview-header {
+    background: var(--text-primary);
+    color: white;
+    padding: 48px 32px;
+    text-align: center;
+  }
+  .preview-header h1 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+  .preview-header p { font-size: 16px; color: #9CA3AF; }
+
+  .section { max-width: 1280px; margin: 0 auto; padding: 48px 32px; }
+  .section-title { font-size: 14px; font-weight: 600; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .section h2 { font-size: 24px; font-weight: 700; margin-bottom: 24px; }
+  .section + .section { border-top: 1px solid var(--border); }
+
+  /* Typography Specimen */
+  .type-specimen { display: flex; flex-direction: column; gap: 24px; }
+  .type-row { display: flex; align-items: baseline; gap: 24px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+  .type-label { width: 120px; flex-shrink: 0; font-size: 13px; color: var(--text-secondary); }
+  .type-sample-22 { font-size: 22px; font-weight: 700; }
+  .type-sample-18 { font-size: 18px; font-weight: 600; }
+  .type-sample-16 { font-size: 16px; font-weight: 400; }
+  .type-sample-14 { font-size: 14px; font-weight: 400; color: var(--text-secondary); }
+
+  /* Color Palette */
+  .palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
+  .swatch { border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border); }
+  .swatch-color { height: 64px; }
+  .swatch-info { padding: 8px 12px; font-size: 13px; }
+  .swatch-info .name { font-weight: 600; }
+  .swatch-info .hex { color: var(--text-secondary); font-size: 12px; }
+
+  /* Component Samples */
+  .components { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 12px 24px; border-radius: var(--radius-md); font-size: 16px;
+    font-weight: 600; font-family: inherit; cursor: pointer; border: none;
+    transition: transform 100ms ease;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: var(--primary-hover); }
+  .btn-secondary { background: var(--surface); color: var(--text-primary); border: 1px solid var(--border); }
+  .btn-ghost { background: transparent; color: var(--primary); }
+
+  .badge {
+    display: inline-flex; padding: 4px 12px; border-radius: 9999px;
+    font-size: 13px; font-weight: 600;
+  }
+  .badge-signed { background: #D1FAE5; color: #065F46; }
+  .badge-pending { background: #FEF3C7; color: #92400E; }
+  .badge-error { background: #FEE2E2; color: #991B1B; }
+
+  .card {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 20px;
+  }
+  .card-title { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+  .card-subtitle { font-size: 14px; color: var(--text-secondary); margin-bottom: 16px; }
+
+  .input-group { display: flex; flex-direction: column; gap: 6px; }
+  .input-label { font-size: 14px; font-weight: 500; }
+  .input-field {
+    padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--radius-md);
+    font-size: 16px; font-family: inherit; background: var(--bg); outline: none;
+  }
+  .input-field:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(123, 47, 247, 0.1); }
+
+  /* Mobile Mockup */
+  .mobile-frame {
+    width: 375px; height: 700px; border: 2px solid var(--border);
+    border-radius: 32px; overflow: hidden; background: var(--mobile-bg);
+    margin: 0 auto; position: relative;
+  }
+  .mobile-status { height: 44px; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; }
+  .mobile-content { padding: 16px; overflow-y: auto; height: calc(100% - 44px - 64px); }
+  .mobile-tab-bar {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 64px;
+    background: var(--bg); border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-around;
+    font-size: 12px; color: var(--text-secondary);
+  }
+  .mobile-tab { text-align: center; }
+  .mobile-tab.active { color: var(--primary); font-weight: 600; }
+
+  .settlement-card {
+    background: var(--bg); border-radius: var(--radius-lg); padding: 20px;
+    margin-bottom: 12px; border: 1px solid var(--border);
+  }
+  .settlement-amount { font-size: 28px; font-weight: 700; color: var(--text-primary); }
+  .settlement-label { font-size: 14px; color: var(--text-secondary); margin-bottom: 4px; }
+  .settlement-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 16px; }
+  .settlement-row + .settlement-row { border-top: 1px solid var(--border); }
+  .settlement-row .label { color: var(--text-secondary); }
+
+  .alert {
+    padding: 12px 16px; border-radius: var(--radius-md); font-size: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .alert-success { background: #D1FAE5; color: #065F46; }
+  .alert-warning { background: #FEF3C7; color: #92400E; }
+  .alert-error { background: #FEE2E2; color: #991B1B; }
+  .alert-info { background: #DBEAFE; color: #1E40AF; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
+  @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="preview-header">
+  <h1>logiSSign Design System</h1>
+  <p>Korean logistics groupware. Pretendard. Trust + Simplicity.</p>
+</div>
+
+<!-- Typography -->
+<div class="section">
+  <div class="section-title">Typography</div>
+  <h2>Pretendard — 한국형 업무용 앱의 표준 서체</h2>
+  <div class="type-specimen">
+    <div class="type-row">
+      <div class="type-label">Title / 22px Bold</div>
+      <div class="type-sample-22">2026년 3월 정산서</div>
+    </div>
+    <div class="type-row">
+      <div class="type-label">Subtitle / 18px Semi</div>
+      <div class="type-sample-18">배송 78건 · 반품 3건 · 집하 12건</div>
+    </div>
+    <div class="type-row">
+      <div class="type-label">Body / 16px Regular</div>
+      <div class="type-sample-16">계약서가 도착했습니다. 본인인증 후 서명해 주세요. 서명 완료 시 정산에 자동 반영됩니다.</div>
+    </div>
+    <div class="type-row">
+      <div class="type-label">Caption / 14px</div>
+      <div class="type-sample-14">2026.03.15 발송 · CJ대한통운 시흥허브</div>
+    </div>
+  </div>
+</div>
+
+<!-- Colors -->
+<div class="section">
+  <div class="section-title">Color Palette</div>
+  <h2>절제된 색상 — 보라색은 핵심 액션에만</h2>
+  <div class="palette">
+    <div class="swatch"><div class="swatch-color" style="background:#7B2FF7"></div><div class="swatch-info"><div class="name">Primary</div><div class="hex">#7B2FF7</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#1A1A1A"></div><div class="swatch-info"><div class="name">Text</div><div class="hex">#1A1A1A</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#6B7280"></div><div class="swatch-info"><div class="name">Secondary</div><div class="hex">#6B7280</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#F8F9FA"></div><div class="swatch-info"><div class="name">Surface</div><div class="hex">#F8F9FA</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#E5E7EB"></div><div class="swatch-info"><div class="name">Border</div><div class="hex">#E5E7EB</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#10B981"></div><div class="swatch-info"><div class="name">Success</div><div class="hex">#10B981</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#F59E0B"></div><div class="swatch-info"><div class="name">Warning</div><div class="hex">#F59E0B</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#EF4444"></div><div class="swatch-info"><div class="name">Error</div><div class="hex">#EF4444</div></div></div>
+  </div>
+</div>
+
+<!-- Components -->
+<div class="section">
+  <div class="section-title">Components</div>
+  <h2>버튼, 뱃지, 카드, 인풋, 알림</h2>
+
+  <h3 style="font-size:16px; margin-bottom:16px; color:var(--text-secondary)">Buttons</h3>
+  <div class="components" style="margin-bottom:32px">
+    <button class="btn btn-primary">서명하기</button>
+    <button class="btn btn-secondary">취소</button>
+    <button class="btn btn-ghost">자세히 보기</button>
+  </div>
+
+  <h3 style="font-size:16px; margin-bottom:16px; color:var(--text-secondary)">Badges</h3>
+  <div class="components" style="margin-bottom:32px">
+    <span class="badge badge-signed">서명완료</span>
+    <span class="badge badge-pending">서명대기</span>
+    <span class="badge badge-error">인증실패</span>
+  </div>
+
+  <h3 style="font-size:16px; margin-bottom:16px; color:var(--text-secondary)">Alerts</h3>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:32px">
+    <div class="alert alert-success">서명이 완료되었습니다.</div>
+    <div class="alert alert-warning">계약서 서명 기한이 3일 남았습니다.</div>
+    <div class="alert alert-error">본인인증에 실패했습니다. 다시 시도해주세요.</div>
+    <div class="alert alert-info">새 정산서가 도착했습니다.</div>
+  </div>
+
+  <h3 style="font-size:16px; margin-bottom:16px; color:var(--text-secondary)">Form Input</h3>
+  <div style="max-width:400px;margin-bottom:32px">
+    <div class="input-group">
+      <label class="input-label">이름</label>
+      <input class="input-field" type="text" placeholder="홍길동" value="김기사">
+    </div>
+  </div>
+
+  <h3 style="font-size:16px; margin-bottom:16px; color:var(--text-secondary)">Card</h3>
+  <div style="max-width:400px">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="card-title">위수탁 계약서</div>
+        <span class="badge badge-pending">서명대기</span>
+      </div>
+      <div class="card-subtitle">CJ대한통운 시흥허브 · 2026.03.01 발송</div>
+      <button class="btn btn-primary" style="width:100%">계약서 확인 및 서명</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile Mockup -->
+<div class="section" style="background:var(--surface)">
+  <div class="section-title">Mobile App Preview</div>
+  <h2>기사님 앱 — 정산서 확인 화면</h2>
+  <div class="mobile-frame">
+    <div class="mobile-status">logiSSign</div>
+    <div class="mobile-content">
+      <div class="settlement-card">
+        <div class="settlement-label">2026년 3월 정산</div>
+        <div class="settlement-amount" style="margin-bottom:16px">₩2,847,300</div>
+        <div class="settlement-row"><span class="label">배송매출</span><span>₩3,120,000</span></div>
+        <div class="settlement-row"><span class="label">반품매출</span><span>₩45,000</span></div>
+        <div class="settlement-row"><span class="label">인센티브</span><span>₩82,300</span></div>
+        <div class="settlement-row"><span class="label">보험료 공제</span><span style="color:var(--error)">-₩180,000</span></div>
+        <div class="settlement-row"><span class="label">장비 임대료</span><span style="color:var(--error)">-₩120,000</span></div>
+        <div class="settlement-row"><span class="label">부가세</span><span style="color:var(--error)">-₩100,000</span></div>
+        <div class="settlement-row" style="font-weight:700;font-size:18px;border-top:2px solid var(--text-primary);padding-top:12px"><span>실수령액</span><span>₩2,847,300</span></div>
+      </div>
+      <div class="settlement-card" style="opacity:0.6">
+        <div class="settlement-label">2026년 2월 정산</div>
+        <div style="font-size:22px;font-weight:700">₩2,650,800</div>
+      </div>
+    </div>
+    <div class="mobile-tab-bar">
+      <div class="mobile-tab">홈</div>
+      <div class="mobile-tab">계약</div>
+      <div class="mobile-tab active">정산</div>
+      <div class="mobile-tab">공지</div>
+      <div class="mobile-tab">프로필</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

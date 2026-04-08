@@ -26,6 +26,12 @@ interface DriverItem {
   vehicle_number: string | null;
 }
 
+function isSendableContractTemplate(template: ContractTemplate, agencyId: string) {
+  if (template.agency_id === agencyId) return true;
+  if (template.agency_id === null && template.template_type !== 'pdf') return true;
+  return false;
+}
+
 export default function NewContractPage() {
   const router = useRouter();
   const [agencyId, setAgencyId] = useState<string | null>(null);
@@ -82,8 +88,9 @@ export default function NewContractPage() {
 
     getContractTemplates(agencyId, principalId).then((res) => {
       if (res.data) {
-        setTemplates(res.data);
-        setSelectedTemplateIds(new Set(res.data.map((t) => t.id)));
+        const availableTemplates = res.data.filter((template) => isSendableContractTemplate(template, agencyId));
+        setTemplates(availableTemplates);
+        setSelectedTemplateIds(new Set(availableTemplates.map((t) => t.id)));
       }
     });
 

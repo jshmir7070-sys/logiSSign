@@ -1,0 +1,47 @@
+{
+  "date": "2026-04-08",
+  "window": "7d",
+  "metrics": {
+    "commits": 218,
+    "contributors": 1,
+    "prs_merged": 0,
+    "insertions": 208278,
+    "deletions": 39275,
+    "net_loc": 169003,
+    "test_loc": 0,
+    "test_ratio": 0.0,
+    "active_days": 8,
+    "sessions": 27,
+    "deep_sessions": 11,
+    "avg_session_minutes": 68,
+    "loc_per_session_hour": 6750,
+    "feat_pct": 0.13,
+    "fix_pct": 0.24,
+    "peak_hour": 15,
+    "ai_assisted_commits": 31
+  },
+  "authors": {
+    "jshmir7070-sys": {
+      "commits": 218,
+      "insertions": 208278,
+      "deletions": 39275,
+      "test_ratio": 0.0,
+      "top_area": "web/src/app/"
+    }
+  },
+  "streak_days": 8,
+  "tweetable": "Week of Apr 1: 218 commits, 208k+ LOC, 27 sessions (11 deep), 8/8 active days | Solo builder | Streak: 8d",
+  "test_health": {
+    "total_test_files": 18,
+    "tests_added_this_period": 18,
+    "regression_test_commits": 0,
+    "test_files_changed": 18
+  },
+  "backlog": {
+    "total_open": 6,
+    "p0_p1": 1,
+    "p2": 3,
+    "completed_this_period": 0,
+    "added_this_period": 6
+  }
+}

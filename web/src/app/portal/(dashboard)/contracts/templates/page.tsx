@@ -11,18 +11,9 @@ import {
 } from '@/services/contract.service';
 import { getPlanLimits, isPaidPlan, PLAN_LABELS, type PlanType } from '@/lib/plan-limits';
 
-const SYSTEM_TEMPLATE_IDS = new Set([
-  'f36661e4-e53e-423a-9177-0e2ea82f4c35',
-  '1304ca4c-4baf-4c35-b4b8-2f7eac7d8022',
-  '2a0c9182-d6af-4c6d-b02d-c6ceed799170',
-  '5f6aaa65-ec75-4023-bbc8-b00765d82c73',
-  'efdc01fb-5609-4ce6-9049-01e81fc2d1aa',
-  '6d391463-c8d1-4323-90dd-7907a5cbbf8a',
-  'bab14b00-5a96-49f8-b5ed-234cc839c7f2',
-  'a1b2c3d4-1111-4aaa-bbbb-000000000001',
-  'a1b2c3d4-2222-4aaa-bbbb-000000000002',
-  'a1b2c3d4-3333-4aaa-bbbb-000000000003',
-]);
+function isSystemTemplate(template: ContractTemplate) {
+  return template.agency_id === null || template.is_system === true;
+}
 
 export default function ContractTemplatesPage() {
   const router = useRouter();
@@ -122,11 +113,11 @@ export default function ContractTemplatesPage() {
   const isAdmin = userRole === 'provider_admin' || userRole === 'agency_admin';
 
   const systemTemplates = useMemo(
-    () => templates.filter((template) => SYSTEM_TEMPLATE_IDS.has(template.id)),
+    () => templates.filter((template) => isSystemTemplate(template)),
     [templates],
   );
   const userTemplates = useMemo(
-    () => templates.filter((template) => !SYSTEM_TEMPLATE_IDS.has(template.id)),
+    () => templates.filter((template) => !isSystemTemplate(template)),
     [templates],
   );
   const activeDefaultCount = systemTemplates.filter((template) => template.is_active).length;
@@ -140,6 +131,27 @@ export default function ContractTemplatesPage() {
       setTemplates((previous) => previous.filter((template) => template.id !== id));
       setPreviewTemplate((current) => (current?.id === id ? null : current));
     }
+  }
+
+  async function handleEditTemplate(template: ContractTemplate) {
+    if (isSystemTemplate(template)) {
+      const response = await fetch('/api/contracts/templates/clone-system', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateId: template.id }),
+      });
+      const result = await response.json();
+
+      if (!response.ok || !result.templateId) {
+        alert(result.error || '기본 템플릿을 편집용으로 준비하지 못했습니다.');
+        return;
+      }
+
+      router.push(`/portal/contracts/field-editor?templateId=${result.templateId}`);
+      return;
+    }
+
+    router.push(`/portal/contracts/field-editor?templateId=${template.id}`);
   }
 
   async function handleLockTemplates() {
@@ -298,7 +310,7 @@ export default function ContractTemplatesPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
           {templates.map((template) => {
-            const isSystem = SYSTEM_TEMPLATE_IDS.has(template.id);
+            const isSystem = isSystemTemplate(template);
             const previewUrl = getTemplatePreviewUrl(template);
             const pdfTemplate = isPdfTemplate(template);
 
@@ -435,13 +447,13 @@ export default function ContractTemplatesPage() {
                 {previewTemplate.is_active && (
                   <button
                     type="button"
-                    onClick={() => router.push(`/portal/contracts/field-editor?templateId=${previewTemplate.id}`)}
+                    onClick={() => void handleEditTemplate(previewTemplate)}
                     className="h-10 px-4 rounded-xl bg-primary/10 text-primary text-sm font-semibold font-korean hover:bg-primary/20 transition-colors"
                   >
-                    필드 편집
+                    {isSystemTemplate(previewTemplate) ? '편집 시작' : '필드 편집'}
                   </button>
                 )}
-                {!SYSTEM_TEMPLATE_IDS.has(previewTemplate.id) && (
+                {!isSystemTemplate(previewTemplate) && (
                   <button
                     type="button"
                     onClick={() => handleDelete(previewTemplate.id, previewTemplate.title)}
