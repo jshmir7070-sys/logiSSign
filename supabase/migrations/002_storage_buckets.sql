@@ -25,7 +25,7 @@ INSERT INTO storage.buckets (id, name, public) VALUES ('settlements', 'settlemen
 
 -- ═══════════════════════════════════════════
 -- Storage Policies
--- 인증된 사용자만 업로드, public 버킷은 누구나 다운로드
+-- 인증된 계정만 업로드, public 버킷은 누구나 다운로드
 -- ═══════════════════════════════════════════
 
 -- contracts
@@ -44,6 +44,6 @@ CREATE POLICY "storage_education_insert" ON storage.objects FOR INSERT WITH CHEC
 CREATE POLICY "storage_seals_select" ON storage.objects FOR SELECT USING (bucket_id = 'seals');
 CREATE POLICY "storage_seals_insert" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'seals' AND auth.role() = 'authenticated');
 
--- settlements (비공개 — 인증 사용자만 접근)
+-- settlements (비공개 — 인증 계정만 접근)
 CREATE POLICY "storage_settlements_select" ON storage.objects FOR SELECT USING (bucket_id = 'settlements' AND auth.role() = 'authenticated');
 CREATE POLICY "storage_settlements_insert" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'settlements' AND auth.role() = 'authenticated');

@@ -84,7 +84,7 @@ Depth in this system is achieved through **Tonal Layering**, not structural line
 
 ### Do
 - **Do** use `Inter` for all numbers; it is the "DNA" of our data-driven look.
-- **Do** use `Pretendard` for all Korean UI labels (e.g., "설정", "사용자 관리").
+- **Do** use `Pretendard` for all Korean UI labels (e.g., "설정", "고객사 관리").
 - **Do** lean on white space. If two elements feel too close, increase the spacing by one tier in the scale rather than adding a line.
 - **Do** use Glassmorphism for the Top Header to provide a sense of vertical depth as content scrolls underneath.
 

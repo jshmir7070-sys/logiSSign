@@ -69,7 +69,7 @@ CREATE POLICY "doc_delivery_delete" ON document_deliveries FOR DELETE USING (
   agency_id = (auth.jwt()->'app_metadata'->>'agency_id')::uuid
 );
 
--- document_sign_fields (기사도 서명 시 필드를 읽어야 하므로 SELECT은 인증 사용자 전체 허용)
+-- document_sign_fields (기사도 서명 시 필드를 읽어야 하므로 SELECT은 인증 계정 전체 허용)
 DROP POLICY IF EXISTS "sign_fields_select" ON document_sign_fields;
 DROP POLICY IF EXISTS "sign_fields_insert" ON document_sign_fields;
 DROP POLICY IF EXISTS "sign_fields_update" ON document_sign_fields;

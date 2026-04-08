@@ -1,7 +1,7 @@
 -- ═══════════════════════════════════════
 -- 018: 감사 로그 RLS 정책 보안 강화
 -- 기존 contract_verification_logs_service 정책이
--- 모든 인증 사용자에게 전체 접근 권한을 부여하고 있어 수정
+-- 모든 인증 계정에게 전체 접근 권한을 부여하고 있어 수정
 -- service_role은 RLS를 자동 우회하므로 별도 정책 불필요
 -- ═══════════════════════════════════════
 
@@ -34,7 +34,7 @@ CREATE POLICY "contract_verification_logs_driver_read" ON contract_verification_
 -- ═══════════════════════════════════════
 DROP POLICY IF EXISTS "user_consents_own" ON user_consents;
 
--- 사용자는 자기 동의 이력 조회 + 새 동의 추가만 가능 (수정/삭제 불가)
+-- 이용자는 자기 동의 이력 조회 + 새 동의 추가만 가능 (수정/삭제 불가)
 CREATE POLICY "user_consents_select_own" ON user_consents
   FOR SELECT USING (user_id = auth.uid());
 

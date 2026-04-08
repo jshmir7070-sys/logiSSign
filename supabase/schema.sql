@@ -271,6 +271,16 @@ CREATE TABLE tax_invoice_send_logs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE admin_checklist_states (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  scope_type TEXT NOT NULL CHECK (scope_type IN ('team', 'user')),
+  scope_key TEXT NOT NULL,
+  value JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  UNIQUE (scope_type, scope_key)
+);
+
 -- 계약서 템플릿
 CREATE TABLE contract_templates (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -821,7 +831,7 @@ CREATE INDEX IF NOT EXISTS idx_integrity_results_checked_at ON integrity_check_r
 -- Added: 2026-03-31
 -- ============================================================
 
--- agencies: 소속 사용자만 접근
+-- agencies: 소속 계정만 접근
 ALTER TABLE agencies ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "agencies_own" ON agencies
@@ -1112,7 +1122,7 @@ INSERT INTO storage.buckets (id, name, public) VALUES ('seals', 'seals', true)
 INSERT INTO storage.buckets (id, name, public) VALUES ('settlements', 'settlements', false)
   ON CONFLICT (id) DO NOTHING;
 
--- Storage policies: 인증된 사용자만 업로드, 다운로드는 public
+-- Storage policies: 인증된 계정만 업로드, 다운로드는 public
 CREATE POLICY "storage_contracts_select" ON storage.objects FOR SELECT USING (bucket_id = 'contracts');
 CREATE POLICY "storage_contracts_insert" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'contracts' AND auth.role() = 'authenticated');
 CREATE POLICY "storage_documents_select" ON storage.objects FOR SELECT USING (bucket_id = 'documents');

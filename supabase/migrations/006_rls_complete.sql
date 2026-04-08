@@ -19,11 +19,11 @@ CREATE POLICY "amendments_driver_read" ON contract_amendments
 -- 2. 누락 정책 추가: contract_verification_logs
 --    기존: verification_logs_read_agency (SELECT only)
 --    추가: 서비스에서 INSERT 필요 (공개 진위확인 API)
---    진위확인은 비로그인 사용자도 호출하므로 service_role로 처리
+--    진위확인은 비로그인 상태에서도 호출하므로 service_role로 처리
 --    → 별도 INSERT 정책 불필요 (service_role은 RLS 무시)
 -- ═══════════════════════════════════════════
 
--- (의도적 미추가: service_role로 INSERT, 인증 사용자 INSERT 불필요)
+-- (의도적 미추가: service_role로 INSERT, 인증 계정 INSERT 불필요)
 
 
 -- ═══════════════════════════════════════════
@@ -131,7 +131,7 @@ CREATE POLICY "tax_invoices_driver_read" ON tax_invoices
 -- ═══════════════════════════════════════════
 -- 9. security_logs: INSERT 정책 (service_role 전용)
 --    현재 service_role로만 INSERT하므로 RLS 자동 우회.
---    명시적으로 authenticated 사용자의 INSERT를 차단하기 위해 확인.
+--    명시적으로 authenticated 계정의 INSERT를 차단하기 위해 확인.
 --    → RLS가 활성화되어 있고 INSERT 정책이 없으므로 이미 차단됨.
 -- ═══════════════════════════════════════════
 

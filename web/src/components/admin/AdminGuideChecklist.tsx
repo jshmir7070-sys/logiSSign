@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useEffect, useMemo, useState } from 'react'
 
 type GuideStep = {
   id: string
@@ -19,123 +19,119 @@ type GuideSection = {
 }
 
 type ChecklistState = Record<string, boolean>
+type ScopeKey = 'team' | 'mine'
+type TeamScopeKey = 'ops' | 'cs' | 'legal' | 'finance' | 'dev' | 'drivers'
+
+const TEAM_OPTIONS: Array<{ key: TeamScopeKey; label: string }> = [
+  { key: 'ops', label: '운영팀' },
+  { key: 'cs', label: '고객센터' },
+  { key: 'legal', label: '법무' },
+  { key: 'finance', label: '재무' },
+  { key: 'dev', label: '개발' },
+  { key: 'drivers', label: '기사관리' },
+]
 
 const guideSections: GuideSection[] = [
   {
     id: 'daily',
-    title: '매일 확인하면 좋은 운영 순서',
-    summary:
-      '관리자 프로그램은 고객사의 업무를 대신 처리하기보다 서비스가 안정적으로 사용되고 있는지 확인하고 빠르게 지원하는 역할에 맞춰 구성되어 있습니다.',
+    title: '매일 확인하는 운영 순서',
+    summary: '결제, 고객사, 서버 상태를 먼저 확인하면 장애를 가장 빨리 잡을 수 있습니다.',
     steps: [
       {
         id: 'daily-billing',
-        title: '결제 상태 먼저 확인',
-        description:
-          '결제 관리에서 최근 주문, 입금 대기, 실패 내역을 확인해 즉시 안내가 필요한 고객사가 있는지 먼저 점검합니다.',
+        title: '결제 상태 확인',
+        description: '입금 대기, 결제 실패, 카드 만료 예정 고객사가 있는지 먼저 확인합니다.',
         href: '/admin/billing',
         cta: '결제 관리 열기',
       },
       {
         id: 'daily-agencies',
-        title: '고객사와 소속 기사 현황 점검',
-        description:
-          '고객사 관리와 기사 현황 화면에서 연결 상태, 최근 활동, 누락 여부를 함께 확인해 초기 설정 문제를 빠르게 찾습니다.',
+        title: '고객사 운영 현황 확인',
+        description: '가입, 기사 연결, 플랜 상태, 최근 활동을 고객사 관리 화면에서 확인합니다.',
         href: '/admin/agencies',
-        cta: '고객사 관리 보기',
+        cta: '고객사 관리 열기',
       },
       {
         id: 'daily-server',
-        title: '서버 상태와 오류 이슈 점검',
-        description:
-          '서버 상태 화면에서 DB, Storage, Auth, Sentry 상태를 확인해 전체 서비스 이슈인지 특정 고객사 이슈인지 먼저 구분합니다.',
+        title: '서버와 알림 상태 확인',
+        description: 'DB, 인증, 스토리지, Sentry 상태를 먼저 확인해 전체 장애인지 개별 장애인지 나눕니다.',
         href: '/admin/server',
-        cta: '서버 상태 보기',
+        cta: '서버 상태 열기',
       },
     ],
   },
   {
     id: 'onboarding',
-    title: '신규 고객사 지원 순서',
-    summary:
-      '신규 고객사는 가입, 플랜 선택, 기사 등록, 계약 발송, 정산 시작 순서로 안내하면 가장 빠르게 안착합니다.',
+    title: '신규 고객사 온보딩',
+    summary: '가입, 플랜 결제, 기사 연결, 템플릿 구성까지 단계별로 안내하면 문의를 크게 줄일 수 있습니다.',
     steps: [
       {
         id: 'onboarding-plan',
-        title: '가입과 플랜 선택 완료 여부 확인',
-        description:
-          '고객사 계정 생성 후 무료 시작인지, 유료 플랜 결제인지, 로그인까지 정상적으로 이어졌는지 먼저 확인합니다.',
+        title: '가입과 플랜 선택 확인',
+        description: '고객사가 가입 후 플랜 선택과 결제까지 무리 없이 진행했는지 확인합니다.',
         href: '/admin/agencies',
-        cta: '신규 고객사 확인',
+        cta: '신규 고객사 보기',
       },
       {
         id: 'onboarding-payment',
-        title: '결제 반영 여부 확인',
-        description:
-          '유료 플랜을 선택한 고객사는 결제 관리 화면에서 주문 상태와 결제 수단이 정상 반영됐는지 확인합니다.',
+        title: '결제 반영 확인',
+        description: '플랜 주문 상태, 결제 수단, 가상계좌 입금 여부가 정상 반영됐는지 확인합니다.',
         href: '/admin/billing',
-        cta: '결제 반영 확인',
+        cta: '주문 내역 보기',
       },
       {
-        id: 'onboarding-workflow',
+        id: 'onboarding-guide',
         title: '초기 사용 순서 안내',
-        description:
-          '기사 등록, 템플릿 만들기, 내 문서함, 문서/서류 전송, 정산 업로드 순서로 안내하면 고객사가 스스로 업무 흐름을 잡기 쉽습니다.',
+        description: '기사 등록, 템플릿 만들기, 문서 발송, 정산 업로드 순서로 안내합니다.',
         href: '/admin/templates',
-        cta: '템플릿 화면 보기',
+        cta: '템플릿 관리 보기',
       },
     ],
   },
   {
     id: 'drivers',
     title: '소속 기사 연결 점검',
-    summary:
-      '계약서나 정산서를 보내기 전에 기사 계정 연결과 알림 가능 상태를 먼저 확인하면 오발송과 문의를 크게 줄일 수 있습니다.',
+    summary: '계약과 정산을 보내기 전에 기사 계정 연결과 앱 수신 가능 상태를 먼저 점검합니다.',
     steps: [
       {
-        id: 'drivers-connection',
-        title: '기사 계정 연결 여부 확인',
-        description:
-          '기사 현황에서 계정 연결, 푸시 가능 여부, 최근 활동 상태를 먼저 확인해 발송 전 점검 기준으로 사용합니다.',
+        id: 'drivers-link',
+        title: '기사 계정 연결 확인',
+        description: '기사 현황 화면에서 고객사별 기사 연결 여부와 최근 앱 수신 상태를 확인합니다.',
         href: '/admin/drivers',
         cta: '기사 현황 보기',
       },
       {
-        id: 'drivers-count',
-        title: '고객사별 기사 수 비교',
-        description:
-          '고객사 관리 화면에서 등록 기사 수와 실제 기사 현황 숫자가 크게 다르지 않은지 비교해 누락 여부를 확인합니다.',
+        id: 'drivers-coverage',
+        title: '고객사별 연결률 점검',
+        description: '등록 기사 수와 앱 연결 기사 수 차이가 큰 고객사를 우선 확인합니다.',
         href: '/admin/agencies',
-        cta: '고객사별 기사 보기',
+        cta: '고객사 연결률 보기',
       },
     ],
   },
   {
     id: 'workflow',
-    title: '계약, 정산, 세금계산서 안내 기준',
-    summary:
-      '관리자는 고객사가 각 메뉴에서 직접 작업할 수 있도록 정확한 메뉴와 순서를 안내하는 역할에 집중하는 편이 가장 효율적입니다.',
+    title: '계약, 정산, 세금계산서 운영 기준',
+    summary: '고객사가 직접 처리할 항목과 운영팀이 확인할 항목을 분리해서 안내합니다.',
     steps: [
       {
         id: 'workflow-contracts',
-        title: '계약서는 계약서 관리 메뉴로 안내',
-        description:
-          '템플릿 만들기, 내 문서함, 문서/서류 전송은 계약서 관리 그룹에서 직접 처리하도록 안내합니다.',
+        title: '계약 흐름 안내',
+        description: '계약서 발송과 전자서명은 고객사 포털 계약서 메뉴에서 직접 처리하도록 안내합니다.',
         href: '/admin/templates',
-        cta: '템플릿 현황 보기',
+        cta: '계약 템플릿 보기',
       },
       {
-        id: 'workflow-settlement',
-        title: '정산 기준은 거래처/정산 기준 관리로 안내',
-        description:
-          '보험, 차감 항목, 수익 구조는 거래처/정산 기준 관리 메뉴에서 설정하도록 안내하면 가장 자연스럽습니다.',
+        id: 'workflow-settlements',
+        title: '정산 기준 안내',
+        description: '보험, 공제, 단가, 기사 수당은 거래처·정산 기준 관리 화면에서 설정하도록 안내합니다.',
         href: '/admin/agencies',
-        cta: '고객사 설정 보기',
+        cta: '고객사 설정 흐름 보기',
       },
       {
         id: 'workflow-tax',
-        title: '세금계산서는 수기 역발행 보조 도구로 설명',
-        description:
-          '세금계산서 메뉴는 출력, 다운로드, 공급자 전송을 돕는 수기 역발행 보조 도구라는 점을 분명하게 안내합니다.',
+        title: '세금계산서 운영 안내',
+        description: '세금계산서는 수기 역발행 보조 도구이며 출력, 다운로드, 공급자 전송 중심으로 운영합니다.',
         href: '/admin/notices',
         cta: '운영 공지 보기',
       },
@@ -143,31 +139,27 @@ const guideSections: GuideSection[] = [
   },
   {
     id: 'incident',
-    title: '장애와 문의 대응 순서',
-    summary:
-      '원인 추정보다 먼저 상태를 확인하고 영향 범위를 좁히는 방식으로 대응하면 운영 지원이 훨씬 안정적입니다.',
+    title: '장애 대응 기준',
+    summary: '서버 상태, 감사 로그, 영향 고객사를 순서대로 확인하면 대응 속도가 빨라집니다.',
     steps: [
       {
         id: 'incident-server',
-        title: '서버 상태와 Sentry 먼저 확인',
-        description:
-          'DB, Storage, Auth, Sentry 상태를 먼저 확인해 시스템 전체 문제인지 특정 고객사 문제인지 구분합니다.',
+        title: '서버 상태와 Sentry 확인',
+        description: 'DB, Auth, Storage, Sentry 상태를 먼저 보고 공통 장애인지 개별 장애인지 판단합니다.',
         href: '/admin/server',
-        cta: '상태 화면 열기',
+        cta: '서버 상태 열기',
       },
       {
         id: 'incident-audit',
         title: '감사 로그 확인',
-        description:
-          '권한 오류, 인증 실패, 주요 보안 이벤트는 감사 로그에서 우선 확인해 원인 후보를 줄입니다.',
+        description: '권한 오류, 인증 실패, 주요 보안 이벤트는 감사 로그에서 먼저 확인합니다.',
         href: '/admin/audit-log',
         cta: '감사 로그 보기',
       },
       {
         id: 'incident-scope',
-        title: '영향 고객사 범위 확인',
-        description:
-          '특정 고객사만 겪는 문제인지 전체 이슈인지 고객사 관리와 기사 현황을 함께 보며 범위를 정리합니다.',
+        title: '영향 고객사 범위 정리',
+        description: '특정 고객사 문제인지 전체 장애인지 고객사 관리 화면에서 영향 범위를 정리합니다.',
         href: '/admin/agencies',
         cta: '영향 범위 확인',
       },
@@ -185,9 +177,24 @@ const quickLinks = [
 ]
 
 export default function AdminGuideChecklist() {
-  const [checkedMap, setCheckedMap] = useState<ChecklistState>({})
+  const [teamStates, setTeamStates] = useState<Record<TeamScopeKey, ChecklistState>>({
+    ops: {},
+    cs: {},
+    legal: {},
+    finance: {},
+    dev: {},
+    drivers: {},
+  })
+  const [mineState, setMineState] = useState<ChecklistState>({})
+  const [selectedScope, setSelectedScope] = useState<ScopeKey>('team')
+  const [selectedTeam, setSelectedTeam] = useState<TeamScopeKey>('ops')
+  const [scopeLabels, setScopeLabels] = useState({
+    teams: Object.fromEntries(TEAM_OPTIONS.map((team) => [team.key, `${team.label} 체크리스트`])) as Record<TeamScopeKey, string>,
+    mineLabel: '내 담당 체크리스트',
+  })
+  const [canEditTeam, setCanEditTeam] = useState(true)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [savingScope, setSavingScope] = useState<ScopeKey | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -200,47 +207,84 @@ export default function AdminGuideChecklist() {
         if (!response.ok) {
           throw new Error(payload?.error || '운영 체크리스트를 불러오지 못했습니다.')
         }
+
         if (!mounted) return
-        setCheckedMap((payload?.data ?? {}) as ChecklistState)
+
+        setTeamStates((previous) => ({
+          ...previous,
+          ...(payload?.data?.teams ?? {}),
+        }))
+        setMineState((payload?.data?.mine ?? {}) as ChecklistState)
+        setScopeLabels({
+          teams: {
+            ...Object.fromEntries(TEAM_OPTIONS.map((team) => [team.key, `${team.label} 체크리스트`])),
+            ...(payload?.scopes?.teams ?? {}),
+          },
+          mineLabel: payload?.scopes?.mineLabel ?? '내 담당 체크리스트',
+        })
+        setCanEditTeam(Boolean(payload?.permissions?.canEditTeam))
         setError(null)
       } catch (loadError) {
         if (!mounted) return
-        setError(
-          loadError instanceof Error
-            ? loadError.message
-            : '운영 체크리스트를 불러오지 못했습니다.',
-        )
+        setError(loadError instanceof Error ? loadError.message : '운영 체크리스트를 불러오지 못했습니다.')
       } finally {
         if (mounted) setLoading(false)
       }
     }
 
     void loadChecklist()
-
     return () => {
       mounted = false
     }
   }, [])
 
-  const totalSteps = useMemo(
-    () => guideSections.reduce((count, section) => count + section.steps.length, 0),
-    [],
-  )
-  const completedSteps = useMemo(
-    () => Object.values(checkedMap).filter(Boolean).length,
-    [checkedMap],
-  )
-  const completionRate = totalSteps === 0 ? 0 : Math.round((completedSteps / totalSteps) * 100)
+  const totalSteps = useMemo(() => guideSections.reduce((count, section) => count + section.steps.length, 0), [])
 
-  async function persistChecklist(nextState: ChecklistState) {
-    setCheckedMap(nextState)
-    setSaving(true)
+  const completion = useMemo(() => {
+    const countCompleted = (state: ChecklistState) => Object.values(state).filter(Boolean).length
+    const perTeam = Object.fromEntries(
+      TEAM_OPTIONS.map((team) => [
+        team.key,
+        {
+          completed: countCompleted(teamStates[team.key] ?? {}),
+          rate:
+            totalSteps === 0
+              ? 0
+              : Math.round((countCompleted(teamStates[team.key] ?? {}) / totalSteps) * 100),
+        },
+      ]),
+    ) as Record<TeamScopeKey, { completed: number; rate: number }>
+    const myCompleted = countCompleted(mineState)
+    return {
+      myCompleted,
+      myRate: totalSteps === 0 ? 0 : Math.round((myCompleted / totalSteps) * 100),
+      perTeam,
+    }
+  }, [mineState, teamStates, totalSteps])
+
+  const currentState = selectedScope === 'team' ? teamStates[selectedTeam] ?? {} : mineState
+  const currentCompleted =
+    selectedScope === 'team' ? completion.perTeam[selectedTeam]?.completed ?? 0 : completion.myCompleted
+  const currentRate = selectedScope === 'team' ? completion.perTeam[selectedTeam]?.rate ?? 0 : completion.myRate
+  const currentLabel =
+    selectedScope === 'team' ? scopeLabels.teams[selectedTeam] ?? `${selectedTeam} 체크리스트` : scopeLabels.mineLabel
+  const isScopeReadOnly = selectedScope === 'team' && !canEditTeam
+
+  async function persistChecklist(scope: ScopeKey, nextState: ChecklistState, scopeKey?: TeamScopeKey) {
+    if (scope === 'team') {
+      const targetTeam = scopeKey ?? selectedTeam
+      setTeamStates((previous) => ({ ...previous, [targetTeam]: nextState }))
+    } else {
+      setMineState(nextState)
+    }
+    setSavingScope(scope)
+
     try {
       const response = await fetch('/api/admin/guide-checklist', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ value: nextState }),
+        body: JSON.stringify({ scope, scopeKey: scope === 'team' ? scopeKey ?? selectedTeam : undefined, value: nextState }),
       })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) {
@@ -248,165 +292,166 @@ export default function AdminGuideChecklist() {
       }
       setError(null)
     } catch (saveError) {
-      setError(
-        saveError instanceof Error
-          ? saveError.message
-          : '운영 체크리스트를 저장하지 못했습니다.',
-      )
+      setError(saveError instanceof Error ? saveError.message : '운영 체크리스트를 저장하지 못했습니다.')
     } finally {
-      setSaving(false)
+      setSavingScope(null)
     }
   }
 
   function toggleStep(stepId: string) {
     const nextState = {
-      ...checkedMap,
-      [stepId]: !checkedMap[stepId],
+      ...currentState,
+      [stepId]: !currentState[stepId],
     }
-    void persistChecklist(nextState)
+    void persistChecklist(selectedScope, nextState, selectedTeam)
   }
 
-  function resetChecklist() {
-    void persistChecklist({})
+  if (loading) {
+    return <div className="rounded-3xl bg-surface-container-lowest p-8 text-sm text-on-surface-variant shadow-ambient">운영 체크리스트를 불러오는 중입니다...</div>
   }
 
   return (
-    <div className="space-y-8">
-      <div className="rounded-3xl bg-surface-container-lowest p-8 shadow-ambient">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-              Admin Guide
+    <div className="space-y-6">
+      <div className="rounded-3xl bg-surface-container-lowest p-6 shadow-ambient">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <h2 className="font-headline text-[28px] font-bold text-on-surface">운영 가이드</h2>
+            <p className="mt-2 text-sm leading-6 text-on-surface-variant">
+              팀별 체크리스트와 개인 담당 항목을 분리해 관리합니다. 고객사 가입, 기사 연결, 계약·정산 안내,
+              장애 대응 순서를 한 화면에서 확인할 수 있습니다.
             </p>
-            <h1 className="mt-2 font-headline text-3xl font-bold text-on-surface font-korean">
-              관리자 운영 체크리스트
-            </h1>
-            <p className="mt-3 text-sm leading-6 text-on-surface-variant font-korean">
-              운영 중 자주 확인하는 순서를 체크리스트로 정리했습니다. 체크 상태는 서버에 저장되어
-              모든 관리자 계정에서 같은 진행 상태를 함께 확인할 수 있습니다.
-            </p>
-            {error ? <p className="mt-3 text-sm text-error font-korean">{error}</p> : null}
           </div>
 
-          <div className="min-w-[220px] rounded-2xl bg-surface-container-low p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-              Progress
-            </p>
-            <p className="mt-2 text-3xl font-bold text-on-surface">{completionRate}%</p>
-            <p className="mt-1 text-sm text-on-surface-variant font-korean">
-              총 {totalSteps}단계 중 {completedSteps}단계를 확인했습니다.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={resetChecklist}
-                disabled={loading || saving}
-                className="inline-flex h-10 items-center rounded-xl border border-outline-variant/20 px-4 text-sm text-on-surface font-korean transition-colors hover:bg-surface disabled:opacity-50"
-              >
-                체크리스트 초기화
-              </button>
-              {saving ? (
-                <span className="inline-flex h-10 items-center text-xs text-on-surface-variant font-korean">
-                  저장 중...
-                </span>
-              ) : null}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl bg-surface-container-low p-4">
+              <p className="text-xs text-on-surface-variant">{scopeLabels.teams[selectedTeam] ?? '팀별 체크리스트'}</p>
+              <p className="mt-2 font-data text-2xl font-bold text-primary">{completion.perTeam[selectedTeam]?.rate ?? 0}%</p>
+              <p className="mt-1 text-xs text-on-surface-variant">
+                {completion.perTeam[selectedTeam]?.completed ?? 0} / {totalSteps} 완료
+              </p>
+            </div>
+            <div className="rounded-2xl bg-surface-container-low p-4">
+              <p className="text-xs text-on-surface-variant">{scopeLabels.mineLabel}</p>
+              <p className="mt-2 font-data text-2xl font-bold text-tertiary">{completion.myRate}%</p>
+              <p className="mt-1 text-xs text-on-surface-variant">
+                {completion.myCompleted} / {totalSteps} 완료
+              </p>
+            </div>
+            <div className="rounded-2xl bg-surface-container-low p-4">
+              <p className="text-xs text-on-surface-variant">현재 보고 있는 체크리스트</p>
+              <p className="mt-2 text-base font-semibold text-on-surface">
+                {currentLabel}
+              </p>
+              <p className="mt-1 text-xs text-on-surface-variant">
+                {currentCompleted} / {totalSteps} 완료
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="mt-6 flex flex-wrap gap-3">
-          {quickLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="inline-flex h-10 items-center rounded-full border border-outline-variant/20 px-4 text-sm text-on-surface font-korean transition-colors hover:bg-surface-container-low"
+        <div className="mt-5 flex flex-wrap gap-2">
+          {([
+            { key: 'team', label: '팀별 체크리스트' },
+            { key: 'mine', label: scopeLabels.mineLabel },
+          ] as Array<{ key: ScopeKey; label: string }>).map((scope) => (
+            <button
+              key={scope.key}
+              type="button"
+              onClick={() => setSelectedScope(scope.key)}
+              className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+                selectedScope === scope.key
+                  ? 'bg-primary text-white'
+                  : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'
+              }`}
             >
-              {link.label}
-            </Link>
+              {scope.label}
+            </button>
           ))}
+
+          <div className="ml-auto rounded-xl bg-surface px-4 py-2 text-xs text-on-surface-variant">
+            {savingScope === selectedScope ? '저장 중...' : `${currentRate}% 진행 중`}
+          </div>
         </div>
+
+        {selectedScope === 'team' ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {TEAM_OPTIONS.map((team) => (
+              <button
+                key={team.key}
+                type="button"
+                onClick={() => setSelectedTeam(team.key)}
+                className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+                  selectedTeam === team.key
+                    ? 'bg-tertiary text-white'
+                    : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'
+                }`}
+              >
+                {team.label}
+                <span className="ml-2 text-xs opacity-80">
+                  {completion.perTeam[team.key]?.completed ?? 0}/{totalSteps}
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {isScopeReadOnly ? (
+          <div className="mt-4 rounded-2xl border border-outline-variant/20 bg-surface-container-low px-4 py-3 text-sm text-on-surface-variant">
+            팀별 체크리스트는 플랫폼 관리자만 수정할 수 있습니다. 현재 계정은 개인 담당 체크리스트만 변경할 수 있습니다.
+          </div>
+        ) : null}
+
+        {error ? (
+          <div className="mt-4 rounded-2xl border border-error/20 bg-error/5 px-4 py-3 text-sm text-error">
+            {error}
+          </div>
+        ) : null}
       </div>
 
-      <div className="grid gap-6">
-        {guideSections.map((section) => {
-          const doneCount = section.steps.filter((step) => checkedMap[step.id]).length
-          return (
-            <section
-              key={section.id}
-              id={section.id}
-              className="rounded-3xl bg-surface-container-lowest p-6 shadow-ambient"
-            >
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-                    Section
-                  </p>
-                  <h2 className="mt-1 font-headline text-xl font-bold text-on-surface font-korean">
-                    {section.title}
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-on-surface-variant font-korean">
-                    {section.summary}
-                  </p>
-                </div>
-                <div className="rounded-full bg-surface-container-low px-4 py-2 text-sm text-on-surface-variant font-korean">
-                  {doneCount}/{section.steps.length} 완료
-                </div>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="space-y-5">
+          {guideSections.map((section) => (
+            <section key={section.id} className="rounded-3xl bg-surface-container-lowest p-6 shadow-ambient">
+              <div className="border-b border-outline-variant/15 pb-4">
+                <h3 className="font-headline text-[20px] font-bold text-on-surface">{section.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-on-surface-variant">{section.summary}</p>
               </div>
 
-              <div className="mt-6 grid gap-4">
+              <div className="mt-5 space-y-4">
                 {section.steps.map((step, index) => {
-                  const checked = Boolean(checkedMap[step.id])
+                  const checked = Boolean(currentState[step.id])
+
                   return (
-                    <div
-                      key={step.id}
-                      className={`rounded-2xl border p-5 transition-colors ${
-                        checked
-                          ? 'border-primary/30 bg-primary/5'
-                          : 'border-outline-variant/20 bg-surface-container-low'
-                      }`}
-                    >
-                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="flex gap-4">
-                          <button
-                            type="button"
-                            onClick={() => toggleStep(step.id)}
-                            disabled={loading || saving}
-                            className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-bold transition-colors disabled:opacity-50 ${
-                              checked
-                                ? 'border-primary bg-primary text-white'
-                                : 'border-outline-variant/20 bg-white text-on-surface'
-                            }`}
-                            aria-pressed={checked}
-                            aria-label={`${step.title} 체크`}
-                          >
-                            {checked ? '✓' : index + 1}
-                          </button>
-                          <div>
-                            <h3 className="text-base font-semibold text-on-surface font-korean">
-                              {step.title}
-                            </h3>
-                            <p className="mt-1 text-sm leading-6 text-on-surface-variant font-korean">
-                              {step.description}
-                            </p>
+                    <div key={step.id} className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
+                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                              {index + 1}
+                            </span>
+                            <div>
+                              <p className="text-base font-semibold text-on-surface">{step.title}</p>
+                              <p className="mt-1 text-sm leading-6 text-on-surface-variant">{step.description}</p>
+                            </div>
                           </div>
                         </div>
 
-                        <div className="flex shrink-0 flex-wrap gap-3">
+                        <div className="flex flex-wrap items-center gap-3">
                           <button
                             type="button"
                             onClick={() => toggleStep(step.id)}
-                            disabled={loading || saving}
-                            className={`inline-flex h-10 items-center rounded-xl px-4 text-sm font-semibold font-korean transition-colors disabled:opacity-50 ${
+                            disabled={isScopeReadOnly}
+                            className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
                               checked
-                                ? 'border border-outline-variant/20 bg-white text-on-surface'
-                                : 'bg-surface-container-high text-on-surface'
-                            }`}
+                                ? 'bg-tertiary text-white'
+                                : 'bg-white text-on-surface hover:bg-surface'
+                            } disabled:cursor-not-allowed disabled:opacity-60`}
                           >
-                            {checked ? '체크 해제' : '확인 완료'}
+                            {checked ? '확인 완료' : '확인하기'}
                           </button>
                           <Link
                             href={step.href}
-                            className="inline-flex h-10 items-center justify-center rounded-xl bg-power-gradient px-4 text-sm font-semibold text-white font-korean"
+                            className="rounded-xl border border-outline-variant/20 bg-white px-4 py-2 text-sm font-medium text-on-surface hover:bg-surface"
                           >
                             {step.cta}
                           </Link>
@@ -417,8 +462,35 @@ export default function AdminGuideChecklist() {
                 })}
               </div>
             </section>
-          )
-        })}
+          ))}
+        </div>
+
+        <aside className="space-y-5">
+          <div className="rounded-3xl bg-surface-container-lowest p-5 shadow-ambient">
+            <h3 className="font-headline text-lg font-bold text-on-surface">빠른 이동</h3>
+            <div className="mt-4 space-y-2">
+              {quickLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="flex items-center justify-between rounded-2xl bg-surface-container-low px-4 py-3 text-sm text-on-surface hover:bg-surface-container-high"
+                >
+                  <span>{link.label}</span>
+                  <span className="material-symbols-outlined text-[18px] text-on-surface-variant">chevron_right</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-surface-container-lowest p-5 shadow-ambient">
+            <h3 className="font-headline text-lg font-bold text-on-surface">운영 팁</h3>
+            <ul className="mt-4 space-y-3 text-sm leading-6 text-on-surface-variant">
+              <li>결제와 서버 상태를 먼저 확인하면 전체 장애를 가장 빨리 구분할 수 있습니다.</li>
+              <li>고객사 문의는 기사 연결, 문서 전송, 정산 초안 여부를 함께 보면 대부분 빠르게 해결됩니다.</li>
+              <li>세금계산서 전송 실패는 재무와 기사 앱 수신 상태를 함께 보는 것이 가장 효율적입니다.</li>
+            </ul>
+          </div>
+        </aside>
       </div>
     </div>
   )

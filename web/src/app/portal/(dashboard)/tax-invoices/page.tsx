@@ -62,6 +62,10 @@ function formatDate(value: string | null): string {
   });
 }
 
+function formatPercent(value: number): string {
+  return `${value.toFixed(1)}%`;
+}
+
 function getYearMonthOptions(): { value: string; label: string }[] {
   const options: { value: string; label: string }[] = [];
   const now = new Date();
@@ -264,6 +268,55 @@ export default function TaxInvoicesPage() {
       latestSentAt,
     };
   }, [sendLogs]);
+  const sendAnalytics = useMemo(() => {
+    const issuedInvoices = invoices.filter((invoice) => invoice.status === 'issued');
+    const succeededInvoiceIds = new Set(
+      sendLogs.filter((log) => log.success).map((log) => log.tax_invoice_id),
+    );
+    const pendingIssuedCount = issuedInvoices.filter((invoice) => !succeededInvoiceIds.has(invoice.id)).length;
+    const coverageRate = issuedInvoices.length > 0 ? (succeededInvoiceIds.size / issuedInvoices.length) * 100 : 0;
+
+    const last7Days = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (6 - index));
+      const dateKey = date.toISOString().slice(0, 10);
+      const logs = sendLogs.filter((log) => log.created_at.slice(0, 10) === dateKey);
+      return {
+        dateKey,
+        label: `${date.getMonth() + 1}/${date.getDate()}`,
+        total: logs.length,
+        success: logs.filter((log) => log.success).length,
+      };
+    });
+
+    const failureReasons = Object.entries(
+      sendLogs
+        .filter((log) => !log.success)
+        .reduce<Record<string, number>>((accumulator, log) => {
+          const reason = log.reason?.trim() || '기타 오류';
+          accumulator[reason] = (accumulator[reason] ?? 0) + 1;
+          return accumulator;
+        }, {}),
+    )
+      .sort((left, right) => right[1] - left[1])
+      .slice(0, 5);
+
+    const channelDistribution = [
+      { label: '앱 푸시 성공', count: sendLogStats.pushSuccessCount, tone: 'bg-primary' },
+      { label: '문자 전송 성공', count: sendLogStats.smsSuccessCount, tone: 'bg-tertiary' },
+      { label: '전송 실패', count: sendLogStats.failureCount, tone: 'bg-error' },
+    ];
+
+    return {
+      issuedCount: issuedInvoices.length,
+      successCoverageCount: succeededInvoiceIds.size,
+      pendingIssuedCount,
+      coverageRate,
+      last7Days,
+      failureReasons,
+      channelDistribution,
+    };
+  }, [invoices, sendLogStats.failureCount, sendLogStats.pushSuccessCount, sendLogStats.smsSuccessCount, sendLogs]);
 
   const summaryCards = [
     { title: '공급가액 합계', value: formatKRW(summary?.totalSupply ?? 0), color: 'text-primary' },
@@ -295,6 +348,18 @@ export default function TaxInvoicesPage() {
       value: `${sendLogStats.smsSuccessCount}건`,
       description: '문자 fallback 포함',
       color: 'text-on-surface-variant',
+    },
+    {
+      title: '공급자 도달률',
+      value: formatPercent(sendAnalytics.coverageRate),
+      description: `${sendAnalytics.successCoverageCount} / ${sendAnalytics.issuedCount}건`,
+      color: 'text-primary',
+    },
+    {
+      title: '미전송 발행분',
+      value: `${sendAnalytics.pendingIssuedCount}건`,
+      description: '발행 완료 후 아직 전송되지 않음',
+      color: 'text-error',
     },
   ];
 
@@ -512,6 +577,84 @@ export default function TaxInvoicesPage() {
             <p className="mt-1 text-xs text-on-surface-variant font-korean">{card.description}</p>
           </div>
         ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-headline font-semibold text-on-surface font-korean">채널별 전송 분포</h2>
+              <p className="mt-1 text-xs text-on-surface-variant font-korean">앱 푸시, 문자 전송, 실패 비중을 확인할 수 있습니다.</p>
+            </div>
+            <Badge label={`${sendLogStats.total}건`} variant="default" />
+          </div>
+          <div className="mt-5 space-y-4">
+            {sendAnalytics.channelDistribution.map((item) => {
+              const width = sendLogStats.total > 0 ? Math.max(8, Math.round((item.count / sendLogStats.total) * 100)) : 0;
+              return (
+                <div key={item.label}>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-korean text-on-surface">{item.label}</span>
+                    <span className="font-data text-on-surface-variant">{item.count}건</span>
+                  </div>
+                  <div className="mt-2 h-2 rounded-full bg-surface-container-low overflow-hidden">
+                    <div className={`${item.tone} h-full rounded-full`} style={{ width: `${width}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-headline font-semibold text-on-surface font-korean">최근 7일 전송 추이</h2>
+              <p className="mt-1 text-xs text-on-surface-variant font-korean">일자별 전송 건수와 성공 건수를 함께 봅니다.</p>
+            </div>
+          </div>
+          <div className="mt-5 space-y-3">
+            {sendAnalytics.last7Days.map((row) => {
+              const width = sendLogStats.total > 0 ? Math.max(6, Math.round((row.total / Math.max(...sendAnalytics.last7Days.map((item) => item.total), 1)) * 100)) : 0;
+              return (
+                <div key={row.dateKey} className="rounded-xl bg-surface-container-low px-4 py-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-data text-on-surface">{row.label}</span>
+                    <span className="text-on-surface-variant">{row.success} / {row.total}건</span>
+                  </div>
+                  <div className="mt-2 h-2 rounded-full bg-white overflow-hidden">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${width}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="bg-surface-container-lowest rounded-2xl shadow-ambient p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-headline font-semibold text-on-surface font-korean">실패 사유 상위</h2>
+              <p className="mt-1 text-xs text-on-surface-variant font-korean">반복되는 실패 원인을 먼저 정리해 재전송 우선순위를 잡습니다.</p>
+            </div>
+          </div>
+          <div className="mt-5 space-y-3">
+            {sendAnalytics.failureReasons.length === 0 ? (
+              <div className="rounded-xl bg-surface-container-low px-4 py-6 text-sm text-on-surface-variant font-korean">
+                최근 전송 실패 사유가 없습니다.
+              </div>
+            ) : (
+              sendAnalytics.failureReasons.map(([reason, count]) => (
+                <div key={reason} className="rounded-xl bg-surface-container-low px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm text-on-surface font-korean">{reason}</p>
+                    <span className="font-data text-sm text-error">{count}건</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="bg-surface-container-lowest rounded-2xl shadow-ambient overflow-hidden">

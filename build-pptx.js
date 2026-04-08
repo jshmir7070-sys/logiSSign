@@ -473,7 +473,7 @@ const TOTAL = 28;
   const admFeatures = [
     ["대리점 관리", "가입/활성/정지/해지 상태 추적\n대리점별 기사 수 및 이용 현황", C.primary],
     ["구독 관리", "Free / Basic / Standard / Enterprise\n요금제별 기능 제한 및 업그레이드", C.accent],
-    ["SaaS 지표", "MRR, 대리점 수, 요금제 분포\n이탈률, 활성 사용자 수 추적", C.primaryLight],
+    ["SaaS 지표", "MRR, 대리점 수, 요금제 분포\n이탈률, 활성 고객사 수 추적", C.primaryLight],
     ["빌링 설정", "결제 주기: 월/1년/2년/3년\n결제 수단 관리 및 청구서", C.success],
   ];
 
