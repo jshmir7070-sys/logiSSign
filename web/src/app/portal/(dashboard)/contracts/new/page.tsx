@@ -298,7 +298,7 @@ export default function NewContractPage() {
     return (
       <div className="py-20 text-center space-y-6">
         <div className="text-5xl">📨</div>
-        <h1 className="text-2xl font-headline font-bold text-on-surface font-korean">계약/문서 발송 완료</h1>
+        <h1 className="text-2xl font-headline font-bold text-on-surface font-korean">계약·문서 전송 완료</h1>
         <p className="text-on-surface-variant font-korean">
           {result.sent}건 발송 완료{result.failed > 0 ? ` / ${result.failed}건 실패` : ''}
         </p>
@@ -317,7 +317,7 @@ export default function NewContractPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-headline font-bold text-on-surface font-korean">계약/문서 일괄 전송</h1>
+          <h1 className="text-2xl font-headline font-bold text-on-surface font-korean">계약·문서 전송</h1>
           <p className="mt-1 text-sm text-on-surface-variant font-korean">
             등록된 카테고리와 기사 기준으로 계약서 템플릿 또는 저장 완료된 문서함 PDF를 선택해 전송합니다
           </p>

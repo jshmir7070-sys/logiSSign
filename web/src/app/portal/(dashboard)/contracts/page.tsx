@@ -98,7 +98,7 @@ export default function ContractsPage() {
             <span className="font-korean">계약서 관리</span>
           </h1>
           <p className="mt-1 text-sm text-on-surface-variant font-korean">
-            기사 계약서를 관리하고 발송하세요.
+            기사에게 보낸 계약서와 문서의 서명 상태를 관리하세요.
           </p>
         </div>
         <Link
@@ -108,7 +108,7 @@ export default function ContractsPage() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
           </svg>
-          <span className="font-korean">계약/문서 일괄 전송</span>
+          <span className="font-korean">계약·문서 전송</span>
         </Link>
       </div>
 
@@ -169,7 +169,7 @@ export default function ContractsPage() {
                         {activeTab === 'all' ? '발송된 계약서가 없습니다.' : '해당 상태의 계약서가 없습니다.'}
                       </p>
                       <p className="text-xs text-on-surface-variant/60 font-korean">
-                        오른쪽 상단의 &quot;계약/문서 일괄 전송&quot; 버튼으로 기사에게 계약서나 문서를 보낼 수 있습니다.
+                        오른쪽 상단의 &quot;계약·문서 전송&quot; 버튼으로 기사에게 계약서나 문서를 보낼 수 있습니다.
                       </p>
                     </div>
                   </td>

@@ -179,7 +179,7 @@ function BillingGuideModal({
               }}
               className="h-11 rounded-xl bg-surface-container-high font-korean text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-highest"
             >
-              계약서 발송
+              계약·문서 전송
             </button>
             <button
               type="button"
