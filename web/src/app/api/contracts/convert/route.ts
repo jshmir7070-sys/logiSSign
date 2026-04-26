@@ -3,6 +3,8 @@ import { authenticateRequest } from '@/lib/api-auth'
 import { PDFDocument } from 'pdf-lib'
 import { rateLimitAuth } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/get-ip'
+import { existsSync, readFileSync } from 'node:fs'
+import path from 'node:path'
 
 export const maxDuration = 60
 
@@ -168,19 +170,17 @@ async function convertDocxToPdf(buffer: Buffer): Promise<string> {
   try {
     const fontkit = (await import('@pdf-lib/fontkit')).default
     pdfDoc.registerFontkit(fontkit)
-    const fs = await import('fs')
-    const path = await import('path')
 
     // 시스템 폰트 또는 프로젝트 내 폰트 탐색
     const fontPaths = [
-      path.join(process.cwd(), 'public', 'fonts', 'NotoSansKR-Regular.ttf'),
-      path.join(process.cwd(), 'public', 'fonts', 'Pretendard-Regular.otf'),
+      path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'fonts', 'NotoSansKR-Regular.ttf'),
+      path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'fonts', 'Pretendard-Regular.otf'),
     ]
 
     for (const fp of fontPaths) {
       try {
-        if (fs.existsSync(fp)) {
-          const fontBytes = fs.readFileSync(fp)
+        if (existsSync(fp)) {
+          const fontBytes = readFileSync(fp)
           font = await pdfDoc.embedFont(fontBytes)
           break
         }

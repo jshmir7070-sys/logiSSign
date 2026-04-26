@@ -20,6 +20,9 @@ export interface SettlementCalcResult {
   delivery_count: number
   return_count: number
   collect_count: number
+  delivery_amount: number
+  return_amount: number
+  collect_amount: number
   fresh_count: number
   etc_count: number
   total_count: number

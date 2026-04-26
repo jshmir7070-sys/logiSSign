@@ -183,6 +183,71 @@ export async function deductPoints(params: {
   return { balanceAfter: newBalance, deducted: totalCost }
 }
 
+/**
+ * 포인트 환불 (refund) — 실패한 발송/작업에 대한 차감 취소
+ */
+export async function refundPoints(params: {
+  agencyId: string
+  action: PointAction
+  count?: number
+  referenceType?: string
+  referenceId?: string
+  userId?: string
+  description?: string
+}): Promise<{ balanceAfter: number; refunded: number }> {
+  const { agencyId, action, count = 1, referenceType, referenceId, userId, description } = params
+  const costInfo = POINT_COSTS[action]
+  if (!costInfo) throw new Error(`알 수 없는 포인트 액션: ${action}`)
+
+  const totalRefund = costInfo.cost * count
+  if (totalRefund === 0) {
+    const bal = await getPointBalance(agencyId)
+    return { balanceAfter: bal.balance, refunded: 0 }
+  }
+
+  const bal = await getPointBalance(agencyId)
+  const currentBalance = bal.balance
+  const newBalance = currentBalance + totalRefund
+  const newTotalUsed = Math.max(0, bal.totalUsed - totalRefund)
+
+  const { data: updated, error: updateErr } = await supabaseAdmin
+    .from('point_balances')
+    .update({
+      balance: newBalance,
+      total_used: newTotalUsed,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('agency_id', agencyId)
+    .eq('balance', currentBalance)
+    .select('balance')
+    .single()
+
+  if (updateErr || !updated) {
+    throw new Error('포인트 환불 처리 중 충돌이 발생했습니다. 관리자에게 문의해주세요.')
+  }
+
+  const desc = description ?? (
+    count > 1
+      ? `${costInfo.label} 실패 환불 ${count}건 (${costInfo.cost}P × ${count})`
+      : `${costInfo.label} 실패 환불 (${costInfo.cost}P)`
+  )
+
+  await supabaseAdmin
+    .from('point_transactions')
+    .insert({
+      agency_id: agencyId,
+      type: 'refund',
+      amount: totalRefund,
+      balance_after: newBalance,
+      description: desc,
+      reference_type: referenceType ?? action,
+      reference_id: referenceId,
+      created_by: userId,
+    })
+
+  return { balanceAfter: newBalance, refunded: totalRefund }
+}
+
 /* ══════════════════════ 포인트 충전 ══════════════════════ */
 
 /** 포인트 충전 (결제 완료 후 호출) — 원자적 업데이트 */
@@ -203,7 +268,7 @@ export async function chargePoints(params: {
   const newBalance = currentBalance + totalPoints
 
   // 원자적 업데이트 (낙관적 잠금)
-  const { error: updateErr } = await supabaseAdmin
+  const { data: updated, error: updateErr } = await supabaseAdmin
     .from('point_balances')
     .update({
       balance: newBalance,
@@ -212,8 +277,10 @@ export async function chargePoints(params: {
     })
     .eq('agency_id', agencyId)
     .eq('balance', currentBalance) // 낙관적 잠금
+    .select('balance')
+    .maybeSingle()
 
-  if (updateErr) {
+  if (updateErr || !updated) {
     throw new Error('포인트 충전 처리 중 충돌이 발생했습니다. 다시 시도해주세요.')
   }
 

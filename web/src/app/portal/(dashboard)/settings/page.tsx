@@ -5,14 +5,13 @@ import { useSearchParams } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase'
 import AdminsTab from '@/components/portal/settings/AdminsTab'
 import BillingTab from '@/components/portal/settings/BillingTab'
-import CategoryTab from '@/components/portal/settings/CategoryTab'
 import NotificationTab from '@/components/portal/settings/NotificationTab'
 import ProfileTab from '@/components/portal/settings/ProfileTab'
 import SealTab from '@/components/portal/settings/SealTab'
 
-type SettingsTab = 'profile' | 'category' | 'seal' | 'billing' | 'notification' | 'admins'
+type SettingsTab = 'profile' | 'seal' | 'billing' | 'notification' | 'admins'
 
-const VALID_TABS: SettingsTab[] = ['profile', 'category', 'seal', 'billing', 'notification', 'admins']
+const VALID_TABS: SettingsTab[] = ['profile', 'seal', 'billing', 'notification', 'admins']
 
 export default function PortalSettingsPage() {
   const searchParams = useSearchParams()
@@ -43,7 +42,6 @@ export default function PortalSettingsPage() {
   const tabs: Array<{ id: SettingsTab; label: string }> = [
     { id: 'profile', label: '기본 정보' },
     { id: 'admins', label: '관리자 계정' },
-    { id: 'category', label: '카테고리 관리' },
     { id: 'seal', label: '도장 / 서명' },
     { id: 'billing', label: '결제 관리' },
     { id: 'notification', label: '알림 설정' },
@@ -100,7 +98,6 @@ export default function PortalSettingsPage() {
 
       {activeTab === 'profile' ? <ProfileTab /> : null}
       {activeTab === 'admins' && agencyId ? <AdminsTab agencyId={agencyId} plan={userPlan} /> : null}
-      {activeTab === 'category' && agencyId ? <CategoryTab agencyId={agencyId} /> : null}
       {activeTab === 'seal' && agencyId ? <SealTab agencyId={agencyId} /> : null}
       {activeTab === 'billing' ? <BillingTab /> : null}
       {activeTab === 'notification' ? <NotificationTab /> : null}

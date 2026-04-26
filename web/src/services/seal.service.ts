@@ -468,19 +468,32 @@ export interface RenderSealOptions {
   fontSizeScale?: number     // 글씨 크기 배율 (0.5~1.5, 기본 1.0)
   letterSpacingScale?: number // 글자 간격 배율 (0.5~1.5, 기본 1.0)
   useHanja?: boolean         // 한자 모드 여부 (印/인 선택에 사용)
+  canvasFactory?: (width: number, height: number) => {
+    width: number
+    height: number
+    getContext: (contextId: '2d') => CanvasRenderingContext2D | null
+    toDataURL: (type?: string) => string
+  }
 }
 
 /** 단일 도장 Canvas 렌더링 → data URI (실시간 미리보기에서도 사용) */
 export function renderSealCanvas(opts: RenderSealOptions): string {
-  const { name, category, shape, fontFamily, fontWeight, size, corporateTitle, intaglio = false, extraStroke: _extraStroke = 0, showDot = false, fontSizeScale = 1.0, letterSpacingScale = 1.0, useHanja = false } = opts
-  const canvas = document.createElement('canvas')
+  const { name, category, shape, fontFamily, fontWeight, size, corporateTitle, intaglio = false, extraStroke: _extraStroke = 0, showDot = false, fontSizeScale = 1.0, letterSpacingScale = 1.0, useHanja = false, canvasFactory } = opts
 
-  // 타원형은 가로가 더 길도록
-  const w = shape === 'oval' ? Math.round(size * 1.3) : size
-  const h = size
+  // 타원형은 한국식 막도장처럼 세로가 더 긴 형태로 렌더링한다.
+  const w = size
+  const h = shape === 'oval' ? Math.round(size * 1.35) : size
+  if (!canvasFactory && typeof document === 'undefined') {
+    throw new Error('A canvasFactory is required when rendering seals outside the browser.')
+  }
+
+  const canvas = canvasFactory ? canvasFactory(w, h) : document.createElement('canvas')
   canvas.width = w
   canvas.height = h
-  const ctx = canvas.getContext('2d')!
+  const ctx = canvas.getContext('2d')
+  if (!ctx) {
+    throw new Error('Unable to create a 2D canvas context.')
+  }
   ctx.clearRect(0, 0, w, h)
 
   const cx = w / 2
@@ -505,11 +518,11 @@ export function renderSealCanvas(opts: RenderSealOptions): string {
     }
   } else {
     // 개인도장: 원형/사각형은 이름+"인"(한글) 또는 이름+"印"(한자), 타원형은 이름만
-      const sealSuffix = useHanja ? '印' : '인'
-      if (shape === 'circle') {
+    const sealSuffix = useHanja ? '印' : '인'
+    if (shape === 'circle') {
       drawPersonalCircleSeal(ctx, chars, fontFamily, fontWeight, cx, cy, size, pad, outerLineW, showDot, fontSizeScale, letterSpacingScale, sealSuffix)
     } else if (shape === 'oval') {
-      drawPersonalOvalSeal(ctx, chars, fontFamily, fontWeight, cx, cy, w, h, pad, outerLineW, fontSizeScale)
+      drawPersonalOvalSeal(ctx, chars, fontFamily, fontWeight, cx, cy, w, h, pad, outerLineW, fontSizeScale, letterSpacingScale)
     } else {
       drawPersonalSquareSeal(ctx, chars, fontFamily, fontWeight, w, h, pad, outerLineW, shape, fontSizeScale, sealSuffix)
     }
@@ -738,8 +751,7 @@ function drawCorporateSquareSeal(
 /**
  * 개인 인감도장 스타일:
  * - 원형 두꺼운 테두리
- * - 중앙에 이름 (전각풍 큰 글씨)
- * - 2글자: 세로 배치, 3글자: 삼각 배치, 4글자: 2×2 그리드
+ * - 중앙에 이름 + 인(印)을 정방향 세로 배치
  */
 /**
  * 글자 사이에 작은 원(·)을 그리는 헬퍼
@@ -749,6 +761,33 @@ function drawDot(ctx: CanvasRenderingContext2D, x: number, y: number, radius: nu
   ctx.beginPath()
   ctx.arc(x, y, radius, 0, Math.PI * 2)
   ctx.fill()
+}
+
+function drawVerticalSealText(
+  ctx: CanvasRenderingContext2D,
+  chars: string[],
+  cx: number,
+  cy: number,
+  maxW: number,
+  maxH: number,
+  fontFamily: string,
+  fontWeight: string,
+  fontSizeScale = 1.0,
+  letterSpacingScale = 1.0,
+  strokeRatio = 0.2,
+) {
+  if (chars.length === 0) return
+
+  const spacingRatio = 0.92 * letterSpacingScale
+  const fsByHeight = maxH / (1 + Math.max(chars.length - 1, 0) * spacingRatio)
+  const fs = Math.min(maxW, fsByHeight) * fontSizeScale
+  const spacing = fs * spacingRatio
+  const totalH = fs + Math.max(chars.length - 1, 0) * spacing
+  const startY = cy - totalH / 2 + fs / 2
+
+  chars.forEach((ch, i) => {
+    drawThickText(ctx, ch, cx, startY + i * spacing, fs, fontFamily, fontWeight, strokeRatio)
+  })
 }
 
 function drawPersonalCircleSeal(
@@ -775,65 +814,23 @@ function drawPersonalCircleSeal(
 
   const usableR = outerR - outerLineW
 
-  // 개인 인감: 이름 + "인"(한글) 또는 "印"(한자) (예: "홍길동" → "홍길동인" 또는 "洪吉東印")
+  // 개인 인감: 이름 + "인"(한글) 또는 "印"(한자)을 정방향 세로쓰기(위 -> 아래)로 배치한다.
   const sealChars = (chars + sealSuffix).split('')
   const len = sealChars.length
   const dotR = size * 0.018  // 점 반지름
   const fsScale = fontSizeScale
   const lsScale = letterSpacingScale
 
-  if (len <= 2) {
-    const fs = usableR * 1.0 * fsScale
-    const gap = fs * 0.50 * lsScale
-    sealChars.forEach((ch, i) =>
-      drawThickText(ctx, ch, cx, cy - gap + i * gap * 2, fs, fontFamily, fontWeight))
-    if (showDot && len === 2) {
-      drawDot(ctx, cx, cy, dotR)
-    }
-  } else if (len === 3) {
-    const fs = usableR * 0.72 * fsScale
-    const spacing = fs * 1.05 * lsScale
-    const totalH = len * spacing
-    const sy = cy - totalH / 2 + spacing / 2
-    sealChars.forEach((ch, i) =>
-      drawThickText(ctx, ch, cx, sy + i * spacing, fs, fontFamily, fontWeight))
-    if (showDot) {
-      drawDot(ctx, cx, sy + spacing * 0.5, dotR)
-      drawDot(ctx, cx, sy + spacing * 1.5, dotR)
-    }
-  } else if (len === 4) {
-    const fs = usableR * 0.68 * fsScale
-    const gx = usableR * 0.34 * lsScale
-    const gy = usableR * 0.34 * lsScale
-    drawThickText(ctx, sealChars[0], cx + gx, cy - gy, fs, fontFamily, fontWeight)
-    drawThickText(ctx, sealChars[1], cx + gx, cy + gy, fs, fontFamily, fontWeight)
-    drawThickText(ctx, sealChars[2], cx - gx, cy - gy, fs, fontFamily, fontWeight)
-    drawThickText(ctx, sealChars[3], cx - gx, cy + gy, fs, fontFamily, fontWeight)
-    if (showDot) {
-      drawDot(ctx, cx, cy, dotR * 1.2)
-    }
-  } else {
-    const rightCount = Math.ceil(len / 2)
-    const leftCount = len - rightCount
-    const rightChars = sealChars.slice(0, rightCount)
-    const leftChars = sealChars.slice(rightCount)
-    const maxPerCol = Math.max(rightCount, leftCount)
-    const fs = usableR * (maxPerCol <= 2 ? 0.62 : maxPerCol === 3 ? 0.52 : 0.44) * fsScale
-    const gx = usableR * 0.32 * lsScale
-    const spacing = fs * 1.05 * lsScale
+  const maxW = usableR * (len <= 3 ? 0.92 : len === 4 ? 0.78 : 0.68)
+  const maxH = usableR * 1.72
+  drawVerticalSealText(ctx, sealChars, cx, cy, maxW, maxH, fontFamily, fontWeight, fsScale, lsScale, 0.2)
 
-    const rTotalH = rightCount * spacing
-    const rStartY = cy - rTotalH / 2 + spacing / 2
-    rightChars.forEach((ch, i) =>
-      drawThickText(ctx, ch, cx + gx, rStartY + i * spacing, fs, fontFamily, fontWeight))
-
-    const lTotalH = leftCount * spacing
-    const lStartY = cy - lTotalH / 2 + spacing / 2
-    leftChars.forEach((ch, i) =>
-      drawThickText(ctx, ch, cx - gx, lStartY + i * spacing, fs, fontFamily, fontWeight))
-
-    if (showDot) {
-      drawDot(ctx, cx, cy, dotR * 1.2)
+  if (showDot && len > 1) {
+    const dotX = cx + maxW * 0.72
+    const maxDotH = usableR * 1.45
+    const gap = maxDotH / len
+    for (let i = 1; i < len; i += 1) {
+      drawDot(ctx, dotX, cy - maxDotH / 2 + gap * i, dotR * 0.72)
     }
   }
 }
@@ -850,6 +847,7 @@ function drawPersonalOvalSeal(
   pad: number,
   outerLineW: number,
   fontSizeScale = 1.0,
+  letterSpacingScale = 1.0,
 ) {
   // 외곽 타원 (두꺼운 테두리)
   ctx.lineWidth = outerLineW * 1.2
@@ -858,10 +856,11 @@ function drawPersonalOvalSeal(
   ctx.ellipse(cx, cy, cx - pad, cy - pad, 0, 0, Math.PI * 2)
   ctx.stroke()
 
-  // 중앙에 가로 배치 (타원은 가로가 길므로)
-  const maxW = (w - pad * 2) * 0.80
-  const fs = Math.min(h * 0.55, maxW / Math.max(chars.length, 1) * 1.35) * fontSizeScale
-  drawThickText(ctx, chars, cx, cy, fs, fontFamily, fontWeight, 0.20)
+  // 타원형은 이름만 위에서 아래로 배치한다.
+  const sealChars = chars.split('')
+  const maxW = (w - pad * 2 - outerLineW * 2) * 0.78
+  const maxH = (h - pad * 2 - outerLineW * 2) * 0.82
+  drawVerticalSealText(ctx, sealChars, cx, cy, maxW, maxH, fontFamily, fontWeight, fontSizeScale, letterSpacingScale, 0.2)
 }
 
 /* ────────────────── 일반도장: 사각형 ────────────────── */

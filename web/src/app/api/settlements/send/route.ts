@@ -251,6 +251,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '발송 가능한 정산서가 없습니다.' }, { status: 400 })
     }
 
+    const driverMissingRows = settlementRows.filter((settlement) => !settlement.driver_id || !settlement.drivers)
+    if (driverMissingRows.length > 0) {
+      return NextResponse.json(
+        {
+          error: `등록 기사와 연결되지 않은 정산서가 ${driverMissingRows.length}건 있습니다. 정산을 다시 생성해 주세요.`,
+        },
+        { status: 400 },
+      )
+    }
+
     const validIds = settlementRows.map((settlement) => settlement.id)
     const driverIds = Array.from(
       new Set(settlementRows.map((settlement) => settlement.driver_id).filter(Boolean)),
@@ -267,6 +277,19 @@ export async function POST(request: NextRequest) {
 
     const driverChannels = (driverContacts ?? []) as DriverChannel[]
     const contactMap = new Map(driverChannels.map((driver) => [driver.id, driver]))
+    const missingContactRows = settlementRows.filter(
+      (settlement) => settlement.driver_id && !contactMap.has(settlement.driver_id),
+    )
+
+    if (missingContactRows.length > 0) {
+      return NextResponse.json(
+        {
+          error: `등록 기사 정보를 찾을 수 없는 정산서가 ${missingContactRows.length}건 있습니다. 기사 등록 상태를 확인해 주세요.`,
+        },
+        { status: 400 },
+      )
+    }
+
     const unreachableDrivers = driverChannels.filter((driver) => !driver.push_token && !driver.phone)
 
     if (unreachableDrivers.length > 0) {

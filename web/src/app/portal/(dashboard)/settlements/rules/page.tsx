@@ -1,1 +1,5 @@
-export { default } from '../../principals/page';
+import { redirect } from 'next/navigation';
+
+export default function SettlementRulesPage() {
+  redirect('/portal/principals');
+}

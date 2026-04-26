@@ -342,7 +342,11 @@ export default function SealScreen() {
                   onPress={() => setSelectedPreview(preview)}
                   activeOpacity={0.7}
                 >
-                  <Image source={{ uri: preview.dataUri }} style={styles.previewImage} resizeMode="contain" />
+                  <Image
+                    source={{ uri: preview.dataUri }}
+                    style={[styles.previewImage, preview.shape === 'oval' && styles.previewImageOval]}
+                    resizeMode="contain"
+                  />
                   <Text style={styles.previewFont}>{preview.font}</Text>
                   {selectedPreview?.id === preview.id && (
                     <View style={styles.selectedCheck}>
@@ -526,6 +530,7 @@ const styles = StyleSheet.create({
   },
   previewCardSelected: { borderColor: colors.primary, backgroundColor: colors.primary + '08' },
   previewImage: { width: 72, height: 72, marginBottom: 6 },
+  previewImageOval: { width: 56, height: 82 },
   previewFont: { ...typography.labelSmall, color: colors.onSurfaceVariant },
   selectedCheck: { position: 'absolute', top: 4, right: 4 },
   signWrap: { gap: 12 },

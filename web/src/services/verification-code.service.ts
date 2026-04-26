@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from 'crypto'
+import { createHash, randomInt, timingSafeEqual } from 'crypto'
 import { createAdminSupabaseClient } from '@/lib/supabase'
 
 export type VerificationPurpose =
@@ -44,7 +44,7 @@ export function normalizePhoneForVerification(phone: string) {
 }
 
 export function generateVerificationCode() {
-  return String(Math.floor(100000 + Math.random() * 900000))
+  return String(randomInt(100000, 1000000))
 }
 
 function secondsBetween(targetIso: string, now: Date) {

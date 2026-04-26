@@ -45,10 +45,25 @@ const PUBLIC_ROUTES = [
   "/favicon.ico",
 ];
 
+const BEARER_API_ROUTES = [
+  "/api/contracts/sign",
+  "/api/contracts/file-url",
+  "/api/contracts/viewed",
+  "/api/documents/sign/finalize",
+  "/api/drivers/me",
+  "/api/drivers/update-self",
+  "/api/seals/generate",
+  "/api/user-data",
+];
+
 function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) =>
     route === "/" ? pathname === "/" : pathname.startsWith(route)
   );
+}
+
+function acceptsBearerAuth(pathname: string): boolean {
+  return BEARER_API_ROUTES.includes(pathname);
 }
 
 function addNoCacheHeaders(response: NextResponse): NextResponse {
@@ -82,7 +97,7 @@ function setActivityCookie(response: NextResponse) {
   });
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const requestHeaders = createRequestHeaders(request);
   const requestId = getRequestId(requestHeaders);
@@ -113,6 +128,19 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
+  const isAdminRoute = pathname.startsWith("/admin");
+  const isAdminApiRoute = pathname.startsWith("/api/admin");
+  const isPortalRoute = pathname.startsWith("/portal");
+  const isApiRoute = pathname.startsWith("/api");
+  const hasBearerToken = request.headers.get("authorization")?.startsWith("Bearer ") ?? false;
+  const isBearerApiRequest = isApiRoute && hasBearerToken && acceptsBearerAuth(pathname);
+
+  if (isBearerApiRequest) {
+    const response = NextResponse.next({ request: { headers: requestHeaders } });
+    addRequestIdHeader(response, requestId);
+    return response;
+  }
+
   let response = NextResponse.next({ request: { headers: requestHeaders } });
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
@@ -138,12 +166,6 @@ export async function middleware(request: NextRequest) {
     error: userError,
   } = await supabase.auth.getUser();
 
-  const isAdminRoute = pathname.startsWith("/admin");
-  const isAdminApiRoute = pathname.startsWith("/api/admin");
-  const isPortalRoute = pathname.startsWith("/portal");
-  const isApiRoute = pathname.startsWith("/api");
-  const hasBearerToken = request.headers.get("authorization")?.startsWith("Bearer ") ?? false;
-
   if (userError || !user) {
     logStructured("warn", "auth_missing", {
       requestId,
@@ -164,7 +186,7 @@ export async function middleware(request: NextRequest) {
     return redirect;
   }
 
-  if (!hasBearerToken && isSessionIdle(request.cookies.get(SESSION_ACTIVITY_COOKIE)?.value)) {
+  if (!isBearerApiRequest && isSessionIdle(request.cookies.get(SESSION_ACTIVITY_COOKIE)?.value)) {
     logStructured("warn", "session_idle_timeout", {
       requestId,
       path: pathname,
@@ -191,7 +213,7 @@ export async function middleware(request: NextRequest) {
 
   const role = (user.app_metadata?.role as string | undefined) ?? "";
 
-  if ((isAdminRoute || isPortalRoute || isApiRoute) && !hasBearerToken) {
+  if ((isAdminRoute || isPortalRoute || isApiRoute) && !isBearerApiRequest) {
     const mfaToken = request.cookies.get(MFA_COOKIE)?.value;
     const mfaValid = mfaToken ? await verifyMfaToken(mfaToken, user.id) : false;
 

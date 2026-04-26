@@ -1,13 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server'
+import path from 'path'
+import { createCanvas, GlobalFonts } from '@napi-rs/canvas'
 import {
   renderSealCanvas,
-  ensureSealFontsLoaded,
   ALL_SEAL_FONTS,
   type SealShape,
 } from '@/services/seal.service'
 import { authenticateRequest } from '@/lib/api-auth'
 import { rateLimitAuth } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/get-ip'
+
+let serverSealFontsLoaded = false
+
+function registerSealFont(fileName: string, familyName: string) {
+  const fontPath = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'fonts', fileName)
+  try {
+    GlobalFonts.registerFromPath(fontPath, familyName)
+  } catch (err) {
+    console.warn(`[seals/generate] Font registration failed: ${familyName}`, err)
+  }
+}
+
+function ensureServerSealFontsLoaded() {
+  if (serverSealFontsLoaded) return
+  serverSealFontsLoaded = true
+
+  registerSealFont('HJ한전서A.ttf', 'HJJeonseoA')
+  registerSealFont('HJ한전서B.ttf', 'HJJeonseoB')
+  registerSealFont('HJ한전서A.ttf', 'YiSunShinBold')
+  registerSealFont('HJ한전서B.ttf', 'WandohopeB')
+  registerSealFont('HJ한전서A.ttf', 'SuseongBatang')
+  registerSealFont('HJ한전서B.ttf', 'SuseongHyejeong')
+  registerSealFont('NotoSansKR-Bold.otf', 'JeongseonArGothicB')
+  registerSealFont('NotoSansKR-Bold.otf', 'GangwonEduBold')
+  registerSealFont('NotoSansKR-Bold.otf', 'Noto Serif KR')
+  registerSealFont('NotoSansKR-Bold.otf', 'Nanum Myeongjo')
+  registerSealFont('NotoSansKR-Bold.otf', 'Hahmlet')
+}
+
+function createServerSealCanvas(width: number, height: number) {
+  return createCanvas(width, height) as unknown as {
+    width: number
+    height: number
+    getContext: (contextId: '2d') => CanvasRenderingContext2D | null
+    toDataURL: (type?: string) => string
+  }
+}
 
 /**
  * POST /api/seals/generate
@@ -32,7 +70,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '이름을 입력하세요' }, { status: 400 })
     }
 
-    ensureSealFontsLoaded()
+    ensureServerSealFontsLoaded()
     const font = ALL_SEAL_FONTS[fontIdx ?? 0] ?? ALL_SEAL_FONTS[0]
 
     const dataUri = renderSealCanvas({
@@ -42,10 +80,11 @@ export async function POST(request: NextRequest) {
       fontFamily: font.family,
       fontWeight: font.weight,
       size: sealSize || 250,
-      showDot: showDot ?? true,
+      showDot: showDot ?? false,
       fontSizeScale: (fontSize || 100) / 100,
       letterSpacingScale: (letterSpacing || 100) / 100,
       useHanja: false,
+      canvasFactory: createServerSealCanvas,
     })
 
     return NextResponse.json({
@@ -80,7 +119,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '이름 필수' }, { status: 400 })
     }
 
-    ensureSealFontsLoaded()
+    ensureServerSealFontsLoaded()
 
     const shapes: SealShape[] = ['circle', 'square', 'oval', 'rounded_square']
     // 인기 폰트 4개만
@@ -98,10 +137,11 @@ export async function GET(request: NextRequest) {
           fontFamily: font.family,
           fontWeight: font.weight,
           size: 200,
-          showDot: true,
+          showDot: false,
           fontSizeScale: 1,
           letterSpacingScale: 1,
           useHanja: false,
+          canvasFactory: createServerSealCanvas,
         })
         previews.push({
           id: `${shape}-${fi}`,

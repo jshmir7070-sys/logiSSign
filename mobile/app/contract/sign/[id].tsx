@@ -28,7 +28,7 @@ import Header from '../../../components/common/Header';
 import Button from '../../../components/common/Button';
 import SignaturePad from '../../../components/common/SignaturePad';
 import { useAuthStore } from '../../../stores/authStore';
-import { fetchContractFileUrl, getContractDetail, signContract } from '../../../services/contract.service';
+import { fetchContractFileUrl, getContractDetail, markContractViewed, signContract } from '../../../services/contract.service';
 import {
   requestIdentityVerification,
   IDENTITY_PROVIDERS,
@@ -37,7 +37,6 @@ import {
 } from '../../../services/identity.service';
 import { getDefaultDriverSigningAsset, type DriverSigningAssetType } from '../../../services/signing-asset.service';
 import { colors, spacing, typography, borderRadius, shadows } from '../../../constants/theme';
-import { supabase } from '../../../lib/supabase';
 
 /* ══════════════════════ PDF 필드 타입 ══════════════════════ */
 
@@ -207,11 +206,7 @@ export default function ContractSignScreen() {
 
       // 열람 상태 업데이트
       if (contract.status === 'sent') {
-        await supabase
-          .from('contracts')
-          .update({ status: 'viewed' })
-          .eq('id', id)
-          .eq('driver_id', driver.id);
+        await markContractViewed(id, driver.id);
       }
 
       setLoading(false);

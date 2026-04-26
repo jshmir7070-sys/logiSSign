@@ -8,7 +8,7 @@ import { getClientIp } from '@/lib/get-ip'
 import { getPlanLimits, isPointBased, isPaidPlan, type PlanType } from '@/lib/plan-limits'
 import { rateLimitAuth } from '@/lib/rate-limit'
 import { decryptAgencyPii, decryptDriverPii } from '@/services/pii.service'
-import { deductPoints, hasEnoughPoints } from '@/services/point.service'
+import { deductPoints, hasEnoughPoints, refundPoints } from '@/services/point.service'
 import { sendContractSignSms } from '@/services/sms.service'
 
 const supabaseAdmin = createClient(
@@ -28,6 +28,18 @@ type InsertedContract = {
   id: string
   driver_id: string
   title: string
+}
+
+type ContractTemplateRow = {
+  id: string
+  agency_id: string | null
+  principal_id: string | null
+  title: string
+  content: string
+  is_active: boolean
+  template_type: string | null
+  template_pdf_url: string | null
+  sign_fields: Record<string, unknown>[] | null
 }
 
 async function sha256(text: string): Promise<string> {
@@ -255,8 +267,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validationError }, { status: 400 })
     }
 
-    const driverIds = validated.driverIds ?? (validated.driverId ? [validated.driverId] : [])
-    const { templateIds, bindingData, bindingDataMap } = validated
+    const driverIds = Array.from(new Set(validated.driverIds ?? (validated.driverId ? [validated.driverId] : [])))
+    const templateIds = Array.from(new Set(validated.templateIds))
+    const { bindingData, bindingDataMap, principalId } = validated
 
     if (driverIds.length === 0) {
       return NextResponse.json({ error: '기사를 1명 이상 선택해 주세요.' }, { status: 400 })
@@ -265,6 +278,19 @@ export async function POST(request: NextRequest) {
     const agencyId = auth.agencyId
     if (!agencyId) {
       return NextResponse.json({ error: '대리점 정보가 없습니다.' }, { status: 403 })
+    }
+
+    if (principalId) {
+      const { data: principal, error: principalErr } = await supabaseAdmin
+        .from('principals')
+        .select('id')
+        .eq('id', principalId)
+        .eq('agency_id', agencyId)
+        .maybeSingle()
+
+      if (principalErr || !principal) {
+        return NextResponse.json({ error: '선택한 카테고리를 확인할 수 없습니다.' }, { status: 403 })
+      }
     }
 
     const { data: agency } = await supabaseAdmin
@@ -326,6 +352,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (principalId) {
+      const { data: links, error: linkErr } = await supabaseAdmin
+        .from('driver_principals')
+        .select('driver_id')
+        .eq('principal_id', principalId)
+        .eq('status', 'active')
+        .in('driver_id', driverIds)
+
+      const linkedDriverIds = new Set((links ?? []).map((link) => link.driver_id))
+      const unlinkedDriverIds = driverIds.filter((driverId) => !linkedDriverIds.has(driverId))
+      if (linkErr || unlinkedDriverIds.length > 0) {
+        return NextResponse.json(
+          { error: '선택한 카테고리에 연결되지 않은 기사가 포함되어 있습니다.' },
+          { status: 403 },
+        )
+      }
+    }
+
     const unreachableDrivers = driverChannels.filter((driver) => !driver.push_token && !driver.phone)
     if (unreachableDrivers.length > 0) {
       const names = unreachableDrivers.map((driver) => driver.name || driver.id).join(', ')
@@ -339,16 +383,28 @@ export async function POST(request: NextRequest) {
 
     const { data: templates, error: fetchErr } = await supabaseAdmin
       .from('contract_templates')
-      .select('id, title, content, template_type, template_pdf_url, sign_fields')
+      .select('id, agency_id, principal_id, title, content, is_active, template_type, template_pdf_url, sign_fields')
       .in('id', templateIds)
+      .eq('is_active', true)
       .or(`agency_id.eq.${agencyId},agency_id.is.null`)
 
-    if (fetchErr || !templates?.length) {
+    const templateRows = (templates ?? []) as ContractTemplateRow[]
+    const foundTemplateIds = new Set(templateRows.map((template) => template.id))
+    const missingTemplateIds = templateIds.filter((templateId) => !foundTemplateIds.has(templateId))
+    const notSendableTemplate = templateRows.find(
+      (template) => template.agency_id !== agencyId && !(template.agency_id === null && template.template_type !== 'pdf'),
+    )
+    const mismatchedPrincipalTemplate = templateRows.find(
+      (template) => template.principal_id && template.principal_id !== principalId,
+    )
+
+    if (fetchErr || missingTemplateIds.length > 0 || notSendableTemplate || mismatchedPrincipalTemplate) {
       return NextResponse.json({ error: '계약서 템플릿을 불러오지 못했습니다.' }, { status: 400 })
     }
 
     const senderBindingData = await resolveSenderBindingData(agencyId)
     const contracts: Record<string, unknown>[] = []
+    const sentAt = new Date().toISOString()
 
     for (const driverId of driverIds) {
       const driverBindingData = await resolveDriverBindingData(
@@ -357,7 +413,7 @@ export async function POST(request: NextRequest) {
         bindingDataMap?.[driverId] ?? bindingData,
       )
 
-      for (const template of templates) {
+      for (const template of templateRows) {
         const templateRecord = template as Record<string, unknown>
         const content = bindVariables(template.content, driverBindingData)
         const contentHash = await sha256(content)
@@ -399,7 +455,8 @@ export async function POST(request: NextRequest) {
           content_hash: contentHash,
           sign_token: crypto.randomUUID(),
           binding_data: driverBindingData,
-          status: 'draft',
+          status: 'sent',
+          sent_at: sentAt,
           ...(templateRecord.template_type === 'pdf'
             ? {
                 template_type: 'pdf',
@@ -416,7 +473,7 @@ export async function POST(request: NextRequest) {
       .insert(contracts as never[])
       .select('id, driver_id, title')
 
-    if (insertErr || !inserted?.length) {
+    if (insertErr || !inserted?.length || inserted.length !== contracts.length) {
       console.error('[ContractSend] Insert error:', insertErr)
       return NextResponse.json(
         { error: `계약서 생성에 실패했습니다. ${insertErr?.message ?? ''}`.trim() },
@@ -430,6 +487,35 @@ export async function POST(request: NextRequest) {
       const current = contractsByDriver.get(contract.driver_id) ?? []
       current.push(contract)
       contractsByDriver.set(contract.driver_id, current)
+    }
+
+    let chargedContractCount = 0
+    let pointDeducted = 0
+    if (requestedChargeableContracts > 0 && !isSubscription) {
+      try {
+        const result = await deductPoints({
+          agencyId,
+          action: 'contract_send',
+          count: requestedChargeableContracts,
+          referenceType: 'contract',
+          userId: auth.userId,
+        })
+        chargedContractCount = requestedChargeableContracts
+        pointDeducted = result.deducted
+      } catch (pointError) {
+        console.error('[ContractSend] Point deduction failed:', pointError)
+        const { error: cleanupError } = await supabaseAdmin
+          .from('contracts')
+          .delete()
+          .in('id', insertedContracts.map((contract) => contract.id))
+        if (cleanupError) {
+          console.error('[ContractSend] Failed to delete contracts after point error:', cleanupError)
+        }
+        return NextResponse.json(
+          { error: pointError instanceof Error ? pointError.message : '포인트 차감에 실패했습니다.' },
+          { status: 402 },
+        )
+      }
     }
 
     const notifiedDriverIds = new Set<string>()
@@ -468,61 +554,67 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (notifiedDriverIds.size === 0) {
-      await supabaseAdmin.from('contracts').delete().in(
-        'id',
-        insertedContracts.map((contract) => contract.id),
-      )
-
-      return NextResponse.json(
-        { error: '실제로 전송 가능한 기사 연락 수단이 없어 계약서를 발송하지 못했습니다.' },
-        { status: 502 },
-      )
-    }
-
-    const sentContractIds = insertedContracts
-      .filter((contract) => notifiedDriverIds.has(contract.driver_id))
-      .map((contract) => contract.id)
+    const sentContracts = insertedContracts.filter((contract) => notifiedDriverIds.has(contract.driver_id))
     const unsentContractIds = insertedContracts
       .filter((contract) => !notifiedDriverIds.has(contract.driver_id))
       .map((contract) => contract.id)
 
-    const actualChargeableContracts = Math.max(0, sentContractIds.length - remainingFree)
-    let pointDeducted = 0
-    if (actualChargeableContracts > 0 && !isSubscription) {
-      const result = await deductPoints({
-        agencyId,
-        action: 'contract_send',
-        count: actualChargeableContracts,
-        referenceType: 'contract',
-        userId: auth.userId,
-      })
-      pointDeducted = result.deducted
-    }
-
-    const sentAt = new Date().toISOString()
-    const { error: sentUpdateError } = await supabaseAdmin
-      .from('contracts')
-      .update({ status: 'sent', sent_at: sentAt })
-      .in('id', sentContractIds)
-
-    if (sentUpdateError) {
-      console.error('[ContractSend] Status update failed:', sentUpdateError)
-      throw sentUpdateError
-    }
-
     if (unsentContractIds.length > 0) {
-      const { error: cleanupError } = await supabaseAdmin.from('contracts').delete().in('id', unsentContractIds)
+      const { error: cleanupError } = await supabaseAdmin
+        .from('contracts')
+        .delete()
+        .in('id', unsentContractIds)
       if (cleanupError) {
-        console.error('[ContractSend] Failed to delete unsent drafts:', cleanupError)
+        console.error('[ContractSend] Failed to delete unnotified contracts:', cleanupError)
+      }
+    }
+
+    if (sentContracts.length === 0) {
+      if (chargedContractCount > 0) {
+        try {
+          const refund = await refundPoints({
+            agencyId,
+            action: 'contract_send',
+            count: chargedContractCount,
+            referenceType: 'contract',
+            userId: auth.userId,
+            description: '계약서 알림 전체 실패 환불',
+          })
+          pointDeducted = Math.max(0, pointDeducted - refund.refunded)
+        } catch (refundError) {
+          console.error('[ContractSend] Point refund failed after full notification failure:', refundError)
+        }
+      }
+
+      return NextResponse.json(
+        { error: '계약서 알림 전송에 실패했습니다. 전송되지 않은 계약서는 저장하지 않았습니다.' },
+        { status: 502 },
+      )
+    }
+
+    const actualChargeableContracts = Math.max(0, sentContracts.length - remainingFree)
+    const refundContractCount = Math.max(0, chargedContractCount - actualChargeableContracts)
+    if (refundContractCount > 0 && !isSubscription) {
+      try {
+        const refund = await refundPoints({
+          agencyId,
+          action: 'contract_send',
+          count: refundContractCount,
+          referenceType: 'contract',
+          userId: auth.userId,
+          description: `계약서 알림 실패 환불 ${refundContractCount}건`,
+        })
+        pointDeducted = Math.max(0, pointDeducted - refund.refunded)
+      } catch (refundError) {
+        console.error('[ContractSend] Point refund failed after partial notification failure:', refundError)
       }
     }
 
     return NextResponse.json({
-      created: sentContractIds.length,
-      contractIds: sentContractIds,
+      created: sentContracts.length,
+      contractIds: sentContracts.map((contract) => contract.id),
       pointDeducted,
-      freeUsed: Math.min(sentContractIds.length, remainingFree),
+      freeUsed: Math.min(sentContracts.length, remainingFree),
       notifiedDrivers: notifiedDriverIds.size,
       failedDrivers: Array.from(failedDriverIds),
     })

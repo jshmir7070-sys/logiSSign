@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Badge from '@/components/shared/Badge';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
 import {
@@ -34,6 +34,8 @@ function isSendableContractTemplate(template: ContractTemplate, agencyId: string
 
 export default function NewContractPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const preselectedDocId = searchParams.get('docId') ?? searchParams.get('documentId');
   const [agencyId, setAgencyId] = useState<string | null>(null);
   const [agencyName, setAgencyName] = useState('');
   const [agencyBizNumber, setAgencyBizNumber] = useState('');
@@ -50,6 +52,9 @@ export default function NewContractPage() {
   const [documents, setDocuments] = useState<{ id: string; title: string; field_count: number }[]>([]);
   const [contractStartDate, setContractStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [contractEndDate, setContractEndDate] = useState('');
+  const [documentTypeFilter, setDocumentTypeFilter] = useState<'all' | 'template' | 'document'>(
+    preselectedDocId ? 'document' : 'all',
+  );
 
   const [previewTemplate, setPreviewTemplate] = useState<ContractTemplate | null>(null);
   const [sending, setSending] = useState(false);
@@ -90,7 +95,7 @@ export default function NewContractPage() {
       if (res.data) {
         const availableTemplates = res.data.filter((template) => isSendableContractTemplate(template, agencyId));
         setTemplates(availableTemplates);
-        setSelectedTemplateIds(new Set(availableTemplates.map((t) => t.id)));
+        setSelectedTemplateIds(preselectedDocId ? new Set<string>() : new Set(availableTemplates.map((t) => t.id)));
       }
     });
 
@@ -99,7 +104,7 @@ export default function NewContractPage() {
       .from('document_files')
       .select('id, title, status')
       .eq('agency_id', agencyId)
-      .in('status', ['draft', 'ready'])
+      .eq('status', 'ready')
       .order('created_at', { ascending: false })
       .then(async ({ data: docFiles }) => {
         const docs: { id: string; title: string; field_count: number }[] = [];
@@ -109,29 +114,48 @@ export default function NewContractPage() {
             .select('id', { count: 'exact', head: true })
             .eq('document_file_id', doc.id);
           const fieldCount = count ?? 0;
-          if (doc.status === 'draft' && fieldCount === 0) continue;
+          if (fieldCount === 0) continue;
           docs.push({ id: doc.id, title: doc.title, field_count: fieldCount });
         }
         setDocuments(docs);
+        if (preselectedDocId && docs.some((doc) => doc.id === preselectedDocId)) {
+          setSelectedDocIds(new Set([preselectedDocId]));
+          setDocumentTypeFilter('document');
+        }
       });
 
-    // 기사 조회 — 해당 카테고리 소속 기사 + 미분류 기사
+    // 기사 조회 — driver_principals 기준의 해당 카테고리 활성 기사만
     supabase
-      .from('drivers')
-      .select('id, name, phone, employee_code, driver_code, address, business_reg_number, representative_name, business_address, is_business_owner, vat_included, delivery_area, vehicle_number, principal_id')
-      .eq('agency_id', agencyId)
+      .from('driver_principals')
+      .select('driver_id')
+      .eq('principal_id', principalId)
       .eq('status', 'active')
-      .order('name')
-      .then(({ data }) => {
-        const all = (data ?? []) as unknown as (DriverItem & { principal_id: string | null })[];
-        // 해당 카테고리 기사 + 카테고리 미지정 기사
-        const filtered = all.filter(
-          (d) => d.principal_id === principalId || !d.principal_id
-        );
-        setDrivers(filtered);
+      .then(async ({ data: links, error }) => {
+        if (error) {
+          setDrivers([]);
+          setSelectedDriverIds(new Set());
+          return;
+        }
+
+        const driverIds = (links ?? []).map((link) => link.driver_id);
+        if (driverIds.length === 0) {
+          setDrivers([]);
+          setSelectedDriverIds(new Set());
+          return;
+        }
+
+        const { data } = await supabase
+          .from('drivers')
+          .select('id, name, phone, employee_code, driver_code, address, business_reg_number, representative_name, business_address, is_business_owner, vat_included, delivery_area, vehicle_number')
+          .eq('agency_id', agencyId)
+          .eq('status', 'active')
+          .in('id', driverIds)
+          .order('name');
+
+        setDrivers((data ?? []) as unknown as DriverItem[]);
         setSelectedDriverIds(new Set());
       });
-  }, [agencyId, principalId]);
+  }, [agencyId, preselectedDocId, principalId]);
 
   const toggleDriver = (id: string) => {
     setSelectedDriverIds((prev) => {
@@ -157,6 +181,9 @@ export default function NewContractPage() {
     () => drivers.filter((driver) => selectedDriverIds.has(driver.id)),
     [drivers, selectedDriverIds],
   );
+
+  const visibleTemplates = documentTypeFilter === 'document' ? [] : templates;
+  const visibleDocuments = documentTypeFilter === 'template' ? [] : documents;
 
   const formatPhoneLastFour = (phone: string | null) => {
     const digits = String(phone ?? '').replace(/\D/g, '');
@@ -220,15 +247,22 @@ export default function NewContractPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             driverIds: Array.from(selectedDriverIds),
+            principalId,
             templateIds: Array.from(selectedTemplateIds),
             bindingDataMap,
           }),
         });
         const result = await response.json();
-        if (response.ok) totalSent += result.created ?? 0;
-        else totalFailed += selectedDriverIds.size;
+        const requested = selectedDriverIds.size * selectedTemplateIds.size;
+        if (response.ok) {
+          const created = result.created ?? 0;
+          totalSent += created;
+          totalFailed += Math.max(0, requested - created);
+        } else {
+          totalFailed += requested;
+        }
       } catch {
-        totalFailed += selectedDriverIds.size;
+        totalFailed += selectedDriverIds.size * selectedTemplateIds.size;
       }
     }
 
@@ -244,8 +278,12 @@ export default function NewContractPage() {
           title: documents.find(d => d.id === docId)?.title ?? '문서',
           documentFileId: docId,
         });
-        if (res.error) totalFailed += 1;
-        else totalSent += res.total;
+        if (res.error) {
+          totalFailed += selectedDriverIds.size;
+        } else {
+          totalSent += Math.max(0, res.total - res.failed);
+          totalFailed += res.failed;
+        }
       }
     }
 
@@ -260,7 +298,7 @@ export default function NewContractPage() {
     return (
       <div className="py-20 text-center space-y-6">
         <div className="text-5xl">📨</div>
-        <h1 className="text-2xl font-headline font-bold text-on-surface font-korean">계약서 발송 완료</h1>
+        <h1 className="text-2xl font-headline font-bold text-on-surface font-korean">계약/문서 발송 완료</h1>
         <p className="text-on-surface-variant font-korean">
           {result.sent}건 발송 완료{result.failed > 0 ? ` / ${result.failed}건 실패` : ''}
         </p>
@@ -279,9 +317,9 @@ export default function NewContractPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-headline font-bold text-on-surface font-korean">새 계약서 발송</h1>
+          <h1 className="text-2xl font-headline font-bold text-on-surface font-korean">계약/문서 일괄 전송</h1>
           <p className="mt-1 text-sm text-on-surface-variant font-korean">
-            기존 기사에게 계약서를 선택하여 발송합니다
+            등록된 카테고리와 기사 기준으로 계약서 템플릿 또는 저장 완료된 문서함 PDF를 선택해 전송합니다
           </p>
         </div>
         <button
@@ -345,9 +383,6 @@ export default function NewContractPage() {
                       <p className="text-sm font-body font-semibold text-on-surface font-korean">{d.name}</p>
                       <p className="text-xs text-on-surface-variant font-data">
                         {d.driver_code ?? '-'} · {d.employee_code ?? '-'} · {d.phone}
-                        {!(d as unknown as { principal_id: string | null }).principal_id && (
-                          <span className="text-amber-500 ml-1 font-korean">(미분류)</span>
-                        )}
                       </p>
                     </div>
                     <Badge
@@ -362,110 +397,137 @@ export default function NewContractPage() {
         </section>
       )}
 
-      {/* 3. 템플릿 선택 */}
-      {principalId && templates.length > 0 && (
+      {/* 3. 계약/문서 선택 */}
+      {principalId && (
         <section className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 space-y-4">
-          <h2 className="text-base font-headline font-semibold text-on-surface font-korean">
-            3. 계약서 템플릿 선택
-          </h2>
-          <div className="space-y-2">
-            {templates.map((tmpl) => {
-              const checked = selectedTemplateIds.has(tmpl.id);
-              return (
-                <label
-                  key={tmpl.id}
-                  className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                    checked ? 'border-primary/40 bg-primary/5' : 'border-outline-variant/15 hover:border-outline-variant/30'
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-headline font-semibold text-on-surface font-korean">
+                3. 계약서/문서 선택
+              </h2>
+              <p className="mt-1 text-xs text-on-surface-variant font-korean">
+                텍스트 계약서 템플릿과 저장 완료된 문서함 PDF를 한 화면에서 선택합니다.
+              </p>
+            </div>
+            <div className="flex rounded-xl bg-surface-container-low p-1">
+              {[
+                { key: 'all', label: '전체' },
+                { key: 'template', label: '계약서' },
+                { key: 'document', label: '문서함' },
+              ].map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setDocumentTypeFilter(item.key as 'all' | 'template' | 'document')}
+                  className={`h-8 rounded-lg px-3 text-xs font-semibold font-korean transition-colors ${
+                    documentTypeFilter === item.key
+                      ? 'bg-primary text-white'
+                      : 'text-on-surface-variant hover:text-on-surface'
                   }`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => {
-                      setSelectedTemplateIds((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(tmpl.id)) next.delete(tmpl.id); else next.add(tmpl.id);
-                        return next;
-                      });
-                    }}
-                    className="w-4 h-4 rounded accent-primary"
-                  />
-                  <div className="flex-1">
-                    <p className="text-sm font-body font-semibold text-on-surface font-korean">{tmpl.title}</p>
-                    <p className="text-xs text-on-surface-variant font-korean mt-0.5 line-clamp-1">{tmpl.content.substring(0, 60)}...</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPreviewTemplate(tmpl); }}
-                    className="text-xs text-primary font-label font-semibold hover:underline shrink-0 font-korean"
-                  >
-                    미리보기
-                  </button>
-                </label>
-              );
-            })}
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </div>
-          {templates.length === 0 && (
-            <p className="text-sm text-on-surface-variant font-korean">
-              이 카테고리에 등록된 템플릿이 없습니다.
-              계약서 관리 → 템플릿에서 먼저 등록하세요.
+
+          {visibleTemplates.length === 0 && visibleDocuments.length === 0 ? (
+            <p className="rounded-xl bg-surface-container-low px-4 py-5 text-sm text-on-surface-variant font-korean">
+              선택 가능한 계약서나 저장 완료된 문서함 PDF가 없습니다. 템플릿 만들기 또는 내 문서함에서 먼저 저장해 주세요.
             </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {visibleTemplates.map((tmpl) => {
+                const checked = selectedTemplateIds.has(tmpl.id);
+                return (
+                  <label
+                    key={tmpl.id}
+                    className={`min-h-[132px] rounded-xl border-2 p-4 cursor-pointer transition-all ${
+                      checked ? 'border-primary/40 bg-primary/5' : 'border-outline-variant/15 hover:border-outline-variant/30'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          setSelectedTemplateIds((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(tmpl.id)) next.delete(tmpl.id); else next.add(tmpl.id);
+                            return next;
+                          });
+                        }}
+                        className="mt-1 w-4 h-4 rounded accent-primary"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-2 flex items-center gap-2">
+                          <Badge label="계약서" variant="info" />
+                          <span className="text-[11px] text-on-surface-variant font-korean">
+                            {tmpl.agency_id === agencyId ? '등록 템플릿' : '기본 템플릿'}
+                          </span>
+                        </div>
+                        <p className="text-sm font-body font-semibold text-on-surface font-korean line-clamp-2">{tmpl.title}</p>
+                        <p className="mt-2 text-xs text-on-surface-variant font-korean line-clamp-2">
+                          {tmpl.content.replace(/\s+/g, ' ').substring(0, 84)}...
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPreviewTemplate(tmpl); }}
+                      className="mt-3 text-xs text-primary font-label font-semibold hover:underline font-korean"
+                    >
+                      미리보기
+                    </button>
+                  </label>
+                );
+              })}
+
+              {visibleDocuments.map((doc) => {
+                const checked = selectedDocIds.has(doc.id);
+                return (
+                  <label
+                    key={doc.id}
+                    className={`min-h-[132px] rounded-xl border-2 p-4 cursor-pointer transition-all ${
+                      checked ? 'border-tertiary/40 bg-tertiary/5' : 'border-outline-variant/15 hover:border-outline-variant/30'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          setSelectedDocIds((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(doc.id)) next.delete(doc.id); else next.add(doc.id);
+                            return next;
+                          });
+                        }}
+                        className="mt-1 w-4 h-4 rounded accent-tertiary"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-2 flex items-center gap-2">
+                          <Badge label="문서함 PDF" variant="warning" />
+                          <span className="text-[11px] text-on-surface-variant font-korean">저장 완료</span>
+                        </div>
+                        <p className="text-sm font-body font-semibold text-on-surface font-korean line-clamp-2">{doc.title}</p>
+                        <p className="mt-2 text-xs text-on-surface-variant font-korean">
+                          서명/입력 필드 {doc.field_count}개 배치됨
+                        </p>
+                      </div>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
           )}
         </section>
       )}
 
-      {/* 4. 문서함 선택 (선택사항) */}
-      {principalId && documents.length > 0 && (
+      {/* 4. 계약 기간 */}
+      {principalId && selectedDriverIds.size > 0 && selectedTemplateIds.size > 0 && (
         <section className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-headline font-semibold text-on-surface font-korean">
-              4. 문서함 선택 <span className="text-xs text-on-surface-variant font-normal">(선택사항)</span>
-            </h2>
-            <span className="text-xs text-on-surface-variant font-korean">{selectedDocIds.size}개 선택</span>
-          </div>
-          <p className="text-xs text-on-surface-variant font-korean -mt-2">
-            업로드한 문서함(PDF)를 함께 발송합니다. 기사가 설정된 위치에 서명/입력합니다.
-          </p>
-          <div className="space-y-2">
-            {documents.map((doc) => {
-              const checked = selectedDocIds.has(doc.id);
-              return (
-                <label
-                  key={doc.id}
-                  className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                    checked ? 'border-tertiary/40 bg-tertiary/5' : 'border-outline-variant/15 hover:border-outline-variant/30'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => {
-                      setSelectedDocIds((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(doc.id)) next.delete(doc.id); else next.add(doc.id);
-                        return next;
-                      });
-                    }}
-                    className="w-4 h-4 rounded accent-tertiary"
-                  />
-                  <div className="flex-1">
-                    <p className="text-sm font-body font-semibold text-on-surface font-korean">{doc.title}</p>
-                    <p className="text-xs text-on-surface-variant font-korean mt-0.5">
-                      서명 필드 {doc.field_count}개 배치됨
-                    </p>
-                  </div>
-                  <Badge label="문서함" variant="warning" />
-                </label>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* 5. 계약 기간 */}
-      {principalId && selectedDriverIds.size > 0 && (selectedTemplateIds.size > 0 || selectedDocIds.size > 0) && (
-        <section className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 space-y-4">
-          <h2 className="text-base font-headline font-semibold text-on-surface font-korean">5. 계약 기간</h2>
+          <h2 className="text-base font-headline font-semibold text-on-surface font-korean">4. 계약 기간</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>계약 시작일</label>
@@ -487,7 +549,7 @@ export default function NewContractPage() {
         <section className="bg-surface-container-lowest rounded-2xl shadow-ambient p-6 space-y-4">
           <div>
             <h2 className="text-base font-headline font-semibold text-on-surface font-korean">
-              6. 발송 대상 최종 확인
+              {selectedTemplateIds.size > 0 ? '5. 발송 대상 최종 확인' : '4. 발송 대상 최종 확인'}
             </h2>
             <p className="mt-1 text-xs text-on-surface-variant font-korean">
               기사고유코드, 사번, 이름, 전화번호 끝 4자리를 확인한 뒤 발송해 주세요.

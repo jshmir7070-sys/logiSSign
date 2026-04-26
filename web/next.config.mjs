@@ -1,17 +1,31 @@
 import { withSentryConfig } from '@sentry/nextjs'
 
+const supabaseImageHostname = (() => {
+  try {
+    return process.env.NEXT_PUBLIC_SUPABASE_URL
+      ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
+      : undefined
+  } catch {
+    return undefined
+  }
+})()
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // 이미지 최적화
   images: {
     formats: ['image/avif', 'image/webp'],
-    remotePatterns: [
-      { protocol: 'https', hostname: '*.supabase.co' },
-    ],
+    remotePatterns: supabaseImageHostname
+      ? [{ protocol: 'https', hostname: supabaseImageHostname }]
+      : [],
   },
   // 번들 최적화
   experimental: {
     optimizePackageImports: ['recharts', '@supabase/supabase-js', 'date-fns', 'lucide-react'],
+  },
+  serverExternalPackages: ['@napi-rs/canvas'],
+  turbopack: {
+    root: import.meta.dirname,
   },
   async headers() {
     return [

@@ -21,13 +21,29 @@ import {
 import type { DriverRate } from './driver-rate.service'
 import type { UnmatchedRow } from './excel-parser.service'
 
+async function getActivePrincipalDriverIds(
+  supabase: ReturnType<typeof createBrowserSupabaseClient>,
+  principalId?: string | null
+): Promise<string[] | null> {
+  if (!principalId) return null
+
+  const { data } = await supabase
+    .from('driver_principals')
+    .select('driver_id')
+    .eq('principal_id', principalId)
+    .eq('status', 'active')
+
+  return (data ?? []).map((link: { driver_id: string }) => link.driver_id)
+}
+
 /* ── Calculate Coupang settlements using 정산Raw + route rates ── */
 
 export async function calculateCoupangRouteSettlements(
   agencyId: string,
   rawRows: CoupangRawRow[],
   summaryRows: CoupangSummaryRow[],
-  fieldConfig?: FieldConfig
+  fieldConfig?: FieldConfig,
+  principalId?: string | null
 ): Promise<{
   results: SettlementCalcResult[]
   unmatched: UnmatchedRow[]
@@ -48,11 +64,22 @@ export async function calculateCoupangRouteSettlements(
   }
 
   const codes = Array.from(new Set(rawRows.map((r) => r.employee_code)))
-  const { data } = await supabase
+  const linkedDriverIds = await getActivePrincipalDriverIds(supabase, principalId)
+
+  let driverQuery = supabase
     .from('drivers')
     .select('id, name, employee_code, delivery_area, is_business_owner, vat_included, fresh_incentive_pct, extra_incentive_pct, principals(name)')
     .eq('agency_id', agencyId)
+    .eq('status', 'active')
     .in('employee_code', codes)
+
+  if (linkedDriverIds) {
+    driverQuery = linkedDriverIds.length > 0
+      ? driverQuery.in('id', linkedDriverIds)
+      : driverQuery.in('id', ['__no_active_driver_for_principal__'])
+  }
+
+  const { data } = await driverQuery
 
   const drivers = (data ?? []) as unknown as DriverQueryRow[]
   const driverMap = new Map<string, DriverQueryRow>()
@@ -227,7 +254,8 @@ export async function calculateCoupangRouteSettlements(
 export async function calculateCoupangSettlements(
   agencyId: string,
   summaryRows: CoupangSummaryRow[],
-  fieldConfig?: FieldConfig
+  fieldConfig?: FieldConfig,
+  principalId?: string | null
 ): Promise<{
   results: SettlementCalcResult[]
   unmatched: UnmatchedRow[]
@@ -245,11 +273,22 @@ export async function calculateCoupangSettlements(
   }
 
   const codes = summaryRows.map((r) => r.employee_code)
-  const { data } = await supabase
+  const linkedDriverIds = await getActivePrincipalDriverIds(supabase, principalId)
+
+  let driverQuery = supabase
     .from('drivers')
     .select('id, name, employee_code, delivery_area, is_business_owner, vat_included, principals(name)')
     .eq('agency_id', agencyId)
+    .eq('status', 'active')
     .in('employee_code', codes)
+
+  if (linkedDriverIds) {
+    driverQuery = linkedDriverIds.length > 0
+      ? driverQuery.in('id', linkedDriverIds)
+      : driverQuery.in('id', ['__no_active_driver_for_principal__'])
+  }
+
+  const { data } = await driverQuery
 
   const drivers = (data ?? []) as unknown as DriverQueryRow[]
   const driverMatchMap = new Map<string, DriverMatch>()

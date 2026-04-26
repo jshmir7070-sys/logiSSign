@@ -66,6 +66,7 @@ export const patchAmendmentSchema = z.object({
 export const sendContractSchema = z.object({
   driverId: uuid.optional(),
   driverIds: z.array(uuid).optional(),
+  principalId: uuid.optional(),
   templateIds: z.array(uuid).min(1, '템플릿은 1개 이상 선택해야 합니다.'),
   bindingDataMap: z.record(z.string().max(100), boundedRecord(100, 5000)).optional(),
   bindingData: boundedRecord(100, 5000).optional().default({}),

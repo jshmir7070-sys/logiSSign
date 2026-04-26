@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Badge from '@/components/shared/Badge';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
 import {
@@ -220,50 +221,58 @@ export default function ContractTemplatesPage() {
           )}
         </div>
 
-        {paid && !templatesLocked && isAdmin && canUploadMore ? (
-          <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link
+            href="/portal/documents"
+            className="h-10 px-5 rounded-xl border border-outline-variant/20 bg-surface-container-lowest text-on-surface-variant font-label text-sm font-semibold hover:bg-surface-container-high transition-all flex items-center gap-2 font-korean"
+          >
+            내 문서함
+          </Link>
+          {paid && !templatesLocked && isAdmin && canUploadMore ? (
+            <>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={creatingPdf}
+                className="h-10 px-5 rounded-xl bg-surface-container-high text-on-surface font-label text-sm font-semibold hover:bg-surface-container-highest transition-all flex items-center gap-2 font-korean disabled:opacity-50"
+              >
+                내 컴퓨터 문서 가져오기
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) {
+                    void handleCreatePdfTemplate(file);
+                  }
+                }}
+              />
+            </>
+          ) : paid && templatesLocked && isAdmin ? (
             <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={creatingPdf}
-              className="h-10 px-5 rounded-xl bg-surface-container-high text-on-surface font-label text-sm font-semibold hover:bg-surface-container-highest transition-all flex items-center gap-2 font-korean disabled:opacity-50"
+              onClick={handleUnlockTemplates}
+              className="h-10 px-5 rounded-xl border border-error/30 text-error font-label text-sm font-semibold hover:bg-error/5 transition-all flex items-center gap-2 font-korean"
             >
-              내 컴퓨터 문서 가져오기
+              잠금 해제
             </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
-              className="hidden"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) {
-                  void handleCreatePdfTemplate(file);
-                }
-              }}
-            />
-          </div>
-        ) : paid && templatesLocked && isAdmin ? (
-          <button
-            onClick={handleUnlockTemplates}
-            className="h-10 px-5 rounded-xl border border-error/30 text-error font-label text-sm font-semibold hover:bg-error/5 transition-all flex items-center gap-2 font-korean"
-          >
-            잠금 해제
-          </button>
-        ) : paid ? (
-          <button
-            onClick={() => alert(`현재 ${PLAN_LABELS[userPlan as PlanType]} 플랜의 템플릿 한도를 모두 사용했습니다.`)}
-            className="h-10 px-5 rounded-xl border border-amber-400/50 bg-amber-50 text-amber-700 font-label text-sm font-semibold hover:bg-amber-100 transition-all flex items-center gap-2 font-korean"
-          >
-            플랜 업그레이드
-          </button>
-        ) : (
-          <button
-            onClick={() => alert('템플릿 기능은 유료 플랜에서 사용할 수 있습니다. 설정 > 결제에서 플랜을 변경해 주세요.')}
-            className="h-10 px-5 rounded-xl border border-amber-400/50 bg-amber-50 text-amber-700 font-label text-sm font-semibold hover:bg-amber-100 transition-all flex items-center gap-2 font-korean"
-          >
-            플랜 업그레이드
-          </button>
-        )}
+          ) : paid ? (
+            <button
+              onClick={() => alert(`현재 ${PLAN_LABELS[userPlan as PlanType]} 플랜의 템플릿 한도를 모두 사용했습니다.`)}
+              className="h-10 px-5 rounded-xl border border-amber-400/50 bg-amber-50 text-amber-700 font-label text-sm font-semibold hover:bg-amber-100 transition-all flex items-center gap-2 font-korean"
+            >
+              플랜 업그레이드
+            </button>
+          ) : (
+            <button
+              onClick={() => alert('템플릿 기능은 유료 플랜에서 사용할 수 있습니다. 설정 > 결제에서 플랜을 변경해 주세요.')}
+              className="h-10 px-5 rounded-xl border border-amber-400/50 bg-amber-50 text-amber-700 font-label text-sm font-semibold hover:bg-amber-100 transition-all flex items-center gap-2 font-korean"
+            >
+              플랜 업그레이드
+            </button>
+          )}
+        </div>
       </div>
 
       {templatesLocked && (

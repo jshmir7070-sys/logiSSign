@@ -40,6 +40,13 @@ export async function GET(request: NextRequest) {
     return error ?? NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 })
   }
 
+  if (auth.role !== 'provider_admin') {
+    return NextResponse.json(
+      { error: 'Provider admin permission is required.' },
+      { status: 403 }
+    )
+  }
+
   try {
     return NextResponse.json(await loadSettings())
   } catch (fetchError) {

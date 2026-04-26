@@ -51,6 +51,38 @@ export async function getContractDetail(contractId: string, driverId?: string): 
   }
 }
 
+export async function markContractViewed(
+  contractId: string,
+  driverId: string,
+): Promise<{ error: string | null }> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) {
+      return { error: '로그인이 필요합니다. 다시 로그인해주세요.' };
+    }
+
+    const APP_URL = process.env.EXPO_PUBLIC_APP_URL || 'https://logissign.com';
+    const response = await fetch(`${APP_URL}/api/contracts/viewed`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ contractId, driverId }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      return { error: result.error || '계약서 열람 처리 실패' };
+    }
+
+    return { error: null };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : '계약서 열람 처리 실패' };
+  }
+}
+
 export interface ConsentData {
   consent_contract: boolean;
   consent_privacy_collect: boolean;

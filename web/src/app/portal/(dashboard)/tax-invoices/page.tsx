@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import Badge from '@/components/shared/Badge';
 import { formatBusinessNumber } from '@/lib/formatters';
+import { downloadRecordsAsXlsx } from '@/lib/safe-xlsx';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
 import {
   getTaxInvoiceSendLogs,
@@ -406,7 +407,6 @@ export default function TaxInvoicesPage() {
     if (selectedInvoices.length === 0) return;
 
     setDownloading(true);
-    const XLSX = await import('xlsx');
     const rows = selectedInvoices.map((invoice) => ({
       기사명: invoice.drivers?.name ?? '',
       사업자번호: invoice.drivers?.business_reg_number ?? '',
@@ -418,11 +418,12 @@ export default function TaxInvoicesPage() {
       발행일: invoice.issued_at ? new Date(invoice.issued_at).toLocaleDateString('ko-KR') : '',
     }));
 
-    const sheet = XLSX.utils.json_to_sheet(rows);
-    sheet['!cols'] = [{ wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 14 }];
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, sheet, '세금계산서');
-    XLSX.writeFile(workbook, `세금계산서_${yearMonth}.xlsx`);
+    await downloadRecordsAsXlsx(
+      rows,
+      '세금계산서',
+      `세금계산서_${yearMonth}.xlsx`,
+      [18, 18, 14, 14, 12, 14, 12, 14]
+    );
     setDownloading(false);
   }
 

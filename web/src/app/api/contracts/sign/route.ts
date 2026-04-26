@@ -5,12 +5,86 @@ import { getClientIp } from '@/lib/get-ip'
 import { rateLimitAuth } from '@/lib/rate-limit'
 import { generateSignedPdf } from '@/services/signed-pdf.service'
 import { bridgeContractToSettlement } from '@/services/contract-settlement-bridge.service'
+import { getIdentityVerification } from '@/services/payment.service'
+import { decryptDriverPii } from '@/services/pii.service'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
+
+type PdfFieldResponse = {
+  value?: unknown
+  imageData?: unknown
+}
+
+type PdfFieldResponseMap = Record<string, PdfFieldResponse>
+
+type ContractSignField = {
+  id?: unknown
+  field_type?: unknown
+  field_owner?: unknown
+  required?: unknown
+  default_value?: unknown
+  label?: unknown
+}
+
+function normalizeName(value: unknown): string {
+  return typeof value === 'string' ? value.replace(/\s+/g, '').trim() : ''
+}
+
+function normalizePhone(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  const digits = value.replace(/\D/g, '')
+  if (digits.startsWith('82') && digits.length >= 11) {
+    return `0${digits.slice(2)}`
+  }
+  return digits
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
+function parsePdfFieldResponses(signatureBase64: string): PdfFieldResponseMap | null {
+  try {
+    const parsed = JSON.parse(signatureBase64) as { type?: unknown; responses?: unknown }
+    if (parsed?.type !== 'pdf_fields' || !parsed.responses || Array.isArray(parsed.responses)) {
+      return null
+    }
+    return parsed.responses as PdfFieldResponseMap
+  } catch {
+    return null
+  }
+}
+
+function requiredFieldHasValue(field: ContractSignField, responses: PdfFieldResponseMap): boolean {
+  const fieldId = isNonEmptyString(field.id) ? field.id : ''
+  const response = fieldId ? responses[fieldId] : undefined
+  const defaultValue = field.default_value
+  const fieldType = field.field_type
+
+  if (fieldType === 'signature' || fieldType === 'seal') {
+    return isNonEmptyString(response?.imageData) || isNonEmptyString(defaultValue)
+  }
+
+  if (fieldType === 'checkbox') {
+    return response?.value === true || response?.value === 'true' || defaultValue === true || defaultValue === 'true'
+  }
+
+  return isNonEmptyString(response?.value) || isNonEmptyString(defaultValue)
+}
+
+function validateRequiredPdfFields(
+  signFields: ContractSignField[],
+  responses: PdfFieldResponseMap,
+): string[] {
+  return signFields
+    .filter((field) => field.required === true)
+    .filter((field) => !requiredFieldHasValue(field, responses))
+    .map((field) => (isNonEmptyString(field.label) ? field.label : isNonEmptyString(field.id) ? field.id : '필수 항목'))
+}
 
 /**
  * POST /api/contracts/sign
@@ -63,18 +137,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '필수 필드가 누락되었습니다' }, { status: 400 })
     }
 
+    if (!isNonEmptyString(certId)) {
+      return NextResponse.json({ error: '본인인증 정보가 필요합니다.' }, { status: 422 })
+    }
+
     // 3. 로그인 계정 = 요청 기사인지 확인
     //    모바일 기사 계정의 app_metadata 또는 user_metadata에서 driver_id 확인
     // ✅ 보안: app_metadata만 사용 (user_metadata는 클라이언트가 수정 가능하므로 신뢰 불가)
-    const metaDriverId = user.app_metadata?.driver_id
-    if (metaDriverId && metaDriverId !== driverId) {
+    const metaRole = user.app_metadata?.role
+    const metaDriverId = typeof user.app_metadata?.driver_id === 'string' ? user.app_metadata.driver_id : ''
+    const metaAgencyId = typeof user.app_metadata?.agency_id === 'string' ? user.app_metadata.agency_id : ''
+    if (metaRole !== 'driver' || !metaDriverId || !metaAgencyId || metaDriverId !== driverId) {
       return NextResponse.json({ error: '본인의 계약서만 서명할 수 있습니다' }, { status: 403 })
     }
 
     // 4. 계약서 존재 + driver_id 일치 + 서명 가능 상태 확인
     const { data: contract, error: fetchErr } = await supabaseAdmin
       .from('contracts')
-      .select('id, driver_id, status')
+      .select('id, agency_id, driver_id, status, template_type, sign_fields')
       .eq('id', contractId)
       .single()
 
@@ -86,6 +166,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '본인의 계약서만 서���할 수 있습니다' }, { status: 403 })
     }
 
+    if (contract.agency_id !== metaAgencyId) {
+      return NextResponse.json({ error: '본인의 계약서만 서명할 수 있습니다' }, { status: 403 })
+    }
+
     if (contract.status === 'signed') {
       return NextResponse.json({ error: '이미 서명된 계약서입니다' }, { status: 409 })
     }
@@ -94,45 +178,45 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '서명 가능한 상태가 아닙니다' }, { status: 400 })
     }
 
-    // 5. 본인인증 certId 서버 재검증 (certId가 있으면)
-    let identityVerified = false
-    if (certId) {
-      try {
-        const portoneSecret = process.env.PORTONE_V2_SECRET
-        if (portoneSecret) {
-          const verifyRes = await fetch(
-            `https://api.portone.io/identity-verifications/${encodeURIComponent(certId)}`,
-            {
-              headers: {
-                Authorization: `PortOne ${portoneSecret}`,
-                'Content-Type': 'application/json',
-              },
-            }
-          )
-          if (verifyRes.ok) {
-            const verifyData = await verifyRes.json()
-            if (verifyData.status === 'VERIFIED') {
-              identityVerified = true
-            }
-          }
-        } else {
-          // 포트원 키 없으면 certId 존재 자체로 기록 (개발 환경)
-          identityVerified = true
-        }
-      } catch (verifyErr) {
-        console.error('[ContractSign] Identity verification failed for certId:', certId, verifyErr)
-        return NextResponse.json(
-          { error: '본인인증 검증에 실패했습니다. 다시 시도해주세요.' },
-          { status: 422 }
-        )
-      }
+    const { data: rawDriver, error: driverErr } = await supabaseAdmin
+      .from('drivers')
+      .select('id, agency_id, name, phone, bank_account, birth_date')
+      .eq('id', driverId)
+      .eq('agency_id', metaAgencyId)
+      .single()
 
-      if (!identityVerified) {
+    if (driverErr || !rawDriver) {
+      return NextResponse.json({ error: '기사 정보를 확인할 수 없습니다.' }, { status: 404 })
+    }
+
+    const driver = await decryptDriverPii(rawDriver as Record<string, unknown>)
+
+    let identityVerified = false
+    try {
+      const verification = await getIdentityVerification(certId)
+      identityVerified = verification.verified
+
+      const expectedName = normalizeName(driver.name)
+      const verifiedName = normalizeName(verification.name)
+      const expectedPhone = normalizePhone(driver.phone)
+      const verifiedPhone = normalizePhone(verification.phone)
+
+      if (
+        !identityVerified ||
+        (expectedName && verifiedName && expectedName !== verifiedName) ||
+        (expectedPhone && verifiedPhone && expectedPhone !== verifiedPhone)
+      ) {
         return NextResponse.json(
-          { error: '본인인증이 완료되지 않았습니다. 인증 후 다시 시도해주세요.' },
+          { error: '본인인증 정보가 기사 정보와 일치하지 않습니다.' },
           { status: 422 }
         )
       }
+    } catch (verifyErr) {
+      console.error('[ContractSign] Identity verification failed for certId:', certId, verifyErr)
+      return NextResponse.json(
+        { error: '본인인증 검증에 실패했습니다. 다시 시도해주세요.' },
+        { status: 422 }
+      )
     }
 
     // 6. 클라이언트 IP / UA 추출
@@ -140,6 +224,26 @@ export async function POST(request: NextRequest) {
       ?? request.headers.get('x-real-ip')
       ?? '0.0.0.0'
     const signerUserAgent = request.headers.get('user-agent') ?? 'unknown'
+
+    const signFieldResponses = parsePdfFieldResponses(signatureBase64)
+    if (contract.template_type === 'pdf') {
+      if (!signFieldResponses) {
+        return NextResponse.json({ error: 'PDF 서명 필드 응답이 필요합니다.' }, { status: 400 })
+      }
+
+      const signFields = Array.isArray(contract.sign_fields)
+        ? (contract.sign_fields as ContractSignField[])
+        : []
+      const missingRequiredFields = validateRequiredPdfFields(signFields, signFieldResponses)
+      if (missingRequiredFields.length > 0) {
+        return NextResponse.json(
+          { error: `필수 서명 항목이 누락되었습니다: ${missingRequiredFields.join(', ')}` },
+          { status: 400 }
+        )
+      }
+    } else if (signFieldResponses) {
+      return NextResponse.json({ error: '텍스트 계약서는 PDF 필드 응답을 사용할 수 없습니다.' }, { status: 400 })
+    }
 
     const now = new Date().toISOString()
 
@@ -175,17 +279,6 @@ export async function POST(request: NextRequest) {
     if (sigError) {
       console.error('[ContractSign] Signature insert error:', sigError)
       return NextResponse.json({ error: '서명 기록 저장 실패' }, { status: 500 })
-    }
-
-    // 8. PDF 필드 응답 파싱 (pdf 모드일 경우)
-    let signFieldResponses = null
-    try {
-      const parsed = JSON.parse(signatureBase64)
-      if (parsed?.type === 'pdf_fields' && parsed.responses) {
-        signFieldResponses = parsed.responses
-      }
-    } catch {
-      // text 모드: signatureBase64는 일반 base64 문자열
     }
 
     // 9. 계약서 상태 업데이트

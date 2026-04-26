@@ -97,6 +97,18 @@ export interface CoupangRawRow {
   fresh_incentive: number
 }
 
+export interface RouteSettlementDetail {
+  route_code: string
+  delivery_count: number
+  return_count: number
+  driver_delivery_rate: number
+  driver_return_rate: number
+  coupang_rate: number
+  delivery_amount: number
+  return_amount: number
+  total_amount: number
+}
+
 /* ── Default column mappings per principal ── */
 
 export const DEFAULT_COLUMN_MAPPINGS: Record<string, ExcelColumnMapping> = {
@@ -355,7 +367,8 @@ export function aggregateCoupangSummaryRows(rows: CoupangSummaryRow[]): CoupangS
 
 export async function matchDrivers(
   agencyId: string,
-  parsedRows: ParsedExcelRow[]
+  parsedRows: ParsedExcelRow[],
+  principalId?: string | null
 ): Promise<{
   matched: Map<string, { driver: DriverMatch; row: ParsedExcelRow }>
   unmatched: UnmatchedRow[]
@@ -374,11 +387,31 @@ export async function matchDrivers(
   }
 
   const codes = aggregatedRows.map((r) => r.employee_code)
-  const { data } = await supabase
+  let linkedDriverIds: string[] | null = null
+
+  if (principalId) {
+    const { data: links } = await supabase
+      .from('driver_principals')
+      .select('driver_id')
+      .eq('principal_id', principalId)
+      .eq('status', 'active')
+    linkedDriverIds = (links ?? []).map((link: { driver_id: string }) => link.driver_id)
+  }
+
+  let query = supabase
     .from('drivers')
     .select('id, name, employee_code, delivery_area, is_business_owner, vat_included, principals(name)')
     .eq('agency_id', agencyId)
+    .eq('status', 'active')
     .in('employee_code', codes)
+
+  if (linkedDriverIds) {
+    query = linkedDriverIds.length > 0
+      ? query.in('id', linkedDriverIds)
+      : query.in('id', ['__no_active_driver_for_principal__'])
+  }
+
+  const { data } = await query
 
   const drivers = (data ?? []) as unknown as DriverQueryRow[]
 

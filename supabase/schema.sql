@@ -523,12 +523,7 @@ CREATE POLICY "contracts_agency_delete" ON contracts
     AND status NOT IN ('signed')
   );
 
--- 계약서: 기사 본인 — 서명 시 status 변경만 허용
--- 기사 본인 — 서명 관련 상태만 변경 허용 (content/title/template 변경 불가는 트리거로 강제)
-CREATE POLICY "contracts_driver_update" ON contracts
-  FOR UPDATE USING (
-    driver_id IN (SELECT id FROM drivers WHERE user_id = auth.uid())
-  );
+-- 계약서: 기사는 직접 UPDATE 불가. 열람/서명 상태 변경은 서버 API(service role)에서만 처리한다.
 
 -- 전자서명: INSERT만 허용 (수정/삭제 불가 — 서명 기록은 불변)
 CREATE POLICY "contract_signatures_agency_read" ON contract_signatures

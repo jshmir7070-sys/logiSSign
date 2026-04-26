@@ -5,6 +5,14 @@ import { useRouter } from 'next/navigation';
 import Badge from '@/components/shared/Badge';
 import { toastSuccess, toastError } from '@/components/shared/Toast';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
+import {
+  getWorksheet,
+  getWorksheetNames,
+  loadExcelWorkbook,
+  sheetToSafeRecords,
+  worksheetToRows,
+  type ExcelWorkbook,
+} from '@/lib/safe-xlsx';
 import { getPrincipals, getUploadMapping, saveUploadMapping, normalizeFieldConfig, UPLOAD_MAPPING_PRESETS, EXCEL_TYPE_LABELS, type Principal, type ExcelType } from '@/services/principal.service';
 import {
   parseExcelData,
@@ -202,8 +210,7 @@ export default function SettlementUploadPage() {
   const [selectedSheet, setSelectedSheet] = useState('');
   const [importMode, setImportMode] = useState<ImportMode>('calculate');
   // Store full workbook reference for sheet switching
-  const workbookRef = useRef<import('xlsx').WorkBook | null>(null);
-  const xlsxRef = useRef<typeof import('xlsx') | null>(null);
+  const workbookRef = useRef<ExcelWorkbook | null>(null);
 
   /* ── Coupang raw rows (array of arrays) ── */
   const [_coupangRawRows, setCoupangRawRows] = useState<unknown[][]>([]);
@@ -361,17 +368,16 @@ export default function SettlementUploadPage() {
     }
 
     try {
-      const XLSX = await import('xlsx');
-      xlsxRef.current = XLSX;
       const buffer = await file.arrayBuffer();
-      const wb = XLSX.read(buffer, { type: 'array' });
+      const wb = await loadExcelWorkbook(buffer);
       workbookRef.current = wb;
       setFileName(file.name);
 
       // Detect sheet types
-      const infos = detectSheetTypes(wb.SheetNames, (name) => {
-        const ws = wb.Sheets[name];
-        return XLSX.utils.sheet_to_json(ws, { header: 1 }) as unknown[][];
+      const sheetNames = getWorksheetNames(wb);
+      const infos = detectSheetTypes(sheetNames, (name) => {
+        const ws = getWorksheet(wb, name);
+        return ws ? worksheetToRows(ws) : [];
       });
       setSheetInfos(infos);
 
@@ -380,13 +386,18 @@ export default function SettlementUploadPage() {
       if (hasCoupangSummary) {
         // Coupang summary workbook (single or multi sheet)
         const summarySheet = infos.find((s) => s.detected === 'coupang_summary');
-        setSelectedSheet(summarySheet?.name ?? wb.SheetNames[0]);
+        setSelectedSheet(summarySheet?.name ?? sheetNames[0]);
         setImportMode('coupang_direct');
         setStep('sheet-select');
       } else {
         // Single sheet or generic - go to column mapping
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(ws) as Record<string, unknown>[];
+        const ws = wb.worksheets[0];
+        if (!ws) {
+          setError('엑셀 파일에 시트가 없습니다');
+          setProcessing(false);
+          return;
+        }
+        const json = sheetToSafeRecords(ws);
         if (json.length === 0) {
           setError('엑셀 파일에 데이터가 없습니다');
           setProcessing(false);
@@ -407,10 +418,10 @@ export default function SettlementUploadPage() {
 
   /* ── Load selected sheet for generic mode ── */
   function loadSheetForMapping(sheetName: string) {
-    if (!workbookRef.current || !xlsxRef.current) return;
-    const XLSX = xlsxRef.current;
-    const ws = workbookRef.current.Sheets[sheetName];
-    const json = XLSX.utils.sheet_to_json(ws) as Record<string, unknown>[];
+    if (!workbookRef.current) return;
+    const ws = getWorksheet(workbookRef.current, sheetName);
+    if (!ws) return;
+    const json = sheetToSafeRecords(ws);
     if (json.length === 0) {
       setError('선택한 시트에 데이터가 없습니다');
       return;
@@ -423,10 +434,10 @@ export default function SettlementUploadPage() {
 
   /* ── Load Coupang summary sheet ── */
   function _loadCoupangSheet(sheetName: string) {
-    if (!workbookRef.current || !xlsxRef.current) return;
-    const XLSX = xlsxRef.current;
-    const ws = workbookRef.current.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as unknown[][];
+    if (!workbookRef.current) return;
+    const ws = getWorksheet(workbookRef.current, sheetName);
+    if (!ws) return;
+    const rows = worksheetToRows(ws);
     setCoupangRawRows(rows);
   }
 
@@ -443,8 +454,7 @@ export default function SettlementUploadPage() {
     setError('');
 
     try {
-      if (!workbookRef.current || !xlsxRef.current) throw new Error('워크북을 찾을 수 없습니다');
-      const XLSX = xlsxRef.current;
+      if (!workbookRef.current) throw new Error('워크북을 찾을 수 없습니다');
       const selectedPrincipal = principals.find((principal) => principal.id === principalId);
       const fieldConfig = selectedPrincipal?.field_config
         ? normalizeFieldConfig(selectedPrincipal.field_config)
@@ -457,8 +467,8 @@ export default function SettlementUploadPage() {
         setProcessing(false);
         return;
       }
-      const rawWs = rawSheetName ? workbookRef.current.Sheets[rawSheetName] : null;
-      const rawArrayRows = rawWs ? (XLSX.utils.sheet_to_json(rawWs, { header: 1 }) as unknown[][]) : [];
+      const rawWs = rawSheetName ? getWorksheet(workbookRef.current, rawSheetName) : null;
+      const rawArrayRows = rawWs ? worksheetToRows(rawWs) : [];
       const { parsed: rawParsed } = parseCoupangRaw(rawArrayRows);
 
       // Parse 정산총괄 for pass-through amounts (프레쉬백, 추가인센, 분실파손)
@@ -466,8 +476,8 @@ export default function SettlementUploadPage() {
       let summaryParsed: import('@/services/excel-settlement.service').CoupangSummaryRow[] = [];
       const skipped: string[] = [];
       if (summarySheetName) {
-        const summaryWs = workbookRef.current.Sheets[summarySheetName];
-        const summaryRows = XLSX.utils.sheet_to_json(summaryWs, { header: 1 }) as unknown[][];
+        const summaryWs = getWorksheet(workbookRef.current, summarySheetName);
+        const summaryRows = summaryWs ? worksheetToRows(summaryWs) : [];
         const result = parseCoupangSummary(summaryRows);
         summaryParsed = result.parsed;
         skipped.push(...result.skipped);
@@ -478,7 +488,8 @@ export default function SettlementUploadPage() {
         const { results, unmatched: um } = await calculateCoupangSettlements(
           agencyId,
           summaryParsed,
-          fieldConfig
+          fieldConfig,
+          principalId || null
         );
         setSettlements(results);
         setUnmatched(um);
@@ -498,7 +509,8 @@ export default function SettlementUploadPage() {
         agencyId,
         rawParsed,
         summaryParsed,
-        fieldConfig
+        fieldConfig,
+        principalId || null
       );
       setSettlements(results);
       setUnmatched(um);
@@ -548,7 +560,7 @@ export default function SettlementUploadPage() {
         return;
       }
 
-      const { matched, unmatched: um } = await matchDrivers(agencyId, parsed);
+      const { matched, unmatched: um } = await matchDrivers(agencyId, parsed, principalId || null);
       setUnmatched(um);
 
       const mismatchCount = um.filter((item) => item.reason && item.reason !== '등록된 기사 없음').length;
@@ -579,8 +591,14 @@ export default function SettlementUploadPage() {
 
     // 엑셀 업로드 포인트 사전 확인
     try {
+      if (unmatched.length > 0) {
+        setError(`미매칭 기사 ${unmatched.length}건이 있어 저장할 수 없습니다. 기사 등록, 원청사 연결, 사번/기사명을 먼저 확인해 주세요.`);
+        setProcessing(false);
+        return;
+      }
+
       if (unmatchedRoutes.length > 0) {
-        setError('?쇱슦???④? 媛 ?몄꽕?뺤씤 湲곗궗媛 ?덉뼱 ????섏? ?딆뒿?덈떎. ?쇱슦???④?瑜?硫쇱? ?ㅼ젙?섏꽭??');
+        setError(`미설정 라우트 ${unmatchedRoutes.length}건이 있어 저장할 수 없습니다. 기사 상세에서 라우트별 단가를 먼저 설정해 주세요.`);
         setProcessing(false);
         return;
       }
@@ -598,8 +616,14 @@ export default function SettlementUploadPage() {
       }
     } catch { /* 확인 실패 시 일단 진행 */ }
 
+    if (unmatched.length > 0) {
+      setError(`미매칭 기사 ${unmatched.length}건이 있어 저장할 수 없습니다. 기사 등록, 원청사 연결, 사번/기사명을 먼저 확인해 주세요.`);
+      setProcessing(false);
+      return;
+    }
+
     if (unmatchedRoutes.length > 0) {
-      setError('?쇱슦???④? 媛 ?몄꽕?뺤씤 湲곗궗媛 ?덉뼱 ????섏? ?딆뒿?덈떎. ?쇱슦???④?瑜?硫쇱? ?ㅼ젙?섏꽭??');
+      setError(`미설정 라우트 ${unmatchedRoutes.length}건이 있어 저장할 수 없습니다. 기사 상세에서 라우트별 단가를 먼저 설정해 주세요.`);
       setProcessing(false);
       return;
     }
@@ -868,11 +892,11 @@ export default function SettlementUploadPage() {
 
             {/* Preview of selected sheet */}
             {selectedSheet && importMode === 'coupang_direct' && (() => {
-              const XLSX = xlsxRef.current;
               const wb = workbookRef.current;
-              if (!XLSX || !wb) return null;
-              const ws = wb.Sheets[selectedSheet];
-              const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as unknown[][];
+              if (!wb) return null;
+              const ws = getWorksheet(wb, selectedSheet);
+              if (!ws) return null;
+              const rows = worksheetToRows(ws);
               const headerRow = rows[4] as string[] | undefined;
               const dataRows = rows.slice(5, 10);
 
@@ -1234,10 +1258,18 @@ export default function SettlementUploadPage() {
               </p>
               <div className="text-xs text-on-surface-variant font-korean space-y-0.5">
                 {unmatched.slice(0, 5).map((u, idx) => (
-                  <p key={idx}>사번 &quot;{u.employee_code}&quot; — 등록된 기사 없음</p>
+                  <p key={idx}>
+                    사번 &quot;{u.employee_code}&quot;
+                    {u.driver_name ? ` / 엑셀 기사명 "${u.driver_name}"` : ''}
+                    {' — '}
+                    {u.reason ?? '등록된 기사 없음'}
+                  </p>
                 ))}
                 {unmatched.length > 5 && <p>... 외 {unmatched.length - 5}건</p>}
               </div>
+              <p className="text-xs text-warning/80 font-korean mt-1">
+                미매칭이 0건이어야 정산 저장이 가능합니다.
+              </p>
             </div>
           )}
 
@@ -1469,7 +1501,7 @@ export default function SettlementUploadPage() {
               </p>
               <button
                 onClick={handleSave}
-                disabled={processing}
+                disabled={processing || unmatched.length > 0 || unmatchedRoutes.length > 0}
                 className="h-11 px-8 rounded-xl bg-power-gradient text-white font-label font-semibold text-sm hover:shadow-lg transition-shadow disabled:opacity-50 font-korean"
               >
                 {processing ? '저장 중...' : '정산 확정 저장'}

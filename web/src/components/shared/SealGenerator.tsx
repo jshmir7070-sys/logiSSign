@@ -92,7 +92,7 @@ export default function SealGenerator({ defaultName = '', onComplete, onCancel }
   // 한글/한자
   const [useHanja, setUseHanja] = useState(false)
   const [hanjaOverride, setHanjaOverride] = useState('')
-  const [showDot, setShowDot] = useState(true)
+  const [showDot, setShowDot] = useState(false)
   const [editingCharIdx, setEditingCharIdx] = useState<number | null>(null)
 
   // 법인도장 중앙 텍스트
@@ -189,6 +189,8 @@ export default function SealGenerator({ defaultName = '', onComplete, onCancel }
   }
 
   const inputCls = 'h-11 px-4 rounded-xl border border-outline-variant/30 bg-surface text-sm text-on-surface font-korean focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/10 placeholder:text-on-surface-variant/40'
+  const previewImageWidth = sealSize
+  const previewImageHeight = shape === 'oval' ? Math.round(sealSize * 1.35) : sealSize
 
   return (
     <div className="space-y-0">
@@ -335,9 +337,9 @@ export default function SealGenerator({ defaultName = '', onComplete, onCancel }
             {previewUri ? (
               <>
                 <div className="p-4 rounded-2xl border border-outline-variant/20 bg-white shadow-sm"
-                  style={{ width: Math.min(sealSize + 40, 440), height: Math.min(sealSize + 40, 440), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  style={{ width: Math.min(previewImageWidth + 40, 440), height: Math.min(previewImageHeight + 40, 560), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element -- data URI from canvas, next/image not applicable */}
-                  <img src={previewUri} alt="도장 미리보기" style={{ maxWidth: sealSize, maxHeight: sealSize }} className="object-contain" />
+                  <img src={previewUri} alt="도장 미리보기" style={{ maxWidth: previewImageWidth, maxHeight: previewImageHeight }} className="object-contain" />
                 </div>
                 <p className="mt-3 text-xs text-on-surface-variant/60 font-korean">
                   {ALL_SEAL_FONTS[fontIdx]?.label} · {SHAPE_OPTIONS.find(s => s.value === shape)?.label} · {sealSize}px

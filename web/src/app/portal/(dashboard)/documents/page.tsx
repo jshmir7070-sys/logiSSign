@@ -10,13 +10,14 @@ interface DocumentFile {
   agency_id: string;
   title: string;
   file_url: string;
+  storage_path: string;
   status: string;
   field_count: number;
   created_at: string;
 }
 
-function shouldHideUnsavedDraft(status: string, fieldCount: number) {
-  return status === 'draft' && fieldCount === 0;
+function shouldHideUnsavedDraft(status: string) {
+  return status === 'draft';
 }
 
 function formatDate(value: string) {
@@ -28,6 +29,19 @@ export default function DocumentsPage() {
   const [documents, setDocuments] = useState<DocumentFile[]>([]);
   const [previewDoc, setPreviewDoc] = useState<DocumentFile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const handleSendDocument = (doc: DocumentFile) => {
+    if (doc.status !== 'ready') {
+      alert('저장 완료된 문서만 전송할 수 있습니다. 먼저 필드를 저장해 주세요.');
+      return;
+    }
+    if (doc.field_count === 0) {
+      alert('전송 전에 텍스트, 서명, 도장 등 입력 필드를 1개 이상 배치해 주세요.');
+      return;
+    }
+
+    router.push(`/portal/contracts/new?docId=${encodeURIComponent(doc.id)}`);
+  };
 
   const loadDocuments = useCallback(async (aid: string) => {
     const supabase = createBrowserSupabaseClient();
@@ -60,31 +74,22 @@ export default function DocumentsPage() {
       fieldCountMap.set(row.document_file_id, (fieldCountMap.get(row.document_file_id) ?? 0) + 1);
     }
 
-    const updatePromises: PromiseLike<unknown>[] = [];
     const nextDocuments: DocumentFile[] = data.map((doc, index) => {
       const fieldCount = fieldCountMap.get(doc.id) ?? 0;
-      let status = (doc as Record<string, unknown>).status as string;
-      if (status === 'draft' && fieldCount > 0) {
-        status = 'ready';
-        updatePromises.push(
-          supabase.from('document_files').update({ status: 'ready' }).eq('id', doc.id).then(() => undefined),
-        );
-      }
+      const status = (doc as Record<string, unknown>).status as string;
+      const storagePath = (doc as Record<string, unknown>).file_url as string;
 
       const signedRes = signedUrlResults[index] as { data: { signedUrl: string } | null };
       return {
         ...(doc as Record<string, unknown>),
-        file_url: signedRes?.data?.signedUrl ?? ((doc as Record<string, unknown>).file_url as string),
+        file_url: signedRes?.data?.signedUrl ?? storagePath,
+        storage_path: storagePath,
         field_count: fieldCount,
         status,
       } as DocumentFile;
     });
 
-    if (updatePromises.length > 0) {
-      await Promise.all(updatePromises);
-    }
-
-    setDocuments(nextDocuments.filter((doc) => !shouldHideUnsavedDraft(doc.status, doc.field_count)));
+    setDocuments(nextDocuments.filter((doc) => !shouldHideUnsavedDraft(doc.status)));
     setLoading(false);
   }, []);
 
@@ -105,15 +110,18 @@ export default function DocumentsPage() {
     })();
   }, [loadDocuments]);
 
-  const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`"${title}" 문서를 삭제하시겠습니까?`)) return;
+  const handleDelete = async (doc: DocumentFile) => {
+    if (!confirm(`"${doc.title}" 문서를 삭제하시겠습니까?`)) return;
 
     const supabase = createBrowserSupabaseClient();
-    await supabase.from('document_sign_fields').delete().eq('document_file_id', id);
-    await supabase.from('document_files').delete().eq('id', id);
+    await supabase.from('document_sign_fields').delete().eq('document_file_id', doc.id);
+    await supabase.from('document_files').delete().eq('id', doc.id);
+    if (doc.storage_path && !doc.storage_path.startsWith('http')) {
+      await supabase.storage.from('documents').remove([doc.storage_path]);
+    }
 
-    setDocuments((previous) => previous.filter((doc) => doc.id !== id));
-    setPreviewDoc((current) => (current?.id === id ? null : current));
+    setDocuments((previous) => previous.filter((item) => item.id !== doc.id));
+    setPreviewDoc((current) => (current?.id === doc.id ? null : current));
   };
 
   const handleCreateTemplateFromDoc = (doc: DocumentFile) => {
@@ -148,6 +156,7 @@ export default function DocumentsPage() {
           <h1 className="text-2xl font-headline font-bold text-on-surface font-korean">내 문서함</h1>
           <p className="mt-1 text-sm text-on-surface-variant font-korean">
             저장한 계약 서류를 파일처럼 모아 보고, 클릭하면 크게 미리본 뒤 바로 템플릿 만들기나 필드 편집으로 이어집니다.
+            전송하기를 누르면 카테고리와 등록 기사 대상을 선택해 바로 보낼 수 있습니다.
           </p>
         </div>
 
@@ -219,7 +228,7 @@ export default function DocumentsPage() {
           </li>
           <li className="flex items-start gap-2">
             <span className="text-primary mt-0.5">2.</span>
-            저장된 문서를 클릭하면 크게 미리본 뒤 필드 편집이나 템플릿 만들기로 바로 이어집니다.
+            저장된 문서를 클릭하면 크게 미리본 뒤 수정, 삭제, 전송으로 바로 이어집니다.
           </li>
           <li className="flex items-start gap-2">
             <span className="text-primary mt-0.5">3.</span>
@@ -241,7 +250,7 @@ export default function DocumentsPage() {
               <div>
                 <h2 className="text-lg font-bold text-on-surface font-korean">{previewDoc.title}</h2>
                 <p className="text-xs text-on-surface-variant font-korean">
-                  문서를 확인한 뒤 템플릿 만들기 또는 필드 편집을 진행하세요.
+                  문서를 확인한 뒤 수정, 삭제 또는 등록 기사 대상 전송을 진행하세요.
                 </p>
               </div>
               <button
@@ -278,7 +287,7 @@ export default function DocumentsPage() {
               <div className="flex flex-wrap items-center justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => handleDelete(previewDoc.id, previewDoc.title)}
+                  onClick={() => handleDelete(previewDoc)}
                   className="h-10 px-4 rounded-xl text-error text-sm font-korean hover:bg-error/10 transition-colors"
                 >
                   삭제
@@ -295,7 +304,14 @@ export default function DocumentsPage() {
                   onClick={() => router.push(`/portal/contracts/field-editor?docId=${previewDoc.id}&from=documents`)}
                   className="h-10 px-4 rounded-xl bg-primary/10 text-primary text-sm font-semibold font-korean hover:bg-primary/20 transition-colors"
                 >
-                  필드 편집
+                  수정/필드 편집
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSendDocument(previewDoc)}
+                  className="h-10 px-5 rounded-xl bg-tertiary text-white text-sm font-semibold font-korean hover:shadow-md transition-shadow"
+                >
+                  전송하기
                 </button>
                 <button
                   type="button"

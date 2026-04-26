@@ -36,7 +36,7 @@ import {
   getSignFields as getDocumentSignFields,
   saveSignFields as saveDocumentSignFields,
 } from '@/services/document-sign-field.service'
-import * as pdfjsLib from 'pdfjs-dist'
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs'
 
 // PDF.js worker 설정 (로컬 파일 — CSP 차단 방지)
 if (typeof window !== 'undefined') {
@@ -313,7 +313,7 @@ function ContractFieldEditorPage() {
       canvas.height = viewport.height
       const ctx = canvas.getContext('2d')
       if (!ctx) return
-      await page.render({ canvasContext: ctx, viewport }).promise
+      await page.render({ canvas, canvasContext: ctx, viewport }).promise
     } catch (err) {
       console.error('PDF 페이지 렌더링 실패:', err)
     }
@@ -326,7 +326,7 @@ function ContractFieldEditorPage() {
       try {
         const loadingTask = pdfjsLib.getDocument({
           url: pdfUrl,
-          cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/cmaps/',
+          cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.6.205/cmaps/',
           cMapPacked: true,
           withCredentials: false,
         })
@@ -619,22 +619,10 @@ function ContractFieldEditorPage() {
           }
         }
       }
-      const fieldCountMap = new Map<string, number>()
-      if (docFiles && docFiles.length > 0) {
-        const { data: fieldRows } = await supabase
-          .from('document_sign_fields')
-          .select('document_file_id')
-          .in('document_file_id', docFiles.map((doc) => doc.id))
-        for (const row of fieldRows ?? []) {
-          fieldCountMap.set(row.document_file_id, (fieldCountMap.get(row.document_file_id) ?? 0) + 1)
-        }
-      }
-
-      // 문서함 파일들 (삭제된 문서와 저장되지 않은 draft 제외)
+      // 문서함 파일들 (삭제된 문서와 저장되지 않은 초안 제외)
       if (docFiles) {
         for (const doc of docFiles as { id: string; title: string; file_url: string; status: string }[]) {
-          const fieldCount = fieldCountMap.get(doc.id) ?? 0
-          if (doc.file_url && doc.status !== 'deleted' && !(doc.status === 'draft' && fieldCount === 0)) {
+          if (doc.file_url && doc.status !== 'deleted' && doc.status !== 'draft') {
             const storagePath = doc.file_url.startsWith('http') ? doc.file_url.split('/documents/')[1] : doc.file_url
             if (storagePath) {
               const { data: signed } = await supabase.storage.from('documents').createSignedUrl(decodeURIComponent(storagePath), 3600)

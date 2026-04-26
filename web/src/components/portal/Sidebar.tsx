@@ -45,17 +45,20 @@ const navItems: NavItem[] = [
     featureKey: 'dashboard',
   },
   {
-    label: '기사 관리',
+    label: '기사/거래처',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
         <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
       </svg>
     ),
     href: '/portal/drivers',
-    featureKey: 'drivers',
+    children: [
+      { label: '기사 관리', href: '/portal/drivers', featureKey: 'drivers' },
+      { label: '거래처/정산 기준', href: '/portal/principals', featureKey: 'settlements.basic' },
+    ],
   },
   {
-    label: '계약서 관리',
+    label: '계약/문서 관리',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
         <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
@@ -64,16 +67,14 @@ const navItems: NavItem[] = [
     href: '/portal/contracts',
     featureKey: 'contracts',
     children: [
-      { label: '신규 계약 발송', href: '/portal/contracts/new', featureKey: 'contracts' },
+      { label: '일괄 전송', href: '/portal/contracts/new', featureKey: 'contracts' },
       { label: '계약서 목록', href: '/portal/contracts', featureKey: 'contracts' },
-      { label: '템플릿 만들기', href: '/portal/contracts/templates', featureKey: 'contracts.templates' },
-      { label: '내 문서함', href: '/portal/documents', featureKey: 'contracts' },
-      { label: '문서/서류 전송', href: '/portal/documents/send', featureKey: 'contracts' },
+      { label: '템플릿·문서함', href: '/portal/contracts/templates', featureKey: 'contracts.templates' },
       { label: '변경 이력', href: '/portal/amendments', featureKey: 'contracts' },
     ],
   },
   {
-    label: '정산 관리',
+    label: '정산/매출 관리',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
         <path d="M4 10v7h3v-7H4zm6 0v7h3v-7h-3zM2 22h19v-3H2v3zm14-12v7h3v-7h-3zm-4.5-9L2 6v2h19V6l-9.5-5z" />
@@ -82,33 +83,26 @@ const navItems: NavItem[] = [
     href: '/portal/settlements/generate',
     featureKey: 'settlements.basic',
     children: [
-      { label: '거래처/정산 기준 관리', href: '/portal/principals', featureKey: 'settlements.basic' },
       { label: '정산 업로드', href: '/portal/settlements/upload', featureKey: 'settlements.upload' },
-      { label: '정산 생성', href: '/portal/settlements/generate', featureKey: 'settlements.basic' },
-      { label: '정산 직접 편집', href: '/portal/settlements/builder', featureKey: 'settlements.builder' },
+      { label: '정산 생성/전송', href: '/portal/settlements/generate', featureKey: 'settlements.basic' },
+      { label: '직접 편집', href: '/portal/settlements/builder', featureKey: 'settlements.builder' },
       { label: '생성 이력', href: '/portal/settlements/history', featureKey: 'settlements.basic' },
       { label: '세금계산서', href: '/portal/tax-invoices', featureKey: 'settlements.tax' },
+      { label: '매출 리포트', href: '/portal/reports', featureKey: 'reports' },
     ],
   },
   {
-    label: '매출 리포트',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z" />
-      </svg>
-    ),
-    href: '/portal/reports',
-    featureKey: 'reports',
-  },
-  {
-    label: '공지 관리',
+    label: '공지/가이드',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
         <path d="M18 11v2h4v-2h-4zm-2 6.61c.96.71 2.21 1.65 3.2 2.39.4-.53.8-1.07 1.2-1.6-.99-.74-2.24-1.68-3.2-2.4-.4.54-.8 1.08-1.2 1.61zM20.4 5.6c-.4-.53-.8-1.07-1.2-1.6-.99.74-2.24 1.68-3.2 2.4.4.53.8 1.07 1.2 1.6.96-.72 2.21-1.65 3.2-2.4zM4 9c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h1l5 3V6L5 9H4zm11.5 3c0-1.33-.58-2.53-1.5-3.35v6.69c.92-.81 1.5-2.01 1.5-3.34z" />
       </svg>
     ),
     href: '/portal/notices',
-    featureKey: 'notices',
+    children: [
+      { label: '공지 관리', href: '/portal/notices', featureKey: 'notices' },
+      { label: '사용 가이드', href: '/portal/guide' },
+    ],
   },
   {
     label: '설정',
@@ -119,15 +113,6 @@ const navItems: NavItem[] = [
     ),
     href: '/portal/settings',
     featureKey: 'settings',
-  },
-  {
-    label: '사용 가이드',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z" />
-      </svg>
-    ),
-    href: '/portal/guide',
   },
 ];
 
@@ -142,7 +127,7 @@ export default function Sidebar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [expandedItem, setExpandedItem] = useState<string | null>('정산 관리');
+  const [expandedItem, setExpandedItem] = useState<string | null>('계약/문서 관리');
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
   const isParentActive = (item: NavItem) => item.children?.some((child) => isActive(child.href)) || isActive(item.href);

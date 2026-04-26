@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo, useRef } from 'react';
 import Badge from '@/components/shared/Badge';
 import { toastSuccess, toastWarning } from '@/components/shared/Toast';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
+import { downloadRowsAsXlsx, loadExcelWorkbook, sheetToSafeRecords } from '@/lib/safe-xlsx';
 import { getPrincipals, type Principal, type ItemType, ITEM_LABELS, normalizeFieldConfig, buildExcelHeaders, type SettlementDisplayConfig, DEFAULT_SETTLEMENT_DISPLAY } from '@/services/principal.service';
 import {
   getSettlements,
@@ -31,6 +32,10 @@ const statusVariant: Record<string, 'success' | 'warning' | 'error' | 'default'>
 
 function formatKRW(amount: number): string {
   return `₩${amount.toLocaleString('ko-KR')}`;
+}
+
+function normalizeMatchingText(value: string | null | undefined): string {
+  return String(value ?? '').trim().replace(/\s+/g, '').toLowerCase();
 }
 
 function getYearMonthOptions(): { value: string; label: string }[] {
@@ -304,12 +309,12 @@ export default function SettlementsGeneratePage() {
       }
     }
 
-    const XLSX = await import('xlsx');
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = headers.map(() => ({ wch: 15 }));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '정산');
-    XLSX.writeFile(wb, `${principal.name}_정산양식_${yearMonth}.xlsx`);
+    await downloadRowsAsXlsx(
+      rows,
+      '정산',
+      `${principal.name}_정산양식_${yearMonth}.xlsx`,
+      headers.map(() => 15)
+    );
   }
 
   /* ── Excel Upload & Parse ── */
@@ -324,10 +329,13 @@ export default function SettlementsGeneratePage() {
     const fc = normalizeFieldConfig(principal.field_config);
 
     const data = await file.arrayBuffer();
-    const XLSX = await import('xlsx');
-    const wb = XLSX.read(data);
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(ws);
+    const workbook = await loadExcelWorkbook(data);
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) {
+      toastWarning('엑셀 파일에 시트가 없습니다');
+      return;
+    }
+    const rows = sheetToSafeRecords(worksheet);
 
     if (rows.length === 0) {
       toastWarning('엑셀 파일에 데이터가 없습니다');
@@ -336,24 +344,62 @@ export default function SettlementsGeneratePage() {
 
     const supabase = createBrowserSupabaseClient();
 
-    // Get all drivers with custom_values (for unit prices)
-    const { data: drivers } = await supabase
-      .from('drivers')
-      .select('id, name, employee_code, custom_values')
-      .eq('agency_id', agencyId!);
+    const { data: links } = await supabase
+      .from('driver_principals')
+      .select('driver_id')
+      .eq('principal_id', principal.id)
+      .eq('status', 'active');
+    const linkedDriverIds = (links ?? []).map((link: { driver_id: string }) => link.driver_id);
+
+    const { data: drivers } = linkedDriverIds.length > 0
+      ? await supabase
+        .from('drivers')
+        .select('id, name, employee_code, custom_values')
+        .eq('agency_id', agencyId!)
+        .eq('status', 'active')
+        .in('id', linkedDriverIds)
+      : { data: [] };
     const driverList = (drivers ?? []) as { id: string; name: string; employee_code: string | null; custom_values: Record<string, unknown> | null }[];
+    const driverByEmployeeCode = new Map<string, { id: string; name: string; employee_code: string | null; custom_values: Record<string, unknown> | null }>();
+    const duplicateEmployeeCodes = new Set<string>();
+
+    for (const driver of driverList) {
+      const code = String(driver.employee_code ?? '').trim();
+      if (!code) continue;
+      if (driverByEmployeeCode.has(code)) {
+        duplicateEmployeeCodes.add(code);
+        continue;
+      }
+      driverByEmployeeCode.set(code, driver);
+    }
 
     let created = 0;
     let skipped = 0;
     const itemTypes: ItemType[] = ['delivery', 'return', 'pickup'];
+    const failedRows: string[] = [];
+    const settlementRows: Record<string, unknown>[] = [];
 
-    for (const row of rows) {
+    for (const [index, row] of rows.entries()) {
       const nameVal = String(row['기사명'] ?? '').trim();
       const codeVal = String(row['사번'] ?? '').trim();
-      const driver = driverList.find((d) =>
-        (codeVal && d.employee_code === codeVal) || d.name === nameVal
-      );
-      if (!driver) { skipped++; continue; }
+      if (!codeVal) {
+        failedRows.push(`${index + 2}행: 사번이 비어 있습니다.`);
+        continue;
+      }
+      if (duplicateEmployeeCodes.has(codeVal)) {
+        failedRows.push(`${index + 2}행: 사번 "${codeVal}"으로 등록된 기사가 2명 이상입니다.`);
+        continue;
+      }
+
+      const driver = driverByEmployeeCode.get(codeVal);
+      if (!driver) {
+        failedRows.push(`${index + 2}행: 사번 "${codeVal}"이 선택 원청사의 활성 기사에 없습니다.`);
+        continue;
+      }
+      if (nameVal && normalizeMatchingText(nameVal) !== normalizeMatchingText(driver.name)) {
+        failedRows.push(`${index + 2}행: 기사명 불일치 (엑셀: ${nameVal} / 등록: ${driver.name})`);
+        continue;
+      }
 
       let deliveryCount = 0, deliveryAmount = 0;
       let returnCount = 0, returnAmount = 0;
@@ -427,7 +473,7 @@ export default function SettlementsGeneratePage() {
       const totalDeduction = customDeductionTotal;
       const netAmount = totalAmount - totalDeduction;
 
-      const settlementData = {
+      settlementRows.push({
         agency_id: agencyId!,
         driver_id: driver.id,
         principal_id: principal.id,
@@ -444,8 +490,15 @@ export default function SettlementsGeneratePage() {
         deduction_detail: Object.keys(deductionDetail).length > 0 ? deductionDetail : null,
         net_amount: netAmount,
         status: 'draft',
-      };
+      });
+    }
 
+    if (failedRows.length > 0) {
+      toastWarning(`업로드 중단: 기사 매칭 오류 ${failedRows.length}건이 있습니다. ${failedRows.slice(0, 3).join(' / ')}`);
+      return;
+    }
+
+    for (const settlementData of settlementRows) {
       const { error } = await supabase
         .from('settlements')
         .upsert(settlementData as never, { onConflict: 'agency_id,driver_id,principal_id,year_month' });
