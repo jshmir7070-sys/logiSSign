@@ -157,36 +157,65 @@ async function linkDriverToUser(params: {
   return error ? error.message : null
 }
 
-async function updateDriverUserMetadata(params: {
+type AuthMetadataSnapshot = {
+  user_metadata: Record<string, unknown>
+  app_metadata: Record<string, unknown>
+}
+
+async function captureAuthMetadata(userId: string): Promise<AuthMetadataSnapshot | null> {
+  const currentUser = await supabaseAdmin.auth.admin.getUserById(userId)
+  const existingUser = currentUser.data.user
+  if (!existingUser) return null
+  return {
+    user_metadata: { ...(existingUser.user_metadata ?? {}) },
+    app_metadata: { ...(existingUser.app_metadata ?? {}) },
+  }
+}
+
+async function applyDriverAuthMetadata(params: {
   userId: string
   name: string
   agencyId: string
   driver: DriverLookupRow
-  password?: string
-}) {
-  const currentUser = await supabaseAdmin.auth.admin.getUserById(params.userId)
-  const existingUser = currentUser.data.user
-
+  baseline: AuthMetadataSnapshot
+}): Promise<string | null> {
   const userMetadata = {
-    ...(existingUser?.user_metadata ?? {}),
+    ...params.baseline.user_metadata,
     name: params.name,
     employee_code: params.driver.employee_code,
     driver_code: params.driver.driver_code,
   }
 
   const appMetadata = {
-    ...(existingUser?.app_metadata ?? {}),
+    ...params.baseline.app_metadata,
     role: 'driver',
     agency_id: params.agencyId,
     driver_id: params.driver.id,
     driver_code: params.driver.driver_code,
   }
 
-  await supabaseAdmin.auth.admin.updateUserById(params.userId, {
-    ...(params.password ? { password: params.password } : {}),
+  const { error } = await supabaseAdmin.auth.admin.updateUserById(params.userId, {
     user_metadata: userMetadata,
     app_metadata: appMetadata,
   })
+
+  return error ? error.message : null
+}
+
+async function restoreAuthMetadata(userId: string, snapshot: AuthMetadataSnapshot): Promise<void> {
+  try {
+    await supabaseAdmin.auth.admin.updateUserById(userId, {
+      user_metadata: snapshot.user_metadata,
+      app_metadata: snapshot.app_metadata,
+    })
+  } catch (rollbackError) {
+    console.error('[driver-signup] auth metadata rollback failed', rollbackError)
+  }
+}
+
+async function updateDriverUserPassword(userId: string, password: string): Promise<string | null> {
+  const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, { password })
+  return error ? error.message : null
 }
 
 export async function POST(request: NextRequest) {
@@ -273,8 +302,21 @@ export async function POST(request: NextRequest) {
     })
 
     if (!createResult.error && createResult.data.user) {
-      if (driver.user_id && driver.user_id !== createResult.data.user.id) {
-        await supabaseAdmin.auth.admin.deleteUser(createResult.data.user.id)
+      const newUserId = createResult.data.user.id
+
+      const cleanupNewUser = async (reason: string) => {
+        try {
+          const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(newUserId)
+          if (deleteError) {
+            console.error('[driver-signup] auth user cleanup failed', { newUserId, reason, error: deleteError.message })
+          }
+        } catch (cleanupError) {
+          console.error('[driver-signup] auth user cleanup threw', { newUserId, reason, cleanupError })
+        }
+      }
+
+      if (driver.user_id && driver.user_id !== newUserId) {
+        await cleanupNewUser('driver-already-linked')
         return NextResponse.json(
           { error: '이 기사 고유코드는 이미 다른 계정과 연결되어 있습니다. 대리점에 확인해주세요.' },
           { status: 409 },
@@ -283,7 +325,7 @@ export async function POST(request: NextRequest) {
 
       const linkError = await linkDriverToUser({
         driver,
-        userId: createResult.data.user.id,
+        userId: newUserId,
         name: trimmedName,
         email: trimmedEmail,
         phone: trimmedPhone,
@@ -291,13 +333,13 @@ export async function POST(request: NextRequest) {
       })
 
       if (linkError) {
-        await supabaseAdmin.auth.admin.deleteUser(createResult.data.user.id)
+        await cleanupNewUser('driver-link-failed')
         return NextResponse.json({ error: linkError }, { status: 500 })
       }
 
       return NextResponse.json({
         success: true,
-        userId: createResult.data.user.id,
+        userId: newUserId,
         driverId: driver.id,
         driverCode: driver.driver_code,
         agencyName: agency.name,
@@ -355,6 +397,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 원자성 보장 순서:
+    //   (1) 기존 auth 메타데이터 스냅샷 캡처
+    //   (2) auth 메타데이터 갱신 (driver_id, agency_id, role 등) — 실패 시 drivers 미터치, 즉시 중단
+    //   (3) drivers 행 갱신 — 실패 시 (2)를 원복해서 반쪽 상태 방지
+    //   (4) 비밀번호 갱신 — 가장 마지막 단계 (실패해도 재로그인 시 비번 재설정으로 복구 가능)
+    const baseline = await captureAuthMetadata(foundUser.id)
+    if (!baseline) {
+      return NextResponse.json(
+        { error: '기존 계정 정보를 조회하지 못했습니다. 잠시 후 다시 시도해주세요.' },
+        { status: 500 },
+      )
+    }
+
+    const metadataError = await applyDriverAuthMetadata({
+      userId: foundUser.id,
+      name: trimmedName,
+      agencyId: agency.id,
+      driver,
+      baseline,
+    })
+
+    if (metadataError) {
+      return NextResponse.json({ error: `계정 메타데이터 갱신에 실패했습니다: ${metadataError}` }, { status: 500 })
+    }
+
     const linkError = await linkDriverToUser({
       driver,
       userId: foundUser.id,
@@ -365,16 +432,27 @@ export async function POST(request: NextRequest) {
     })
 
     if (linkError) {
+      await restoreAuthMetadata(foundUser.id, baseline)
       return NextResponse.json({ error: linkError }, { status: 500 })
     }
 
-    await updateDriverUserMetadata({
-      userId: foundUser.id,
-      name: trimmedName,
-      agencyId: agency.id,
-      driver,
-      password,
-    })
+    const passwordError = await updateDriverUserPassword(foundUser.id, password)
+    if (passwordError) {
+      // drivers/auth 메타데이터는 이미 정상 — 비밀번호만 미반영. 사용자에게 비번 재설정 안내.
+      console.error('[driver-signup] password update failed after successful link', {
+        userId: foundUser.id,
+        error: passwordError,
+      })
+      return NextResponse.json({
+        success: true,
+        userId: foundUser.id,
+        driverId: driver.id,
+        driverCode: driver.driver_code,
+        agencyName: agency.name,
+        passwordSet: false,
+        warning: '계정은 정상 연결되었지만 비밀번호 갱신에 실패했습니다. 비밀번호 재설정 후 로그인해주세요.',
+      })
+    }
 
     const wasInactive = driver.status === 'inactive'
 
@@ -386,6 +464,7 @@ export async function POST(request: NextRequest) {
       agencyName: agency.name,
       reinstated: oldAgencyId === agency.id && wasInactive,
       transferred: oldAgencyId !== undefined && oldAgencyId !== agency.id,
+      passwordSet: true,
     })
   } catch (error) {
     return NextResponse.json(
