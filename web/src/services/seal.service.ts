@@ -264,6 +264,100 @@ export function getHanjaCandidates(char: string): string[] {
 }
 
 /**
+ * 법인도장 직함 한글 → 한자 변환 사전.
+ * 일반 인명용 HANGUL_TO_HANJA는 대→大, 자→子, 사→史 같이 의미가 다르므로
+ * 직함 문맥에서 자주 쓰이는 관용 한자 조합을 별도로 매핑한다.
+ */
+const TITLE_PHRASE_HANJA: Record<string, string> = {
+  // 표준 직함
+  '대표자인': '代表者印',
+  '대표이사인': '代表理事印',
+  '대표이사印': '代表理事印',
+  '대표이사之印': '代表理事之印',
+  '대표인': '代表印',
+  '대표자': '代表者',
+  '대표이사': '代表理事',
+  '대표': '代表',
+  '회장인': '會長印',
+  '회장': '會長',
+  '사장인': '社長印',
+  '사장': '社長',
+  '부사장인': '副社長印',
+  '부사장': '副社長',
+  '전무이사': '專務理事',
+  '상무이사': '常務理事',
+  '이사장인': '理事長印',
+  '이사장': '理事長',
+  '이사인': '理事印',
+  '이사': '理事',
+  '감사인': '監査印',
+  '감사': '監査',
+  '직원': '職員',
+  '본부장': '本部長',
+  '지점장': '支店長',
+  '실장': '室長',
+  '팀장': '팀長',
+  '부장': '部長',
+  '차장': '次長',
+  '과장': '課長',
+  '주임': '主任',
+}
+
+/**
+ * 직함 문맥에서 단일 글자가 어떤 한자에 우선 매핑돼야 하는지 (인명 매핑과 다른 케이스).
+ */
+const TITLE_CHAR_OVERRIDE: Record<string, string> = {
+  '대': '代',
+  '자': '者',
+  '이': '理',
+  '사': '事',
+  '장': '長',
+  '직': '職',
+  '원': '員',
+  '회': '會',
+  '감': '監',
+  '주': '主',
+  '임': '任',
+  '부': '部',
+  '차': '次',
+  '과': '課',
+  '실': '室',
+  '점': '店',
+  '본': '本',
+  '전': '專',
+  '상': '常',
+  '관': '管',
+  '리': '理',
+  // 인은 마지막 글자 처리에서 印 으로 강제 (별도 처리)
+}
+
+/**
+ * 법인도장 직함 한자 변환 — 정확한 구문 매핑 우선, 실패 시 글자별 직함-우선 한자 매핑.
+ * 마지막 글자가 "인"이면 항상 印 으로 변환 (도장 의미).
+ */
+export function corporateTitleToHanja(title: string): string {
+  if (!title) return title
+  const exact = TITLE_PHRASE_HANJA[title]
+  if (exact) return exact
+
+  // 글자별 변환
+  const chars = title.split('')
+  const lastIdx = chars.length - 1
+  return chars
+    .map((ch, idx) => {
+      // 마지막 글자가 "인"이면 무조건 印
+      if (idx === lastIdx && ch === '인') return '印'
+      // 직함 문맥 우선 매핑
+      const override = TITLE_CHAR_OVERRIDE[ch]
+      if (override) return override
+      // 그 외엔 일반 인명 한자 1순위
+      const candidates = HANGUL_TO_HANJA[ch]
+      return candidates ? candidates[0] : ch
+    })
+    .join('')
+}
+
+/**
  * 인감도장 서체 — 실무 8종
  *
  * 한글 서체 (4종):
@@ -381,24 +475,8 @@ export function getSealSizeById(id: SealSizeId): SealSizeOption | undefined {
 
 // 법인도장 중앙 텍스트 프리셋 (실무 기준) — 기본값: 대표자인
 const CORPORATE_TITLES = ['대표자인', '대표이사인', '대표이사印', '대표이사之印']
-
-/** 법인도장 직함 한자 변환 매핑 */
-const CORPORATE_TITLE_HANJA: Record<string, string> = {
-  '대표자인': '代表者印',
-  '대표이사인': '代表理事印',
-  '대표이사印': '代表理事印',
-  '대표이사之印': '代表理事之印',
-}
-
-/** 법인도장 직함을 한자로 변환. 매핑에 없으면 글자 단위로 시도 */
-function corporateTitleToHanja(title: string): string {
-  if (CORPORATE_TITLE_HANJA[title]) return CORPORATE_TITLE_HANJA[title]
-  // 글자 단위 변환 시도
-  return title.split('').map(ch => {
-    const candidates = getHanjaCandidates(ch)
-    return candidates.length > 0 ? candidates[0] : ch
-  }).join('')
-}
+// 위 corporateTitleToHanja 정의는 TITLE_PHRASE_HANJA + TITLE_CHAR_OVERRIDE 기반
+// 통합 버전(상단)에서 처리. 이전 4-항목 매핑은 그쪽으로 이관됨.
 
 /* ══════════════════════ 도장 이미지 생성 (Canvas) ══════════════════════ */
 
@@ -493,7 +571,14 @@ export interface RenderSealOptions {
 
 /** 단일 도장 Canvas 렌더링 → data URI (실시간 미리보기에서도 사용) */
 export function renderSealCanvas(opts: RenderSealOptions): string {
-  const { name, category, shape, fontFamily, fontWeight, size, corporateTitle, intaglio = false, extraStroke: _extraStroke = 0, showDot = false, fontSizeScale = 1.0, letterSpacingScale = 1.0, useHanja = false } = opts
+  const { name, category, shape, fontFamily, fontWeight, size, corporateTitle: rawCorporateTitle, intaglio = false, extraStroke: _extraStroke = 0, showDot = false, fontSizeScale = 1.0, letterSpacingScale = 1.0, useHanja = false } = opts
+  // 한자 모드일 때 법인 직함도 한자로 변환 (예: "대표자인" → "代表者印").
+  // rawCorporateTitle 이 비어 있는 케이스는 내부 default "대표자인" 이 적용되므로
+  // 그 default 도 미리 변환된 상태로 넘겨야 한다.
+  const effectiveCorporateTitle = rawCorporateTitle ?? (category === 'corporate' ? '대표자인' : undefined)
+  const corporateTitle = useHanja && category === 'corporate' && effectiveCorporateTitle
+    ? corporateTitleToHanja(effectiveCorporateTitle)
+    : effectiveCorporateTitle
   const canvas = document.createElement('canvas')
 
   // 타원형은 세로가 더 길도록 (전통 한국 인감 형태 — 세로 타원)
