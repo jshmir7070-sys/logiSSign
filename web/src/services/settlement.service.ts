@@ -1,5 +1,4 @@
 import { createBrowserSupabaseClient } from '@/lib/supabase'
-import { calcVAT, calcWithholding } from '@/config/constants'
 
 export interface SettlementWithDriver {
   id: string
@@ -155,90 +154,37 @@ export async function sendSettlements(
   }
 }
 
-export async function confirmSettlements(
+/**
+ * 정산서를 확정하고 세금계산서를 같은 트랜잭션 단위로 생성합니다.
+ * 세금계산서 생성이 실패하면 정산 상태도 sent로 되돌립니다.
+ */
+export async function confirmSettlementsWithTaxInvoices(
   settlementIds: string[]
-): Promise<{ count: number; error: string | null }> {
-  const supabase = createBrowserSupabaseClient()
+): Promise<{ confirmed: number; taxInvoicesCreated: number; error: string | null }> {
   try {
-    const { error, count } = await supabase
-      .from('settlements')
-      .update({ status: 'confirmed' } as never)
-      .in('id', settlementIds)
-      .eq('status', 'sent')
-    if (error) throw error
-    return { count: count ?? settlementIds.length, error: null }
-  } catch (err) {
-    return { count: 0, error: err instanceof Error ? err.message : 'Failed to confirm' }
-  }
-}
-
-export async function generateTaxInvoicesFromSettlements(
-  agencyId: string,
-  settlementIds: string[],
-  yearMonth: string
-): Promise<{ created: number; error: string | null }> {
-  const supabase = createBrowserSupabaseClient()
-  try {
-    // Fetch confirmed settlements with driver info
-    const { data: settlements, error: fetchErr } = await supabase
-      .from('settlements')
-      .select('id, driver_id, total_amount, net_amount, vat_amount, is_business_owner, vat_included')
-      .in('id', settlementIds)
-      .eq('status', 'confirmed')
-    if (fetchErr) throw fetchErr
-
-    const rows = (settlements ?? []) as {
-      id: string; driver_id: string | null;
-      total_amount: number; net_amount: number; vat_amount: number;
-      is_business_owner: boolean; vat_included: boolean;
-    }[]
-
-    const invoices = rows.map((s) => {
-      if (s.is_business_owner) {
-        // 사업자: tax invoice
-        const supplyAmount = s.vat_included
-          ? Math.round(s.net_amount / 1.1)
-          : s.net_amount
-        const taxAmount = s.vat_included
-          ? s.net_amount - supplyAmount
-          : calcVAT(s.net_amount)
-        return {
-          agency_id: agencyId,
-          settlement_id: s.id,
-          driver_id: s.driver_id,
-          year_month: yearMonth,
-          supply_amount: supplyAmount,
-          tax_amount: taxAmount,
-          total_amount: supplyAmount + taxAmount,
-          invoice_type: 'vat_invoice',
-          status: 'pending',
-        }
-      } else {
-        // 비사업자: 원천징수
-        const withholdingAmount = calcWithholding(s.net_amount)
-        return {
-          agency_id: agencyId,
-          settlement_id: s.id,
-          driver_id: s.driver_id,
-          year_month: yearMonth,
-          supply_amount: s.net_amount,
-          tax_amount: withholdingAmount,
-          total_amount: s.net_amount - withholdingAmount,
-          invoice_type: 'withholding_3_3',
-          status: 'issued',
-        }
-      }
+    const res = await fetch('/api/settlements/confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ settlementIds }),
     })
-
-    if (invoices.length === 0) return { created: 0, error: null }
-
-    const { error: insertErr } = await supabase
-      .from('tax_invoices')
-      .upsert(invoices as never[], { onConflict: 'settlement_id' })
-    if (insertErr) throw insertErr
-
-    return { created: invoices.length, error: null }
+    const result = await res.json()
+    if (!res.ok) {
+      return {
+        confirmed: 0,
+        taxInvoicesCreated: 0,
+        error: result.error || '확정 실패',
+      }
+    }
+    return {
+      confirmed: result.confirmed ?? 0,
+      taxInvoicesCreated: result.taxInvoicesCreated ?? 0,
+      error: null,
+    }
   } catch (err) {
-    return { created: 0, error: err instanceof Error ? err.message : 'Failed to process invoices' }
+    return {
+      confirmed: 0,
+      taxInvoicesCreated: 0,
+      error: err instanceof Error ? err.message : 'Failed to confirm',
+    }
   }
 }

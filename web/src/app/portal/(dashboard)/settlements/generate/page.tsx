@@ -9,8 +9,7 @@ import {
   getSettlements,
   getSettlementSummary,
   sendSettlements,
-  confirmSettlements,
-  generateTaxInvoicesFromSettlements,
+  confirmSettlementsWithTaxInvoices,
   type SettlementWithDriver,
   type SettlementSummary,
 } from '@/services/settlement.service';
@@ -211,22 +210,18 @@ export default function SettlementsGeneratePage() {
     setActionLoading(false);
   }
 
-  /* ── Confirm settlements (sent → confirmed) → auto-generate tax invoices ── */
+  /* ── Confirm settlements + tax invoices in one server transaction ── */
   async function handleConfirmAll() {
     const sentIds = settlements.filter((s) => s.status === 'sent').map((s) => s.id);
     if (sentIds.length === 0) { showToast('확정할 정산서가 없습니다'); return; }
     if (!confirm(`${sentIds.length}건의 정산서를 확정하고 세금계산서를 생성하시겠습니까?`)) return;
     setActionLoading(true);
-    const confirmResult = await confirmSettlements(sentIds);
-    if (confirmResult.error) {
-      showToast(`확정 오류: ${confirmResult.error}`);
-      setActionLoading(false);
-      return;
+    const result = await confirmSettlementsWithTaxInvoices(sentIds);
+    if (result.error) {
+      showToast(`확정 오류: ${result.error}`);
+    } else {
+      showToast(`${result.confirmed}건 확정, 세금계산서 ${result.taxInvoicesCreated}건 생성`);
     }
-    // Auto-generate tax invoices
-    const taxResult = await generateTaxInvoicesFromSettlements(agencyId!, sentIds, yearMonth);
-    if (taxResult.error) showToast(`세금계산서 생성 오류: ${taxResult.error}`);
-    else showToast(`${sentIds.length}건 확정, 세금계산서 ${taxResult.created}건 생성`);
     await reloadData();
     setActionLoading(false);
   }
