@@ -30,6 +30,7 @@ import {
   type SealScript,
   type SealShape,
   ALL_SEAL_FONTS,
+  getThousandCharacterFontIdx,
   renderSealCanvas,
   ensureSealFontsLoaded,
   removeWhiteBackground,
@@ -91,6 +92,8 @@ export default function SealGenerator({ defaultName = '', onComplete, onCancel }
 
   // 한글/한자
   const [useHanja, setUseHanja] = useState(false)
+  /** 천자문 모드: 한자 변환과 함께 켜면 전서체(한전서체A 등)를 자동 적용 — 전통 인감 느낌 */
+  const [useThousandChar, setUseThousandChar] = useState(false)
   const [hanjaOverride, setHanjaOverride] = useState('')
   const [showDot, setShowDot] = useState(true)
   const [editingCharIdx, setEditingCharIdx] = useState<number | null>(null)
@@ -121,7 +124,22 @@ export default function SealGenerator({ defaultName = '', onComplete, onCancel }
   const handleHanjaToggle = useCallback((on: boolean) => {
     setUseHanja(on)
     if (on && nameText.trim()) updateHanjaPreview(nameText)
+    // 한자 변환을 끄면 천자문 모드도 함께 끔
+    if (!on) setUseThousandChar(false)
   }, [nameText, updateHanjaPreview])
+
+  /** 천자문(전서체 자동) 토글 — 켜면 한자 변환도 함께 활성화하고 한전서체A로 폰트 전환 */
+  const handleThousandCharToggle = useCallback((on: boolean) => {
+    setUseThousandChar(on)
+    if (on) {
+      if (!useHanja) {
+        setUseHanja(true)
+        if (nameText.trim()) updateHanjaPreview(nameText)
+      }
+      const idx = getThousandCharacterFontIdx()
+      if (idx >= 0) setFontIdx(idx)
+    }
+  }, [useHanja, nameText, updateHanjaPreview])
 
   const handleHanjaCharSelect = useCallback((idx: number, char: string) => {
     const arr = Array.from(hanjaOverride)
@@ -285,6 +303,17 @@ export default function SealGenerator({ defaultName = '', onComplete, onCancel }
                 <div className={`absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow transition-transform ${useHanja ? 'translate-x-[20px]' : 'translate-x-[2px]'}`} />
               </div>
               <span className="text-sm text-on-surface font-korean">한자 변환</span>
+            </label>
+            <label
+              className={`flex items-center gap-2 select-none ${useHanja ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
+              title={useHanja ? '천자문 모드 — 전서체 자동 적용' : '먼저 한자 변환을 켜주세요'}
+            >
+              <div role="switch" aria-checked={useThousandChar}
+                onClick={() => useHanja && handleThousandCharToggle(!useThousandChar)}
+                className={`relative w-10 h-[22px] rounded-full transition-colors ${useThousandChar ? 'bg-amber-700' : 'bg-gray-300'}`}>
+                <div className={`absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow transition-transform ${useThousandChar ? 'translate-x-[20px]' : 'translate-x-[2px]'}`} />
+              </div>
+              <span className="text-sm text-on-surface font-korean">천자문 (전서체)</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <div role="switch" aria-checked={showDot} onClick={() => setShowDot(!showDot)}

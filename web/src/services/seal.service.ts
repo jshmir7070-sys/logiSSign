@@ -282,22 +282,43 @@ export function getHanjaCandidates(char: string): string[] {
  * 도장 전용 폰트 — stamp.seedtype.com 스타일
  * 지자체 무료 폰트 6종 + Google Fonts 3종 = 총 9종
  */
-export const ALL_SEAL_FONTS: { family: string; label: string; weight: string }[] = [
-  // ── 한전서체 (전서체 — 전통 인감 전용) ──
-  { family: '"HJJeonseoA", "Batang", serif',          label: '한전서체A',      weight: '400' },
-  { family: '"HJJeonseoB", "Batang", serif',          label: '한전서체B',      weight: '400' },
+export interface SealFont {
+  family: string
+  label: string
+  weight: string
+  /** 한자 전서체 / 인전 스타일 — 천자문 모드 자동 추천 대상 */
+  hanjaPreferred?: boolean
+}
+
+export const ALL_SEAL_FONTS: SealFont[] = [
+  // ── 한전서체 (전서체 — 전통 인감 전용, 한자에 가장 적합) ──
+  { family: '"HJJeonseoA", "Batang", serif',          label: '한전서체A',       weight: '400', hanjaPreferred: true },
+  { family: '"HJJeonseoB", "Batang", serif',          label: '한전서체B',       weight: '400', hanjaPreferred: true },
   // ── 지자체 도장 전용 폰트 (눈누 CDN, 상업용 무료) ──
-  { family: '"YiSunShinBold", "Batang", serif',       label: '이순신체',       weight: '700' },
-  { family: '"WandohopeB", "Batang", serif',          label: '완도희망체',     weight: '700' },
-  { family: '"JeongseonArGothicB", sans-serif',       label: '정선아리랑',     weight: '700' },
-  { family: '"SuseongBatang", "Batang", serif',       label: '수성바탕체',     weight: '400' },
-  { family: '"SuseongHyejeong", "Batang", serif',     label: '수성혜정체',     weight: '400' },
-  { family: '"GangwonEduBold", sans-serif',            label: '강원도체',       weight: '700' },
-  // ── Google Fonts (도장 적합) ──
-  { family: '"Noto Serif KR", "Batang", serif',       label: '해서체',         weight: '900' },
-  { family: '"Nanum Myeongjo", "Batang", serif',      label: '고인체',         weight: '800' },
-  { family: '"Hahmlet", "Batang", serif',             label: '함렛체',         weight: '900' },
+  { family: '"YiSunShinBold", "Batang", serif',       label: '이순신체',        weight: '700' },
+  { family: '"WandohopeB", "Batang", serif',          label: '완도희망체',      weight: '700' },
+  { family: '"JeongseonArGothicB", sans-serif',       label: '정선아리랑',      weight: '700' },
+  { family: '"SuseongBatang", "Batang", serif',       label: '수성바탕체',      weight: '400' },
+  { family: '"SuseongHyejeong", "Batang", serif',     label: '수성혜정체',      weight: '400' },
+  { family: '"GangwonEduBold", sans-serif',           label: '강원도체',        weight: '700' },
+  // ── Google Fonts — 한글 인감 적합 (확장) ──
+  { family: '"Noto Serif KR", "Batang", serif',       label: '해서체',          weight: '900' },
+  { family: '"Nanum Myeongjo", "Batang", serif',      label: '고인체',          weight: '800', hanjaPreferred: true },
+  { family: '"Nanum Brush Script", cursive',          label: '나눔손글씨',      weight: '400' },
+  { family: '"Nanum Pen Script", cursive',            label: '나눔펜체',        weight: '400' },
+  { family: '"Hahmlet", "Batang", serif',             label: '함렛체',          weight: '900' },
+  { family: '"Gowun Batang", "Batang", serif',        label: '고운바탕(예서풍)', weight: '700', hanjaPreferred: true },
+  { family: '"Black Han Sans", sans-serif',           label: '검은고딕체',      weight: '400' },
+  { family: '"Gaegu", cursive',                       label: '개구체',          weight: '700' },
 ]
+
+/**
+ * 천자문 모드: 한자 변환과 함께 켜면 전서체 계열을 자동 선택해 전통 인감 느낌을 살린다.
+ * @returns 천자문 모드 활성화 시 권장 fontIdx, 비활성화 시 null
+ */
+export function getThousandCharacterFontIdx(): number {
+  return ALL_SEAL_FONTS.findIndex((f) => f.hanjaPreferred)
+}
 
 // 도장 모양 (인감도장은 원형이 기본, 사각도 포함)
 const _SHAPES: { shape: SealShape; label: string }[] = [
@@ -475,9 +496,9 @@ export function renderSealCanvas(opts: RenderSealOptions): string {
   const { name, category, shape, fontFamily, fontWeight, size, corporateTitle, intaglio = false, extraStroke: _extraStroke = 0, showDot = false, fontSizeScale = 1.0, letterSpacingScale = 1.0, useHanja = false } = opts
   const canvas = document.createElement('canvas')
 
-  // 타원형은 가로가 더 길도록
-  const w = shape === 'oval' ? Math.round(size * 1.3) : size
-  const h = size
+  // 타원형은 세로가 더 길도록 (전통 한국 인감 형태 — 세로 타원)
+  const w = shape === 'oval' ? size : size
+  const h = shape === 'oval' ? Math.round(size * 1.3) : size
   canvas.width = w
   canvas.height = h
   const ctx = canvas.getContext('2d')!
@@ -509,7 +530,7 @@ export function renderSealCanvas(opts: RenderSealOptions): string {
       if (shape === 'circle') {
       drawPersonalCircleSeal(ctx, chars, fontFamily, fontWeight, cx, cy, size, pad, outerLineW, showDot, fontSizeScale, letterSpacingScale, sealSuffix)
     } else if (shape === 'oval') {
-      drawPersonalOvalSeal(ctx, chars, fontFamily, fontWeight, cx, cy, w, h, pad, outerLineW, fontSizeScale)
+      drawPersonalOvalSeal(ctx, chars, fontFamily, fontWeight, cx, cy, w, h, pad, outerLineW, fontSizeScale, letterSpacingScale)
     } else {
       drawPersonalSquareSeal(ctx, chars, fontFamily, fontWeight, w, h, pad, outerLineW, shape, fontSizeScale, sealSuffix)
     }
@@ -594,9 +615,10 @@ function drawCorporateCircleSeal(
   const startAngle = -Math.PI / 2 // 12시 방향
 
   // 슬롯 배치: [0]=12시 점, [1..N]=글자, [N+1..]=빈 슬롯은 점
-  // 글자는 12시 점 다음부터 시계방향으로 배치
+  // 전통 한국 인감 방향: 12시에서 우→좌(반시계 방향)로 읽힘.
+  // 따라서 angle 을 i 만큼 빼서 (시계 반대방향) 배치한다.
   for (let i = 0; i < totalSlots; i++) {
-    const angle = startAngle + slotAngle * i
+    const angle = startAngle - slotAngle * i
 
     if (i === 0) {
       // 12시 방향: 항상 점(·)
@@ -604,7 +626,7 @@ function drawCorporateCircleSeal(
       const dy = cy + ringR * Math.sin(angle)
       drawDot(ctx, dx, dy, dotR)
     } else if (i <= nameChars.length) {
-      // 글자 슬롯
+      // 글자 슬롯 — 반시계 방향이므로 글자는 양 옆으로 누워있지 않게 회전 보정
       drawCharOnArc(ctx, nameChars[i - 1], cx, cy, ringR, angle, ringTextSize, fontFamily, fontWeight)
     } else {
       // 빈 슬롯: 점으로 채움 (글자수 부족 시)
@@ -838,8 +860,15 @@ function drawPersonalCircleSeal(
   }
 }
 
-/* ────────────────── 일반도장: 타원형 ────────────────── */
+/* ────────────────── 일반도장: 타원형 (세로 형태) ────────────────── */
 
+/**
+ * 세로 타원 인감 — 전통 한국 인감의 비공식 변형.
+ * - 캔버스 비율: 세로(h) > 가로(w) — 위에서 1.3:1 비율로 설정됨
+ * - 글자: 印/인 접미사 없이 이름만 (사용자 지정)
+ * - 배치: 세로 1열 (위에서 아래로). 한 글자씩 차곡차곡.
+ *   2~3자는 큼직하게, 4자 이상은 글자 크기를 줄여 한 열에 모두 배치.
+ */
 function drawPersonalOvalSeal(
   ctx: CanvasRenderingContext2D,
   chars: string,
@@ -850,18 +879,54 @@ function drawPersonalOvalSeal(
   pad: number,
   outerLineW: number,
   fontSizeScale = 1.0,
+  letterSpacingScale = 1.0,
 ) {
-  // 외곽 타원 (두꺼운 테두리)
+  // 외곽 타원 (세로가 긴 형태) — radiusX < radiusY 가 되도록 명시
+  const rx = (w / 2) - pad
+  const ry = (h / 2) - pad
   ctx.lineWidth = outerLineW * 1.2
   ctx.strokeStyle = SEAL_COLOR
   ctx.beginPath()
-  ctx.ellipse(cx, cy, cx - pad, cy - pad, 0, 0, Math.PI * 2)
+  ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2)
   ctx.stroke()
 
-  // 중앙에 가로 배치 (타원은 가로가 길므로)
-  const maxW = (w - pad * 2) * 0.80
-  const fs = Math.min(h * 0.55, maxW / Math.max(chars.length, 1) * 1.35) * fontSizeScale
-  drawThickText(ctx, chars, cx, cy, fs, fontFamily, fontWeight, 0.20)
+  // 印/인 없이 이름만 — 세로 1열 배치
+  const nameChars = chars.split('')
+  const len = nameChars.length
+  if (len === 0) return
+
+  // 세로 가용 영역 — 외곽선 안쪽
+  const usableH = ry * 2 - outerLineW * 2
+  const usableW = rx * 2 - outerLineW * 2
+
+  // 글자 크기: 글자수가 많을수록 작아지도록. 가용 가로 대비도 제한
+  // 1자 → 폰트 크기 = ry * 1.0, 2자 → ry * 0.6, 3자 → ry * 0.5, 4자+ → ry * 0.42 등
+  const sizeScaleByCount = len === 1 ? 1.0 : len === 2 ? 0.65 : len === 3 ? 0.52 : 0.42
+  const fsByHeight = ry * sizeScaleByCount * fontSizeScale
+  const fsByWidth = usableW * 0.78 * fontSizeScale  // 글자 가로 폭이 타원 가로를 넘지 않도록
+  const fs = Math.min(fsByHeight, fsByWidth)
+
+  if (len === 1) {
+    drawThickText(ctx, nameChars[0], cx, cy, fs, fontFamily, fontWeight)
+    return
+  }
+
+  // 다자 케이스: 세로로 균등 배치
+  const spacing = fs * 1.05 * letterSpacingScale
+  const totalH = len * spacing
+  // 타원 안에서 세로로 중앙 정렬 — 시작 y 는 cy - totalH/2 + spacing/2
+  let startY = cy - totalH / 2 + spacing / 2
+  // 타원 내부에 안 들어가면 spacing 축소
+  if (totalH > usableH) {
+    const safeSpacing = (usableH - fs * 0.2) / len
+    startY = cy - (safeSpacing * len) / 2 + safeSpacing / 2
+    nameChars.forEach((ch, i) =>
+      drawThickText(ctx, ch, cx, startY + i * safeSpacing, fs, fontFamily, fontWeight))
+    return
+  }
+
+  nameChars.forEach((ch, i) =>
+    drawThickText(ctx, ch, cx, startY + i * spacing, fs, fontFamily, fontWeight))
 }
 
 /* ────────────────── 일반도장: 사각형 ────────────────── */
