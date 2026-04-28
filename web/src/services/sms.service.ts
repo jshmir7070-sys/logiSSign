@@ -8,6 +8,8 @@
  * - 계약 갱신 안내
  */
 
+import { withRetry } from '@/lib/retry'
+
 interface SmsPayload {
   to: string
   text: string
@@ -18,6 +20,8 @@ interface SmsResult {
   sent: boolean
   error: string | null
   messageId?: string
+  /** 일시 오류로 재시도 가능 여부 (5xx, 네트워크). false면 영구 실패(잘못된 번호 등). */
+  transient?: boolean
 }
 
 function normalizePhone(phone: string): string {
@@ -46,44 +50,68 @@ export async function sendSms(payload: SmsPayload): Promise<SmsResult> {
 
   if (!apiKey || !apiSecret) {
     console.warn('[SMS] Solapi API key is not configured. SMS send skipped.')
-    return { sent: false, error: 'SMS API 키가 설정되지 않았습니다.' }
+    return { sent: false, error: 'SMS API 키가 설정되지 않았습니다.', transient: false }
   }
 
   const from = normalizePhone(payload.from ?? defaultSender ?? '')
   const to = normalizePhone(payload.to)
 
   if (!from || !to) {
-    return { sent: false, error: '발신 또는 수신 번호가 비어 있습니다.' }
+    return { sent: false, error: '발신 또는 수신 번호가 비어 있습니다.', transient: false }
   }
 
-  try {
-    const authHeader = await getSolapiAuthHeader(apiKey, apiSecret)
-    const response = await fetch('https://api.solapi.com/messages/v4/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: authHeader,
+  // 일시 오류(5xx, 네트워크 throw)는 자동 재시도, 4xx 영구 오류는 즉시 반환
+  return withRetry<SmsResult>(
+    async () => {
+      try {
+        const authHeader = await getSolapiAuthHeader(apiKey, apiSecret)
+        const response = await fetch('https://api.solapi.com/messages/v4/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: authHeader,
+          },
+          body: JSON.stringify({
+            message: {
+              to,
+              from,
+              text: payload.text,
+              type: 'SMS',
+            },
+          }),
+        })
+
+        if (!response.ok) {
+          const errorText = await response.text()
+          return {
+            sent: false,
+            error: `SMS 발송 실패: ${response.status} ${errorText}`,
+            transient: response.status >= 500,
+          }
+        }
+
+        const result = await response.json()
+        return { sent: true, error: null, messageId: result.messageId, transient: false }
+      } catch (error) {
+        // fetch가 던진 네트워크/타임아웃 오류는 일시 오류로 분류
+        return {
+          sent: false,
+          error: error instanceof Error ? error.message : 'SMS 발송에 실패했습니다.',
+          transient: true,
+        }
+      }
+    },
+    {
+      maxAttempts: 3,
+      initialDelayMs: 300,
+      factor: 3,
+      tag: 'solapi-sms',
+      shouldRetry: (result) => {
+        const r = result as SmsResult
+        return !r.sent && r.transient === true
       },
-      body: JSON.stringify({
-        message: {
-          to,
-          from,
-          text: payload.text,
-          type: 'SMS',
-        },
-      }),
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      return { sent: false, error: `SMS 발송 실패: ${response.status} ${errorText}` }
-    }
-
-    const result = await response.json()
-    return { sent: true, error: null, messageId: result.messageId }
-  } catch (error) {
-    return { sent: false, error: error instanceof Error ? error.message : 'SMS 발송에 실패했습니다.' }
-  }
+    },
+  )
 }
 
 export async function sendSmsBulk(messages: SmsPayload[]): Promise<{ sent: number; failed: number }> {

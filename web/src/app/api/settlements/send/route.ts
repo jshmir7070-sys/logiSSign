@@ -6,6 +6,7 @@ import { authenticateRequest } from '@/lib/api-auth'
 import { getClientIp } from '@/lib/get-ip'
 import { isPointBased, isPaidPlan, type PlanType } from '@/lib/plan-limits'
 import { rateLimitAuth } from '@/lib/rate-limit'
+import { withRetry } from '@/lib/retry'
 import { createSignedStorageUrl } from '@/lib/storage-reference'
 import { deductPoints, hasEnoughPoints } from '@/services/point.service'
 import { buildRenderableSettlementTemplate, buildSettlementDriverData, type SettlementPdfSource } from '@/services/settlement-rendering.service'
@@ -178,25 +179,58 @@ async function generateSettlementPdfs(agencyId: string, settlements: SettlementS
   return settlements.length
 }
 
-async function sendPushNotification(driverId: string, token: string): Promise<boolean> {
-  try {
-    const response = await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({
-        to: token,
-        title: '정산서가 도착했습니다',
-        body: '커스텀 정산서가 발송되었습니다. 앱에서 바로 확인해 주세요.',
-        sound: 'default',
-        data: { type: 'settlement', driverId },
-        channelId: 'default',
-      }),
-    })
+interface PushAttempt {
+  ok: boolean
+  transient: boolean
+}
 
-    return response.ok
-  } catch {
-    return false
-  }
+async function sendPushNotification(driverId: string, token: string): Promise<boolean> {
+  // Expo Push: 5xx + 네트워크 오류는 재시도, 4xx(잘못된 토큰 등)는 영구 실패
+  const result = await withRetry<PushAttempt>(
+    async () => {
+      try {
+        const response = await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({
+            to: token,
+            title: '정산서가 도착했습니다',
+            body: '커스텀 정산서가 발송되었습니다. 앱에서 바로 확인해 주세요.',
+            sound: 'default',
+            data: { type: 'settlement', driverId },
+            channelId: 'default',
+          }),
+        })
+
+        if (response.ok) {
+          // Expo는 200이어도 body에 errors가 들어올 수 있음 (DeviceNotRegistered 등 — 영구)
+          try {
+            const payload = (await response.json()) as { data?: { status?: string } }
+            if (payload?.data?.status === 'error') {
+              return { ok: false, transient: false }
+            }
+          } catch { /* JSON 파싱 실패는 200을 더 신뢰해 성공 처리 */ }
+          return { ok: true, transient: false }
+        }
+
+        return { ok: false, transient: response.status >= 500 }
+      } catch {
+        return { ok: false, transient: true }
+      }
+    },
+    {
+      maxAttempts: 3,
+      initialDelayMs: 300,
+      factor: 3,
+      tag: 'expo-push-settlement',
+      shouldRetry: (value) => {
+        const v = value as PushAttempt
+        return !v.ok && v.transient
+      },
+    },
+  )
+
+  return result.ok
 }
 
 export async function POST(request: NextRequest) {
