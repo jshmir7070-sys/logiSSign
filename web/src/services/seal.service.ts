@@ -323,6 +323,164 @@ const THOUSAND_CHARACTER_SET: ReadonlySet<string> = new Set(
   THOUSAND_CHARACTER_CLASSIC.replace(/\s+/g, '').split(''),
 )
 
+/**
+ * 千字文 1000자의 한국 한자음 매핑.
+ * 형식: '한자:음[,음2]' (공백 구분, 두음법칙 변이는 콤마로 추가).
+ * 예: '李:리,이' → 李 의 음은 '리' 이지만 두음법칙으로 '이' 도 동일 글자.
+ *
+ * 이 매핑이 있어야 한국어 입력(예: '천')에 대해 千字文에 있는 한자(天/川/千/賤/踐/凄)
+ * 를 候補로 제시할 수 있다. 기존 인명용 HANGUL_TO_HANJA 후보가 부족한 케이스를 보강.
+ */
+const THOUSAND_KOREAN_RAW = `
+天:천 地:지 玄:현 黃:황 宇:우 宙:주 洪:홍 荒:황
+日:일 月:월 盈:영 昃:측 辰:진 宿:숙,수 列:렬,열 張:장
+寒:한 來:래,내 暑:서 往:왕 秋:추 收:수 冬:동 藏:장
+閏:윤 餘:여 成:성 歲:세 律:률,율 呂:려,여 調:조 陽:양
+雲:운 騰:등 致:치 雨:우 露:로,노 結:결 爲:위 霜:상
+金:금,김 生:생 麗:려,여 水:수 玉:옥 出:출 崑:곤 岡:강
+劍:검 號:호 巨:거 闕:궐 珠:주 稱:칭 夜:야 光:광
+果:과 珍:진 李:리,이 柰:내 菜:채 重:중 芥:개 薑:강
+海:해 鹹:함 河:하 淡:담 鱗:린,인 潛:잠 羽:우 翔:상
+龍:룡,용 師:사 火:화 帝:제 鳥:조 官:관 人:인 皇:황
+始:시 制:제 文:문 字:자 乃:내 服:복 衣:의 裳:상
+推:추 位:위 讓:양 國:국 有:유 虞:우 陶:도 唐:당
+弔:조 民:민 伐:벌 罪:죄 周:주 發:발 殷:은 湯:탕
+坐:좌 朝:조 問:문 道:도 垂:수 拱:공 平:평 章:장
+愛:애 育:육 黎:려,여 首:수 臣:신 伏:복 戎:융 羌:강
+遐:하 邇:이 壹:일 體:체 率:솔,률,율 賓:빈 歸:귀 王:왕
+鳴:명 鳳:봉 在:재 樹:수 白:백 駒:구 食:식 場:장
+化:화 被:피 草:초 木:목 賴:뢰,뇌 及:급 萬:만 方:방
+蓋:개 此:차 身:신 髮:발 四:사 大:대 五:오 常:상
+恭:공 惟:유 鞠:국 養:양 豈:기 敢:감 毀:훼 傷:상
+女:녀,여 慕:모 貞:정 烈:렬,열 男:남 效:효 才:재 良:량,양
+知:지 過:과 必:필 改:개 得:득 能:능 莫:막 忘:망
+罔:망 談:담 彼:피 短:단 靡:미 恃:시 己:기 長:장
+信:신 使:사 可:가 覆:복 器:기 欲:욕 難:난 量:량,양
+墨:묵 悲:비 絲:사 染:염 詩:시 讚:찬 羔:고 羊:양
+景:경 行:행 維:유 賢:현 克:극 念:념,염 作:작 聖:성
+德:덕 建:건 名:명 立:립,입 形:형 端:단 表:표 正:정
+空:공 谷:곡 傳:전 聲:성 虛:허 堂:당 習:습 聽:청
+禍:화 因:인 惡:악 積:적 福:복 緣:연 善:선 慶:경
+尺:척 璧:벽 非:비 寶:보 寸:촌 陰:음 是:시 競:경
+資:자 父:부 事:사 君:군 曰:왈 嚴:엄 與:여 敬:경
+孝:효 當:당 竭:갈 力:력,역 忠:충 則:즉,칙 盡:진 命:명
+臨:림,임 深:심 履:리,이 薄:박 夙:숙 興:흥 溫:온 凊:청
+似:사 蘭:란,난 斯:사 馨:형 如:여 松:송 之:지 盛:성
+川:천 流:류,유 不:불,부 息:식 淵:연 澄:징 取:취 映:영
+容:용 止:지 若:약 思:사 言:언 辭:사 安:안 定:정
+篤:독 初:초 誠:성 美:미 慎:신 終:종 宜:의 令:령,영
+榮:영 業:업 所:소 基:기 籍:적 甚:심 無:무 竟:경
+學:학 優:우 登:등 仕:사 攝:섭 職:직 從:종 政:정
+存:존 以:이 甘:감 棠:당 去:거 而:이 益:익 詠:영
+樂:락,낙,악 殊:수 貴:귀 賤:천 禮:례,예 別:별 尊:존 卑:비
+上:상 和:화 下:하 睦:목 夫:부 唱:창 婦:부 隨:수
+外:외 受:수 傅:부 訓:훈 入:입 奉:봉 母:모 儀:의
+諸:제 姑:고 伯:백 叔:숙 猶:유 子:자 比:비 兒:아
+孔:공 懷:회 兄:형 弟:제 同:동 氣:기 連:련,연 枝:지
+交:교 友:우 投:투 分:분 切:절 磨:마 箴:잠 規:규
+仁:인 慈:자 隱:은 惻:측 造:조 次:차 弗:불 離:리,이
+節:절 義:의 廉:렴,염 退:퇴 顛:전 沛:패 匪:비 虧:휴
+性:성 靜:정 情:정 逸:일 心:심 動:동 神:신 疲:피
+守:수 眞:진 志:지 滿:만 逐:축 物:물 意:의 移:이
+堅:견 持:지 雅:아 操:조 好:호 爵:작 自:자 縻:미
+都:도 邑:읍 華:화 夏:하 東:동 西:서 二:이 京:경
+背:배 邙:망 面:면 洛:락,낙 浮:부 渭:위 據:거 涇:경
+宮:궁 殿:전 盤:반 鬱:울 樓:루,누 觀:관 飛:비 驚:경
+圖:도 寫:사 禽:금 獸:수 畫:화 綵:채 仙:선 靈:령,영
+丙:병 舍:사 傍:방 啓:계 甲:갑 帳:장 對:대 楹:영
+肆:사 筵:연 設:설 席:석 鼓:고 瑟:슬 吹:취 笙:생
+升:승 階:계 納:납 陛:폐 弁:변 轉:전 疑:의 星:성
+右:우 通:통 廣:광 內:내 左:좌 達:달 承:승 明:명
+旣:기 集:집 墳:분 典:전 亦:역 聚:취 群:군 英:영
+杜:두 藁:고 鍾:종 隸:례,예 漆:칠 書:서 壁:벽 經:경
+府:부 羅:라 將:장 相:상 路:로,노 俠:협 槐:괴 卿:경
+戶:호 封:봉 八:팔 縣:현 家:가 給:급 千:천 兵:병
+高:고 冠:관 陪:배 輦:련,연 驅:구 轂:곡 振:진 纓:영
+世:세 祿:록,녹 侈:치 富:부 車:차,거 駕:가 肥:비 輕:경
+策:책 功:공 茂:무 實:실 勒:륵,늑 碑:비 刻:각 銘:명
+磻:반 溪:계 伊:이 尹:윤 佐:좌 時:시 阿:아 衡:형
+奄:엄 宅:택 曲:곡 阜:부 微:미 旦:단 孰:숙 營:영
+桓:환 公:공 匡:광 合:합 濟:제 弱:약 扶:부 傾:경
+綺:기 迴:회 漢:한 惠:혜 說:설,세 感:감 武:무 丁:정
+俊:준 乂:예 密:밀 勿:물 多:다 士:사 寔:식 寧:녕,영
+晋:진 楚:초 更:경 覇:패 趙:조 魏:위 困:곤 橫:횡
+假:가 途:도 滅:멸 虢:괵 踐:천 土:토 會:회 盟:맹
+何:하 遵:준 約:약 法:법 韓:한 弊:폐 煩:번 刑:형
+起:기 翦:전 頗:파 牧:목 用:용 軍:군 最:최 精:정
+宣:선 威:위 沙:사 漠:막 馳:치 譽:예 丹:단 靑:청
+九:구 州:주 禹:우 跡:적 百:백 郡:군 秦:진 幷:병
+嶽:악 宗:종 恆:항 岱:대 禪:선 主:주 云:운 亭:정
+雁:안 門:문 紫:자 塞:새 鷄:계 田:전 赤:적 城:성
+昆:곤 池:지 碣:갈 石:석 鉅:거 野:야 洞:동 庭:정
+曠:광 遠:원 綿:면 邈:막 巖:암 岫:수 杳:묘 冥:명
+治:치 本:본 於:어 農:농 務:무 玆:자 稼:가 穡:색
+俶:숙 載:재 南:남 畝:묘 我:아 藝:예 黍:서 稷:직
+稅:세 熟:숙 貢:공 新:신 勸:권 賞:상 黜:출 陟:척
+孟:맹 軻:가 敦:돈 素:소 史:사 魚:어 秉:병 直:직
+庶:서 幾:기 中:중 庸:용 勞:로,노 謙:겸 謹:근 勅:칙
+聆:령,영 音:음 察:찰 理:리,이 鑑:감 貌:모 辨:변 色:색
+貽:이 厥:궐 嘉:가 猷:유 勉:면 其:기 祗:지 植:식
+省:성 躬:궁 譏:기 誡:계 寵:총 增:증 抗:항 極:극
+殆:태 辱:욕 近:근 恥:치 林:림,임 皋:고 幸:행 卽:즉
+兩:량,양 疏:소 見:견,현 機:기 解:해 組:조 誰:수 逼:핍
+索:색 居:거 閑:한 處:처 沈:침 默:묵 寂:적 寥:료,요
+求:구 古:고 尋:심 論:론,논 散:산 慮:려,여 逍:소 遙:요
+欣:흔 奏:주 累:루,누 遣:견 慼:척 謝:사 歡:환 招:초
+渠:거 荷:하 的:적 歷:력,역 園:원 莽:망 抽:추 條:조
+枇:비 杷:파 晩:만 翠:취 梧:오 桐:동 早:조 凋:조
+陳:진 根:근 委:위 翳:예 落:락,낙 葉:엽 飄:표 颻:요
+遊:유 鵾:곤 獨:독 運:운 凌:릉,능 摩:마 絳:강 霄:소
+耽:탐 讀:독 翫:완 市:시 寓:우 目:목 囊:낭 箱:상
+易:역,이 輶:유 攸:유 畏:외 屬:속 耳:이 垣:원 牆:장
+具:구 膳:선 飡:손,찬 飯:반 適:적 口:구 充:충 腸:장
+飽:포 飫:어 烹:팽 宰:재 飢:기 厭:염 糟:조 糠:강
+親:친 戚:척 故:고 舊:구 老:로,노 少:소 異:이 糧:량,양
+妾:첩 御:어 績:적 紡:방 侍:시 巾:건 帷:유 房:방
+紈:환 扇:선 圓:원 潔:결 銀:은 燭:촉 煒:위 煌:황
+晝:주 眠:면 夕:석 寐:매 藍:람,남 筍:순 象:상 牀:상
+弦:현 歌:가 酒:주 讌:연 接:접 杯:배 擧:거 觴:상
+矯:교 手:수 頓:돈 足:족 悅:열 豫:예 且:차 康:강
+嫡:적 後:후 嗣:사 續:속 祭:제 祀:사 蒸:증 嘗:상
+稽:계 顙:상 再:재 拜:배 悚:송 懼:구 恐:공 惶:황
+牋:전 牒:첩 簡:간 要:요 顧:고 答:답 審:심 詳:상
+骸:해 垢:구 想:상 浴:욕 執:집 熱:열 願:원 凉:량,양
+驢:려,여 騾:라 犢:독 特:특 駭:해 躍:약 超:초 驤:양
+誅:주 斬:참 賊:적 盜:도 捕:포 獲:획 叛:반 亡:망
+布:포 射:사 僚:료,요 丸:환 嵇:혜 琴:금 阮:완 嘯:소
+恬:념,염 筆:필 倫:륜,윤 紙:지 鈞:균 巧:교 任:임 釣:조
+釋:석 紛:분 利:리,이 俗:속 並:병 皆:개 佳:가 妙:묘
+毛:모 施:시 淑:숙 姿:자 工:공 嚬:빈 妍:연 笑:소
+年:년,연 矢:시 每:매 催:최 曦:희 暉:휘 朗:랑,낭 曜:요
+璇:선 璣:기 懸:현 斡:알 晦:회 魄:백 環:환 照:조
+指:지 薪:신 修:수 祜:호 永:영 綏:수 吉:길 劭:소
+矩:구 步:보 引:인 領:령,영 俯:부 仰:앙 廊:랑,낭 廟:묘
+束:속 帶:대 矜:긍 莊:장 徘:배 徊:회 瞻:첨 眺:조
+孤:고 陋:루,누 寡:과 聞:문 愚:우 蒙:몽 等:등 誚:초
+謂:위 語:어 助:조 者:자 焉:언 哉:재 乎:호 也:야
+`
+
+/** 한국 한자음 → 千字文 한자[] 역매핑 (런타임 파싱) */
+const THOUSAND_CHAR_BY_READING: Record<string, string[]> = (() => {
+  const map: Record<string, string[]> = {}
+  for (const token of THOUSAND_KOREAN_RAW.split(/\s+/)) {
+    if (!token.includes(':')) continue
+    const [char, readingStr] = token.split(':')
+    if (!char || !readingStr) continue
+    for (const r of readingStr.split(',')) {
+      const reading = r.trim()
+      if (!reading) continue
+      if (!map[reading]) map[reading] = []
+      if (!map[reading].includes(char)) map[reading].push(char)
+    }
+  }
+  return map
+})()
+
+/** 한국어 한 글자에 대응되는 千字文 한자 후보 목록 */
+export function getThousandCharCandidates(koreanChar: string): string[] {
+  return THOUSAND_CHAR_BY_READING[koreanChar] ?? []
+}
+
 /** 글자가 千字文 본문에 등장하는지 확인 */
 export function isInThousandCharacterClassic(char: string): boolean {
   return THOUSAND_CHARACTER_SET.has(char)
@@ -339,34 +497,57 @@ export interface HanjaConversionOptions {
 }
 
 /**
- * 한글 이름 → 한자 변환 (각 글자의 대표 한자 사용).
- * preferThousandChar=true 면 후보 중 천자문에 등장하는 글자를 우선 선택.
+ * 한글 이름 → 한자 변환.
+ * preferThousandChar=true 면 千字文 1000자 매핑(THOUSAND_CHAR_BY_READING)에서
+ * 먼저 찾고, 없으면 후보 중 천자문 등장 글자, 그것도 없으면 일반 사전 1순위.
  * @returns 변환된 한자 문자열. 매핑이 없으면 원래 한글 유지.
  */
 export function hangulToHanja(name: string, options?: HanjaConversionOptions): string {
   const prefer = options?.preferThousandChar ?? false
   return name.split('').map((ch) => {
-    const candidates = HANGUL_TO_HANJA[ch]
-    if (!candidates || candidates.length === 0) return ch
     if (prefer) {
-      const inClassic = candidates.find((c) => THOUSAND_CHARACTER_SET.has(c))
-      if (inClassic) return inClassic
+      // 1순위: 千字文 음역 매핑에서 직접 찾기 (千字文 한자가 인명 사전에 없는 케이스 보강)
+      const thousandCands = THOUSAND_CHAR_BY_READING[ch]
+      if (thousandCands && thousandCands.length > 0) return thousandCands[0]
+      // 2순위: 인명 사전 후보 중 千字文에 등장하는 글자
+      const candidates = HANGUL_TO_HANJA[ch]
+      if (candidates && candidates.length > 0) {
+        const inClassic = candidates.find((c) => THOUSAND_CHARACTER_SET.has(c))
+        if (inClassic) return inClassic
+        return candidates[0]
+      }
+      return ch
     }
-    return candidates[0]
+    const candidates = HANGUL_TO_HANJA[ch]
+    return candidates && candidates.length > 0 ? candidates[0] : ch
   }).join('')
 }
 
 /**
- * 한글 글자 → 한자 후보 목록 반환 (UI에서 담당자 선택용).
- * preferThousandChar=true 면 천자문 한자가 후보 목록 앞에 먼저 정렬됨.
+ * 한글 글자 → 한자 후보 목록.
+ * preferThousandChar=true 면 千字文 매핑 + 인명 사전 합집합을 千字文 글자 우선으로 정렬.
  */
 export function getHanjaCandidates(char: string, options?: HanjaConversionOptions): string[] {
-  const candidates = HANGUL_TO_HANJA[char] ?? []
-  if (!options?.preferThousandChar || candidates.length === 0) return candidates
-  // 천자문 글자를 앞으로 끌어올린 정렬 (안정 정렬)
-  const inClassic = candidates.filter((c) => THOUSAND_CHARACTER_SET.has(c))
-  const others = candidates.filter((c) => !THOUSAND_CHARACTER_SET.has(c))
-  return [...inClassic, ...others]
+  const baseCandidates = HANGUL_TO_HANJA[char] ?? []
+  if (!options?.preferThousandChar) return baseCandidates
+
+  // 千字文 매핑에서 가져온 글자들을 앞에, 그 다음 인명 사전 후보 (중복 제거)
+  const thousandCands = THOUSAND_CHAR_BY_READING[char] ?? []
+  const seen = new Set<string>()
+  const result: string[] = []
+  for (const c of thousandCands) {
+    if (!seen.has(c)) { seen.add(c); result.push(c) }
+  }
+  // 인명 사전 후보 중 千字文에 있는 것 먼저
+  const baseInClassic = baseCandidates.filter((c) => THOUSAND_CHARACTER_SET.has(c) && !seen.has(c))
+  for (const c of baseInClassic) {
+    if (!seen.has(c)) { seen.add(c); result.push(c) }
+  }
+  // 나머지 인명 사전 후보
+  for (const c of baseCandidates) {
+    if (!seen.has(c)) { seen.add(c); result.push(c) }
+  }
+  return result
 }
 
 /**
