@@ -246,21 +246,127 @@ const HANGUL_TO_HANJA: Record<string, string[]> = {
 }
 
 /**
- * 한글 이름 → 한자 변환 (각 글자의 대표 한자 사용)
+ * 千字文 (천자문) — 周興嗣(주흥사) 撰, 6세기 중국 양나라.
+ * 250 사구(四句) × 4字 = 1000자. 전통적으로 한자 입문 교본이자 인감·서예의 기준 자전.
+ * 본 코퍼스는 표준 한국 한문 교육판 기준이며 모든 글자가 단 한 번만 등장하는 것이
+ * 원칙(주흥사가 의도한 형식). 일부 판본 차이로 異체字가 존재할 수 있으나 Set 으로
+ * 중복은 자동 처리된다.
+ */
+const THOUSAND_CHARACTER_CLASSIC = `
+天地玄黃 宇宙洪荒 日月盈昃 辰宿列張
+寒來暑往 秋收冬藏 閏餘成歲 律呂調陽
+雲騰致雨 露結爲霜 金生麗水 玉出崑岡
+劍號巨闕 珠稱夜光 果珍李柰 菜重芥薑
+海鹹河淡 鱗潛羽翔 龍師火帝 鳥官人皇
+始制文字 乃服衣裳 推位讓國 有虞陶唐
+弔民伐罪 周發殷湯 坐朝問道 垂拱平章
+愛育黎首 臣伏戎羌 遐邇壹體 率賓歸王
+鳴鳳在樹 白駒食場 化被草木 賴及萬方
+蓋此身髮 四大五常 恭惟鞠養 豈敢毀傷
+女慕貞烈 男效才良 知過必改 得能莫忘
+罔談彼短 靡恃己長 信使可覆 器欲難量
+墨悲絲染 詩讚羔羊 景行維賢 克念作聖
+德建名立 形端表正 空谷傳聲 虛堂習聽
+禍因惡積 福緣善慶 尺璧非寶 寸陰是競
+資父事君 曰嚴與敬 孝當竭力 忠則盡命
+臨深履薄 夙興溫凊 似蘭斯馨 如松之盛
+川流不息 淵澄取映 容止若思 言辭安定
+篤初誠美 慎終宜令 榮業所基 籍甚無竟
+學優登仕 攝職從政 存以甘棠 去而益詠
+樂殊貴賤 禮別尊卑 上和下睦 夫唱婦隨
+外受傅訓 入奉母儀 諸姑伯叔 猶子比兒
+孔懷兄弟 同氣連枝 交友投分 切磨箴規
+仁慈隱惻 造次弗離 節義廉退 顛沛匪虧
+性靜情逸 心動神疲 守眞志滿 逐物意移
+堅持雅操 好爵自縻 都邑華夏 東西二京
+背邙面洛 浮渭據涇 宮殿盤鬱 樓觀飛驚
+圖寫禽獸 畫綵仙靈 丙舍傍啓 甲帳對楹
+肆筵設席 鼓瑟吹笙 升階納陛 弁轉疑星
+右通廣內 左達承明 旣集墳典 亦聚群英
+杜藁鍾隸 漆書壁經 府羅將相 路俠槐卿
+戶封八縣 家給千兵 高冠陪輦 驅轂振纓
+世祿侈富 車駕肥輕 策功茂實 勒碑刻銘
+磻溪伊尹 佐時阿衡 奄宅曲阜 微旦孰營
+桓公匡合 濟弱扶傾 綺迴漢惠 說感武丁
+俊乂密勿 多士寔寧 晋楚更覇 趙魏困橫
+假途滅虢 踐土會盟 何遵約法 韓弊煩刑
+起翦頗牧 用軍最精 宣威沙漠 馳譽丹靑
+九州禹跡 百郡秦幷 嶽宗恆岱 禪主云亭
+雁門紫塞 鷄田赤城 昆池碣石 鉅野洞庭
+曠遠綿邈 巖岫杳冥 治本於農 務玆稼穡
+俶載南畝 我藝黍稷 稅熟貢新 勸賞黜陟
+孟軻敦素 史魚秉直 庶幾中庸 勞謙謹勅
+聆音察理 鑑貌辨色 貽厥嘉猷 勉其祗植
+省躬譏誡 寵增抗極 殆辱近恥 林皋幸卽
+兩疏見機 解組誰逼 索居閑處 沈默寂寥
+求古尋論 散慮逍遙 欣奏累遣 慼謝歡招
+渠荷的歷 園莽抽條 枇杷晩翠 梧桐早凋
+陳根委翳 落葉飄颻 遊鵾獨運 凌摩絳霄
+耽讀翫市 寓目囊箱 易輶攸畏 屬耳垣牆
+具膳飡飯 適口充腸 飽飫烹宰 飢厭糟糠
+親戚故舊 老少異糧 妾御績紡 侍巾帷房
+紈扇圓潔 銀燭煒煌 晝眠夕寐 藍筍象牀
+弦歌酒讌 接杯擧觴 矯手頓足 悅豫且康
+嫡後嗣續 祭祀蒸嘗 稽顙再拜 悚懼恐惶
+牋牒簡要 顧答審詳 骸垢想浴 執熱願凉
+驢騾犢特 駭躍超驤 誅斬賊盜 捕獲叛亡
+布射僚丸 嵇琴阮嘯 恬筆倫紙 鈞巧任釣
+釋紛利俗 並皆佳妙 毛施淑姿 工嚬妍笑
+年矢每催 曦暉朗曜 璇璣懸斡 晦魄環照
+指薪修祜 永綏吉劭 矩步引領 俯仰廊廟
+束帶矜莊 徘徊瞻眺 孤陋寡聞 愚蒙等誚
+謂語助者 焉哉乎也
+`
+
+/** 千字文 한자 Set — O(1) 포함 여부 조회용 */
+const THOUSAND_CHARACTER_SET: ReadonlySet<string> = new Set(
+  THOUSAND_CHARACTER_CLASSIC.replace(/\s+/g, '').split(''),
+)
+
+/** 글자가 千字文 본문에 등장하는지 확인 */
+export function isInThousandCharacterClassic(char: string): boolean {
+  return THOUSAND_CHARACTER_SET.has(char)
+}
+
+/** 千字文 코퍼스 크기 — 디버깅/UI용 (정상 1000자, 판본별 999~1000) */
+export function getThousandCharacterCount(): number {
+  return THOUSAND_CHARACTER_SET.size
+}
+
+export interface HanjaConversionOptions {
+  /** 千字文 본문에 등장하는 한자를 우선 선택 (천자문 모드) */
+  preferThousandChar?: boolean
+}
+
+/**
+ * 한글 이름 → 한자 변환 (각 글자의 대표 한자 사용).
+ * preferThousandChar=true 면 후보 중 천자문에 등장하는 글자를 우선 선택.
  * @returns 변환된 한자 문자열. 매핑이 없으면 원래 한글 유지.
  */
-export function hangulToHanja(name: string): string {
+export function hangulToHanja(name: string, options?: HanjaConversionOptions): string {
+  const prefer = options?.preferThousandChar ?? false
   return name.split('').map((ch) => {
     const candidates = HANGUL_TO_HANJA[ch]
-    return candidates ? candidates[0] : ch
+    if (!candidates || candidates.length === 0) return ch
+    if (prefer) {
+      const inClassic = candidates.find((c) => THOUSAND_CHARACTER_SET.has(c))
+      if (inClassic) return inClassic
+    }
+    return candidates[0]
   }).join('')
 }
 
 /**
- * 한글 글자 → 한자 후보 목록 반환 (UI에서 담당자 선택용)
+ * 한글 글자 → 한자 후보 목록 반환 (UI에서 담당자 선택용).
+ * preferThousandChar=true 면 천자문 한자가 후보 목록 앞에 먼저 정렬됨.
  */
-export function getHanjaCandidates(char: string): string[] {
-  return HANGUL_TO_HANJA[char] ?? []
+export function getHanjaCandidates(char: string, options?: HanjaConversionOptions): string[] {
+  const candidates = HANGUL_TO_HANJA[char] ?? []
+  if (!options?.preferThousandChar || candidates.length === 0) return candidates
+  // 천자문 글자를 앞으로 끌어올린 정렬 (안정 정렬)
+  const inClassic = candidates.filter((c) => THOUSAND_CHARACTER_SET.has(c))
+  const others = candidates.filter((c) => !THOUSAND_CHARACTER_SET.has(c))
+  return [...inClassic, ...others]
 }
 
 /**
