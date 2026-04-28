@@ -176,6 +176,7 @@ export const aiExtractDocumentSchema = z.object({
     .min(10, '문서 텍스트가 필요합니다.')
     .max(50000, '문서 크기가 50KB를 초과합니다.'),
   fileName: z.string().trim().max(255, '파일명은 255자 이내여야 합니다.').optional(),
+  provider: z.enum(['openai', 'anthropic']).optional(),
 })
 
 export const aiGenerateTemplateSchema = z.object({
