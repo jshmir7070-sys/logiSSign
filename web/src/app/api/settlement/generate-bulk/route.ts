@@ -117,42 +117,39 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 개별 PDF를 Storage에 업로드 + settlements.pdf_url 저장
+    // 개별 PDF를 settlements 버킷에 업로드 + storage path를 settlements.pdf_url에 저장
+    // (signed URL은 다운로드 시점에 매번 생성 — 1년 만료 URL을 영구 링크로 저장하지 않음)
     const supabase = createAdminSupabaseClient()
+    const yearMonth = `${meta.year}-${String(meta.month).padStart(2, '0')}`
     for (const pdfFile of pdfFiles) {
       const driverData = drivers.find((d) => pdfFile.name.includes(d.name))
       if (!driverData?.id) continue
 
-      const pdfPath = `settlements/${agencyId}/${meta.year}_${String(meta.month).padStart(2, '0')}/${pdfFile.name}`
+      const pdfPath = `${agencyId}/${meta.year}_${String(meta.month).padStart(2, '0')}/${pdfFile.name}`
       const { error: pdfUpErr } = await supabase.storage
-        .from('documents')
+        .from('settlements')
         .upload(pdfPath, pdfFile.data, {
           contentType: 'application/pdf',
           cacheControl: '86400',
           upsert: true,
         })
       if (!pdfUpErr) {
-        const { data: pdfUrlData } = await supabase.storage
-          .from('documents')
-          .createSignedUrl(pdfPath, 86400 * 365) // 1년
-        if (pdfUrlData?.signedUrl) {
-          await supabase
-            .from('settlements')
-            .update({ pdf_url: pdfUrlData.signedUrl })
-            .eq('agency_id', agencyId)
-            .eq('driver_id', driverData.id)
-            .eq('year_month', `${meta.year}-${String(meta.month).padStart(2, '0')}`)
-        }
+        await supabase
+          .from('settlements')
+          .update({ pdf_url: pdfPath })
+          .eq('agency_id', agencyId)
+          .eq('driver_id', driverData.id)
+          .eq('year_month', yearMonth)
       }
     }
 
-    // ZIP 생성
+    // ZIP 생성 — 일괄 다운로드용 24시간 signed URL은 즉시 사용을 위한 임시 링크라 유지
     const zipBytes = await createZip(pdfFiles)
     const zipFilename = `settlement_${meta.year}_${String(meta.month).padStart(2, '0')}_${Date.now()}.zip`
-    const storagePath = `settlements/${agencyId}/${zipFilename}`
+    const storagePath = `${agencyId}/bundles/${zipFilename}`
 
     const { error: uploadError } = await supabase.storage
-      .from('documents')
+      .from('settlements')
       .upload(storagePath, zipBytes, {
         contentType: 'application/zip',
         cacheControl: '86400',
@@ -161,8 +158,8 @@ export async function POST(request: NextRequest) {
     let downloadUrl = ''
     if (!uploadError) {
       const { data: signedData } = await supabase.storage
-        .from('documents')
-        .createSignedUrl(storagePath, 86400) // 24시간
+        .from('settlements')
+        .createSignedUrl(storagePath, 86400) // 24시간 (단발성 다운로드 링크)
 
       downloadUrl = signedData?.signedUrl ?? ''
     }

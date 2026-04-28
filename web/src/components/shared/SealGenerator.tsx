@@ -30,6 +30,9 @@ import {
   type SealScript,
   type SealShape,
   ALL_SEAL_FONTS,
+  getThousandCharacterFontIdx,
+  getThousandCharacterCount,
+  isInThousandCharacterClassic,
   renderSealCanvas,
   ensureSealFontsLoaded,
   removeWhiteBackground,
@@ -91,6 +94,8 @@ export default function SealGenerator({ defaultName = '', onComplete, onCancel }
 
   // 한글/한자
   const [useHanja, setUseHanja] = useState(false)
+  /** 천자문 모드: 한자 변환과 함께 켜면 전서체(한전서체A 등)를 자동 적용 — 전통 인감 느낌 */
+  const [useThousandChar, setUseThousandChar] = useState(false)
   const [hanjaOverride, setHanjaOverride] = useState('')
   const [showDot, setShowDot] = useState(true)
   const [editingCharIdx, setEditingCharIdx] = useState<number | null>(null)
@@ -112,16 +117,34 @@ export default function SealGenerator({ defaultName = '', onComplete, onCancel }
     setUploadPreview(null)
   }
 
-  // 한자 변환
-  const updateHanjaPreview = useCallback((name: string) => {
+  // 한자 변환 — 천자문 모드 시 千字文 본문 한자를 우선 선택
+  const updateHanjaPreview = useCallback((name: string, preferThousand?: boolean) => {
     if (!name.trim()) { setHanjaOverride(''); return }
-    setHanjaOverride(hangulToHanja(name.trim()))
-  }, [])
+    setHanjaOverride(hangulToHanja(name.trim(), { preferThousandChar: preferThousand ?? useThousandChar }))
+  }, [useThousandChar])
 
   const handleHanjaToggle = useCallback((on: boolean) => {
     setUseHanja(on)
     if (on && nameText.trim()) updateHanjaPreview(nameText)
+    // 한자 변환을 끄면 천자문 모드도 함께 끔
+    if (!on) setUseThousandChar(false)
   }, [nameText, updateHanjaPreview])
+
+  /** 천자문 토글 — 켜면 한자 변환 활성화 + 한전서체A 자동 + 千字文 한자 우선 사용 */
+  const handleThousandCharToggle = useCallback((on: boolean) => {
+    setUseThousandChar(on)
+    if (on) {
+      if (!useHanja) {
+        setUseHanja(true)
+      }
+      if (nameText.trim()) updateHanjaPreview(nameText, true)
+      const idx = getThousandCharacterFontIdx()
+      if (idx >= 0) setFontIdx(idx)
+    } else if (useHanja && nameText.trim()) {
+      // 끌 때도 다시 변환해서 천자문 우선 해제
+      updateHanjaPreview(nameText, false)
+    }
+  }, [useHanja, nameText, updateHanjaPreview])
 
   const handleHanjaCharSelect = useCallback((idx: number, char: string) => {
     const arr = Array.from(hanjaOverride)
@@ -286,6 +309,19 @@ export default function SealGenerator({ defaultName = '', onComplete, onCancel }
               </div>
               <span className="text-sm text-on-surface font-korean">한자 변환</span>
             </label>
+            <label
+              className={`flex items-center gap-2 select-none ${useHanja ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
+              title={useHanja ? '천자문 모드 — 전서체 자동 적용' : '먼저 한자 변환을 켜주세요'}
+            >
+              <div role="switch" aria-checked={useThousandChar}
+                onClick={() => useHanja && handleThousandCharToggle(!useThousandChar)}
+                className={`relative w-10 h-[22px] rounded-full transition-colors ${useThousandChar ? 'bg-amber-700' : 'bg-gray-300'}`}>
+                <div className={`absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow transition-transform ${useThousandChar ? 'translate-x-[20px]' : 'translate-x-[2px]'}`} />
+              </div>
+              <span className="text-sm text-on-surface font-korean">
+                천자문 ({getThousandCharacterCount()}자)
+              </span>
+            </label>
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <div role="switch" aria-checked={showDot} onClick={() => setShowDot(!showDot)}
                 className={`relative w-10 h-[22px] rounded-full transition-colors ${showDot ? 'bg-amber-500' : 'bg-gray-300'}`}>
@@ -298,28 +334,52 @@ export default function SealGenerator({ defaultName = '', onComplete, onCancel }
           {/* 한자 후보 선택 UI */}
           {useHanja && nameText.trim() && hanjaOverride && (
             <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/40 space-y-2">
-              <p className="text-xs text-on-surface-variant/70 font-korean">한자 미리보기 (글자를 클릭하면 다른 한자로 변경)</p>
+              <p className="text-xs text-on-surface-variant/70 font-korean">
+                한자 미리보기 (글자를 클릭하면 다른 한자로 변경)
+                {useThousandChar && (
+                  <span className="ml-2 text-[10px] text-amber-700">
+                    · <span className="font-data">千</span> 표시 = 천자문 본문 한자
+                  </span>
+                )}
+              </p>
               <div className="flex items-center gap-1">
                 {Array.from(hanjaOverride).map((char, idx) => {
-                  const candidates = getHanjaCandidates(nameText.trim()[idx] || '')
+                  const candidates = getHanjaCandidates(nameText.trim()[idx] || '', { preferThousandChar: useThousandChar })
                   const hasCandidates = candidates.length > 1
+                  const charInClassic = isInThousandCharacterClassic(char)
                   return (
                     <div key={idx} className="relative">
                       <button type="button"
                         onClick={() => hasCandidates && setEditingCharIdx(editingCharIdx === idx ? null : idx)}
-                        className={`w-10 h-10 rounded-lg border text-lg font-bold flex items-center justify-center transition-all ${
+                        className={`relative w-10 h-10 rounded-lg border text-lg font-bold flex items-center justify-center transition-all ${
                           hasCandidates ? 'border-amber-400 hover:bg-amber-100 cursor-pointer' : 'border-gray-200 bg-gray-50 cursor-default'
                         } ${editingCharIdx === idx ? 'bg-amber-100 ring-2 ring-amber-400' : ''}`}
-                      >{char}</button>
+                      >
+                        {char}
+                        {useThousandChar && charInClassic && (
+                          <span className="absolute -top-1 -right-1 text-[8px] font-data text-amber-700 bg-white rounded-full px-1 leading-tight border border-amber-300">千</span>
+                        )}
+                      </button>
                       {editingCharIdx === idx && hasCandidates && (
                         <div className="absolute top-full left-0 mt-1 z-50 bg-white border border-amber-200 rounded-lg shadow-lg p-1.5 flex flex-wrap gap-1 min-w-[120px]">
-                          {candidates.map((c) => (
-                            <button key={c} type="button" onClick={() => handleHanjaCharSelect(idx, c)}
-                              className={`w-9 h-9 rounded text-base font-bold flex items-center justify-center transition-colors ${
-                                c === char ? 'bg-amber-500 text-white' : 'hover:bg-amber-50 text-on-surface'
-                              }`}
-                            >{c}</button>
-                          ))}
+                          {candidates.map((c) => {
+                            const isClassic = isInThousandCharacterClassic(c)
+                            return (
+                              <button key={c} type="button" onClick={() => handleHanjaCharSelect(idx, c)}
+                                className={`relative w-9 h-9 rounded text-base font-bold flex items-center justify-center transition-colors ${
+                                  c === char ? 'bg-amber-500 text-white' : 'hover:bg-amber-50 text-on-surface'
+                                } ${isClassic && c !== char ? 'ring-1 ring-amber-300' : ''}`}
+                                title={isClassic ? '천자문 본문 한자' : ''}
+                              >
+                                {c}
+                                {isClassic && (
+                                  <span className={`absolute -top-1 -right-1 text-[8px] font-data leading-tight ${
+                                    c === char ? 'text-white' : 'text-amber-700'
+                                  }`}>千</span>
+                                )}
+                              </button>
+                            )
+                          })}
                         </div>
                       )}
                     </div>

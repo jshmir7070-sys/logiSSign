@@ -1,21 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/lib/api-auth'
+import {
+  type CsCategory,
+  LLM_FALLBACK_CATEGORIES,
+  detectCategory,
+  fetchLlmFallback,
+} from '@/lib/cs-chat'
 import { createAdminSupabaseClient } from '@/lib/supabase'
 import { getClientIp } from '@/lib/get-ip'
 import { rateLimitAuth } from '@/lib/rate-limit'
 
 const supabaseAdmin = createAdminSupabaseClient()
-
-type CsCategory =
-  | 'payment'
-  | 'contract'
-  | 'settlement'
-  | 'driver'
-  | 'plan'
-  | 'account'
-  | 'bug'
-  | 'feedback'
-  | 'other'
 
 interface CsChatRequest {
   message: string
@@ -64,23 +59,6 @@ const CATEGORY_RESPONSES: Record<CsCategory, string[]> = {
   ],
 }
 
-const KEYWORD_CATEGORY_MAP: Array<{ keywords: string[]; category: CsCategory }> = [
-  { keywords: ['결제', '카드', '환불', '입금', '가상계좌', '청구', '영수증', '포인트 충전'], category: 'payment' },
-  { keywords: ['계약', '서명', '전자서명', '계약서', '템플릿', '발송', '만료', '재발송'], category: 'contract' },
-  { keywords: ['정산', '엑셀', '업로드', '단가', '세금계산서', '거래처', '사번', '정산서'], category: 'settlement' },
-  { keywords: ['기사', '드라이버', '배달', '초대', '앱 연동', '사번', '등록'], category: 'driver' },
-  { keywords: ['플랜', '요금', '업그레이드', '다운그레이드', '구독', '한도', '기사 수'], category: 'plan' },
-  { keywords: ['계정', '비밀번호', '로그인', '관리자', '설정', '탈퇴', '도장', '서명'], category: 'account' },
-  { keywords: ['오류', '버그', '에러', '안 됨', '작동', '안됨', '고장', '문제'], category: 'bug' },
-  { keywords: ['건의', '피드백', '의견', '제안', '요청', '개선'], category: 'feedback' },
-]
-
-function detectCategory(message: string): CsCategory {
-  for (const { keywords, category } of KEYWORD_CATEGORY_MAP) {
-    if (keywords.some((k) => message.includes(k))) return category
-  }
-  return 'other'
-}
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request)
@@ -122,9 +100,25 @@ export async function POST(request: NextRequest) {
     // 카테고리 결정 (명시 > 자동감지)
     const category = requestedCategory !== 'other' ? requestedCategory : detectCategory(message)
 
-    // 응답 생성
-    const responses = CATEGORY_RESPONSES[category] ?? CATEGORY_RESPONSES.other
-    let response = responses[Math.floor(Math.random() * responses.length)]
+    // 응답 생성: 정형 카테고리는 캔드 응답, other/bug/feedback은 LLM 폴백 시도 후 실패 시 캔드 응답
+    const cannedPool = CATEGORY_RESPONSES[category] ?? CATEGORY_RESPONSES.other
+    const cannedResponse = cannedPool[Math.floor(Math.random() * cannedPool.length)]
+
+    let response = cannedResponse
+    let usedLlm = false
+    if (LLM_FALLBACK_CATEGORIES.has(category)) {
+      const llmResponse = await fetchLlmFallback({
+        message,
+        category,
+        plan,
+        driverCount: totalDrivers,
+        agencyName,
+      })
+      if (llmResponse) {
+        response = llmResponse
+        usedLlm = true
+      }
+    }
 
     // 전담 에이전트 안내 (Enterprise / 150명 초과)
     if (isEnterprise) {
@@ -142,6 +136,7 @@ export async function POST(request: NextRequest) {
         plan,
         driverCount: totalDrivers,
         isDedicated: isEnterprise,
+        usedLlm,
       }),
     })
 

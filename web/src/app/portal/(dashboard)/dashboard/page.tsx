@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import KpiCard from '@/components/portal/KpiCard';
+import OnboardingChecklist from '@/components/portal/OnboardingChecklist';
 import Badge from '@/components/shared/Badge';
 import { createBrowserSupabaseClient } from '@/lib/supabase';
 import { getDashboardStats, type DashboardStats } from '@/services/dashboard.service';
@@ -52,6 +53,7 @@ export default function DashboardPage() {
   const [settlements, setSettlements] = useState<SettlementWithDriver[]>([]);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [agencyId, setAgencyId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -61,6 +63,7 @@ export default function DashboardPage() {
 
       const agencyId = user.app_metadata?.agency_id as string | undefined;
       if (!agencyId) return;
+      setAgencyId(agencyId);
 
       const now = new Date();
       const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -120,6 +123,9 @@ export default function DashboardPage() {
           이번 달 대리점 운영 현황을 한눈에 확인하세요
         </p>
       </div>
+
+      {/* Onboarding 5-step checklist (자동 숨김: 완료 또는 사용자가 닫음) */}
+      <OnboardingChecklist agencyId={agencyId} />
 
       {/* Subscription Status Banner */}
       {!loading && subscription && (
